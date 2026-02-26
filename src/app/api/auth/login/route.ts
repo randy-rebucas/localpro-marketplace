@@ -1,0 +1,23 @@
+import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+import { authService } from "@/services";
+import { setAuthCookies } from "@/lib/auth";
+import { withHandler } from "@/lib/utils";
+import { ValidationError } from "@/lib/errors";
+
+const LoginSchema = z.object({
+  email: z.string().email("Invalid email address"),
+  password: z.string().min(1, "Password is required"),
+});
+
+export const POST = withHandler(async (req: NextRequest) => {
+  const body = await req.json();
+  const parsed = LoginSchema.safeParse(body);
+  if (!parsed.success) throw new ValidationError(parsed.error.errors[0].message);
+
+  const { user, accessToken, refreshToken } = await authService.login(parsed.data);
+
+  const response = NextResponse.json({ user });
+  setAuthCookies(response, accessToken, refreshToken);
+  return response;
+});

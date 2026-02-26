@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(test -d \"/c/Users/corew/localpro-marketplace\")",
+      "Bash(pnpm install)",
+      "Bash(pnpm add next@latest)",
+      "Bash(pnpm add react@latest react-dom@latest)",
+      "Bash(pnpm add -D @types/react@latest @types/react-dom@latest)",
+      "Bash(pnpm tsc --noEmit)",
+      "Bash(pnpm add jose clsx)",
+      "Bash(pnpm build)",
+      "Bash(ls -la /c/Users/corew/localpro-marketplace/src/app/\\\\\\(dashboard\\\\\\)/admin/jobs/)",
+      "Bash(find /c/Users/corew/localpro-marketplace/src/app/\\\\\\(dashboard\\\\\\)/client/jobs/[id] -type f -name \"*.tsx\")",
+      "Bash(grep -h \"^export interface\" c:/Users/corew/localpro-marketplace/src/models/*.ts)",
+      "Bash(__NEW_LINE_a51af46e5bf5ed7c__ cat)"
+    ]
+  }
+}
