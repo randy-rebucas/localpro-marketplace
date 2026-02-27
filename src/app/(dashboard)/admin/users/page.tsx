@@ -32,7 +32,11 @@ export default async function AdminUsersPage({
     User.countDocuments(),
   ]);
 
-  const users = rawUsers as unknown as IUser[];
+  const users = rawUsers.map((u) => ({
+    ...u,
+    _id: u._id.toString(),
+    createdAt: u.createdAt instanceof Date ? u.createdAt.toISOString() : u.createdAt,
+  })) as unknown as IUser[];
   const totalPages = Math.ceil(total / limit);
 
   return (

@@ -20,7 +20,10 @@ export default async function ProviderCalendarPage() {
   })
     .select("title category scheduleDate status budget location")
     .sort({ scheduleDate: 1 })
-    .lean() as unknown as IJob[];
+    .lean();
+
+  // Serialize dates for the CalendarView Client Component
+  const serializedJobs = JSON.parse(JSON.stringify(jobs)) as IJob[];
 
   return (
     <div className="space-y-6">
@@ -28,7 +31,7 @@ export default async function ProviderCalendarPage() {
         <h2 className="text-2xl font-bold text-slate-900">Calendar</h2>
         <p className="text-slate-500 text-sm mt-0.5">Your scheduled jobs for the month.</p>
       </div>
-      <CalendarView jobs={jobs as IJob[]} />
+      <CalendarView jobs={serializedJobs} />
     </div>
   );
 }
