@@ -13,9 +13,11 @@ export const PATCH = withHandler(async (
 
   const { id } = await params;
   const body = await req.json().catch(() => ({}));
-  const { beforePhoto } = body as { beforePhoto?: string };
-  if (!beforePhoto) throw new UnprocessableError("A before photo is required to start the job");
+  const raw = (body as { beforePhotos?: string[] }).beforePhotos;
+  const photos = Array.isArray(raw) ? raw.filter(Boolean) : [];
+  if (photos.length === 0) throw new UnprocessableError("At least one before photo is required to start the job");
+  if (photos.length > 3) throw new UnprocessableError("Maximum 3 before photos allowed");
 
-  const result = await escrowService.startJob(user, id, beforePhoto);
+  const result = await escrowService.startJob(user, id, photos);
   return NextResponse.json({ ...result, message: "Job started" });
 });

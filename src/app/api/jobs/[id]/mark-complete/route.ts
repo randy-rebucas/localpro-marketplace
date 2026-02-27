@@ -13,9 +13,11 @@ export const PATCH = withHandler(async (
 
   const { id } = await params;
   const body = await req.json().catch(() => ({}));
-  const { afterPhoto } = body as { afterPhoto?: string };
-  if (!afterPhoto) throw new UnprocessableError("An after photo is required to mark the job as completed");
+  const raw = (body as { afterPhotos?: string[] }).afterPhotos;
+  const photos = Array.isArray(raw) ? raw.filter(Boolean) : [];
+  if (photos.length === 0) throw new UnprocessableError("At least one after photo is required to mark the job as completed");
+  if (photos.length > 3) throw new UnprocessableError("Maximum 3 after photos allowed");
 
-  const result = await escrowService.markJobComplete(user, id, afterPhoto);
+  const result = await escrowService.markJobComplete(user, id, photos);
   return NextResponse.json({ ...result, message: "Job marked as completed" });
 });

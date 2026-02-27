@@ -10,8 +10,8 @@ import type { IJob, JobStatus, EscrowStatus } from "@/types";
 
 type JobWithClient = IJob & {
   clientId: { name: string };
-  beforePhoto?: string | null;
-  afterPhoto?: string | null;
+  beforePhoto?: string[];
+  afterPhoto?: string[];
 };
 
 interface Props {

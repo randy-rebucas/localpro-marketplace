@@ -12,6 +12,7 @@ export interface CreateJobInput {
   budget: number;
   location: string;
   scheduleDate: string;
+  coordinates?: { type: "Point"; coordinates: [number, number] };
 }
 
 export interface JobFilters {

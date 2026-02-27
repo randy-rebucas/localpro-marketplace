@@ -1,15 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import Button from "@/components/ui/Button";
 import Card, { CardHeader, CardBody, CardFooter } from "@/components/ui/Card";
-
-const CATEGORIES = [
-  "Plumbing", "Electrical", "Cleaning", "Landscaping", "Carpentry",
-  "Painting", "Roofing", "HVAC", "Moving", "Handyman", "Other",
-];
+import LocationAutocomplete from "@/components/shared/LocationAutocomplete";
+import { Sparkles } from "lucide-react";
+import { formatCurrency } from "@/lib/utils";
+import type { ICategory } from "@/types";
 
 interface FormData {
   title: string;
@@ -18,11 +17,12 @@ interface FormData {
   budget: string;
   location: string;
   scheduleDate: string;
+  specialInstructions: string;
 }
 
 const INITIAL: FormData = {
   title: "", category: "", description: "",
-  budget: "", location: "", scheduleDate: "",
+  budget: "", location: "", scheduleDate: "", specialInstructions: "",
 };
 
 const STEPS = ["Job Details", "Budget & Schedule", "Review & Submit"];
@@ -33,6 +33,39 @@ export default function PostJobPage() {
   const [form, setForm] = useState<FormData>(INITIAL);
   const [errors, setErrors] = useState<Partial<FormData>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [categories, setCategories] = useState<string[]>([]);
+
+  useEffect(() => {
+    fetch("/api/categories", { credentials: "include" })
+      .then((r) => r.json())
+      .then((data: ICategory[]) => setCategories(data.map((c) => c.name)))
+      .catch(() => { /* silently fall back to empty list */ });
+  }, []);
+
+  async function generateDescription() {
+    if (!form.title || form.title.trim().length < 3) {
+      toast.error("Enter a job title first so AI knows what to write.");
+      return;
+    }
+    setIsGenerating(true);
+    try {
+      const res = await fetch("/api/ai/generate-description", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ title: form.title, category: form.category }),
+      });
+      const data = await res.json();
+      if (!res.ok) { toast.error(data.error ?? "AI generation failed"); return; }
+      update("description", data.description);
+    } catch {
+      toast.error("Could not reach AI service.");
+    } finally {
+      setIsGenerating(false);
+    }
+  }
 
   function update(field: keyof FormData, value: string) {
     setForm((f) => ({ ...f, [field]: value }));
@@ -75,6 +108,12 @@ export default function PostJobPage() {
           ...form,
           budget: Number(form.budget),
           scheduleDate: new Date(form.scheduleDate).toISOString(),
+          ...(coords && {
+            coordinates: {
+              type: "Point" as const,
+              coordinates: [coords.lng, coords.lat] as [number, number],
+            },
+          }),
         }),
       });
       const data = await res.json();
@@ -134,12 +173,23 @@ export default function PostJobPage() {
                 <select className={`input w-full ${errors.category ? "border-red-400" : ""}`}
                   value={form.category} onChange={(e) => update("category", e.target.value)}>
                   <option value="">Select a category</option>
-                  {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                  {categories.map((c) => <option key={c} value={c}>{c}</option>)}
                 </select>
                 {errors.category && <p className="mt-1 text-xs text-red-500">{errors.category}</p>}
               </div>
               <div>
-                <label className="label block mb-1">Description</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="label">Description</label>
+                  <button
+                    type="button"
+                    onClick={generateDescription}
+                    disabled={isGenerating}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-violet-200 bg-violet-50 px-2.5 py-1 text-xs font-medium text-violet-700 hover:bg-violet-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <Sparkles className={`h-3.5 w-3.5 ${isGenerating ? "animate-pulse" : ""}`} />
+                    {isGenerating ? "Generating…" : "AI Generate"}
+                  </button>
+                </div>
                 <textarea className={`input w-full min-h-[120px] resize-y ${errors.description ? "border-red-400" : ""}`}
                   placeholder="Describe the work needed in detail (what, where, any special requirements)..."
                   value={form.description} onChange={(e) => update("description", e.target.value)} />
@@ -154,20 +204,25 @@ export default function PostJobPage() {
           {step === 1 && (
             <>
               <div>
-                <label className="label block mb-1">Budget (USD)</label>
+                <label className="label block mb-1">Budget (PHP)</label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">$</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">₱</span>
                   <input type="number" min="1" className={`input w-full pl-7 ${errors.budget ? "border-red-400" : ""}`}
-                    placeholder="500"
+                    placeholder="1000"
                     value={form.budget} onChange={(e) => update("budget", e.target.value)} />
                 </div>
                 {errors.budget && <p className="mt-1 text-xs text-red-500">{errors.budget}</p>}
               </div>
               <div>
                 <label className="label block mb-1">Location</label>
-                <input className={`input w-full ${errors.location ? "border-red-400" : ""}`}
-                  placeholder="e.g. 123 Main St, New York, NY"
-                  value={form.location} onChange={(e) => update("location", e.target.value)} />
+                <LocationAutocomplete
+                  value={form.location}
+                  onChange={(address, c) => {
+                    update("location", address);
+                    setCoords(c ?? null);
+                  }}
+                  error={errors.location}
+                />
                 {errors.location && <p className="mt-1 text-xs text-red-500">{errors.location}</p>}
               </div>
               <div>
@@ -176,6 +231,18 @@ export default function PostJobPage() {
                   value={form.scheduleDate} onChange={(e) => update("scheduleDate", e.target.value)}
                   min={new Date().toISOString().slice(0, 16)} />
                 {errors.scheduleDate && <p className="mt-1 text-xs text-red-500">{errors.scheduleDate}</p>}
+              </div>
+              <div>
+                <label className="label block mb-1">
+                  Special Instructions
+                  <span className="ml-1 text-xs font-normal text-slate-400">(optional)</span>
+                </label>
+                <textarea
+                  className="input w-full min-h-[80px] resize-y"
+                  placeholder="e.g. Please call before arriving, dog on premises, use side entrance…"
+                  value={form.specialInstructions}
+                  onChange={(e) => update("specialInstructions", e.target.value)}
+                />
               </div>
             </>
           )}
@@ -187,15 +254,36 @@ export default function PostJobPage() {
                 { label: "Title", value: form.title },
                 { label: "Category", value: form.category },
                 { label: "Description", value: form.description },
-                { label: "Budget", value: `$${form.budget}` },
+                { label: "Budget", value: formatCurrency(Number(form.budget)) },
                 { label: "Location", value: form.location },
                 { label: "Preferred Date", value: new Date(form.scheduleDate).toLocaleString() },
+                ...(form.specialInstructions ? [{ label: "Special Instructions", value: form.specialInstructions }] : []),
               ].map(({ label, value }) => (
                 <div key={label} className="flex gap-3 text-sm">
                   <span className="font-medium text-slate-600 w-28 flex-shrink-0">{label}:</span>
                   <span className="text-slate-800 break-words">{value}</span>
                 </div>
               ))}
+
+              {/* Map preview */ }
+              {coords && process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY && (
+                <div className="overflow-hidden rounded-xl border border-slate-200">
+                  <img
+                    src={`https://maps.googleapis.com/maps/api/staticmap?center=${coords.lat},${coords.lng}&zoom=16&size=640x180&markers=color:red%7Clabel:P%7C${coords.lat},${coords.lng}&scale=2&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`}
+                    alt="Job location map"
+                    className="w-full h-[150px] object-cover"
+                  />
+                  <div className="flex items-center justify-between bg-slate-50 px-3 py-1.5">
+                    <span className="text-xs font-medium text-green-700 flex items-center gap-1.5">
+                      <span className="inline-block h-1.5 w-1.5 rounded-full bg-green-500" />
+                      Coordinates captured
+                    </span>
+                    <span className="font-mono text-xs text-slate-400">
+                      {coords.lat.toFixed(5)}, {coords.lng.toFixed(5)}
+                    </span>
+                  </div>
+                </div>
+              )}
               <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 text-xs text-amber-700 mt-4">
                 Your job will be reviewed by our admin team before being published to providers.
               </div>

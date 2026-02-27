@@ -37,7 +37,7 @@ const JobSchema = new Schema<JobDocument>(
     budget: {
       type: Number,
       required: [true, "Budget is required"],
-      min: [1, "Budget must be at least $1"],
+      min: [1, "Budget must be at least ₱1"],
     },
     status: {
       type: String,
@@ -68,14 +68,23 @@ const JobSchema = new Schema<JobDocument>(
       type: Date,
       required: [true, "Schedule date is required"],
     },
+    specialInstructions: {
+      type: String,
+      trim: true,
+      default: "",
+    },
     riskScore: {
       type: Number,
       min: 0,
       max: 100,
       default: 0,
     },
-    beforePhoto: { type: String, default: null },
-    afterPhoto: { type: String, default: null },
+    beforePhoto: { type: [String], default: [] },
+    afterPhoto: { type: [String], default: [] },
+    coordinates: {
+      type: { type: String, enum: ["Point"] },
+      coordinates: { type: [Number] },
+    },
   },
   {
     timestamps: true,
@@ -88,6 +97,7 @@ JobSchema.index({ status: 1, createdAt: -1 });
 JobSchema.index({ clientId: 1, status: 1 });
 JobSchema.index({ providerId: 1, status: 1 });
 JobSchema.index({ category: 1, status: 1 });
+JobSchema.index({ coordinates: "2dsphere" }, { sparse: true });
 
 const Job: Model<JobDocument> =
   mongoose.models.Job ?? mongoose.model<JobDocument>("Job", JobSchema);

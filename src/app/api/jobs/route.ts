@@ -17,6 +17,11 @@ const CreateJobSchema = z.object({
   budget: z.number().positive(),
   location: z.string().min(1),
   scheduleDate: z.string().datetime(),
+  specialInstructions: z.string().max(500).optional(),
+  coordinates: z.object({
+    type: z.literal("Point"),
+    coordinates: z.tuple([z.number(), z.number()]),
+  }).optional(),
 });
 
 export const GET = withHandler(async (req: NextRequest) => {

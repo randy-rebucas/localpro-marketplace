@@ -18,6 +18,7 @@ import {
   AlertTriangle,
   Users,
   MapPin,
+  Tag,
   LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -55,6 +56,7 @@ const navItems: Record<UserRole, NavItem[]> = {
     { label: "Disputes",      href: "/admin/disputes",   icon: <AlertTriangle  className="h-5 w-5" /> },
     { label: "Users",         href: "/admin/users",      icon: <Users          className="h-5 w-5" /> },
     { label: "Notifications", href: "/admin/notifications", icon: <Bell        className="h-5 w-5" /> },
+    { label: "Categories",    href: "/admin/categories",     icon: <Tag         className="h-5 w-5" /> },
   ],
 };
 

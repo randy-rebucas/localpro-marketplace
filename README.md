@@ -133,6 +133,14 @@ PAYMONGO_WEBHOOK_SECRET=whsk_...
 # OpenAI (job risk scoring)
 OPENAI_API_KEY=sk-...
 
+# Cloudinary (photo uploads — before/after job photos)
+CLOUDINARY_CLOUD_NAME=your-cloud-name
+CLOUDINARY_API_KEY=your-api-key
+CLOUDINARY_API_SECRET=your-api-secret
+
+# Google Maps (Places Autocomplete on location fields)
+NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=AIza...
+
 # SMTP (email notifications)
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587

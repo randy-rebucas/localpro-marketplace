@@ -4,6 +4,10 @@ import type { Types } from "mongoose";
 
 export type UserRole = "client" | "provider" | "admin";
 
+// ─── Upload ───────────────────────────────────────────────────────────────────
+
+export type UploadFolder = "jobs/before" | "jobs/after" | "avatars" | "misc";
+
 export interface IUser {
   _id: Types.ObjectId | string;
   name: string;
@@ -45,9 +49,11 @@ export interface IJob {
   escrowStatus: EscrowStatus;
   location: string;
   scheduleDate: Date;
+  specialInstructions?: string;
   riskScore: number;
-  beforePhoto?: string | null;
-  afterPhoto?: string | null;
+  beforePhoto?: string[];
+  afterPhoto?: string[];
+  coordinates?: { type: "Point"; coordinates: [number, number] } | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -294,6 +300,18 @@ export interface IPayment {
   /** PayMongo payment id (pay_xxx) set on webhook confirmation */
   paymentId?: string;
   refundId?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+// ─── Category ─────────────────────────────────────────────────────────────────
+
+export interface ICategory {
+  _id: string;
+  name: string;
+  slug: string;
+  icon: string;
+  isActive: boolean;
+  order: number;
   createdAt: Date;
   updatedAt: Date;
 }

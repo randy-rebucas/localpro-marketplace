@@ -22,8 +22,8 @@ export default async function ProviderJobsPage() {
 
   const serialized = JSON.parse(JSON.stringify(jobs)) as (IJob & {
     clientId: { name: string };
-    beforePhoto?: string | null;
-    afterPhoto?: string | null;
+    beforePhoto?: string[];
+    afterPhoto?: string[];
   })[];
 
   return (

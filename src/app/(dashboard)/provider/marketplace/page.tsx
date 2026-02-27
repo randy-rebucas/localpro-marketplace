@@ -20,12 +20,7 @@ import {
   ChevronUp,
   RefreshCw,
 } from "lucide-react";
-import type { IJob } from "@/types";
-
-const CATEGORIES = [
-  "All", "Plumbing", "Electrical", "Cleaning", "Landscaping",
-  "Carpentry", "Painting", "Roofing", "HVAC", "Moving", "Handyman", "Other",
-];
+import type { IJob, ICategory } from "@/types";
 
 type SortKey = "newest" | "oldest" | "budget_desc" | "budget_asc";
 const SORT_OPTIONS: { value: SortKey; label: string }[] = [
@@ -58,7 +53,15 @@ export default function MarketplacePage() {
   const [quoteForm, setQuoteForm] = useState<QuoteForm>({ proposedAmount: "", timeline: "", message: "" });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [quotedJobIds, setQuotedJobIds] = useState<Set<string>>(new Set());
+  const [categories, setCategories] = useState<string[]>(["All"]);
   const searchRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    fetch("/api/categories", { credentials: "include" })
+      .then((r) => r.json())
+      .then((data: ICategory[]) => setCategories(["All", ...data.map((c) => c.name)]))
+      .catch(() => {});
+  }, []);
 
   const debouncedSearch = useDebounce(search);
 
@@ -244,7 +247,7 @@ export default function MarketplacePage() {
         {/* Category pills */}
         <div className="flex gap-2 flex-wrap items-center">
           <SlidersHorizontal className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
-          {CATEGORIES.map((c) => (
+          {categories.map((c) => (
             <button
               key={c}
               onClick={() => setCategory(c)}
