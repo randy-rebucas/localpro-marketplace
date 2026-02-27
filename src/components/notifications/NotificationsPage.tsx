@@ -2,7 +2,27 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronRight } from "lucide-react";
+import {
+  Bell,
+  Loader2,
+  ChevronRight,
+  ClipboardList,
+  CheckCircle2,
+  XCircle,
+  FileText,
+  Sparkles,
+  ThumbsDown,
+  Wallet,
+  BadgeCheck,
+  Flag,
+  Banknote,
+  AlertTriangle,
+  Scale,
+  Star,
+  MessageSquare,
+  Ban,
+  type LucideIcon,
+} from "lucide-react";
 import { useNotificationStore } from "@/stores/notificationStore";
 import { useAuthStore } from "@/stores/authStore";
 import { getNotificationLink } from "@/lib/notificationLinks";
@@ -11,22 +31,24 @@ import type { INotification } from "@/types";
 
 // ─── Icon map ─────────────────────────────────────────────────────────────────
 
-const TYPE_ICON: Record<string, string> = {
-  job_submitted: "📋",
-  job_approved: "✅",
-  job_rejected: "❌",
-  quote_received: "📝",
-  quote_accepted: "🎉",
-  quote_rejected: "😔",
-  escrow_funded: "💰",
-  payment_confirmed: "✅",
-  job_completed: "🏁",
-  escrow_released: "💸",
-  dispute_opened: "⚠️",
-  dispute_resolved: "⚖️",
-  review_received: "⭐",
-  new_message: "💬",
-  payment_failed: "🚫",
+type IconConfig = { icon: LucideIcon; bg: string; color: string };
+
+const TYPE_ICON: Record<string, IconConfig> = {
+  job_submitted:     { icon: ClipboardList,  bg: "bg-blue-100",    color: "text-blue-600"    },
+  job_approved:      { icon: CheckCircle2,   bg: "bg-emerald-100", color: "text-emerald-600" },
+  job_rejected:      { icon: XCircle,        bg: "bg-red-100",     color: "text-red-600"     },
+  quote_received:    { icon: FileText,        bg: "bg-violet-100",  color: "text-violet-600"  },
+  quote_accepted:    { icon: Sparkles,        bg: "bg-amber-100",   color: "text-amber-600"   },
+  quote_rejected:    { icon: ThumbsDown,      bg: "bg-slate-100",   color: "text-slate-500"   },
+  escrow_funded:     { icon: Wallet,          bg: "bg-emerald-100", color: "text-emerald-600" },
+  payment_confirmed: { icon: BadgeCheck,      bg: "bg-emerald-100", color: "text-emerald-600" },
+  job_completed:     { icon: Flag,            bg: "bg-blue-100",    color: "text-blue-600"    },
+  escrow_released:   { icon: Banknote,        bg: "bg-emerald-100", color: "text-emerald-600" },
+  dispute_opened:    { icon: AlertTriangle,   bg: "bg-amber-100",   color: "text-amber-600"   },
+  dispute_resolved:  { icon: Scale,           bg: "bg-blue-100",    color: "text-blue-600"    },
+  review_received:   { icon: Star,            bg: "bg-amber-100",   color: "text-amber-500"   },
+  new_message:       { icon: MessageSquare,   bg: "bg-sky-100",     color: "text-sky-600"     },
+  payment_failed:    { icon: Ban,             bg: "bg-red-100",     color: "text-red-600"     },
 };
 
 // ─── Date grouping ─────────────────────────────────────────────────────────────
@@ -77,7 +99,7 @@ export default function NotificationsPage() {
   if (!hydrated) {
     return (
       <div className="flex items-center justify-center h-40">
-        <div className="h-6 w-6 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+        <Loader2 className="h-6 w-6 animate-spin text-primary" />
       </div>
     );
   }
@@ -122,8 +144,8 @@ export default function NotificationsPage() {
       {/* Empty state */}
       {notifications.length === 0 && (
         <div className="bg-white rounded-xl border border-slate-200 shadow-card p-12 flex flex-col items-center text-center">
-          <div className="w-14 h-14 rounded-full bg-slate-100 flex items-center justify-center text-2xl mb-4">
-            🔔
+          <div className="w-14 h-14 rounded-full bg-slate-100 flex items-center justify-center mb-4">
+            <Bell className="h-7 w-7 text-slate-400" />
           </div>
           <p className="text-base font-medium text-slate-700">No notifications yet</p>
           <p className="text-sm text-slate-400 mt-1">
@@ -154,9 +176,15 @@ export default function NotificationsPage() {
                   } ${link ? "cursor-pointer" : "cursor-default"}`}
                 >
                   {/* Icon */}
-                  <span className="text-2xl leading-none mt-0.5 flex-shrink-0">
-                    {TYPE_ICON[n.type] ?? "🔔"}
-                  </span>
+                  {(() => {
+                    const cfg = TYPE_ICON[n.type] ?? { icon: Bell, bg: "bg-slate-100", color: "text-slate-500" };
+                    const Icon = cfg.icon;
+                    return (
+                      <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${cfg.bg}`}>
+                        <Icon className={`h-4 w-4 ${cfg.color}`} />
+                      </div>
+                    );
+                  })()}
 
                   {/* Content */}
                   <div className="flex-1 min-w-0">

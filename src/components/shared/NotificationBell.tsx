@@ -2,30 +2,61 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Bell, ChevronRight } from "lucide-react";
+import {
+  Bell,
+  ChevronRight,
+  ClipboardList,
+  CheckCircle2,
+  XCircle,
+  FileText,
+  Sparkles,
+  ThumbsDown,
+  Wallet,
+  BadgeCheck,
+  Flag,
+  Banknote,
+  AlertTriangle,
+  Scale,
+  Star,
+  MessageSquare,
+  Ban,
+  type LucideIcon,
+} from "lucide-react";
 import { useNotificationStore } from "@/stores/notificationStore";
 import { useAuthStore } from "@/stores/authStore";
 import { getNotificationLink } from "@/lib/notificationLinks";
 import { formatRelativeTime } from "@/lib/utils";
 import type { INotification } from "@/types";
 
-const TYPE_ICON: Record<string, string> = {
-  job_submitted: "📋",
-  job_approved: "✅",
-  job_rejected: "❌",
-  quote_received: "📝",
-  quote_accepted: "🎉",
-  quote_rejected: "😔",
-  escrow_funded: "💰",
-  payment_confirmed: "✅",
-  job_completed: "🏁",
-  escrow_released: "💸",
-  dispute_opened: "⚠️",
-  dispute_resolved: "⚖️",
-  review_received: "⭐",
-  new_message: "💬",
-  payment_failed: "🚫",
+type IconConfig = { icon: LucideIcon; bg: string; color: string };
+
+const TYPE_ICON: Record<string, IconConfig> = {
+  job_submitted:     { icon: ClipboardList,  bg: "bg-blue-100",    color: "text-blue-600"    },
+  job_approved:      { icon: CheckCircle2,   bg: "bg-emerald-100", color: "text-emerald-600" },
+  job_rejected:      { icon: XCircle,        bg: "bg-red-100",     color: "text-red-600"     },
+  quote_received:    { icon: FileText,        bg: "bg-violet-100",  color: "text-violet-600"  },
+  quote_accepted:    { icon: Sparkles,        bg: "bg-amber-100",   color: "text-amber-600"   },
+  quote_rejected:    { icon: ThumbsDown,      bg: "bg-slate-100",   color: "text-slate-500"   },
+  escrow_funded:     { icon: Wallet,          bg: "bg-emerald-100", color: "text-emerald-600" },
+  payment_confirmed: { icon: BadgeCheck,      bg: "bg-emerald-100", color: "text-emerald-600" },
+  job_completed:     { icon: Flag,            bg: "bg-blue-100",    color: "text-blue-600"    },
+  escrow_released:   { icon: Banknote,        bg: "bg-emerald-100", color: "text-emerald-600" },
+  dispute_opened:    { icon: AlertTriangle,   bg: "bg-amber-100",   color: "text-amber-600"   },
+  dispute_resolved:  { icon: Scale,           bg: "bg-blue-100",    color: "text-blue-600"    },
+  review_received:   { icon: Star,            bg: "bg-amber-100",   color: "text-amber-500"   },
+  new_message:       { icon: MessageSquare,   bg: "bg-sky-100",     color: "text-sky-600"     },
+  payment_failed:    { icon: Ban,             bg: "bg-red-100",     color: "text-red-600"     },
 };
+
+function NotifIcon({ type }: { type: string }) {
+  const cfg = TYPE_ICON[type] ?? { icon: Bell, bg: "bg-slate-100", color: "text-slate-500" };
+  const Icon = cfg.icon;
+  return (
+    <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${cfg.bg}`}>
+      <Icon className={`h-3.5 w-3.5 ${cfg.color}`} />
+    </div>
+  );
+}
 
 export default function NotificationBell() {
   const router = useRouter();
@@ -42,22 +73,25 @@ export default function NotificationBell() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Close panel when clicking outside
+  // Close on click outside or Escape
   useEffect(() => {
     if (!open) return;
-    function handleClickOutside(e: MouseEvent) {
-      if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
+    function onMouse(e: MouseEvent) {
+      if (panelRef.current && !panelRef.current.contains(e.target as Node)) setOpen(false);
     }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("mousedown", onMouse);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onMouse);
+      document.removeEventListener("keydown", onKey);
+    };
   }, [open]);
 
   function handleItemClick(n: INotification) {
-    if (!n.readAt && n._id) {
-      markRead(n._id.toString());
-    }
+    if (!n.readAt && n._id) markRead(n._id.toString());
     setOpen(false);
     if (user?.role) {
       const link = getNotificationLink(n.type, n.data, user.role);
@@ -70,12 +104,11 @@ export default function NotificationBell() {
       {/* Bell button */}
       <button
         onClick={() => setOpen((v) => !v)}
-        className="relative p-2 rounded-lg hover:bg-slate-100 transition-colors"
         aria-label="Notifications"
+        aria-expanded={open}
+        className="relative p-2 rounded-lg hover:bg-slate-100 transition-colors"
       >
         <Bell className="h-5 w-5 text-slate-600" />
-
-        {/* Unread badge */}
         {unreadCount > 0 && (
           <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white leading-none">
             {unreadCount > 9 ? "9+" : unreadCount}
@@ -88,19 +121,16 @@ export default function NotificationBell() {
         <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-xl border border-slate-200 shadow-lg z-50 overflow-hidden">
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
-            <span className="text-sm font-semibold text-slate-900">
+            <span className="text-sm font-semibold text-slate-900 flex items-center gap-1.5">
               Notifications
               {unreadCount > 0 && (
-                <span className="ml-1.5 inline-flex items-center justify-center h-4 px-1.5 rounded-full bg-red-100 text-red-600 text-[10px] font-bold">
+                <span className="inline-flex items-center justify-center h-4 px-1.5 rounded-full bg-red-100 text-red-600 text-[10px] font-bold">
                   {unreadCount}
                 </span>
               )}
             </span>
             {unreadCount > 0 && (
-              <button
-                onClick={() => markAllRead()}
-                className="text-xs text-primary hover:underline"
-              >
+              <button onClick={() => markAllRead()} className="text-xs text-primary hover:underline">
                 Mark all read
               </button>
             )}
@@ -109,12 +139,13 @@ export default function NotificationBell() {
           {/* List */}
           <div className="max-h-80 overflow-y-auto divide-y divide-slate-50">
             {notifications.length === 0 ? (
-              <p className="py-8 text-center text-sm text-slate-400">No notifications yet</p>
+              <div className="py-10 flex flex-col items-center gap-2 text-center">
+                <Bell className="h-6 w-6 text-slate-300" />
+                <p className="text-sm text-slate-400">No notifications yet</p>
+              </div>
             ) : (
               notifications.map((n, i) => {
-                const link = user?.role
-                  ? getNotificationLink(n.type, n.data, user.role)
-                  : null;
+                const link = user?.role ? getNotificationLink(n.type, n.data, user.role) : null;
                 return (
                   <button
                     key={n._id?.toString() ?? i}
@@ -123,9 +154,7 @@ export default function NotificationBell() {
                       !n.readAt ? "bg-blue-50/40" : ""
                     }`}
                   >
-                    <span className="text-xl leading-none mt-0.5 flex-shrink-0">
-                      {TYPE_ICON[n.type] ?? "🔔"}
-                    </span>
+                    <NotifIcon type={n.type} />
                     <div className="min-w-0 flex-1">
                       <p className={`text-sm leading-snug truncate ${!n.readAt ? "font-semibold text-slate-900" : "text-slate-700"}`}>
                         {n.title}
@@ -138,9 +167,7 @@ export default function NotificationBell() {
                       </p>
                     </div>
                     <div className="flex items-center gap-1 flex-shrink-0 mt-1">
-                      {!n.readAt && (
-                        <div className="h-2 w-2 rounded-full bg-blue-500" />
-                      )}
+                      {!n.readAt && <div className="h-2 w-2 rounded-full bg-blue-500" />}
                       {link && <ChevronRight className="h-3.5 w-3.5 text-slate-300" />}
                     </div>
                   </button>
