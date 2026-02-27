@@ -30,6 +30,12 @@ export class QuoteRepository extends BaseRepository<QuoteDocument> {
     );
   }
 
+  /** All quotes submitted by a provider (any status). */
+  async findByProvider(providerId: string): Promise<QuoteDocument[]> {
+    await this.connect();
+    return Quote.find({ providerId }).select("jobId status").lean() as unknown as QuoteDocument[];
+  }
+
   /** Pending quotes older than cutoffDate (for auto-expiry). */
   async findStale(cutoffDate: Date): Promise<QuoteDocument[]> {
     await this.connect();

@@ -7,6 +7,7 @@ import { formatCurrency, formatDate } from "@/lib/utils";
 import Button from "@/components/ui/Button";
 import Modal from "@/components/ui/Modal";
 import { Skeleton } from "@/components/ui/Spinner";
+import { CheckCircle2 } from "lucide-react";
 import type { IJob } from "@/types";
 
 const CATEGORIES = [
@@ -23,6 +24,7 @@ export default function MarketplacePage() {
   const [quoteModal, setQuoteModal] = useState<{ open: boolean; job: IJob | null }>({ open: false, job: null });
   const [quoteForm, setQuoteForm] = useState<QuoteForm>({ proposedAmount: "", timeline: "", message: "" });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [quotedJobIds, setQuotedJobIds] = useState<Set<string>>(new Set());
 
   const fetchJobs = useCallback(async () => {
     setIsLoading(true);
@@ -41,6 +43,15 @@ export default function MarketplacePage() {
   }, [category]);
 
   useEffect(() => { fetchJobs(); }, [fetchJobs]);
+
+  useEffect(() => {
+    fetch("/api/quotes", { credentials: "include" })
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => {
+        if (data?.quotedJobIds) setQuotedJobIds(new Set<string>(data.quotedJobIds));
+      })
+      .catch(() => {});
+  }, []);
 
   async function submitQuote() {
     if (!quoteModal.job) return;
@@ -64,8 +75,18 @@ export default function MarketplacePage() {
         }),
       });
       const data = await res.json();
-      if (!res.ok) { toast.error(data.error ?? "Failed to submit quote"); return; }
+      if (!res.ok) {
+        if (data.error === "You have already submitted a quote for this job") {
+          setQuotedJobIds((prev) => new Set(prev).add(quoteModal.job!._id.toString()));
+          setQuoteModal({ open: false, job: null });
+          toast.error("You've already quoted this job");
+        } else {
+          toast.error(data.error ?? "Failed to submit quote");
+        }
+        return;
+      }
       toast.success("Quote submitted!");
+      setQuotedJobIds((prev) => new Set(prev).add(quoteModal.job!._id.toString()));
       setQuoteModal({ open: false, job: null });
       setQuoteForm({ proposedAmount: "", timeline: "", message: "" });
     } catch {
@@ -105,26 +126,36 @@ export default function MarketplacePage() {
         </div>
       ) : (
         <div className="space-y-3">
-          {jobs.map((job) => (
-            <div key={job._id.toString()} className="bg-white rounded-xl border border-slate-200 shadow-card p-5">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-semibold text-slate-900 text-sm truncate">{job.title}</h3>
-                    <JobStatusBadge status={job.status} />
+          {jobs.map((job) => {
+            const quoted = quotedJobIds.has(job._id.toString());
+            return (
+              <div key={job._id.toString()} className="bg-white rounded-xl border border-slate-200 shadow-card p-5">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-semibold text-slate-900 text-sm truncate">{job.title}</h3>
+                      <JobStatusBadge status={job.status} />
+                    </div>
+                    <p className="text-xs text-slate-400 mt-1">{job.category} · {job.location} · {formatDate(job.scheduleDate)}</p>
+                    <p className="text-sm text-slate-600 mt-2 line-clamp-2">{job.description}</p>
                   </div>
-                  <p className="text-xs text-slate-400 mt-1">{job.category} · {job.location} · {formatDate(job.scheduleDate)}</p>
-                  <p className="text-sm text-slate-600 mt-2 line-clamp-2">{job.description}</p>
-                </div>
-                <div className="flex flex-col items-end gap-3 flex-shrink-0">
-                  <p className="text-xl font-bold text-slate-900">{formatCurrency(job.budget)}</p>
-                  <Button size="sm" onClick={() => { setQuoteModal({ open: true, job }); }}>
-                    Submit Quote
-                  </Button>
+                  <div className="flex flex-col items-end gap-3 flex-shrink-0">
+                    <p className="text-xl font-bold text-slate-900">{formatCurrency(job.budget)}</p>
+                    {quoted ? (
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-green-50 text-green-700 text-xs font-medium border border-green-200">
+                        <CheckCircle2 className="h-3.5 w-3.5" />
+                        Quote Sent
+                      </span>
+                    ) : (
+                      <Button size="sm" onClick={() => { setQuoteModal({ open: true, job }); }}>
+                        Submit Quote
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
