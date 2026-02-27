@@ -8,6 +8,7 @@ import { ValidationError } from "@/lib/errors";
 const CreateDisputeSchema = z.object({
   jobId: z.string().min(1),
   reason: z.string().min(20),
+  evidence: z.array(z.string().url()).max(5).optional(),
 });
 
 export const GET = withHandler(async () => {

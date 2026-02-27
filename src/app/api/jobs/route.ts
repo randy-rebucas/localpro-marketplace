@@ -21,6 +21,7 @@ const CreateJobSchema = z.object({
     { message: "Schedule date must be in the future" }
   ),
   specialInstructions: z.string().max(500).optional(),
+  beforePhoto: z.array(z.string().url()).max(5).optional(),
   coordinates: z.object({
     type: z.literal("Point"),
     coordinates: z.tuple([z.number(), z.number()]),

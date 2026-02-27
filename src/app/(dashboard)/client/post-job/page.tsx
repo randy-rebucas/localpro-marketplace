@@ -6,7 +6,7 @@ import toast from "react-hot-toast";
 import Button from "@/components/ui/Button";
 import Card, { CardHeader, CardBody, CardFooter } from "@/components/ui/Card";
 import LocationAutocomplete from "@/components/shared/LocationAutocomplete";
-import { Sparkles, LocateFixed } from "lucide-react";
+import { Sparkles, LocateFixed, ImagePlus, X } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import type { ICategory } from "@/types";
 
@@ -25,7 +25,7 @@ const INITIAL: FormData = {
   budget: "", location: "", scheduleDate: "", specialInstructions: "",
 };
 
-const STEPS = ["Job Details", "Budget & Schedule", "Review & Submit"];
+const STEPS = ["Job Details", "Budget & Schedule", "Photos", "Review & Submit"];
 
 export default function PostJobPage() {
   const router = useRouter();
@@ -37,6 +37,9 @@ export default function PostJobPage() {
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [categories, setCategories] = useState<string[]>([]);
   const [isGeolocating, setIsGeolocating] = useState(false);
+  const [photoFiles, setPhotoFiles]     = useState<{ file: File; preview: string }[]>([]);
+  const [isUploadingPhotos, setIsUploadingPhotos] = useState(false);
+  const [uploadedPhotoUrls, setUploadedPhotoUrls] = useState<string[]>([]);
 
   useEffect(() => {
     fetch("/api/categories", { credentials: "include" })
@@ -126,10 +129,58 @@ export default function PostJobPage() {
   }
 
   function nextStep() {
-    const errs = step === 0 ? validateStep0() : validateStep1();
-    if (Object.keys(errs).length > 0) { setErrors(errs); return; }
-    setErrors({});
-    setStep((s) => s + 1);
+    if (step === 0) {
+      const errs = validateStep0();
+      if (Object.keys(errs).length > 0) { setErrors(errs); return; }
+      setErrors({});
+      setStep(1);
+      return;
+    }
+    if (step === 1) {
+      const errs = validateStep1();
+      if (Object.keys(errs).length > 0) { setErrors(errs); return; }
+      setErrors({});
+      setStep(2);
+      return;
+    }
+    if (step === 2) {
+      // Upload photos then advance to review
+      void uploadPhotosAndAdvance();
+      return;
+    }
+  }
+
+  async function uploadPhotosAndAdvance() {
+    if (photoFiles.length === 0) { setStep(3); return; }
+    setIsUploadingPhotos(true);
+    const urls: string[] = [];
+    try {
+      for (const { file } of photoFiles) {
+        const fd = new FormData();
+        fd.append("file", file);
+        const res  = await fetch("/api/upload", { method: "POST", body: fd, credentials: "include" });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error ?? "Upload failed");
+        urls.push(data.url as string);
+      }
+      setUploadedPhotoUrls(urls);
+      setStep(3);
+    } catch {
+      toast.error("Photo upload failed. Remove images or try again.");
+    } finally {
+      setIsUploadingPhotos(false);
+    }
+  }
+
+  function handlePhotoFiles(files: FileList | null) {
+    if (!files) return;
+    const next = Array.from(files).filter((f) => f.type.startsWith("image/")).slice(0, 5 - photoFiles.length);
+    setPhotoFiles((prev) => [...prev, ...next.map((file) => ({ file, preview: URL.createObjectURL(file) }))].slice(0, 5));
+  }
+
+  function removePhoto(idx: number) {
+    setPhotoFiles((prev) => { URL.revokeObjectURL(prev[idx].preview); return prev.filter((_, i) => i !== idx); });
+    setUploadedPhotoUrls([]);
   }
 
   async function handleSubmit() {
@@ -143,6 +194,7 @@ export default function PostJobPage() {
           ...form,
           budget: Number(form.budget),
           scheduleDate: new Date(form.scheduleDate).toISOString(),
+          ...(uploadedPhotoUrls.length > 0 ? { beforePhoto: uploadedPhotoUrls } : {}),
           ...(coords && {
             coordinates: {
               type: "Point" as const,
@@ -294,6 +346,46 @@ export default function PostJobPage() {
           )}
 
           {step === 2 && (
+            <div className="space-y-4">
+              <p className="text-sm text-slate-500">Attach up to 5 photos to help providers understand the scope of work. <span className="text-slate-400">(optional)</span></p>
+              <input
+                id="photo-upload"
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={(e) => handlePhotoFiles(e.target.files)}
+              />
+              <div className="flex flex-wrap gap-3">
+                {photoFiles.map(({ preview }, i) => (
+                  <div key={i} className="relative w-24 h-24 rounded-xl overflow-hidden border border-slate-200 flex-shrink-0">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={preview} alt={`photo-${i}`} className="w-full h-full object-cover" />
+                    <button
+                      onClick={() => removePhoto(i)}
+                      className="absolute top-1 right-1 bg-black/60 rounded-full p-0.5 text-white hover:bg-black/80"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ))}
+                {photoFiles.length < 5 && (
+                  <label
+                    htmlFor="photo-upload"
+                    className="w-24 h-24 rounded-xl border-2 border-dashed border-slate-300 flex flex-col items-center justify-center gap-1.5 text-slate-400 hover:border-primary hover:text-primary transition-colors cursor-pointer flex-shrink-0"
+                  >
+                    <ImagePlus className="h-6 w-6" />
+                    <span className="text-xs font-medium">Add photo</span>
+                  </label>
+                )}
+              </div>
+              {photoFiles.length > 0 && (
+                <p className="text-xs text-slate-400">{photoFiles.length} / 5 photo{photoFiles.length !== 1 ? "s" : ""} selected — they&apos;ll upload when you continue.</p>
+              )}
+            </div>
+          )}
+
+          {step === 3 && (
             <div className="space-y-3">
               <p className="text-sm text-slate-500">Please review your job details before submitting.</p>
               {[
@@ -304,6 +396,7 @@ export default function PostJobPage() {
                 { label: "Location", value: form.location },
                 { label: "Preferred Date", value: new Date(form.scheduleDate).toLocaleString() },
                 ...(form.specialInstructions ? [{ label: "Special Instructions", value: form.specialInstructions }] : []),
+                ...(photoFiles.length > 0 ? [{ label: "Photos", value: `${photoFiles.length} photo${photoFiles.length !== 1 ? "s" : ""} attached` }] : []),
               ].map(({ label, value }) => (
                 <div key={label} className="flex gap-3 text-sm">
                   <span className="font-medium text-slate-600 w-28 flex-shrink-0">{label}:</span>
@@ -341,8 +434,10 @@ export default function PostJobPage() {
           <Button variant="secondary" onClick={() => setStep((s) => s - 1)} disabled={step === 0}>
             Back
           </Button>
-          {step < 2 ? (
-            <Button onClick={nextStep}>Continue</Button>
+          {step < STEPS.length - 1 ? (
+            <Button onClick={nextStep} isLoading={isUploadingPhotos}>
+              {isUploadingPhotos ? "Uploading…" : "Continue"}
+            </Button>
           ) : (
             <Button onClick={handleSubmit} isLoading={isSubmitting}>
               Submit Job

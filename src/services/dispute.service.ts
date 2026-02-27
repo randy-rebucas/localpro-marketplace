@@ -13,6 +13,7 @@ import type { IJob } from "@/types";
 export interface OpenDisputeInput {
   jobId: string;
   reason: string;
+  evidence?: string[];
 }
 
 export interface ResolveDisputeInput {
@@ -49,6 +50,7 @@ export class DisputeService {
       jobId: input.jobId,
       raisedBy: user.userId,
       reason: input.reason,
+      ...(input.evidence?.length ? { evidence: input.evidence } : {}),
     });
 
     job.status = "disputed";

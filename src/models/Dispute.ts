@@ -22,6 +22,14 @@ const DisputeSchema = new Schema<DisputeDocument>(
       trim: true,
       minlength: [20, "Reason must be at least 20 characters"],
     },
+    evidence: {
+      type: [String],
+      default: [],
+      validate: {
+        validator: (arr: string[]) => arr.length <= 5,
+        message: "Maximum 5 evidence images allowed",
+      },
+    },
     status: {
       type: String,
       enum: ["open", "investigating", "resolved"],

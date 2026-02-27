@@ -3,8 +3,10 @@ import { getCurrentUser } from "@/lib/auth";
 import { connectDB } from "@/lib/db";
 import Job from "@/models/Job";
 import Quote from "@/models/Quote";
+import Dispute from "@/models/Dispute";
+import ProviderProfile from "@/models/ProviderProfile";
 import { JobStatusBadge, EscrowBadge, QuoteStatusBadge } from "@/components/ui/Badge";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { formatCurrency, formatDate, formatRelativeTime } from "@/lib/utils";
 import JobActionButtons from "./JobActionButtons";
 import QuoteAcceptButton from "./QuoteAcceptButton";
 import RaiseDisputeButton from "@/components/shared/RaiseDisputeButton";
@@ -12,8 +14,8 @@ import PartialReleaseButton from "@/components/payment/PartialReleaseButton";
 import RealtimeRefresher from "@/components/shared/RealtimeRefresher";
 import ProviderInfoButton from "@/components/shared/ProviderInfoButton";
 import { notFound } from "next/navigation";
-import { AlertCircle } from "lucide-react";
-import type { IJob, IQuote } from "@/types";
+import { AlertCircle, ShieldCheck, Star, CheckCircle2, Clock, Search } from "lucide-react";
+import type { IJob, IQuote, DisputeStatus } from "@/types";
 
 export const metadata: Metadata = { title: "Job Details" };
 
@@ -53,6 +55,20 @@ export default async function JobDetailPage({
     .lean() as unknown as (IQuote & {
       providerId: { _id: string; name: string; email: string; isVerified: boolean };
     })[];
+
+  // Fetch provider profiles for smart tags (avgRating, completedJobCount)
+  const providerIds = quotes.map((q) => q.providerId._id.toString());
+  const profiles = providerIds.length > 0
+    ? await ProviderProfile.find({ userId: { $in: providerIds } })
+        .select("userId avgRating completedJobCount")
+        .lean() as { userId: { toString(): string }; avgRating?: number; completedJobCount?: number }[]
+    : [];
+  const profileMap = new Map(profiles.map((p) => [p.userId.toString(), p]));
+
+  // Fetch open dispute for this job (if any)
+  const disputeDoc = await Dispute.findOne({ jobId: id }).sort({ createdAt: -1 }).lean() as {
+    _id: string; status: DisputeStatus; reason: string; resolutionNotes?: string; createdAt: Date;
+  } | null;
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
@@ -122,6 +138,63 @@ export default async function JobDetailPage({
         <RaiseDisputeButton jobId={j._id.toString()} status={j.status} />
       </div>
 
+      {/* Dispute timeline */}
+      {disputeDoc && (
+        <div className="bg-white rounded-xl border border-red-200 shadow-card p-6">
+          <h3 className="font-semibold text-slate-900 mb-4 flex items-center gap-2">
+            <AlertCircle className="h-4 w-4 text-red-500" />
+            Dispute Status
+          </h3>
+          {/* Timeline steps */}
+          {(() => {
+            const steps = [
+              { label: "Submitted",    description: `Raised ${formatRelativeTime(disputeDoc.createdAt)}`,    icon: <CheckCircle2 className="h-4 w-4" /> },
+              { label: "Under Review", description: "An admin is investigating the issue",                   icon: <Search className="h-4 w-4" /> },
+              { label: "Resolved",     description: disputeDoc.resolutionNotes ?? "Dispute has been resolved", icon: <ShieldCheck className="h-4 w-4" /> },
+            ];
+            const activeIdx = disputeDoc.status === "open" ? 0 : disputeDoc.status === "investigating" ? 1 : 2;
+            return (
+              <div className="flex flex-col gap-0">
+                {steps.map((s, i) => {
+                  const done    = i < activeIdx;
+                  const current = i === activeIdx;
+                  return (
+                    <div key={s.label} className="flex gap-3">
+                      {/* Dot + connector */}
+                      <div className="flex flex-col items-center">
+                        <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ${
+                          done ? "bg-green-500 text-white" : current ? "bg-primary text-white" : "bg-slate-200 text-slate-400"
+                        }`}>
+                          {s.icon}
+                        </div>
+                        {i < steps.length - 1 && (
+                          <div className={`w-0.5 flex-1 min-h-[24px] ${done ? "bg-green-400" : "bg-slate-200"}`} />
+                        )}
+                      </div>
+                      {/* Label */}
+                      <div className="pb-5">
+                        <p className={`text-sm font-medium ${current ? "text-primary" : done ? "text-slate-900" : "text-slate-400"}`}>
+                          {s.label}
+                        </p>
+                        {(done || current) && (
+                          <p className="text-xs text-slate-500 mt-0.5">{s.description}</p>
+                        )}
+                        {current && disputeDoc.status === "open" && (
+                          <p className="text-xs text-slate-500 mt-0.5">Your dispute is queued for admin review.</p>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
+          <p className="text-xs text-slate-400 mt-1 border-t border-slate-100 pt-3">
+            Reason: <span className="text-slate-600">{disputeDoc.reason}</span>
+          </p>
+        </div>
+      )}
+
       {/* Quotes */}
       {j.status === "open" && (
         <div className="bg-white rounded-xl border border-slate-200 shadow-card">
@@ -137,6 +210,11 @@ export default async function JobDetailPage({
               {quotes.map((q) => {
                 const providerInitials = q.providerId.name
                   .split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
+                const profile = profileMap.get(q.providerId._id.toString());
+                const avgRating = profile?.avgRating ?? 0;
+                const jobsDone  = profile?.completedJobCount ?? 0;
+                const isTopRated = avgRating >= 4.5 && jobsDone >= 3;
+
                 return (
                   <li key={q._id.toString()} className="px-6 py-4">
                     <div className="flex items-start justify-between gap-4">
@@ -145,12 +223,29 @@ export default async function JobDetailPage({
                           <span className="text-xs font-bold text-primary">{providerInitials}</span>
                         </div>
                         <div className="flex-1">
-                          <div className="flex items-center gap-2">
+                          <div className="flex flex-wrap items-center gap-2">
                             <p className="font-medium text-slate-900 text-sm">{q.providerId.name}</p>
                             {q.providerId.isVerified && (
                               <span className="badge bg-blue-100 text-blue-700 text-xs">Verified</span>
                             )}
+                            {isTopRated && (
+                              <span className="badge bg-amber-100 text-amber-700 text-xs">⭐ Top Rated</span>
+                            )}
                           </div>
+                          {/* Provider stats row */}
+                          {(avgRating > 0 || jobsDone > 0) && (
+                            <div className="flex items-center gap-3 mt-0.5">
+                              {avgRating > 0 && (
+                                <span className="flex items-center gap-1 text-xs text-slate-500">
+                                  <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                                  {avgRating.toFixed(1)}
+                                </span>
+                              )}
+                              {jobsDone > 0 && (
+                                <span className="text-xs text-slate-400">{jobsDone} job{jobsDone !== 1 ? "s" : ""} completed</span>
+                              )}
+                            </div>
+                          )}
                           <p className="text-xs text-slate-500 mt-0.5">Timeline: {q.timeline}</p>
                           <p className="text-sm text-slate-700 mt-2">{q.message}</p>
                         </div>
@@ -159,7 +254,11 @@ export default async function JobDetailPage({
                         <p className="text-lg font-bold text-slate-900">{formatCurrency(q.proposedAmount)}</p>
                         <QuoteStatusBadge status={q.status} />
                         {q.status === "pending" && (
-                          <QuoteAcceptButton quoteId={q._id.toString()} />
+                          <QuoteAcceptButton
+                            quoteId={q._id.toString()}
+                            proposedAmount={q.proposedAmount}
+                            providerName={q.providerId.name}
+                          />
                         )}
                       </div>
                     </div>

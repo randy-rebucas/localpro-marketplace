@@ -12,6 +12,8 @@ export interface CreateJobInput {
   budget: number;
   location: string;
   scheduleDate: string;
+  specialInstructions?: string;
+  beforePhoto?: string[];
   coordinates?: { type: "Point"; coordinates: [number, number] };
   invitedProviderId?: string;
 }

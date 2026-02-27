@@ -7,6 +7,7 @@ import Button from "@/components/ui/Button";
 import Modal from "@/components/ui/Modal";
 import { calculateCommission } from "@/lib/commission";
 import { formatCurrency } from "@/lib/utils";
+import { ShieldCheck } from "lucide-react";
 import type { JobStatus, EscrowStatus } from "@/types";
 
 interface Props {
@@ -93,10 +94,15 @@ export default function JobActionButtons({ jobId, status, escrowStatus, budget }
         size="sm"
       >
         <div className="p-6 space-y-4">
+          {/* Trust label */}
+          <div className="flex items-center gap-2.5 rounded-lg bg-green-50 border border-green-200 px-4 py-3">
+            <ShieldCheck className="h-5 w-5 text-green-600 flex-shrink-0" />
+            <p className="text-sm font-medium text-green-800">
+              Payment Secured by LocalPro — funds are held in escrow and only released when you approve.
+            </p>
+          </div>
           <p className="text-sm text-slate-600">
-            You are about to lock funds in escrow for this job. The amount will
-            be held securely and released to the provider once you approve the
-            completed work.
+            The amount will be held securely and released to the provider only after you confirm the work is complete.
           </p>
 
           {/* Breakdown */}

@@ -123,6 +123,7 @@ export interface IDispute {
   jobId: Types.ObjectId | string | IJob;
   raisedBy: Types.ObjectId | string | IUser;
   reason: string;
+  evidence?: string[];
   status: DisputeStatus;
   resolutionNotes?: string;
   createdAt: Date;
