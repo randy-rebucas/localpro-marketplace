@@ -20,6 +20,7 @@ import {
   MapPin,
   Tag,
   LogOut,
+  Banknote,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/authStore";
@@ -47,6 +48,7 @@ const navItems: Record<UserRole, NavItem[]> = {
     { label: "Marketplace",   href: "/provider/marketplace",  icon: <Store             className="h-5 w-5" /> },
     { label: "Active Jobs",   href: "/provider/jobs",         icon: <Briefcase         className="h-5 w-5" /> },
     { label: "Earnings",      href: "/provider/earnings",     icon: <CircleDollarSign  className="h-5 w-5" /> },
+    { label: "Payouts",       href: "/provider/payouts",      icon: <Banknote          className="h-5 w-5" /> },
     { label: "My Profile",    href: "/provider/profile",      icon: <User              className="h-5 w-5" /> },
     { label: "Notifications", href: "/provider/notifications",icon: <Bell              className="h-5 w-5" /> },
   ],
@@ -54,6 +56,7 @@ const navItems: Record<UserRole, NavItem[]> = {
     { label: "Dashboard",     href: "/admin/dashboard",  icon: <BarChart3      className="h-5 w-5" /> },
     { label: "Validate Jobs", href: "/admin/jobs",       icon: <CheckCircle    className="h-5 w-5" /> },
     { label: "Disputes",      href: "/admin/disputes",   icon: <AlertTriangle  className="h-5 w-5" /> },
+    { label: "Payouts",       href: "/admin/payouts",    icon: <Banknote       className="h-5 w-5" /> },
     { label: "Users",         href: "/admin/users",      icon: <Users          className="h-5 w-5" /> },
     { label: "Notifications", href: "/admin/notifications", icon: <Bell        className="h-5 w-5" /> },
     { label: "Categories",    href: "/admin/categories",     icon: <Tag         className="h-5 w-5" /> },

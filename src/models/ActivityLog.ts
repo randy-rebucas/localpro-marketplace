@@ -28,6 +28,10 @@ const ActivityLogSchema = new Schema<ActivityLogDocument>(
         "dispute_opened",
         "dispute_resolved",
         "review_submitted",
+        "job_expired",
+        "quote_expired",
+        "payout_requested",
+        "payout_updated",
       ] as ActivityEventType[],
       required: true,
     },
@@ -44,6 +48,12 @@ const ActivityLogSchema = new Schema<ActivityLogDocument>(
 
 ActivityLogSchema.index({ userId: 1, createdAt: -1 });
 ActivityLogSchema.index({ jobId: 1 });
+
+// In development, delete the cached model so schema changes are picked up
+// without needing a full server restart.
+if (process.env.NODE_ENV === "development") {
+  delete mongoose.models.ActivityLog;
+}
 
 const ActivityLog: Model<ActivityLogDocument> =
   mongoose.models.ActivityLog ??

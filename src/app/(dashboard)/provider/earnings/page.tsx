@@ -2,8 +2,11 @@ import { getCurrentUser } from "@/lib/auth";
 import { connectDB } from "@/lib/db";
 import Transaction from "@/models/Transaction";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import { CircleDollarSign, TrendingDown, Wallet } from "lucide-react";
+import { CircleDollarSign, TrendingDown, Wallet, ArrowUpRight } from "lucide-react";
 import type { ITransaction, IJob } from "@/types";
+import { payoutService } from "@/services/payout.service";
+import RequestPayoutModal from "@/components/payment/RequestPayoutModal";
+import Link from "next/link";
 
 export default async function EarningsPage() {
   const user = await getCurrentUser();
@@ -11,10 +14,13 @@ export default async function EarningsPage() {
 
   await connectDB();
 
-  const transactions = await Transaction.find({ payeeId: user.userId })
-    .sort({ createdAt: -1 })
-    .populate("jobId", "title")
-    .lean() as unknown as (ITransaction & { jobId: { title: string } })[];
+  const [transactions, availableBalance] = await Promise.all([
+    Transaction.find({ payeeId: user.userId })
+      .sort({ createdAt: -1 })
+      .populate("jobId", "title")
+      .lean() as unknown as Promise<(ITransaction & { jobId: { title: string } })[]>,
+    payoutService.getAvailableBalance(user.userId),
+  ]);
 
   const completed = transactions.filter((t) => t.status === "completed");
   const totalGross = completed.reduce((s, t) => s + t.amount, 0);
@@ -25,13 +31,24 @@ export default async function EarningsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold text-slate-900">Earnings</h2>
-        <p className="text-slate-500 text-sm mt-0.5">Commission breakdown and payment history.</p>
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h2 className="text-2xl font-bold text-slate-900">Earnings</h2>
+          <p className="text-slate-500 text-sm mt-0.5">Commission breakdown and payment history.</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <Link
+            href="/provider/payouts"
+            className="text-sm text-slate-500 hover:text-slate-700 underline underline-offset-2 transition-colors"
+          >
+            View payout history
+          </Link>
+          <RequestPayoutModal availableBalance={availableBalance} />
+        </div>
       </div>
 
       {/* Summary cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white rounded-xl border border-slate-200 shadow-card p-5">
           <div className="flex items-start justify-between">
             <div>
@@ -65,6 +82,24 @@ export default async function EarningsPage() {
             </div>
             <div className="p-2.5 bg-green-100 rounded-xl text-green-600">
               <Wallet className="h-5 w-5" />
+            </div>
+          </div>
+        </div>
+        <div className={`rounded-xl border shadow-card p-5 ${availableBalance > 0 ? "bg-primary/5 border-primary/20" : "bg-slate-50 border-slate-200"}`}>
+          <div className="flex items-start justify-between">
+            <div>
+              <p className={`text-xs font-medium ${availableBalance > 0 ? "text-primary" : "text-slate-500"}`}>
+                Available to Payout
+              </p>
+              <p className={`text-2xl font-bold mt-1 ${availableBalance > 0 ? "text-primary" : "text-slate-400"}`}>
+                {formatCurrency(availableBalance)}
+              </p>
+              <p className={`text-xs mt-0.5 ${availableBalance > 0 ? "text-primary/70" : "text-slate-400"}`}>
+                Ready to withdraw
+              </p>
+            </div>
+            <div className={`p-2.5 rounded-xl ${availableBalance > 0 ? "bg-primary/10 text-primary" : "bg-slate-100 text-slate-400"}`}>
+              <ArrowUpRight className="h-5 w-5" />
             </div>
           </div>
         </div>

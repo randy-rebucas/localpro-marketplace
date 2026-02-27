@@ -133,7 +133,9 @@ export type ActivityEventType =
   | "dispute_resolved"
   | "review_submitted"
   | "job_expired"
-  | "quote_expired";
+  | "quote_expired"
+  | "payout_requested"
+  | "payout_updated";
 
 export interface IActivityLog {
   _id: Types.ObjectId | string;
@@ -191,7 +193,9 @@ export type NotificationType =
   | "escrow_auto_released"
   | "quote_expired"
   | "reminder_fund_escrow"
-  | "reminder_no_quotes";
+  | "reminder_no_quotes"
+  | "payout_requested"
+  | "payout_status_update";
 
 export interface INotification {
   _id: Types.ObjectId | string;
@@ -205,6 +209,7 @@ export interface INotification {
     disputeId?: string;
     messageThreadId?: string;
     paymentIntentId?: string;
+    payoutId?: string;
   };
   readAt?: Date | null;
   createdAt: Date;
@@ -303,6 +308,24 @@ export interface IPayment {
   createdAt: Date;
   updatedAt: Date;
 }
+// ─── Payout ───────────────────────────────────────────────────────────────────
+
+export type PayoutStatus = "pending" | "processing" | "completed" | "rejected";
+
+export interface IPayout {
+  _id: Types.ObjectId | string;
+  providerId: Types.ObjectId | string | IUser;
+  amount: number;
+  status: PayoutStatus;
+  bankName: string;
+  accountNumber: string;
+  accountName: string;
+  notes?: string;
+  processedAt?: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 // ─── Category ─────────────────────────────────────────────────────────────────
 
 export interface ICategory {
