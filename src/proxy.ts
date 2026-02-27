@@ -14,7 +14,7 @@ const ROLE_PREFIXES: Record<string, string> = {
   "/admin": "admin",
 };
 
-const AUTH_PAGES = ["/login", "/register"];
+const AUTH_PAGES = ["/login", "/register", "/forgot-password", "/verify-email", "/reset-password"];
 
 async function verifyToken(token: string): Promise<TokenPayload | null> {
   try {

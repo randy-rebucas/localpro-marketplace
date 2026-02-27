@@ -16,7 +16,10 @@ const CreateJobSchema = z.object({
   description: z.string().min(20),
   budget: z.number().positive(),
   location: z.string().min(1),
-  scheduleDate: z.string().datetime(),
+  scheduleDate: z.string().datetime().refine(
+    (val) => new Date(val) > new Date(),
+    { message: "Schedule date must be in the future" }
+  ),
   specialInstructions: z.string().max(500).optional(),
   coordinates: z.object({
     type: z.literal("Point"),
@@ -37,8 +40,8 @@ export const GET = withHandler(async (req: NextRequest) => {
   const result = await jobService.listJobs(user, {
     status,
     category: searchParams.get("category") ?? undefined,
-    page: parseInt(searchParams.get("page") ?? "1"),
-    limit: parseInt(searchParams.get("limit") ?? "20"),
+    page:  Math.max(1, parseInt(searchParams.get("page")  ?? "1",  10) || 1),
+    limit: Math.max(1, parseInt(searchParams.get("limit") ?? "20", 10) || 20),
     aiRank: searchParams.get("aiRank") === "true",
   });
 

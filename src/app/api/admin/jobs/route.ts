@@ -11,8 +11,8 @@ export const GET = withHandler(async (req: NextRequest) => {
   const result = await jobService.listJobs(user, {
     status: searchParams.get("status") ?? undefined,
     category: searchParams.get("category") ?? undefined,
-    page: parseInt(searchParams.get("page") ?? "1"),
-    limit: parseInt(searchParams.get("limit") ?? "20"),
+    page:  Math.max(1, parseInt(searchParams.get("page")  ?? "1",  10) || 1),
+    limit: Math.max(1, parseInt(searchParams.get("limit") ?? "20", 10) || 20),
   });
 
   return NextResponse.json(result);

@@ -18,7 +18,7 @@ export const POST = withHandler(async (req: NextRequest) => {
 
   if (!file) throw new ValidationError("No file provided");
   if (!ALLOWED_TYPES.includes(file.type)) throw new ValidationError("Only JPEG, PNG, and WEBP images are allowed");
-  if (file.size > MAX_BYTES) throw new ValidationError("File exceeds the 8 MB limit");
+  if (file.size > MAX_BYTES) throw new ValidationError("File exceeds the 10 MB limit");
   if (!ALLOWED_FOLDERS.includes(folderParam as UploadFolder)) throw new ValidationError("Invalid upload folder");
 
   const buffer = Buffer.from(await file.arrayBuffer());
