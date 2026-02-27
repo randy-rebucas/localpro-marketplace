@@ -4,15 +4,71 @@ import { Toaster } from "react-hot-toast";
 import Script from "next/script";
 import "./globals.css";
 
-const inter = Inter({ subsets: ["latin"] });
+const inter = Inter({
+  subsets: ["latin"],
+  display: "swap",   // show system font instantly; swap once Inter is loaded
+  variable: "--font-inter",
+});
+
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://localpro.ph";
 
 export const metadata: Metadata = {
+  metadataBase: new URL(APP_URL),
   title: {
     default: "LocalPro — Find Local Service Providers",
     template: "%s | LocalPro",
   },
   description:
     "Connect with trusted local service providers. Post jobs, get quotes, and pay securely with escrow protection.",
+  keywords: [
+    "local service providers",
+    "hire professionals",
+    "home services",
+    "freelance marketplace",
+    "plumber",
+    "electrician",
+    "cleaning services",
+    "Philippines services",
+  ],
+  authors: [{ name: "LocalPro" }],
+  creator: "LocalPro",
+  publisher: "LocalPro",
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true, "max-image-preview": "large" },
+  },
+  openGraph: {
+    type: "website",
+    locale: "en_PH",
+    url: APP_URL,
+    siteName: "LocalPro",
+    title: "LocalPro — Find Local Service Providers",
+    description:
+      "Connect with trusted local service providers. Post jobs, get quotes, and pay securely with escrow protection.",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "LocalPro — Find Local Service Providers",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    site: "@localpro",
+    title: "LocalPro — Find Local Service Providers",
+    description:
+      "Connect with trusted local service providers. Post jobs, get quotes, and pay securely with escrow protection.",
+    images: ["/og-image.png"],
+  },
+  icons: {
+    icon: "/favicon.ico",
+    shortcut: "/favicon-16x16.png",
+    apple: "/apple-touch-icon.png",
+  },
+  manifest: "/site.webmanifest",
 };
 
 export default function RootLayout({
@@ -21,8 +77,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="h-full">
-      <body className={`${inter.className} h-full`}>
+    <html lang="en" className={`${inter.variable} h-full`}>
+      <body className="font-sans h-full">
         {process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY && (
           // &loading=async
           <Script

@@ -51,6 +51,7 @@ const UserSchema = new Schema<UserDocument>(
       enum: ["pending_approval", "approved", "rejected"],
       default: "approved",
     },
+    avatar: { type: String, default: null },
     verificationToken: { type: String, select: false },
     verificationTokenExpiry: { type: Date, select: false },
     resetPasswordToken: { type: String, select: false },

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { getCurrentUser } from "@/lib/auth";
 import { connectDB } from "@/lib/db";
 import Job from "@/models/Job";
@@ -6,6 +7,9 @@ import Link from "next/link";
 import type { IJob } from "@/types";
 import RealtimeRefresher from "@/components/shared/RealtimeRefresher";
 import ClientJobsList from "./ClientJobsList";
+
+export const metadata: Metadata = { title: "My Jobs" };
+
 
 async function getClientJobs(clientId: string) {
   await connectDB();

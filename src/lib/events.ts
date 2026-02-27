@@ -53,3 +53,24 @@ export function pushStatusUpdateMany(
 ): void {
   for (const userId of userIds) pushStatusUpdate(userId, payload);
 }
+
+// ─── Support Channel ──────────────────────────────────────────────────────────
+
+/** Emit and subscribe to support-chat events. */
+export const supportBus = new SSEBus();
+
+/**
+ * Push a support message to a specific user's support stream.
+ * Used when an admin replies so the user sees it immediately.
+ */
+export function pushSupportToUser(userId: string, payload: unknown): void {
+  supportBus.emit(`support:${userId}`, payload);
+}
+
+/**
+ * Push a support message to the admin-wide support stream.
+ * Used when a user sends a message so all logged-in admins see it.
+ */
+export function pushSupportToAdmin(payload: unknown): void {
+  supportBus.emit("support:admin", payload);
+}

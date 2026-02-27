@@ -1,18 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
+import Image from "next/image";
 import Card, { CardBody, CardFooter, CardHeader } from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import { useAuthStore } from "@/stores/authStore";
 import { formatDate } from "@/lib/utils";
-import { ShieldCheck, CalendarDays, Briefcase } from "lucide-react";
+import { ShieldCheck, CalendarDays, Camera } from "lucide-react";
 
 interface MeData {
   name: string;
   email: string;
   role: string;
   isVerified: boolean;
+  avatar?: string | null;
   createdAt: string;
 }
 
@@ -25,6 +27,10 @@ export default function ClientProfilePage() {
   // Edit name state
   const [name, setName] = useState("");
   const [savingName, setSavingName] = useState(false);
+
+  // Avatar upload state
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
   // Change password state
   const [currentPassword, setCurrentPassword] = useState("");
@@ -45,6 +51,45 @@ export default function ClientProfilePage() {
       .catch(() => toast.error("Failed to load profile"))
       .finally(() => setLoading(false));
   }, []);
+
+  async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!e.target.files) return;
+    e.target.value = "";
+    if (!file) return;
+    if (![".jpg", ".jpeg", ".png", ".webp"].some((ext) => file.name.toLowerCase().endsWith(ext))) {
+      toast.error("Only JPEG, PNG and WEBP images are allowed");
+      return;
+    }
+    if (file.size > 8 * 1024 * 1024) { toast.error("Image must be under 8 MB"); return; }
+
+    setUploadingAvatar(true);
+    try {
+      // 1. Upload to Cloudinary
+      const form = new FormData();
+      form.append("file", file);
+      form.append("folder", "avatars");
+      const uploadRes = await fetch("/api/upload", { method: "POST", credentials: "include", body: form });
+      const uploadData = await uploadRes.json();
+      if (!uploadRes.ok) { toast.error(uploadData.error ?? "Upload failed"); return; }
+
+      // 2. Save URL to user profile
+      const saveRes = await fetch("/api/auth/me", {
+        method: "PUT",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ avatar: uploadData.url }),
+      });
+      const saveData = await saveRes.json();
+      if (!saveRes.ok) { toast.error(saveData.error ?? "Failed to save avatar"); return; }
+
+      setMe((prev) => prev ? { ...prev, avatar: saveData.avatar } : prev);
+      if (user) setUser({ ...user, avatar: saveData.avatar });
+      toast.success("Profile picture updated!");
+    } finally {
+      setUploadingAvatar(false);
+    }
+  }
 
   async function saveName(e: React.FormEvent) {
     e.preventDefault();
@@ -109,13 +154,47 @@ export default function ClientProfilePage() {
         <p className="text-sm text-slate-500 mt-0.5">Manage your account details and password.</p>
       </div>
 
+      {/* Hidden file input */}
+      <input
+        ref={avatarInputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        className="hidden"
+        onChange={handleAvatarChange}
+      />
+
       {/* Header card */}
       <Card>
         <CardBody className="flex items-center gap-5">
           {/* Avatar */}
-          <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-            <span className="text-xl font-bold text-primary">{initials}</span>
-          </div>
+          <button
+            type="button"
+            onClick={() => !uploadingAvatar && avatarInputRef.current?.click()}
+            className="relative h-16 w-16 rounded-full flex-shrink-0 group focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            disabled={uploadingAvatar}
+            title="Change profile picture"
+          >
+            {me?.avatar ? (
+              <Image
+                src={me.avatar}
+                alt={me.name}
+                width={64}
+                height={64}
+                className="h-16 w-16 rounded-full object-cover"
+              />
+            ) : (
+              <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
+                <span className="text-xl font-bold text-primary">{initials}</span>
+              </div>
+            )}
+            <span className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+              {uploadingAvatar ? (
+                <div className="h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
+              ) : (
+                <Camera className="h-5 w-5 text-white" />
+              )}
+            </span>
+          </button>
 
           {/* Info */}
           <div className="flex-1 min-w-0">

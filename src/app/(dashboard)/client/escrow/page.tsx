@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { getCurrentUser } from "@/lib/auth";
 import { connectDB } from "@/lib/db";
 import Job from "@/models/Job";
@@ -9,6 +10,9 @@ import Link from "next/link";
 import { CheckCircle, Zap, Clock, CircleCheck } from "lucide-react";
 import ProviderInfoButton from "@/components/shared/ProviderInfoButton";
 import type { IJob } from "@/types";
+
+export const metadata: Metadata = { title: "Escrow" };
+
 
 interface EscrowPageProps {
   searchParams: Promise<Record<string, string | undefined>>;

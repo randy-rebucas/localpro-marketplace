@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { getCurrentUser } from "@/lib/auth";
 import { connectDB } from "@/lib/db";
 import Job from "@/models/Job";
@@ -10,10 +11,13 @@ import Link from "next/link";
 import { Briefcase, Lock, CircleDollarSign } from "lucide-react";
 import type { IJob } from "@/types";
 
+export const metadata: Metadata = { title: "Dashboard" };
+
+
 async function getClientStats(clientId: string) {
   await connectDB();
 
-  const [activeJobs, escrowJobs, transactions, recentJobs] = await Promise.all([
+  const [activeJobs, escrowJobs, transactions, recentJobs, userDoc] = await Promise.all([
     Job.countDocuments({
       clientId,
       status: { $in: ["open", "assigned", "in_progress"] },
@@ -24,23 +28,21 @@ async function getClientStats(clientId: string) {
       .sort({ createdAt: -1 })
       .limit(5)
       .lean(),
+    User.findById(clientId).select("name").lean() as Promise<{ name?: string } | null>,
   ]);
 
   const escrowLocked = escrowJobs.reduce((sum, j) => sum + j.budget, 0);
   const totalSpend = transactions.reduce((sum, t) => sum + t.amount, 0);
+  const firstName = userDoc?.name?.split(" ")[0] ?? "there";
 
-  return { activeJobs, escrowLocked, totalSpend, recentJobs };
+  return { activeJobs, escrowLocked, totalSpend, recentJobs, firstName };
 }
 
 export default async function ClientDashboardPage() {
   const currentUser = await getCurrentUser();
   if (!currentUser) return null;
 
-  await connectDB();
-  const userDoc = await User.findById(currentUser.userId).select("name").lean() as { name?: string } | null;
-  const firstName = userDoc?.name?.split(" ")[0] ?? "there";
-
-  const { activeJobs, escrowLocked, totalSpend, recentJobs } =
+  const { activeJobs, escrowLocked, totalSpend, recentJobs, firstName } =
     await getClientStats(currentUser.userId);
 
   return (

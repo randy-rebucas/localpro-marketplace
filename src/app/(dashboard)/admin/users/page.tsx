@@ -1,8 +1,12 @@
+import type { Metadata } from "next";
 import { getCurrentUser } from "@/lib/auth";
 import { connectDB } from "@/lib/db";
 import User from "@/models/User";
 import AdminUsersList from "./AdminUsersList";
 import type { IUser } from "@/types";
+
+export const metadata: Metadata = { title: "Manage Users" };
+
 
 export default async function AdminUsersPage({
   searchParams,

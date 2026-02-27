@@ -30,6 +30,13 @@ export async function connectDB(): Promise<typeof mongoose> {
   if (!cached.promise) {
     const opts = {
       bufferCommands: false,
+      // Limit pool to avoid exhausting Atlas / container file descriptors
+      maxPoolSize: 10,
+      minPoolSize: 2,
+      // Fail fast on cold-start DB unavailability
+      serverSelectionTimeoutMS: 5_000,
+      // Release idle sockets after 45 s
+      socketTimeoutMS: 45_000,
     };
     cached.promise = mongoose.connect(MONGODB_URI, opts);
   }

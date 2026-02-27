@@ -1,8 +1,12 @@
+import type { Metadata } from "next";
 import { getCurrentUser } from "@/lib/auth";
 import { connectDB } from "@/lib/db";
 import Category from "@/models/Category";
 import CategoriesManager from "./CategoriesManager";
 import type { ICategory } from "@/types";
+
+export const metadata: Metadata = { title: "Categories" };
+
 
 export default async function AdminCategoriesPage() {
   const user = await getCurrentUser();

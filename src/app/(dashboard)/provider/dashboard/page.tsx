@@ -1,9 +1,11 @@
+import type { Metadata } from "next";
 import { getCurrentUser } from "@/lib/auth";
 import { connectDB } from "@/lib/db";
 import Job from "@/models/Job";
 import Transaction from "@/models/Transaction";
 import Review from "@/models/Review";
 import User from "@/models/User";
+// ↑ User is used inside getProviderStats — connectDB() is called only once there
 import KpiCard from "@/components/ui/KpiCard";
 import { JobStatusBadge } from "@/components/ui/Badge";
 import { formatCurrency, formatRelativeTime } from "@/lib/utils";
@@ -11,10 +13,13 @@ import Link from "next/link";
 import { CircleDollarSign, Briefcase, Star, Store } from "lucide-react";
 import type { IJob } from "@/types";
 
+export const metadata: Metadata = { title: "Dashboard" };
+
+
 async function getProviderStats(providerId: string) {
   await connectDB();
 
-  const [activeJobs, transactions, reviews, recentJobs] = await Promise.all([
+  const [activeJobs, transactions, reviews, recentJobs, userDoc] = await Promise.all([
     Job.countDocuments({
       providerId,
       status: { $in: ["assigned", "in_progress"] },
@@ -25,6 +30,7 @@ async function getProviderStats(providerId: string) {
       .sort({ createdAt: -1 })
       .limit(5)
       .lean(),
+    User.findById(providerId).select("name").lean() as Promise<{ name?: string } | null>,
   ]);
 
   const totalEarnings = transactions.reduce((sum, t) => sum + t.netAmount, 0);
@@ -32,19 +38,16 @@ async function getProviderStats(providerId: string) {
     reviews.length > 0
       ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
       : 0;
+  const firstName = userDoc?.name?.split(" ")[0] ?? "there";
 
-  return { activeJobs, totalEarnings, avgRating, reviewCount: reviews.length, recentJobs };
+  return { activeJobs, totalEarnings, avgRating, reviewCount: reviews.length, recentJobs, firstName };
 }
 
 export default async function ProviderDashboardPage() {
   const user = await getCurrentUser();
   if (!user) return null;
 
-  await connectDB();
-  const userDoc = await User.findById(user.userId).select("name").lean() as { name?: string } | null;
-  const firstName = userDoc?.name?.split(" ")[0] ?? "there";
-
-  const { activeJobs, totalEarnings, avgRating, reviewCount, recentJobs } =
+  const { activeJobs, totalEarnings, avgRating, reviewCount, recentJobs, firstName } =
     await getProviderStats(user.userId);
 
   return (

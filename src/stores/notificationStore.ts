@@ -10,6 +10,7 @@
  */
 
 import { create } from "zustand";
+import toast from "react-hot-toast";
 import type { INotification } from "@/types";
 
 export type { INotification as Notification };
@@ -35,8 +36,11 @@ interface NotificationState {
   /** Mark all read (also calls API) */
   markAllRead: () => Promise<void>;
 
-  /** Prepend an incoming SSE notification */
-  _ingest: (n: INotification) => void;
+  /**
+   * Prepend an incoming SSE notification and surface a toast popup.
+   * Pass `silent: true` to skip the toast (e.g. during bulk hydration).
+   */
+  _ingest: (n: INotification, silent?: boolean) => void;
 
   /** Clear all state and close SSE — call on logout */
   reset: () => void;
@@ -144,11 +148,20 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     }).catch(() => {});
   },
 
-  _ingest: (n: INotification) =>
+  _ingest: (n: INotification, silent = false) => {
     set((state) => ({
       notifications: [n, ...state.notifications].slice(0, 50),
       unreadCount: state.unreadCount + (n.readAt ? 0 : 1),
-    })),
+    }));
+    if (!silent && !n.readAt) {
+      const body = n.message ? `${n.title}: ${n.message.slice(0, 80)}` : n.title;
+      toast(body, {
+        icon: "🔔",
+        duration: 6000,
+        style: { maxWidth: "360px" },
+      });
+    }
+  },
 
   reset: () => {
     if (_eventSource) {

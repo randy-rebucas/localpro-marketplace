@@ -46,12 +46,13 @@ function groupByDate(notifications: INotification[]): Group[] {
 export default function NotificationsPage() {
   const router = useRouter();
   const { user } = useAuthStore();
-  const { notifications, unreadCount, hydrated, hydrate, connectSSE, disconnectSSE, markRead, markAllRead } =
+  const { notifications, unreadCount, hydrated, hydrate, markRead, markAllRead } =
     useNotificationStore();
 
+  // SSE is managed globally by NotificationBell (always mounted in the header).
+  // We only need to hydrate existing notifications here.
   useEffect(() => {
-    hydrate().then(() => connectSSE());
-    return () => disconnectSSE();
+    hydrate();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

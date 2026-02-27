@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { getCurrentUser } from "@/lib/auth";
 import { connectDB } from "@/lib/db";
 import Job from "@/models/Job";
@@ -9,6 +10,9 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import type { IJob, IQuote } from "@/types";
+
+export const metadata: Metadata = { title: "Job Details" };
+
 
 export default async function AdminJobDetailPage({
   params,

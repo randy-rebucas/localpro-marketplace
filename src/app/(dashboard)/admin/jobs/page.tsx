@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { getCurrentUser } from "@/lib/auth";
 import { connectDB } from "@/lib/db";
 import Job from "@/models/Job";
@@ -6,6 +7,9 @@ import AdminJobActions from "./AdminJobActions";
 import RealtimeRefresher from "@/components/shared/RealtimeRefresher";
 import { MapPin, Calendar, User } from "lucide-react";
 import type { IJob } from "@/types";
+
+export const metadata: Metadata = { title: "Manage Jobs" };
+
 
 function RiskBadge({ score }: { score: number }) {
   if (score > 60) return (

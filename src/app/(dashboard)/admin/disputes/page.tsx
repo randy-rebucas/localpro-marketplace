@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { getCurrentUser } from "@/lib/auth";
 import { connectDB } from "@/lib/db";
 import Dispute from "@/models/Dispute";
@@ -7,6 +8,9 @@ import DisputeActions from "./DisputeActions";
 import RealtimeRefresher from "@/components/shared/RealtimeRefresher";
 import { AlertOctagon, Search, Lock } from "lucide-react";
 import type { IDispute } from "@/types";
+
+export const metadata: Metadata = { title: "Disputes" };
+
 
 export default async function AdminDisputesPage() {
   const user = await getCurrentUser();

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { getCurrentUser } from "@/lib/auth";
 import { connectDB } from "@/lib/db";
 import Job from "@/models/Job";
@@ -10,6 +11,9 @@ import AdminJobsChart from "./AdminJobsChart";
 import Link from "next/link";
 import { CircleDollarSign, BarChart3, Lock, AlertTriangle, ClipboardCheck, Users, ShieldAlert } from "lucide-react";
 import type { JobStatus } from "@/types";
+
+export const metadata: Metadata = { title: "Admin Dashboard" };
+
 
 async function getAdminStats() {
   await connectDB();

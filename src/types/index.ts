@@ -17,6 +17,7 @@ export interface IUser {
   isVerified: boolean;
   isSuspended: boolean;
   approvalStatus: "pending_approval" | "approved" | "rejected";
+  avatar?: string;
   createdAt: Date;
   updatedAt: Date;
 }

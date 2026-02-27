@@ -25,6 +25,13 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  poweredByHeader: false,
+
+  // Tree-shake icon and chart libraries — removes unused exports from the bundle
+  experimental: {
+    optimizePackageImports: ["lucide-react", "recharts"],
+  },
+
   async headers() {
     return [
       {
@@ -33,7 +40,12 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+
   images: {
+    // Serve AVIF (≈50% smaller than WebP) with WebP fallback
+    formats: ["image/avif", "image/webp"],
+    // Cache optimized images for 7 days (default is 60 s)
+    minimumCacheTTL: 60 * 60 * 24 * 7,
     remotePatterns: [
       { protocol: "https", hostname: "avatars.githubusercontent.com" },
       { protocol: "https", hostname: "lh3.googleusercontent.com" },

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { getCurrentUser } from "@/lib/auth";
 import { connectDB } from "@/lib/db";
 import Transaction from "@/models/Transaction";
@@ -7,6 +8,9 @@ import type { ITransaction, IJob } from "@/types";
 import { payoutService } from "@/services/payout.service";
 import RequestPayoutModal from "@/components/payment/RequestPayoutModal";
 import Link from "next/link";
+
+export const metadata: Metadata = { title: "Earnings" };
+
 
 export default async function EarningsPage() {
   const user = await getCurrentUser();

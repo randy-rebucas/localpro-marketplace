@@ -22,6 +22,8 @@ import {
   LogOut,
   Banknote,
   Heart,
+  MessageSquare,
+  Headphones,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/authStore";
@@ -36,32 +38,37 @@ interface NavItem {
 
 const navItems: Record<UserRole, NavItem[]> = {
   client: [
-    { label: "Dashboard",     href: "/client/dashboard",  icon: <LayoutDashboard className="h-5 w-5" /> },
-    { label: "Post a Job",    href: "/client/post-job",   icon: <PlusCircle       className="h-5 w-5" /> },
-    { label: "My Jobs",       href: "/client/jobs",       icon: <ClipboardList    className="h-5 w-5" /> },
-    { label: "Escrow",        href: "/client/escrow",     icon: <Lock             className="h-5 w-5" /> },
-    { label: "Favorites",     href: "/client/favorites",  icon: <Heart            className="h-5 w-5" /> },
-    { label: "Reviews",       href: "/client/reviews",    icon: <Star             className="h-5 w-5" /> },
-    { label: "My Profile",    href: "/client/profile",    icon: <User             className="h-5 w-5" /> },
-    { label: "Notifications", href: "/client/notifications", icon: <Bell          className="h-5 w-5" /> },
+    { label: "Dashboard",     href: "/client/dashboard",     icon: <LayoutDashboard className="h-5 w-5" /> },
+    { label: "Post a Job",    href: "/client/post-job",      icon: <PlusCircle       className="h-5 w-5" /> },
+    { label: "My Jobs",       href: "/client/jobs",          icon: <ClipboardList    className="h-5 w-5" /> },
+    { label: "Messages",      href: "/client/messages",      icon: <MessageSquare    className="h-5 w-5" /> },
+    { label: "Support",       href: "/client/support",       icon: <Headphones       className="h-5 w-5" /> },
+    { label: "Escrow",        href: "/client/escrow",        icon: <Lock             className="h-5 w-5" /> },
+    { label: "Favorites",     href: "/client/favorites",     icon: <Heart            className="h-5 w-5" /> },
+    { label: "Reviews",       href: "/client/reviews",       icon: <Star             className="h-5 w-5" /> },
+    { label: "My Profile",    href: "/client/profile",       icon: <User             className="h-5 w-5" /> },
+    { label: "Notifications", href: "/client/notifications", icon: <Bell             className="h-5 w-5" /> },
   ],
   provider: [
     { label: "Dashboard",     href: "/provider/dashboard",    icon: <LayoutDashboard   className="h-5 w-5" /> },
     { label: "Marketplace",   href: "/provider/marketplace",  icon: <Store             className="h-5 w-5" /> },
     { label: "Active Jobs",   href: "/provider/jobs",         icon: <Briefcase         className="h-5 w-5" /> },
+    { label: "Messages",      href: "/provider/messages",     icon: <MessageSquare     className="h-5 w-5" /> },
+    { label: "Support",       href: "/provider/support",      icon: <Headphones        className="h-5 w-5" /> },
     { label: "Earnings",      href: "/provider/earnings",     icon: <CircleDollarSign  className="h-5 w-5" /> },
     { label: "Payouts",       href: "/provider/payouts",      icon: <Banknote          className="h-5 w-5" /> },
     { label: "My Profile",    href: "/provider/profile",      icon: <User              className="h-5 w-5" /> },
     { label: "Notifications", href: "/provider/notifications",icon: <Bell              className="h-5 w-5" /> },
   ],
   admin: [
-    { label: "Dashboard",     href: "/admin/dashboard",  icon: <BarChart3      className="h-5 w-5" /> },
-    { label: "Validate Jobs", href: "/admin/jobs",       icon: <CheckCircle    className="h-5 w-5" /> },
-    { label: "Disputes",      href: "/admin/disputes",   icon: <AlertTriangle  className="h-5 w-5" /> },
-    { label: "Payouts",       href: "/admin/payouts",    icon: <Banknote       className="h-5 w-5" /> },
-    { label: "Users",         href: "/admin/users",      icon: <Users          className="h-5 w-5" /> },
-    { label: "Notifications", href: "/admin/notifications", icon: <Bell        className="h-5 w-5" /> },
-    { label: "Categories",    href: "/admin/categories",     icon: <Tag         className="h-5 w-5" /> },
+    { label: "Dashboard",      href: "/admin/dashboard",      icon: <BarChart3      className="h-5 w-5" /> },
+    { label: "Validate Jobs",  href: "/admin/jobs",           icon: <CheckCircle    className="h-5 w-5" /> },
+    { label: "Disputes",       href: "/admin/disputes",       icon: <AlertTriangle  className="h-5 w-5" /> },
+    { label: "Support Inbox",  href: "/admin/support",        icon: <Headphones     className="h-5 w-5" /> },
+    { label: "Payouts",        href: "/admin/payouts",        icon: <Banknote       className="h-5 w-5" /> },
+    { label: "Users",          href: "/admin/users",          icon: <Users          className="h-5 w-5" /> },
+    { label: "Notifications",  href: "/admin/notifications",  icon: <Bell           className="h-5 w-5" /> },
+    { label: "Categories",     href: "/admin/categories",     icon: <Tag            className="h-5 w-5" /> },
   ],
 };
 

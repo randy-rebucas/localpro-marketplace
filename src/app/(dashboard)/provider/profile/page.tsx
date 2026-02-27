@@ -1,15 +1,23 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
+import Image from "next/image";
+import dynamic from "next/dynamic";
 import type { IProviderProfile, AvailabilityStatus, WeeklySchedule } from "@/types";
 import { DEFAULT_SCHEDULE } from "@/types";
 import Card, { CardBody, CardFooter, CardHeader } from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import { useAuthStore } from "@/stores/authStore";
 import SkillsInput from "@/components/shared/SkillsInput";
-import ScheduleEditor from "@/components/shared/ScheduleEditor";
-import { Star } from "lucide-react";
+import { Star, Camera } from "lucide-react";
+import { Skeleton } from "@/components/ui/Spinner";
+
+// Lazy-load ScheduleEditor — it’s large and only needed below the fold
+const ScheduleEditor = dynamic(
+  () => import("@/components/shared/ScheduleEditor"),
+  { loading: () => <Skeleton className="h-64 rounded-xl" />, ssr: false }
+);
 
 type ProfileData = Partial<
   Pick<
@@ -64,10 +72,15 @@ function StarRating({ value }: { value: number }) {
 }
 
 export default function ProviderProfilePage() {
-  const user = useAuthStore((s) => s.user);
+  const { user, setUser } = useAuthStore();
   const [profile, setProfile] = useState<ProfileData>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+
+  // Avatar
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+  const [avatar, setAvatar] = useState<string | null>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
   // Form state
   const [bio, setBio] = useState("");
@@ -78,9 +91,12 @@ export default function ProviderProfilePage() {
   const [schedule, setSchedule] = useState<WeeklySchedule>(DEFAULT_SCHEDULE);
 
   useEffect(() => {
-    fetch("/api/providers/profile", { credentials: "include" })
-      .then((r) => r.json())
-      .then((data) => {
+    Promise.all([
+      fetch("/api/auth/me", { credentials: "include" }).then((r) => r.json()),
+      fetch("/api/providers/profile", { credentials: "include" }).then((r) => r.json()),
+    ])
+      .then(([meData, data]) => {
+        setAvatar(meData?.avatar ?? null);
         setProfile(data ?? {});
         setBio(data?.bio ?? "");
         setSkills(data?.skills ?? []);
@@ -92,6 +108,43 @@ export default function ProviderProfilePage() {
       .catch(() => toast.error("Failed to load profile"))
       .finally(() => setLoading(false));
   }, []);
+
+  async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!e.target.files) return;
+    e.target.value = "";
+    if (!file) return;
+    if (![".jpg", ".jpeg", ".png", ".webp"].some((ext) => file.name.toLowerCase().endsWith(ext))) {
+      toast.error("Only JPEG, PNG and WEBP images are allowed");
+      return;
+    }
+    if (file.size > 8 * 1024 * 1024) { toast.error("Image must be under 8 MB"); return; }
+
+    setUploadingAvatar(true);
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      form.append("folder", "avatars");
+      const uploadRes = await fetch("/api/upload", { method: "POST", credentials: "include", body: form });
+      const uploadData = await uploadRes.json();
+      if (!uploadRes.ok) { toast.error(uploadData.error ?? "Upload failed"); return; }
+
+      const saveRes = await fetch("/api/auth/me", {
+        method: "PUT",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ avatar: uploadData.url }),
+      });
+      const saveData = await saveRes.json();
+      if (!saveRes.ok) { toast.error(saveData.error ?? "Failed to save avatar"); return; }
+
+      setAvatar(saveData.avatar);
+      if (user) setUser({ ...user, avatar: saveData.avatar });
+      toast.success("Profile picture updated!");
+    } finally {
+      setUploadingAvatar(false);
+    }
+  }
 
   async function saveProfile() {
     setSaving(true);
@@ -153,16 +206,50 @@ export default function ProviderProfilePage() {
         </p>
       </div>
 
+      {/* Hidden file input */}
+      <input
+        ref={avatarInputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        className="hidden"
+        onChange={handleAvatarChange}
+      />
+
       {/* Profile header card */}
       <Card>
         <CardBody className="flex items-center gap-5">
           {/* Avatar */}
           <div className="relative flex-shrink-0">
-            <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
-              <span className="text-xl font-bold text-primary">{initials}</span>
-            </div>
+            <button
+              type="button"
+              onClick={() => !uploadingAvatar && avatarInputRef.current?.click()}
+              className="relative h-16 w-16 rounded-full group focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              disabled={uploadingAvatar}
+              title="Change profile picture"
+            >
+              {avatar ? (
+                <Image
+                  src={avatar}
+                  alt={user?.name ?? ""}
+                  width={64}
+                  height={64}
+                  className="h-16 w-16 rounded-full object-cover"
+                />
+              ) : (
+                <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
+                  <span className="text-xl font-bold text-primary">{initials}</span>
+                </div>
+              )}
+              <span className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                {uploadingAvatar ? (
+                  <div className="h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                ) : (
+                  <Camera className="h-5 w-5 text-white" />
+                )}
+              </span>
+            </button>
             <span
-              className={`absolute bottom-0.5 right-0.5 h-3.5 w-3.5 rounded-full border-2 border-white ${cfg.dot}`}
+              className={`absolute bottom-0.5 right-0.5 h-3.5 w-3.5 rounded-full border-2 border-white ${cfg.dot} pointer-events-none`}
             />
           </div>
 

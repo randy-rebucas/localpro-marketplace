@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import toast from "react-hot-toast";
 import { ChevronDown, LogOut, User, Shield, Briefcase } from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
@@ -77,8 +78,20 @@ export default function Header({ title }: HeaderProps) {
             className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 hover:bg-slate-50 transition-colors"
           >
             {/* Avatar */}
-            <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white text-xs font-bold select-none">
-              {initials}
+            <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0">
+              {user?.avatar ? (
+                <Image
+                  src={user.avatar}
+                  alt={user.name}
+                  width={32}
+                  height={32}
+                  className="h-8 w-8 rounded-full object-cover"
+                />
+              ) : (
+                <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white text-xs font-bold select-none">
+                  {initials}
+                </div>
+              )}
             </div>
             <div className="hidden sm:block text-left">
               <p className="text-sm font-medium text-slate-900 leading-tight">{user?.name}</p>

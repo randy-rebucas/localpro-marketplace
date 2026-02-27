@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { getCurrentUser } from "@/lib/auth";
 import { payoutService } from "@/services/payout.service";
 import { formatCurrency, formatDate } from "@/lib/utils";
@@ -5,6 +6,9 @@ import { Wallet, Clock, CheckCircle2, XCircle, ArrowLeft, Loader2 } from "lucide
 import type { IPayout, PayoutStatus } from "@/types";
 import Link from "next/link";
 import RequestPayoutModal from "@/components/payment/RequestPayoutModal";
+
+export const metadata: Metadata = { title: "Payouts" };
+
 
 const statusConfig: Record<PayoutStatus, { label: string; classes: string; icon: React.ReactNode }> = {
   pending: {
