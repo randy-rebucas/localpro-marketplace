@@ -162,6 +162,7 @@ export default function ChatWindow({
               senderRole={getSenderRole(msg)}
               createdAt={msg.createdAt}
               isMine={isMine}
+              readAt={msg.readAt}
             />
           );
         })}

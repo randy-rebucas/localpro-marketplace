@@ -6,18 +6,24 @@ export type UserRole = "client" | "provider" | "admin";
 
 // ─── Upload ───────────────────────────────────────────────────────────────────
 
-export type UploadFolder = "jobs/before" | "jobs/after" | "avatars" | "misc";
+export type UploadFolder = "jobs/before" | "jobs/after" | "avatars" | "kyc" | "misc";
 
 export interface IUser {
   _id: Types.ObjectId | string;
   name: string;
   email: string;
-  password: string;
+  password?: string;
   role: UserRole;
   isVerified: boolean;
   isSuspended: boolean;
   approvalStatus: "pending_approval" | "approved" | "rejected";
   avatar?: string;
+  facebookId?: string;
+  oauthProvider?: "facebook" | null;
+  phone?: string | null;
+  kycStatus?: "none" | "pending" | "approved" | "rejected";
+  kycDocuments?: Array<{ type: string; url: string; uploadedAt: Date }>;
+  kycRejectionReason?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -49,6 +55,8 @@ export interface IJob {
   budget: number;
   status: JobStatus;
   escrowStatus: EscrowStatus;
+  /** Non-null when client chose to partially release escrow; remaining was refunded */
+  partialReleaseAmount?: number | null;
   location: string;
   scheduleDate: Date;
   specialInstructions?: string;
@@ -283,6 +291,10 @@ export interface IProviderProfile {
   /** Recomputed on each review submission */
   avgRating: number;
   completedJobCount: number;
+  /** 0-100; recomputed on job completion/cancellation */
+  completionRate: number;
+  /** Average hours from job assignment to first status update; recomputed on first progress update */
+  avgResponseTimeHours: number;
   createdAt: Date;
   updatedAt: Date;
 }

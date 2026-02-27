@@ -4,6 +4,7 @@ import {
   activityRepository,
 } from "@/repositories";
 import Job from "@/models/Job";
+import ProviderProfile from "@/models/ProviderProfile";
 import { canTransition, canTransitionEscrow } from "@/lib/jobLifecycle";
 import { pushStatusUpdateMany } from "@/lib/events";
 import { calculateCommission } from "@/lib/commission";
@@ -127,6 +128,20 @@ export class EscrowService {
 
     job.escrowStatus = "released";
     await jobDoc.save();
+
+    // ── update provider performance metrics ──────────────────────────────────
+    if (job.providerId) {
+      const providerId = job.providerId.toString();
+      const [completedCount, totalCount] = await Promise.all([
+        Job.countDocuments({ providerId, status: "completed" }),
+        Job.countDocuments({ providerId, status: { $in: ["completed", "cancelled", "refunded"] } }),
+      ]);
+      const completionRate = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 100;
+      await ProviderProfile.updateOne(
+        { userId: job.providerId.toString() },
+        { $set: { completedJobCount: completedCount, completionRate } }
+      );
+    }
 
     await transactionRepository.setPending(job._id!.toString(), "completed");
 

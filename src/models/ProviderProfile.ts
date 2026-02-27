@@ -54,6 +54,8 @@ const ProviderProfileSchema = new Schema<ProviderProfileDocument>(
     },
     avgRating: { type: Number, default: 0, min: 0, max: 5 },
     completedJobCount: { type: Number, default: 0, min: 0 },
+    completionRate: { type: Number, default: 0, min: 0, max: 100 },
+    avgResponseTimeHours: { type: Number, default: 0, min: 0 },
   },
   { timestamps: true }
 );

@@ -24,6 +24,9 @@ import {
   Heart,
   MessageSquare,
   Headphones,
+  CalendarDays,
+  TrendingUp,
+  ShieldCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/authStore";
@@ -57,12 +60,15 @@ const navItems: Record<UserRole, NavItem[]> = {
     { label: "Support",       href: "/provider/support",      icon: <Headphones        className="h-5 w-5" /> },
     { label: "Earnings",      href: "/provider/earnings",     icon: <CircleDollarSign  className="h-5 w-5" /> },
     { label: "Payouts",       href: "/provider/payouts",      icon: <Banknote          className="h-5 w-5" /> },
+    { label: "Calendar",      href: "/provider/calendar",     icon: <CalendarDays      className="h-5 w-5" /> },
     { label: "My Profile",    href: "/provider/profile",      icon: <User              className="h-5 w-5" /> },
     { label: "Notifications", href: "/provider/notifications",icon: <Bell              className="h-5 w-5" /> },
   ],
   admin: [
     { label: "Dashboard",      href: "/admin/dashboard",      icon: <BarChart3      className="h-5 w-5" /> },
     { label: "Validate Jobs",  href: "/admin/jobs",           icon: <CheckCircle    className="h-5 w-5" /> },
+    { label: "Revenue",        href: "/admin/revenue",        icon: <TrendingUp     className="h-5 w-5" /> },
+    { label: "KYC Review",     href: "/admin/kyc",            icon: <ShieldCheck    className="h-5 w-5" /> },
     { label: "Disputes",       href: "/admin/disputes",       icon: <AlertTriangle  className="h-5 w-5" /> },
     { label: "Support Inbox",  href: "/admin/support",        icon: <Headphones     className="h-5 w-5" /> },
     { label: "Payouts",        href: "/admin/payouts",        icon: <Banknote       className="h-5 w-5" /> },

@@ -7,6 +7,7 @@ import { CircleDollarSign, TrendingDown, Wallet, ArrowUpRight } from "lucide-rea
 import type { ITransaction, IJob } from "@/types";
 import { payoutService } from "@/services/payout.service";
 import RequestPayoutModal from "@/components/payment/RequestPayoutModal";
+import ExportEarningsButton from "@/components/payment/ExportEarningsButton";
 import Link from "next/link";
 
 export const metadata: Metadata = { title: "Earnings" };
@@ -47,6 +48,7 @@ export default async function EarningsPage() {
           >
             View payout history
           </Link>
+          <ExportEarningsButton />
           <RequestPayoutModal availableBalance={availableBalance} />
         </div>
       </div>

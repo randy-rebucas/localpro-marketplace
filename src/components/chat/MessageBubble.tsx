@@ -1,6 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
+import { CheckCheck, Check } from "lucide-react";
 
 interface MessageBubbleProps {
   body: string;
@@ -8,6 +9,7 @@ interface MessageBubbleProps {
   senderRole?: string;
   createdAt: string | Date;
   isMine: boolean;
+  readAt?: string | null;
 }
 
 export default function MessageBubble({
@@ -15,6 +17,7 @@ export default function MessageBubble({
   senderName,
   createdAt,
   isMine,
+  readAt,
 }: MessageBubbleProps) {
   const time = new Date(createdAt).toLocaleTimeString([], {
     hour: "2-digit",
@@ -36,7 +39,14 @@ export default function MessageBubble({
       >
         {body}
       </div>
-      <span className="text-[11px] text-slate-400 px-1">{time}</span>
+      <div className={cn("flex items-center gap-1 px-1", isMine ? "flex-row-reverse" : "flex-row")}>
+        <span className="text-[11px] text-slate-400">{time}</span>
+        {isMine && (
+          readAt
+            ? <CheckCheck className="h-3.5 w-3.5 text-primary" aria-label="Read" />
+            : <Check className="h-3.5 w-3.5 text-slate-400" aria-label="Sent" />
+        )}
+      </div>
     </div>
   );
 }

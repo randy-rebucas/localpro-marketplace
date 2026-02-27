@@ -5,9 +5,9 @@ import { requireUser } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { ValidationError } from "@/lib/errors";
 
-const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
-const MAX_BYTES = 8 * 1024 * 1024; // 8 MB
-const ALLOWED_FOLDERS: UploadFolder[] = ["jobs/before", "jobs/after", "avatars", "misc"];
+const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
+const MAX_BYTES = 10 * 1024 * 1024; // 10 MB
+const ALLOWED_FOLDERS: UploadFolder[] = ["jobs/before", "jobs/after", "avatars", "kyc", "misc"];
 
 export const POST = withHandler(async (req: NextRequest) => {
   await requireUser();

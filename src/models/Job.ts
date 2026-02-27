@@ -59,6 +59,11 @@ const JobSchema = new Schema<JobDocument>(
       enum: ["not_funded", "funded", "released", "refunded"],
       default: "not_funded",
     },
+    partialReleaseAmount: {
+      type: Number,
+      default: null,
+      min: 0,
+    },
     location: {
       type: String,
       required: [true, "Location is required"],

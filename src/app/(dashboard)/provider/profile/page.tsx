@@ -10,6 +10,7 @@ import Card, { CardBody, CardFooter, CardHeader } from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import { useAuthStore } from "@/stores/authStore";
 import SkillsInput from "@/components/shared/SkillsInput";
+import KycUpload from "@/components/shared/KycUpload";
 import { Star, Camera } from "lucide-react";
 import { Skeleton } from "@/components/ui/Spinner";
 
@@ -419,6 +420,9 @@ export default function ProviderProfilePage() {
           </Button>
         </CardFooter>
       </Card>
+
+      {/* KYC Verification */}
+      <KycUpload />
     </div>
   );
 }
