@@ -6,7 +6,7 @@ import {
   activityRepository,
   notificationRepository,
 } from "@/repositories";
-import { pushNotification } from "@/lib/events";
+import { pushNotification, pushStatusUpdate } from "@/lib/events";
 import { NotFoundError, UnprocessableError } from "@/lib/errors";
 import type { JobStatus, AdminStats } from "@/types";
 
@@ -76,6 +76,7 @@ export class AdminService {
       data: { jobId },
     });
     pushNotification(j.clientId.toString(), notification);
+    pushStatusUpdate(j.clientId.toString(), { entity: "job", id: jobId, status: "open" });
 
     return jobDoc;
   }
@@ -108,6 +109,7 @@ export class AdminService {
       data: { jobId },
     });
     pushNotification(j.clientId.toString(), notification);
+    pushStatusUpdate(j.clientId.toString(), { entity: "job", id: jobId, status: "rejected" });
 
     return jobDoc;
   }

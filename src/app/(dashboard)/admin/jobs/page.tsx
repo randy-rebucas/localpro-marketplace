@@ -3,6 +3,7 @@ import { connectDB } from "@/lib/db";
 import Job from "@/models/Job";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import AdminJobActions from "./AdminJobActions";
+import RealtimeRefresher from "@/components/shared/RealtimeRefresher";
 import type { IJob } from "@/types";
 
 export default async function AdminJobsPage() {
@@ -18,6 +19,7 @@ export default async function AdminJobsPage() {
 
   return (
     <div className="space-y-6">
+      <RealtimeRefresher entity="job" />
       <div>
         <h2 className="text-2xl font-bold text-slate-900">Job Validation</h2>
         <p className="text-slate-500 text-sm mt-0.5">

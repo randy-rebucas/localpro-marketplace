@@ -28,3 +28,28 @@ export function pushNotification(userId: string, payload: unknown): void {
 export function pushMessage(threadId: string, payload: unknown): void {
   messageBus.emit(`message:${threadId}`, payload);
 }
+
+/** Shape of a real-time status-update event multiplexed on the notification SSE stream. */
+export interface StatusUpdatePayload {
+  __event: "status_update";
+  entity: "job" | "quote" | "dispute" | "transaction";
+  id: string;
+  status?: string;
+  escrowStatus?: string;
+}
+
+/** Push a status-update event to a single user's SSE stream. */
+export function pushStatusUpdate(
+  userId: string,
+  payload: Omit<StatusUpdatePayload, "__event">
+): void {
+  notificationBus.emit(`notification:${userId}`, { ...payload, __event: "status_update" });
+}
+
+/** Push a status-update event to multiple users at once. */
+export function pushStatusUpdateMany(
+  userIds: string[],
+  payload: Omit<StatusUpdatePayload, "__event">
+): void {
+  for (const userId of userIds) pushStatusUpdate(userId, payload);
+}

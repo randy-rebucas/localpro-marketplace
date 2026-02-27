@@ -84,6 +84,15 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
         const payload = JSON.parse(event.data);
         // Skip the initial connection confirmation event
         if (payload?.type === "connected") return;
+
+        // Route silent status-update events to the status store
+        if (payload?.__event === "status_update") {
+          import("@/stores/statusStore").then(({ useStatusStore }) => {
+            useStatusStore.getState().dispatch(payload);
+          });
+          return;
+        }
+
         // Only ingest objects that look like INotification (have a title field)
         if (!payload?.title) return;
         get()._ingest(payload as INotification);

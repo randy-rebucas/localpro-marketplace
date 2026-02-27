@@ -5,6 +5,7 @@ import { JobStatusBadge, EscrowBadge } from "@/components/ui/Badge";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import Link from "next/link";
 import type { IJob } from "@/types";
+import RealtimeRefresher from "@/components/shared/RealtimeRefresher";
 
 async function getClientJobs(clientId: string) {
   await connectDB();
@@ -22,6 +23,7 @@ export default async function ClientJobsPage() {
 
   return (
     <div className="space-y-6">
+      <RealtimeRefresher entity="job" />
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-slate-900">My Jobs</h2>

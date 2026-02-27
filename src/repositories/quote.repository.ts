@@ -29,6 +29,12 @@ export class QuoteRepository extends BaseRepository<QuoteDocument> {
       { status: "rejected" }
     );
   }
+
+  /** Pending quotes older than cutoffDate (for auto-expiry). */
+  async findStale(cutoffDate: Date): Promise<QuoteDocument[]> {
+    await this.connect();
+    return Quote.find({ status: "pending", createdAt: { $lt: cutoffDate } }).lean() as unknown as QuoteDocument[];
+  }
 }
 
 export const quoteRepository = new QuoteRepository();

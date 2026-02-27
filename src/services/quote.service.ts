@@ -3,6 +3,7 @@ import {
   jobRepository,
   activityRepository,
 } from "@/repositories";
+import { pushStatusUpdate, pushStatusUpdateMany } from "@/lib/events";
 import {
   NotFoundError,
   ForbiddenError,
@@ -55,6 +56,8 @@ export class QuoteService {
       message: `A provider submitted a quote of ₱${input.proposedAmount.toLocaleString()} for "${j.title}".`,
       data: { jobId: input.jobId, quoteId: quote._id!.toString() },
     });
+    // Signal the client's job detail page to refresh (new quote appeared)
+    pushStatusUpdate(j.clientId.toString(), { entity: "job", id: input.jobId });
 
     return quote;
   }
@@ -115,6 +118,14 @@ export class QuoteService {
         data: { jobId: j._id.toString(), quoteId: q._id.toString() },
       });
     }
+    // Push status updates so both parties' pages refresh
+    pushStatusUpdateMany(
+      [j.clientId.toString(), q.providerId?.toString()].filter(Boolean) as string[],
+      { entity: "job", id: j._id.toString(), status: "assigned" }
+    );
+    if (q.providerId) {
+      pushStatusUpdate(q.providerId.toString(), { entity: "quote", id: q._id.toString(), status: "accepted" });
+    }
 
     return { quote, job };
   }
@@ -151,6 +162,7 @@ export class QuoteService {
         message: "The client chose a different provider for this job.",
         data: { jobId: q.jobId.toString(), quoteId },
       });
+      pushStatusUpdate(q.providerId.toString(), { entity: "quote", id: quoteId, status: "rejected" });
     }
 
     return quote;

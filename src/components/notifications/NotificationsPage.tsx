@@ -2,54 +2,13 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import {
-  Bell,
-  Loader2,
-  ChevronRight,
-  ClipboardList,
-  CheckCircle2,
-  XCircle,
-  FileText,
-  Sparkles,
-  ThumbsDown,
-  Wallet,
-  BadgeCheck,
-  Flag,
-  Banknote,
-  AlertTriangle,
-  Scale,
-  Star,
-  MessageSquare,
-  Ban,
-  type LucideIcon,
-} from "lucide-react";
+import { Bell, Loader2, ChevronRight } from "lucide-react";
 import { useNotificationStore } from "@/stores/notificationStore";
 import { useAuthStore } from "@/stores/authStore";
 import { getNotificationLink } from "@/lib/notificationLinks";
 import { formatDate, formatRelativeTime } from "@/lib/utils";
+import { NotifIcon } from "@/components/shared/notificationIcons";
 import type { INotification } from "@/types";
-
-// ─── Icon map ─────────────────────────────────────────────────────────────────
-
-type IconConfig = { icon: LucideIcon; bg: string; color: string };
-
-const TYPE_ICON: Record<string, IconConfig> = {
-  job_submitted:     { icon: ClipboardList,  bg: "bg-blue-100",    color: "text-blue-600"    },
-  job_approved:      { icon: CheckCircle2,   bg: "bg-emerald-100", color: "text-emerald-600" },
-  job_rejected:      { icon: XCircle,        bg: "bg-red-100",     color: "text-red-600"     },
-  quote_received:    { icon: FileText,        bg: "bg-violet-100",  color: "text-violet-600"  },
-  quote_accepted:    { icon: Sparkles,        bg: "bg-amber-100",   color: "text-amber-600"   },
-  quote_rejected:    { icon: ThumbsDown,      bg: "bg-slate-100",   color: "text-slate-500"   },
-  escrow_funded:     { icon: Wallet,          bg: "bg-emerald-100", color: "text-emerald-600" },
-  payment_confirmed: { icon: BadgeCheck,      bg: "bg-emerald-100", color: "text-emerald-600" },
-  job_completed:     { icon: Flag,            bg: "bg-blue-100",    color: "text-blue-600"    },
-  escrow_released:   { icon: Banknote,        bg: "bg-emerald-100", color: "text-emerald-600" },
-  dispute_opened:    { icon: AlertTriangle,   bg: "bg-amber-100",   color: "text-amber-600"   },
-  dispute_resolved:  { icon: Scale,           bg: "bg-blue-100",    color: "text-blue-600"    },
-  review_received:   { icon: Star,            bg: "bg-amber-100",   color: "text-amber-500"   },
-  new_message:       { icon: MessageSquare,   bg: "bg-sky-100",     color: "text-sky-600"     },
-  payment_failed:    { icon: Ban,             bg: "bg-red-100",     color: "text-red-600"     },
-};
 
 // ─── Date grouping ─────────────────────────────────────────────────────────────
 
@@ -176,15 +135,7 @@ export default function NotificationsPage() {
                   } ${link ? "cursor-pointer" : "cursor-default"}`}
                 >
                   {/* Icon */}
-                  {(() => {
-                    const cfg = TYPE_ICON[n.type] ?? { icon: Bell, bg: "bg-slate-100", color: "text-slate-500" };
-                    const Icon = cfg.icon;
-                    return (
-                      <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${cfg.bg}`}>
-                        <Icon className={`h-4 w-4 ${cfg.color}`} />
-                      </div>
-                    );
-                  })()}
+                  <NotifIcon type={n.type} size="md" />
 
                   {/* Content */}
                   <div className="flex-1 min-w-0">

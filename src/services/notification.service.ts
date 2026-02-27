@@ -17,6 +17,9 @@ const EMAIL_ALWAYS: Set<NotificationType> = new Set([
   "escrow_released",
   "dispute_opened",
   "dispute_resolved",
+  "job_expired",
+  "escrow_auto_released",
+  "quote_expired",
 ]);
 
 export interface PushNotificationInput {

@@ -5,6 +5,7 @@ import { JobStatusBadge, EscrowBadge } from "@/components/ui/Badge";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import ProviderJobActions from "./ProviderJobActions";
 import RaiseDisputeButton from "@/components/shared/RaiseDisputeButton";
+import RealtimeRefresher from "@/components/shared/RealtimeRefresher";
 import type { IJob } from "@/types";
 
 export default async function ProviderJobsPage() {
@@ -23,6 +24,7 @@ export default async function ProviderJobsPage() {
 
   return (
     <div className="space-y-6">
+      <RealtimeRefresher entity="job" />
       <div>
         <h2 className="text-2xl font-bold text-slate-900">Active Jobs</h2>
         <p className="text-slate-500 text-sm mt-0.5">{jobs.length} job{jobs.length !== 1 ? "s" : ""} assigned to you</p>

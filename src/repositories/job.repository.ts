@@ -67,6 +67,24 @@ export class JobRepository extends BaseRepository<JobDocument> {
     await this.connect();
     return Job.find({ escrowStatus: "funded" }).select("budget").lean();
   }
+
+  /** Open jobs older than cutoffDate (for auto-expiry). */
+  async findStaleOpen(cutoffDate: Date): Promise<JobDocument[]> {
+    await this.connect();
+    return Job.find({ status: "open", createdAt: { $lt: cutoffDate } }).lean() as unknown as JobDocument[];
+  }
+
+  /** Completed jobs whose escrow is still funded and were updated before cutoffDate (for auto-release). */
+  async findCompletedPendingRelease(cutoffDate: Date): Promise<JobDocument[]> {
+    await this.connect();
+    return Job.find({ status: "completed", escrowStatus: "funded", updatedAt: { $lt: cutoffDate } }).lean() as unknown as JobDocument[];
+  }
+
+  /** Assigned jobs with unfunded escrow updated before cutoffDate (for reminders). */
+  async findAssignedUnfunded(cutoffDate: Date): Promise<JobDocument[]> {
+    await this.connect();
+    return Job.find({ status: "assigned", escrowStatus: "not_funded", updatedAt: { $lt: cutoffDate } }).lean() as unknown as JobDocument[];
+  }
 }
 
 export const jobRepository = new JobRepository();

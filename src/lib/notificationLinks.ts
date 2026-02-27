@@ -77,6 +77,27 @@ export function getNotificationLink(
       // Messaging page not yet implemented
       return null;
 
+    case "job_expired":
+      if (role === "client" && jobId) return `/client/jobs/${jobId}`;
+      return null;
+
+    case "escrow_auto_released":
+      if (role === "provider") return "/provider/earnings";
+      if (role === "client") return "/client/escrow";
+      return null;
+
+    case "quote_expired":
+      if (role === "provider") return "/provider/marketplace";
+      return null;
+
+    case "reminder_fund_escrow":
+      if (role === "client") return "/client/escrow";
+      return null;
+
+    case "reminder_no_quotes":
+      if (role === "client" && jobId) return `/client/jobs/${jobId}`;
+      return null;
+
     default:
       return null;
   }

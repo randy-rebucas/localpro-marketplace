@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import toast from "react-hot-toast";
@@ -22,7 +22,6 @@ export default function Header({ title }: HeaderProps) {
   const router = useRouter();
   const { user, logout } = useAuthStore();
   const [menuOpen, setMenuOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
 
   // Close on Escape
   useEffect(() => {
@@ -70,7 +69,7 @@ export default function Header({ title }: HeaderProps) {
         <NotificationBell />
 
         {/* User menu */}
-        <div className="relative" ref={menuRef}>
+        <div className="relative">
           <button
             onClick={() => setMenuOpen((o) => !o)}
             aria-expanded={menuOpen}

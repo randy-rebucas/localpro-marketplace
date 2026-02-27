@@ -50,6 +50,7 @@ const JobSchema = new Schema<JobDocument>(
         "disputed",
         "rejected",
         "refunded",
+        "expired",
       ],
       default: "pending_validation",
     },

@@ -48,6 +48,7 @@ export function JobStatusBadge({ status }: { status: JobStatus }) {
     disputed: { variant: "danger", label: "Disputed" },
     rejected: { variant: "muted", label: "Rejected" },
     refunded: { variant: "muted", label: "Refunded" },
+    expired: { variant: "muted", label: "Expired" },
   };
   const { variant, label } = config[status] ?? { variant: "default", label: status };
   return <Badge variant={variant}>{label}</Badge>;

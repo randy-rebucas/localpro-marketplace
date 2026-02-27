@@ -4,6 +4,7 @@ import Dispute from "@/models/Dispute";
 import { DisputeStatusBadge } from "@/components/ui/Badge";
 import { formatDate, formatCurrency } from "@/lib/utils";
 import DisputeActions from "./DisputeActions";
+import RealtimeRefresher from "@/components/shared/RealtimeRefresher";
 import type { IDispute, IJob } from "@/types";
 
 export default async function AdminDisputesPage() {
@@ -25,6 +26,7 @@ export default async function AdminDisputesPage() {
 
   return (
     <div className="space-y-6">
+      <RealtimeRefresher entity="dispute" />
       <div>
         <h2 className="text-2xl font-bold text-slate-900">Dispute Panel</h2>
         <p className="text-slate-500 text-sm mt-0.5">{disputes.length} active dispute{disputes.length !== 1 ? "s" : ""}</p>

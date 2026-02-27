@@ -4,6 +4,7 @@ import {
   activityRepository,
 } from "@/repositories";
 import { canTransition, canTransitionEscrow } from "@/lib/jobLifecycle";
+import { pushStatusUpdateMany } from "@/lib/events";
 import { calculateCommission } from "@/lib/commission";
 import {
   NotFoundError,
@@ -46,6 +47,11 @@ export class EscrowService {
       jobId: job._id!.toString(),
     });
 
+    pushStatusUpdateMany(
+      [job.clientId.toString(), job.providerId?.toString()].filter(Boolean) as string[],
+      { entity: "job", id: job._id!.toString(), status: "in_progress" }
+    );
+
     return { job };
   }
 
@@ -83,6 +89,11 @@ export class EscrowService {
       message: "The provider has marked the job as done. Please review and release payment.",
       data: { jobId: job._id!.toString() },
     });
+
+    pushStatusUpdateMany(
+      [job.clientId.toString(), job.providerId?.toString()].filter(Boolean) as string[],
+      { entity: "job", id: job._id!.toString(), status: "completed" }
+    );
 
     return { job };
   }
@@ -126,6 +137,11 @@ export class EscrowService {
         data: { jobId: job._id!.toString() },
       });
     }
+
+    pushStatusUpdateMany(
+      [job.clientId.toString(), job.providerId?.toString()].filter(Boolean) as string[],
+      { entity: "job", id: job._id!.toString(), escrowStatus: "released" }
+    );
 
     return { job };
   }

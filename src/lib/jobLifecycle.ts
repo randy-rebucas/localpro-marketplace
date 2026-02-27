@@ -9,13 +9,14 @@ type StatusTransitionMap = Partial<Record<JobStatus, JobStatus[]>>;
 
 const VALID_TRANSITIONS: StatusTransitionMap = {
   pending_validation: ["open", "rejected"],
-  open: ["assigned", "rejected"],
+  open: ["assigned", "rejected", "expired"],
   assigned: ["in_progress", "completed", "disputed"],
   in_progress: ["completed", "disputed"],
   completed: [],
   disputed: ["completed", "refunded"],
   rejected: [],
   refunded: [],
+  expired: [],
 };
 
 /**

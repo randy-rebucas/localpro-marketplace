@@ -28,7 +28,8 @@ export type JobStatus =
   | "completed"
   | "disputed"
   | "rejected"
-  | "refunded";
+  | "refunded"
+  | "expired";
 
 export type EscrowStatus = "not_funded" | "funded" | "released" | "refunded";
 
@@ -124,7 +125,9 @@ export type ActivityEventType =
   | "escrow_released"
   | "dispute_opened"
   | "dispute_resolved"
-  | "review_submitted";
+  | "review_submitted"
+  | "job_expired"
+  | "quote_expired";
 
 export interface IActivityLog {
   _id: Types.ObjectId | string;
@@ -177,7 +180,12 @@ export type NotificationType =
   | "dispute_opened"
   | "dispute_resolved"
   | "review_received"
-  | "new_message";
+  | "new_message"
+  | "job_expired"
+  | "escrow_auto_released"
+  | "quote_expired"
+  | "reminder_fund_escrow"
+  | "reminder_no_quotes";
 
 export interface INotification {
   _id: Types.ObjectId | string;

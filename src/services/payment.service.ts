@@ -81,6 +81,12 @@ export class PaymentService {
         });
       }
 
+      const { pushStatusUpdateMany } = await import("@/lib/events");
+      pushStatusUpdateMany(
+        [user.userId, job.providerId?.toString()].filter(Boolean) as string[],
+        { entity: "job", id: job._id!.toString(), escrowStatus: "funded" }
+      );
+
       return { simulated: true, message: "Escrow funded (simulation mode)" };
     }
 
@@ -224,6 +230,12 @@ export class PaymentService {
       message: `Your payment of ₱${p.amount.toLocaleString()} has been confirmed.`,
       data: { jobId: p.jobId.toString() },
     });
+
+    const { pushStatusUpdateMany } = await import("@/lib/events");
+    pushStatusUpdateMany(
+      [p.clientId.toString(), p.providerId?.toString()].filter(Boolean) as string[],
+      { entity: "job", id: p.jobId.toString(), escrowStatus: "funded" }
+    );
   }
 
   /**

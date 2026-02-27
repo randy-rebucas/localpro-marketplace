@@ -5,7 +5,7 @@ import {
   activityRepository,
   notificationRepository,
 } from "@/repositories";
-import { pushNotification } from "@/lib/events";
+import { pushNotification, pushStatusUpdateMany } from "@/lib/events";
 import { NotFoundError, ForbiddenError, UnprocessableError } from "@/lib/errors";
 import type { TokenPayload } from "@/lib/auth";
 import type { IJob } from "@/types";
@@ -72,6 +72,11 @@ export class DisputeService {
       });
       pushNotification(otherPartyId, notification);
     }
+
+    pushStatusUpdateMany(
+      [job.clientId.toString(), job.providerId?.toString()].filter(Boolean) as string[],
+      { entity: "job", id: input.jobId, status: "disputed" }
+    );
 
     return dispute;
   }
@@ -153,6 +158,25 @@ export class DisputeService {
       eventType: "dispute_resolved",
       jobId: d.jobId.toString(),
     });
+
+    // Push realtime updates to both parties
+    if (jobDoc && input.status === "resolved") {
+      const job2 = jobDoc as unknown as {
+        clientId: { toString(): string };
+        providerId?: { toString(): string } | null;
+        status: string;
+        escrowStatus: string;
+        _id: { toString(): string };
+      };
+      const affected = [job2.clientId.toString(), job2.providerId?.toString()].filter(Boolean) as string[];
+      pushStatusUpdateMany(affected, {
+        entity: "job",
+        id: job2._id.toString(),
+        status: job2.status,
+        escrowStatus: job2.escrowStatus,
+      });
+      pushStatusUpdateMany(affected, { entity: "dispute", id: disputeId });
+    }
 
     return disputeDoc;
   }

@@ -7,6 +7,7 @@ import { formatCurrency, formatDate } from "@/lib/utils";
 import JobActionButtons from "./JobActionButtons";
 import QuoteAcceptButton from "./QuoteAcceptButton";
 import RaiseDisputeButton from "@/components/shared/RaiseDisputeButton";
+import RealtimeRefresher from "@/components/shared/RealtimeRefresher";
 import { notFound } from "next/navigation";
 import { AlertCircle } from "lucide-react";
 import type { IJob, IQuote } from "@/types";
@@ -49,6 +50,7 @@ export default async function JobDetailPage({
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
+      <RealtimeRefresher entity="job" id={id} />
       {/* Payment status banners */}
       {paymentCancelled && (
         <div className="rounded-xl border border-amber-200 bg-amber-50 px-5 py-4 flex items-center gap-3">
