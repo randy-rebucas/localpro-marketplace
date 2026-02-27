@@ -14,12 +14,12 @@ const securityHeaders = [
     key: "Content-Security-Policy",
     value: [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://maps.googleapis.com https://js.paymongo.com",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://maps.googleapis.com https://js.paymongo.com https://www.googletagmanager.com",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' https://fonts.gstatic.com",
-      "img-src 'self' data: blob: https://res.cloudinary.com https://maps.googleapis.com https://maps.gstatic.com https://avatars.githubusercontent.com https://lh3.googleusercontent.com",
-      "connect-src 'self' https://api.paymongo.com https://maps.googleapis.com",
-      "frame-src https://js.paymongo.com https://checkout.paymongo.com",
+      "img-src 'self' data: blob: https://res.cloudinary.com https://maps.googleapis.com https://maps.gstatic.com https://avatars.githubusercontent.com https://lh3.googleusercontent.com https://www.google-analytics.com",
+      "connect-src 'self' https://api.paymongo.com https://maps.googleapis.com https://www.google-analytics.com https://analytics.google.com https://stats.g.doubleclick.net",
+      "frame-src https://js.paymongo.com https://checkout.paymongo.com https://www.googletagmanager.com",
     ].join("; "),
   },
 ];

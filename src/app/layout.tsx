@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { Toaster } from "react-hot-toast";
 import Script from "next/script";
+import { GoogleTagManagerScript, GoogleTagManagerNoscript } from "@/components/analytics/GoogleTagManager";
 import "./globals.css";
 
 const inter = Inter({
@@ -79,6 +80,12 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} h-full`}>
       <body className="font-sans h-full">
+        {process.env.NEXT_PUBLIC_GTM_ID && (
+          <GoogleTagManagerNoscript gtmId={process.env.NEXT_PUBLIC_GTM_ID} />
+        )}
+        {process.env.NEXT_PUBLIC_GTM_ID && (
+          <GoogleTagManagerScript gtmId={process.env.NEXT_PUBLIC_GTM_ID} />
+        )}
         {process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY && (
           // &loading=async
           <Script
