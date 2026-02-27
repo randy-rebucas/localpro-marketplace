@@ -1,8 +1,10 @@
-import { jobRepository, quoteRepository, transactionRepository, activityRepository } from "@/repositories";
+import { jobRepository, quoteRepository, transactionRepository, activityRepository, reviewRepository, disputeRepository } from "@/repositories";
+import { payoutRepository } from "@/repositories/payout.repository";
 import { notificationService } from "@/services/notification.service";
 import { pushStatusUpdate, pushStatusUpdateMany } from "@/lib/events";
 import type { JobDocument } from "@/models/Job";
 import type { QuoteDocument } from "@/models/Quote";
+import type { DisputeDocument } from "@/models/Dispute";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -155,8 +157,19 @@ export class CronService {
    * Sends in-app reminders for actionable stale states:
    *  - Clients who haven't funded escrow > 24 hours after quote acceptance
    *  - Clients whose job has been open > 3 days with no quotes yet
+   *  - Providers who haven't started a funded job > 48 hours after assignment
+   *  - Providers whose job has been in_progress > 7 days without completion
+   *  - Clients who haven't left a review > 24 hours after escrow release
+   *  - Admins when a dispute has been open/investigating > 5 days
    */
-  async sendReminders(): Promise<{ escrowReminders: number; noQuoteReminders: number }> {
+  async sendReminders(): Promise<{
+    escrowReminders: number;
+    noQuoteReminders: number;
+    startJobReminders: number;
+    completeJobReminders: number;
+    reviewReminders: number;
+    disputeEscalations: number;
+  }> {
     // ── Escrow funding reminders (assigned but unfunded > 24h) ──────────────
     const unfundedCutoff = hoursAgo(24);
     const unfundedJobs = await jobRepository.findAssignedUnfunded(unfundedCutoff);
@@ -181,7 +194,6 @@ export class CronService {
     const noQuoteCutoff = daysAgo(3);
     const staleOpenJobs = await jobRepository.findStaleOpen(noQuoteCutoff);
 
-    // Filter to only jobs that truly have no quotes yet
     let noQuoteCount = 0;
     for (const job of staleOpenJobs) {
       const j = job as unknown as JobDocument & {
@@ -191,7 +203,7 @@ export class CronService {
       };
 
       const quotes = await quoteRepository.findForJob(j._id.toString());
-      if (quotes.length > 0) continue; // already has quotes — skip
+      if (quotes.length > 0) continue;
 
       await notificationService.push({
         userId: j.clientId.toString(),
@@ -204,10 +216,145 @@ export class CronService {
       noQuoteCount++;
     }
 
+    // ── Start-job reminders (assigned + funded > 48h, not started) ──────────
+    const startJobCutoff = hoursAgo(48);
+    const fundedNotStarted = await jobRepository.findAssignedFundedNotStarted(startJobCutoff);
+
+    for (const job of fundedNotStarted) {
+      const j = job as unknown as JobDocument & {
+        _id: { toString(): string };
+        providerId: { toString(): string } | null;
+        title: string;
+      };
+      if (!j.providerId) continue;
+
+      await notificationService.push({
+        userId: j.providerId.toString(),
+        type: "reminder_start_job",
+        title: "Reminder: start your job",
+        message: `The client has funded escrow for "${j.title}". Please begin work and mark the job as started.`,
+        data: { jobId: j._id.toString() },
+      });
+    }
+
+    // ── Complete-job reminders (in_progress > 7 days) ───────────────────────
+    const completeJobCutoff = daysAgo(7);
+    const staleInProgress = await jobRepository.findStaleInProgress(completeJobCutoff);
+
+    for (const job of staleInProgress) {
+      const j = job as unknown as JobDocument & {
+        _id: { toString(): string };
+        providerId: { toString(): string } | null;
+        title: string;
+      };
+      if (!j.providerId) continue;
+
+      await notificationService.push({
+        userId: j.providerId.toString(),
+        type: "reminder_complete_job",
+        title: "Reminder: mark your job as complete",
+        message: `"${j.title}" has been in progress for over 7 days. Please mark it as complete once finished.`,
+        data: { jobId: j._id.toString() },
+      });
+    }
+
+    // ── Review reminders (escrow released > 24h, no review yet) ───────────
+    const reviewCutoff = hoursAgo(24);
+    const releasedJobs = await jobRepository.findReleasedUnreviewed(reviewCutoff);
+
+    let reviewCount = 0;
+    for (const job of releasedJobs) {
+      const j = job as unknown as JobDocument & {
+        _id: { toString(): string };
+        clientId: { toString(): string };
+        title: string;
+      };
+
+      const reviewed = await reviewRepository.existsForJob(j._id.toString());
+      if (reviewed) continue;
+
+      await notificationService.push({
+        userId: j.clientId.toString(),
+        type: "reminder_leave_review",
+        title: "How did it go? Leave a review",
+        message: `Your job "${j.title}" is complete. Take a moment to rate your provider — it helps the community.`,
+        data: { jobId: j._id.toString() },
+      });
+
+      reviewCount++;
+    }
+
+    // ── Stale-dispute escalations (open/investigating > 5 days) ────────────
+    const disputeCutoff = daysAgo(5);
+    const staleDisputes = await disputeRepository.findStale(disputeCutoff);
+
+    for (const dispute of staleDisputes) {
+      const d = dispute as unknown as DisputeDocument & {
+        _id: { toString(): string };
+        jobId: { toString(): string; title?: string } | { _id: { toString(): string }; title: string };
+        status: string;
+      };
+      const disputeId = d._id.toString();
+      const jobTitle =
+        typeof d.jobId === "object" && "title" in d.jobId
+          ? (d.jobId as { title: string }).title
+          : "a job";
+
+      await notificationService.notifyAdmins(
+        "reminder_stale_dispute",
+        "Dispute needs attention",
+        `A dispute on "${jobTitle}" has been ${d.status} for over 5 days with no resolution.`,
+        { disputeId }
+      );
+    }
+
     return {
       escrowReminders: unfundedJobs.length,
       noQuoteReminders: noQuoteCount,
+      startJobReminders: fundedNotStarted.length,
+      completeJobReminders: staleInProgress.length,
+      reviewReminders: reviewCount,
+      disputeEscalations: staleDisputes.length,
     };
+  }
+
+  /**
+   * Auto-rejects payout requests that have been pending for more than `days` days.
+   * Notifies the provider so they can resubmit. Default threshold: 7 days.
+   */
+  async expireStalePendingPayouts(days = 7): Promise<{ expired: number }> {
+    const cutoff = daysAgo(days);
+    const stalePayout = await payoutRepository.findStalePending(cutoff);
+    if (stalePayout.length === 0) return { expired: 0 };
+
+    for (const payout of stalePayout) {
+      const p = payout as unknown as {
+        _id: { toString(): string };
+        providerId: { toString(): string };
+        amount: number;
+      };
+
+      await payoutRepository.updateById(p._id.toString(), {
+        status: "rejected",
+        notes: `Automatically rejected after ${days} days with no admin action.`,
+      });
+
+      await activityRepository.log({
+        userId: "system",
+        eventType: "payout_updated",
+        metadata: { payoutId: p._id.toString(), status: "rejected", autoExpired: true },
+      });
+
+      await notificationService.push({
+        userId: p.providerId.toString(),
+        type: "payout_status_update",
+        title: "Payout request expired",
+        message: `Your payout request of ₱${p.amount.toLocaleString()} was automatically closed after ${days} days. Please resubmit if you still wish to withdraw.`,
+        data: { payoutId: p._id.toString() },
+      });
+    }
+
+    return { expired: stalePayout.length };
   }
 }
 

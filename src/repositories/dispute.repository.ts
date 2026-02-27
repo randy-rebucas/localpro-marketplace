@@ -30,6 +30,17 @@ export class DisputeRepository extends BaseRepository<DisputeDocument> {
   async countOpen(): Promise<number> {
     return this.count({ status: { $in: ["open", "investigating"] } } as never);
   }
+
+  /** Disputes still open/investigating with no status change since before cutoffDate. */
+  async findStale(cutoffDate: Date): Promise<DisputeDocument[]> {
+    await this.connect();
+    return Dispute.find({
+      status: { $in: ["open", "investigating"] },
+      updatedAt: { $lt: cutoffDate },
+    })
+      .populate("jobId", "title")
+      .lean() as unknown as DisputeDocument[];
+  }
 }
 
 export const disputeRepository = new DisputeRepository();

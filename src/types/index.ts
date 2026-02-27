@@ -196,6 +196,10 @@ export type NotificationType =
   | "quote_expired"
   | "reminder_fund_escrow"
   | "reminder_no_quotes"
+  | "reminder_start_job"
+  | "reminder_complete_job"
+  | "reminder_leave_review"
+  | "reminder_stale_dispute"
   | "payout_requested"
   | "payout_status_update"
   | "job_direct_invite";

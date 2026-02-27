@@ -18,6 +18,13 @@ import {
   Clock,
   Coins,
   BellRing,
+  Landmark,
+  CircleDollarSign,
+  UserCheck,
+  PlayCircle,
+  Timer,
+  PenLine,
+  ShieldAlert,
   type LucideIcon,
 } from "lucide-react";
 
@@ -42,8 +49,15 @@ export const TYPE_ICON: Record<string, IconConfig> = {
   job_expired:            { icon: Clock,    bg: "bg-slate-100",  color: "text-slate-500"  },
   escrow_auto_released:   { icon: Coins,    bg: "bg-emerald-100",color: "text-emerald-600"},
   quote_expired:          { icon: Clock,    bg: "bg-slate-100",  color: "text-slate-500"  },
-  reminder_fund_escrow:   { icon: BellRing, bg: "bg-amber-100",  color: "text-amber-600"  },
-  reminder_no_quotes:     { icon: BellRing, bg: "bg-amber-100",  color: "text-amber-600"  },
+  reminder_fund_escrow:   { icon: BellRing,          bg: "bg-amber-100",   color: "text-amber-600"   },
+  reminder_no_quotes:     { icon: BellRing,          bg: "bg-amber-100",   color: "text-amber-600"   },
+  payout_requested:       { icon: Landmark,           bg: "bg-violet-100",  color: "text-violet-600"  },
+  payout_status_update:   { icon: CircleDollarSign,   bg: "bg-emerald-100", color: "text-emerald-600" },
+  job_direct_invite:      { icon: UserCheck,          bg: "bg-indigo-100",  color: "text-indigo-600"  },
+  reminder_start_job:     { icon: PlayCircle,         bg: "bg-orange-100",  color: "text-orange-600"  },
+  reminder_complete_job:  { icon: Timer,              bg: "bg-orange-100",  color: "text-orange-600"  },
+  reminder_leave_review:  { icon: PenLine,            bg: "bg-amber-100",   color: "text-amber-600"   },
+  reminder_stale_dispute: { icon: ShieldAlert,        bg: "bg-red-100",     color: "text-red-600"     },
 };
 
 const FALLBACK: IconConfig = { icon: Bell, bg: "bg-slate-100", color: "text-slate-500" };

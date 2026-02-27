@@ -98,6 +98,35 @@ export function getNotificationLink(
       if (role === "client" && jobId) return `/client/jobs/${jobId}`;
       return null;
 
+    case "payout_requested":
+      if (role === "provider") return "/provider/payouts";
+      if (role === "admin") return "/admin/payouts";
+      return null;
+
+    case "payout_status_update":
+      if (role === "provider") return "/provider/payouts";
+      return null;
+
+    case "job_direct_invite":
+      if (role === "provider") return "/provider/jobs";
+      return null;
+
+    case "reminder_start_job":
+      if (role === "provider") return "/provider/jobs";
+      return null;
+
+    case "reminder_complete_job":
+      if (role === "provider") return "/provider/jobs";
+      return null;
+
+    case "reminder_leave_review":
+      if (role === "client" && jobId) return `/client/jobs/${jobId}`;
+      return null;
+
+    case "reminder_stale_dispute":
+      if (role === "admin") return "/admin/disputes";
+      return null;
+
     default:
       return null;
   }

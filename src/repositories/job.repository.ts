@@ -85,6 +85,24 @@ export class JobRepository extends BaseRepository<JobDocument> {
     await this.connect();
     return Job.find({ status: "assigned", escrowStatus: "not_funded", updatedAt: { $lt: cutoffDate } }).lean() as unknown as JobDocument[];
   }
+
+  /** Assigned + funded jobs that haven't moved to in_progress before cutoffDate. */
+  async findAssignedFundedNotStarted(cutoffDate: Date): Promise<JobDocument[]> {
+    await this.connect();
+    return Job.find({ status: "assigned", escrowStatus: "funded", updatedAt: { $lt: cutoffDate } }).lean() as unknown as JobDocument[];
+  }
+
+  /** Jobs stuck in_progress since before cutoffDate (provider hasn't completed). */
+  async findStaleInProgress(cutoffDate: Date): Promise<JobDocument[]> {
+    await this.connect();
+    return Job.find({ status: "in_progress", updatedAt: { $lt: cutoffDate } }).lean() as unknown as JobDocument[];
+  }
+
+  /** Completed jobs with released escrow whose escrow was released before cutoffDate (for review reminders). */
+  async findReleasedUnreviewed(cutoffDate: Date): Promise<JobDocument[]> {
+    await this.connect();
+    return Job.find({ status: "completed", escrowStatus: "released", updatedAt: { $lt: cutoffDate } }).lean() as unknown as JobDocument[];
+  }
 }
 
 export const jobRepository = new JobRepository();

@@ -36,6 +36,13 @@ export class PayoutRepository extends BaseRepository<PayoutDocument> {
     ]);
     return result[0]?.total ?? 0;
   }
+
+  /** Payout requests that have been in "pending" status since before `cutoff` */
+  async findStalePending(cutoff: Date): Promise<PayoutDocument[]> {
+    await this.connect();
+    return Payout.find({ status: "pending", createdAt: { $lt: cutoff } })
+      .lean() as unknown as PayoutDocument[];
+  }
 }
 
 export const payoutRepository = new PayoutRepository();

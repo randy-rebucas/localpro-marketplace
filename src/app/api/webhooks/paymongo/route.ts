@@ -11,6 +11,8 @@ import { paymentService } from "@/services";
  * Events handled:
  *   checkout_session.payment.paid  → fund escrow, notify parties
  *   payment_intent.succeeded       → (legacy) fund escrow, notify parties
+ *   payment.failed                 → mark payment failed, notify client
+ *   checkout_session.payment.expired → mark payment failed, notify client
  */
 export async function POST(req: NextRequest) {
   const rawBody = await req.text();
@@ -76,6 +78,19 @@ export async function POST(req: NextRequest) {
         successfulPayment?.id ?? "",
         successfulPayment?.attributes.source?.type ?? "unknown"
       );
+    }
+
+    // ── Payment failed ───────────────────────────────────────────────────────
+    if (eventType === "payment.failed") {
+      const intentId: string =
+        (resourceData.attributes as Record<string, unknown>).payment_intent_id as string ?? resourceData.id;
+      await paymentService.handlePaymentFailed(intentId);
+    }
+
+    // ── Checkout session expired without payment ─────────────────────────────
+    if (eventType === "checkout_session.payment.expired") {
+      const intentId = resourceData.attributes.payment_intent?.id ?? resourceData.id;
+      await paymentService.handlePaymentFailed(intentId);
     }
   } catch (err) {
     console.error("[PAYMONGO WEBHOOK]", err);

@@ -264,6 +264,31 @@ export class PaymentService {
 
     await paymentRepository.markRefunded(p.paymentIntentId, refund.id);
   }
+
+  /**
+   * Called from the PayMongo webhook when a payment attempt fails.
+   * Marks the Payment record as failed and notifies the client.
+   */
+  async handlePaymentFailed(paymentIntentId: string) {
+    const payment = await paymentRepository.findByPaymentIntentId(paymentIntentId);
+    if (!payment) return;
+
+    await paymentRepository.updateById(payment._id!.toString(), { status: "failed" });
+
+    const p = payment as unknown as {
+      clientId: { toString(): string };
+      jobId: { toString(): string };
+    };
+
+    const { notificationService } = await import("@/services/notification.service");
+    await notificationService.push({
+      userId: p.clientId.toString(),
+      type: "payment_failed",
+      title: "Payment failed",
+      message: "Your payment attempt failed. Please try funding escrow again.",
+      data: { jobId: p.jobId.toString(), paymentIntentId },
+    });
+  }
 }
 
 export const paymentService = new PaymentService();
