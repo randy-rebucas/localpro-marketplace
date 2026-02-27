@@ -8,6 +8,7 @@ import { formatCurrency, formatDate } from "@/lib/utils";
 import JobActionButtons from "./JobActionButtons";
 import QuoteAcceptButton from "./QuoteAcceptButton";
 import RaiseDisputeButton from "@/components/shared/RaiseDisputeButton";
+import PartialReleaseButton from "@/components/payment/PartialReleaseButton";
 import RealtimeRefresher from "@/components/shared/RealtimeRefresher";
 import ProviderInfoButton from "@/components/shared/ProviderInfoButton";
 import { notFound } from "next/navigation";
@@ -115,6 +116,9 @@ export default async function JobDetailPage({
       {/* Action buttons (client-side component for interactivity) */}
       <div className="flex flex-wrap items-center gap-4">
         <JobActionButtons jobId={j._id.toString()} status={j.status} escrowStatus={j.escrowStatus} budget={j.budget} />
+        {j.status === "completed" && j.escrowStatus === "funded" && (
+          <PartialReleaseButton jobId={j._id.toString()} budget={j.budget} />
+        )}
         <RaiseDisputeButton jobId={j._id.toString()} status={j.status} />
       </div>
 

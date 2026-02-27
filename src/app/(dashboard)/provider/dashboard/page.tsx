@@ -5,12 +5,13 @@ import Job from "@/models/Job";
 import Transaction from "@/models/Transaction";
 import Review from "@/models/Review";
 import User from "@/models/User";
+import ProviderProfile from "@/models/ProviderProfile";
 // ↑ User is used inside getProviderStats — connectDB() is called only once there
 import KpiCard from "@/components/ui/KpiCard";
 import { JobStatusBadge } from "@/components/ui/Badge";
 import { formatCurrency, formatRelativeTime } from "@/lib/utils";
 import Link from "next/link";
-import { CircleDollarSign, Briefcase, Star, Store } from "lucide-react";
+import { CircleDollarSign, Briefcase, Star, Store, TrendingUp } from "lucide-react";
 import type { IJob } from "@/types";
 
 export const metadata: Metadata = { title: "Dashboard" };
@@ -19,7 +20,7 @@ export const metadata: Metadata = { title: "Dashboard" };
 async function getProviderStats(providerId: string) {
   await connectDB();
 
-  const [activeJobs, transactions, reviews, recentJobs, userDoc] = await Promise.all([
+  const [activeJobs, transactions, reviews, recentJobs, userDoc, profileDoc] = await Promise.all([
     Job.countDocuments({
       providerId,
       status: { $in: ["assigned", "in_progress"] },
@@ -31,6 +32,7 @@ async function getProviderStats(providerId: string) {
       .limit(5)
       .lean(),
     User.findById(providerId).select("name").lean() as Promise<{ name?: string } | null>,
+    ProviderProfile.findOne({ userId: providerId }).select("completionRate completedJobCount").lean() as Promise<{ completionRate?: number; completedJobCount?: number } | null>,
   ]);
 
   const totalEarnings = transactions.reduce((sum, t) => sum + t.netAmount, 0);
@@ -39,15 +41,17 @@ async function getProviderStats(providerId: string) {
       ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
       : 0;
   const firstName = userDoc?.name?.split(" ")[0] ?? "there";
+  const completionRate = profileDoc?.completionRate ?? 100;
+  const completedJobCount = profileDoc?.completedJobCount ?? 0;
 
-  return { activeJobs, totalEarnings, avgRating, reviewCount: reviews.length, recentJobs, firstName };
+  return { activeJobs, totalEarnings, avgRating, reviewCount: reviews.length, recentJobs, firstName, completionRate, completedJobCount };
 }
 
 export default async function ProviderDashboardPage() {
   const user = await getCurrentUser();
   if (!user) return null;
 
-  const { activeJobs, totalEarnings, avgRating, reviewCount, recentJobs, firstName } =
+  const { activeJobs, totalEarnings, avgRating, reviewCount, recentJobs, firstName, completionRate, completedJobCount } =
     await getProviderStats(user.userId);
 
   return (
@@ -62,7 +66,7 @@ export default async function ProviderDashboardPage() {
         </Link>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <KpiCard
           title="Total Earnings"
           value={formatCurrency(totalEarnings)}
@@ -80,6 +84,12 @@ export default async function ProviderDashboardPage() {
           value={avgRating > 0 ? `${avgRating.toFixed(1)} ★` : "—"}
           subtitle={`${reviewCount} review${reviewCount !== 1 ? "s" : ""}`}
           icon={<Star className="h-6 w-6" />}
+        />
+        <KpiCard
+          title="Completion Rate"
+          value={completedJobCount > 0 ? `${completionRate}%` : "—"}
+          subtitle={`${completedJobCount} job${completedJobCount !== 1 ? "s" : ""} completed`}
+          icon={<TrendingUp className="h-6 w-6" />}
         />
       </div>
 

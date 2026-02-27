@@ -6,6 +6,7 @@ import Quote from "@/models/Quote";
 import { JobStatusBadge, EscrowBadge } from "@/components/ui/Badge";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import AdminJobActions from "../AdminJobActions";
+import AdminEscrowOverride from "@/components/shared/AdminEscrowOverride";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
@@ -63,13 +64,14 @@ export default async function AdminJobDetailPage({
         </p>
       </div>
 
-      {/* Status & risk */}
+      {/* Status, risk & escrow override */}
       <div className="flex flex-wrap gap-3 items-center">
         <JobStatusBadge status={j.status} />
         <EscrowBadge status={j.escrowStatus} />
         <span className={`badge ${j.riskScore > 60 ? "bg-red-100 text-red-700" : j.riskScore > 30 ? "bg-amber-100 text-amber-700" : "bg-green-100 text-green-700"}`}>
           Risk Score: {j.riskScore}
         </span>
+        <AdminEscrowOverride jobId={j._id.toString()} escrowStatus={j.escrowStatus} />
       </div>
 
       {/* Client info */}

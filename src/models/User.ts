@@ -4,10 +4,13 @@ import type { IUser } from "@/types";
 
 export interface UserDocument extends Omit<IUser, "_id">, Document {
   comparePassword(candidate: string): Promise<boolean>;
+  password?: string;
   verificationToken?: string;
   verificationTokenExpiry?: Date;
   resetPasswordToken?: string;
   resetPasswordTokenExpiry?: Date;
+  otpCode?: string;
+  otpExpiry?: Date;
 }
 
 const UserSchema = new Schema<UserDocument>(
@@ -29,7 +32,7 @@ const UserSchema = new Schema<UserDocument>(
     },
     password: {
       type: String,
-      required: [true, "Password is required"],
+      required: false,
       minlength: [8, "Password must be at least 8 characters"],
       select: false,
     },
@@ -52,6 +55,25 @@ const UserSchema = new Schema<UserDocument>(
       default: "approved",
     },
     avatar: { type: String, default: null },
+    kycStatus: {
+      type: String,
+      enum: ["none", "pending", "approved", "rejected"],
+      default: "none",
+    },
+    kycDocuments: [
+      {
+        type:       { type: String, required: true },
+        url:        { type: String, required: true },
+        uploadedAt: { type: Date, default: Date.now },
+        _id: false,
+      },
+    ],
+    kycRejectionReason: { type: String, default: null },
+    facebookId: { type: String, default: null, index: true, sparse: true },
+    oauthProvider: { type: String, enum: ["facebook", null], default: null },
+    phone: { type: String, default: null, sparse: true },
+    otpCode: { type: String, select: false, default: null },
+    otpExpiry: { type: Date, select: false, default: null },
     verificationToken: { type: String, select: false },
     verificationTokenExpiry: { type: Date, select: false },
     resetPasswordToken: { type: String, select: false },
@@ -70,9 +92,10 @@ const UserSchema = new Schema<UserDocument>(
 
 // Hash password before save
 UserSchema.pre("save", async function (next) {
-  if (!this.isModified("password")) return next();
+  const doc = this as unknown as UserDocument;
+  if (!doc.isModified("password") || !doc.password) return next();
   const salt = await bcrypt.genSalt(12);
-  this.password = await bcrypt.hash(this.password, salt);
+  doc.password = await bcrypt.hash(doc.password, salt);
   next();
 });
 
@@ -80,7 +103,8 @@ UserSchema.pre("save", async function (next) {
 UserSchema.methods.comparePassword = async function (
   candidate: string
 ): Promise<boolean> {
-  return bcrypt.compare(candidate, this.password);
+  const doc = this as unknown as UserDocument;
+  return bcrypt.compare(candidate, doc.password ?? "");
 };
 
 // Indexes

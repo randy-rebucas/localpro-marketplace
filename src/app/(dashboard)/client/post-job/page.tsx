@@ -6,7 +6,7 @@ import toast from "react-hot-toast";
 import Button from "@/components/ui/Button";
 import Card, { CardHeader, CardBody, CardFooter } from "@/components/ui/Card";
 import LocationAutocomplete from "@/components/shared/LocationAutocomplete";
-import { Sparkles } from "lucide-react";
+import { Sparkles, LocateFixed } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import type { ICategory } from "@/types";
 
@@ -36,6 +36,7 @@ export default function PostJobPage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [categories, setCategories] = useState<string[]>([]);
+  const [isGeolocating, setIsGeolocating] = useState(false);
 
   useEffect(() => {
     fetch("/api/categories", { credentials: "include" })
@@ -43,6 +44,40 @@ export default function PostJobPage() {
       .then((data: ICategory[]) => setCategories(data.map((c) => c.name)))
       .catch(() => { /* silently fall back to empty list */ });
   }, []);
+
+  async function detectLocation() {
+    if (!("geolocation" in navigator)) {
+      toast.error("Geolocation is not supported by your browser");
+      return;
+    }
+    setIsGeolocating(true);
+    try {
+      const position = await new Promise<GeolocationPosition>((resolve, reject) =>
+        navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 10000, maximumAge: 60000 })
+      );
+      const { latitude: lat, longitude: lng } = position.coords;
+      setCoords({ lat, lng });
+      // Reverse geocode using Google Maps if available, else fall back to coords string
+      if (typeof window !== "undefined" && window.google?.maps) {
+        const geocoder = new window.google.maps.Geocoder();
+        const result = await geocoder.geocode({ location: { lat, lng } });
+        if (result.results[0]) {
+          update("location", result.results[0].formatted_address);
+        } else {
+          update("location", `${lat.toFixed(5)}, ${lng.toFixed(5)}`);
+        }
+      } else {
+        update("location", `${lat.toFixed(5)}, ${lng.toFixed(5)}`);
+      }
+      toast.success("Location detected!");
+    } catch (e: unknown) {
+      const err = e as { code?: number };
+      if (err.code === 1) toast.error("Location access denied. Enable it in your browser settings.");
+      else toast.error("Could not detect your location. Try typing it manually.");
+    } finally {
+      setIsGeolocating(false);
+    }
+  }
 
   async function generateDescription() {
     if (!form.title || form.title.trim().length < 3) {
@@ -214,7 +249,18 @@ export default function PostJobPage() {
                 {errors.budget && <p className="mt-1 text-xs text-red-500">{errors.budget}</p>}
               </div>
               <div>
-                <label className="label block mb-1">Location</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="label">Location</label>
+                  <button
+                    type="button"
+                    onClick={detectLocation}
+                    disabled={isGeolocating}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700 hover:bg-blue-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <LocateFixed className={`h-3.5 w-3.5 ${isGeolocating ? "animate-spin" : ""}`} />
+                    {isGeolocating ? "Detecting…" : "Use my location"}
+                  </button>
+                </div>
                 <LocationAutocomplete
                   value={form.location}
                   onChange={(address, c) => {
