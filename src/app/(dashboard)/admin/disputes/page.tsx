@@ -5,7 +5,8 @@ import { DisputeStatusBadge } from "@/components/ui/Badge";
 import { formatDate, formatCurrency } from "@/lib/utils";
 import DisputeActions from "./DisputeActions";
 import RealtimeRefresher from "@/components/shared/RealtimeRefresher";
-import type { IDispute, IJob } from "@/types";
+import { AlertOctagon, Search, Lock } from "lucide-react";
+import type { IDispute } from "@/types";
 
 export default async function AdminDisputesPage() {
   const user = await getCurrentUser();
@@ -33,40 +34,90 @@ export default async function AdminDisputesPage() {
       </div>
 
       {disputes.length === 0 ? (
-        <div className="bg-white rounded-xl border border-slate-200 p-12 text-center text-slate-400 text-sm">
-          No active disputes. 🎉
+        <div className="bg-white rounded-xl border border-slate-200 p-12 text-center">
+          <p className="text-slate-400 text-sm">No active disputes.</p>
+          <p className="text-slate-300 text-xs mt-1">All disputes have been resolved.</p>
         </div>
-      ) : (
-        <div className="space-y-4">
-          {disputes.map((dispute) => (
-            <div key={dispute._id.toString()} className="bg-white rounded-xl border border-slate-200 shadow-card p-6">
-              <div className="flex items-start justify-between gap-4 mb-3">
-                <div>
-                  <h3 className="font-semibold text-slate-900">{dispute.jobId?.title}</h3>
-                  <p className="text-xs text-slate-400 mt-1">
-                    Raised by: {dispute.raisedBy.name} ({dispute.raisedBy.role}) · {formatDate(dispute.createdAt)}
-                  </p>
-                  <p className="text-xs text-slate-400">
-                    Job budget: {formatCurrency(dispute.jobId?.budget ?? 0)} · Escrow: {dispute.jobId?.escrowStatus}
+      ) : (() => {
+        type DisputeWithRefs = IDispute & {
+          jobId: { _id: string; title: string; budget: number; escrowStatus: string };
+          raisedBy: { name: string; email: string; role: string };
+        };
+        const open = (disputes as DisputeWithRefs[]).filter((d) => d.status === "open");
+        const investigating = (disputes as DisputeWithRefs[]).filter((d) => d.status === "investigating");
+
+        function DisputeCard({ dispute }: { dispute: DisputeWithRefs }) {
+          const escrowAtRisk = dispute.jobId?.escrowStatus === "funded";
+          return (
+            <div className="bg-white rounded-xl border border-slate-200 shadow-card overflow-hidden">
+              {escrowAtRisk && (
+                <div className="bg-amber-50 border-b border-amber-200 px-5 py-2 flex items-center gap-2">
+                  <Lock className="h-3.5 w-3.5 text-amber-600 flex-shrink-0" />
+                  <p className="text-xs font-medium text-amber-700">
+                    Escrow funded — {formatCurrency(dispute.jobId.budget)} at risk
                   </p>
                 </div>
-                <DisputeStatusBadge status={dispute.status} />
-              </div>
+              )}
+              <div className="p-6">
+                <div className="flex items-start justify-between gap-4 mb-3">
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-slate-900 truncate">{dispute.jobId?.title}</h3>
+                    <p className="text-xs text-slate-400 mt-1">
+                      Raised by <span className="font-medium text-slate-600">{dispute.raisedBy.name}</span>
+                      <span className={`ml-1.5 px-1.5 py-0.5 rounded text-[10px] font-medium ${dispute.raisedBy.role === "client" ? "bg-blue-100 text-blue-700" : "bg-violet-100 text-violet-700"}`}>
+                        {dispute.raisedBy.role}
+                      </span>
+                      <span className="ml-2 text-slate-300">·</span>
+                      <span className="ml-2">{formatDate(dispute.createdAt)}</span>
+                    </p>
+                  </div>
+                  <DisputeStatusBadge status={dispute.status} />
+                </div>
 
-              <div className="bg-slate-50 rounded-lg p-3 mb-4">
-                <p className="text-xs font-medium text-slate-500 mb-1">Reason:</p>
-                <p className="text-sm text-slate-700">{dispute.reason}</p>
-              </div>
+                <div className="bg-slate-50 rounded-lg p-3 mb-4 text-sm text-slate-700">
+                  <p className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-1">Dispute Reason</p>
+                  {dispute.reason}
+                </div>
 
-              <DisputeActions
-                disputeId={dispute._id.toString()}
-                currentStatus={dispute.status}
-                escrowStatus={dispute.jobId?.escrowStatus}
-              />
+                <DisputeActions
+                  disputeId={dispute._id.toString()}
+                  currentStatus={dispute.status}
+                  escrowStatus={dispute.jobId?.escrowStatus}
+                />
+              </div>
             </div>
-          ))}
-        </div>
-      )}
+          );
+        }
+
+        return (
+          <div className="space-y-6">
+            {open.length > 0 && (
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <AlertOctagon className="h-4 w-4 text-red-500" />
+                  <h3 className="text-sm font-semibold text-slate-700">New — Needs Review</h3>
+                  <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-medium">{open.length}</span>
+                </div>
+                <div className="space-y-3">
+                  {open.map((d) => <DisputeCard key={d._id.toString()} dispute={d} />)}
+                </div>
+              </div>
+            )}
+            {investigating.length > 0 && (
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <Search className="h-4 w-4 text-amber-500" />
+                  <h3 className="text-sm font-semibold text-slate-700">Under Investigation</h3>
+                  <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">{investigating.length}</span>
+                </div>
+                <div className="space-y-3">
+                  {investigating.map((d) => <DisputeCard key={d._id.toString()} dispute={d} />)}
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })()}
     </div>
   );
 }

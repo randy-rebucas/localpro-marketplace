@@ -2,6 +2,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { connectDB } from "@/lib/db";
 import Transaction from "@/models/Transaction";
 import { formatCurrency, formatDate } from "@/lib/utils";
+import { CircleDollarSign, TrendingDown, Wallet } from "lucide-react";
 import type { ITransaction, IJob } from "@/types";
 
 export default async function EarningsPage() {
@@ -19,6 +20,8 @@ export default async function EarningsPage() {
   const totalGross = completed.reduce((s, t) => s + t.amount, 0);
   const totalCommission = completed.reduce((s, t) => s + t.commission, 0);
   const totalNet = completed.reduce((s, t) => s + t.netAmount, 0);
+  const commissionPct = totalGross > 0 ? Math.round((totalCommission / totalGross) * 100) : 10;
+  const netPct = 100 - commissionPct;
 
   return (
     <div className="space-y-6">
@@ -29,18 +32,58 @@ export default async function EarningsPage() {
 
       {/* Summary cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {[
-          { label: "Gross Earned", value: formatCurrency(totalGross), desc: "Before commission" },
-          { label: "Commission Paid", value: formatCurrency(totalCommission), desc: "10% platform fee" },
-          { label: "Net Received", value: formatCurrency(totalNet), desc: "Your take-home pay" },
-        ].map((card) => (
-          <div key={card.label} className="bg-white rounded-xl border border-slate-200 shadow-card p-5">
-            <p className="text-xs text-slate-500">{card.label}</p>
-            <p className="text-2xl font-bold text-slate-900 mt-1">{card.value}</p>
-            <p className="text-xs text-slate-400 mt-0.5">{card.desc}</p>
+        <div className="bg-white rounded-xl border border-slate-200 shadow-card p-5">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-xs text-slate-500">Gross Earned</p>
+              <p className="text-2xl font-bold text-slate-900 mt-1">{formatCurrency(totalGross)}</p>
+              <p className="text-xs text-slate-400 mt-0.5">Before commission</p>
+            </div>
+            <div className="p-2.5 bg-primary/10 rounded-xl text-primary">
+              <CircleDollarSign className="h-5 w-5" />
+            </div>
           </div>
-        ))}
+        </div>
+        <div className="bg-white rounded-xl border border-slate-200 shadow-card p-5">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-xs text-slate-500">Commission Paid</p>
+              <p className="text-2xl font-bold text-red-500 mt-1">-{formatCurrency(totalCommission)}</p>
+              <p className="text-xs text-slate-400 mt-0.5">10% platform fee</p>
+            </div>
+            <div className="p-2.5 bg-red-50 rounded-xl text-red-400">
+              <TrendingDown className="h-5 w-5" />
+            </div>
+          </div>
+        </div>
+        <div className="bg-green-50 rounded-xl border border-green-200 shadow-card p-5">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-xs text-green-600 font-medium">Net Received</p>
+              <p className="text-2xl font-bold text-green-700 mt-1">{formatCurrency(totalNet)}</p>
+              <p className="text-xs text-green-500 mt-0.5">Your take-home pay</p>
+            </div>
+            <div className="p-2.5 bg-green-100 rounded-xl text-green-600">
+              <Wallet className="h-5 w-5" />
+            </div>
+          </div>
+        </div>
       </div>
+
+      {/* Commission breakdown bar */}
+      {totalGross > 0 && (
+        <div className="bg-white rounded-xl border border-slate-200 shadow-card p-5">
+          <p className="text-xs font-medium text-slate-500 mb-3">Earnings breakdown</p>
+          <div className="flex rounded-full overflow-hidden h-3">
+            <div className="bg-green-400 transition-all" style={{ width: `${netPct}%` }} />
+            <div className="bg-red-300 transition-all" style={{ width: `${commissionPct}%` }} />
+          </div>
+          <div className="flex items-center gap-4 mt-2.5 text-xs text-slate-500">
+            <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-green-400 inline-block" />You receive {netPct}%</span>
+            <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-red-300 inline-block" />Platform fee {commissionPct}%</span>
+          </div>
+        </div>
+      )}
 
       {/* Transaction table */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-card overflow-hidden">
@@ -64,7 +107,7 @@ export default async function EarningsPage() {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {transactions.map((t) => (
-                  <tr key={t._id.toString()} className="hover:bg-slate-50/50">
+                  <tr key={t._id.toString()} className="hover:bg-slate-50/50 transition-colors">
                     <td className="px-6 py-4 font-medium text-slate-900">
                       {(t.jobId as unknown as IJob & { title: string })?.title ?? "—"}
                     </td>

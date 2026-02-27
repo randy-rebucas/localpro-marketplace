@@ -119,29 +119,38 @@ export default async function JobDetailPage({
             </div>
           ) : (
             <ul className="divide-y divide-slate-100">
-              {quotes.map((q) => (
-                <li key={q._id.toString()} className="px-6 py-4">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <p className="font-medium text-slate-900 text-sm">{q.providerId.name}</p>
-                        {q.providerId.isVerified && (
-                          <span className="badge bg-blue-100 text-blue-700 text-xs">Verified</span>
+              {quotes.map((q) => {
+                const providerInitials = q.providerId.name
+                  .split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
+                return (
+                  <li key={q._id.toString()} className="px-6 py-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex gap-3 flex-1">
+                        <div className="flex-shrink-0 w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center">
+                          <span className="text-xs font-bold text-primary">{providerInitials}</span>
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium text-slate-900 text-sm">{q.providerId.name}</p>
+                            {q.providerId.isVerified && (
+                              <span className="badge bg-blue-100 text-blue-700 text-xs">Verified</span>
+                            )}
+                          </div>
+                          <p className="text-xs text-slate-500 mt-0.5">Timeline: {q.timeline}</p>
+                          <p className="text-sm text-slate-700 mt-2">{q.message}</p>
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-end gap-2 flex-shrink-0">
+                        <p className="text-lg font-bold text-slate-900">{formatCurrency(q.proposedAmount)}</p>
+                        <QuoteStatusBadge status={q.status} />
+                        {q.status === "pending" && (
+                          <QuoteAcceptButton quoteId={q._id.toString()} />
                         )}
                       </div>
-                      <p className="text-xs text-slate-500 mt-0.5">Timeline: {q.timeline}</p>
-                      <p className="text-sm text-slate-700 mt-2">{q.message}</p>
                     </div>
-                    <div className="flex flex-col items-end gap-2 flex-shrink-0">
-                      <p className="text-lg font-bold text-slate-900">{formatCurrency(q.proposedAmount)}</p>
-                      <QuoteStatusBadge status={q.status} />
-                      {q.status === "pending" && (
-                        <QuoteAcceptButton quoteId={q._id.toString()} />
-                      )}
-                    </div>
-                  </div>
-                </li>
-              ))}
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>

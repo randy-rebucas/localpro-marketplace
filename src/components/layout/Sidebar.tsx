@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   PlusCircle,
@@ -18,8 +18,11 @@ import {
   AlertTriangle,
   Users,
   MapPin,
+  LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuthStore } from "@/stores/authStore";
+import toast from "react-hot-toast";
 import type { UserRole } from "@/types";
 
 interface NavItem {
@@ -35,6 +38,7 @@ const navItems: Record<UserRole, NavItem[]> = {
     { label: "My Jobs",       href: "/client/jobs",       icon: <ClipboardList    className="h-5 w-5" /> },
     { label: "Escrow",        href: "/client/escrow",     icon: <Lock             className="h-5 w-5" /> },
     { label: "Reviews",       href: "/client/reviews",    icon: <Star             className="h-5 w-5" /> },
+    { label: "My Profile",    href: "/client/profile",    icon: <User             className="h-5 w-5" /> },
     { label: "Notifications", href: "/client/notifications", icon: <Bell          className="h-5 w-5" /> },
   ],
   provider: [
@@ -60,7 +64,15 @@ interface SidebarProps {
 
 export default function Sidebar({ role }: SidebarProps) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { logout } = useAuthStore();
   const items = navItems[role] ?? [];
+
+  async function handleLogout() {
+    await logout();
+    toast.success("You have been signed out");
+    router.push("/login");
+  }
 
   return (
     <aside className="w-64 bg-primary-950 flex flex-col h-full">
@@ -100,6 +112,17 @@ export default function Sidebar({ role }: SidebarProps) {
           );
         })}
       </nav>
+
+      {/* Sign out */}
+      <div className="px-3 py-4 border-t border-white/10">
+        <button
+          onClick={handleLogout}
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-primary-300 hover:bg-white/10 hover:text-white transition-colors"
+        >
+          <LogOut className="h-5 w-5" />
+          Sign out
+        </button>
+      </div>
     </aside>
   );
 }

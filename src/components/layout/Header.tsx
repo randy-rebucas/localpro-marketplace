@@ -51,7 +51,7 @@ export default function Header({ title }: HeaderProps) {
 
   const profileHref =
     user?.role === "provider" ? "/provider/profile" :
-    user?.role === "client"   ? "/client/dashboard" :
+    user?.role === "client"   ? "/client/profile" :
     null;
 
   return (

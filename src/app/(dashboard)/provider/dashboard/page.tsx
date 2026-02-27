@@ -3,11 +3,12 @@ import { connectDB } from "@/lib/db";
 import Job from "@/models/Job";
 import Transaction from "@/models/Transaction";
 import Review from "@/models/Review";
+import User from "@/models/User";
 import KpiCard from "@/components/ui/KpiCard";
 import { JobStatusBadge } from "@/components/ui/Badge";
 import { formatCurrency, formatRelativeTime } from "@/lib/utils";
 import Link from "next/link";
-import { CircleDollarSign, Briefcase, Star } from "lucide-react";
+import { CircleDollarSign, Briefcase, Star, Store } from "lucide-react";
 import type { IJob } from "@/types";
 
 async function getProviderStats(providerId: string) {
@@ -39,14 +40,23 @@ export default async function ProviderDashboardPage() {
   const user = await getCurrentUser();
   if (!user) return null;
 
+  await connectDB();
+  const userDoc = await User.findById(user.userId).select("name").lean() as { name?: string } | null;
+  const firstName = userDoc?.name?.split(" ")[0] ?? "there";
+
   const { activeJobs, totalEarnings, avgRating, reviewCount, recentJobs } =
     await getProviderStats(user.userId);
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold text-slate-900">Dashboard</h2>
-        <p className="text-slate-500 text-sm mt-0.5">Your performance overview.</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-slate-900">Welcome back, {firstName}!</h2>
+          <p className="text-slate-500 text-sm mt-0.5">Here&apos;s your performance overview.</p>
+        </div>
+        <Link href="/provider/marketplace" className="btn-primary">
+          Browse Jobs
+        </Link>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -77,21 +87,34 @@ export default async function ProviderDashboardPage() {
           <Link href="/provider/jobs" className="text-sm text-primary hover:underline">View jobs</Link>
         </div>
         {recentJobs.length === 0 ? (
-          <div className="px-6 py-8 text-center text-slate-400 text-sm">
-            No jobs yet. <Link href="/provider/marketplace" className="text-primary hover:underline">Browse the marketplace</Link>
+          <div className="px-6 py-10 text-center">
+            <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-3">
+              <Store className="h-6 w-6 text-primary" />
+            </div>
+            <p className="text-slate-600 text-sm font-medium">No jobs yet</p>
+            <p className="text-slate-400 text-xs mt-1 mb-4">Find your first job in the marketplace</p>
+            <Link href="/provider/marketplace" className="btn-primary text-xs">Browse marketplace →</Link>
           </div>
         ) : (
           <ul className="divide-y divide-slate-100">
             {recentJobs.map((job) => {
               const j = job as unknown as IJob;
               return (
-                <li key={j._id.toString()} className="px-6 py-4 flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-slate-900">{j.title}</p>
-                    <p className="text-xs text-slate-400 mt-0.5">{j.category} · {formatRelativeTime(j.createdAt)}</p>
+                <li key={j._id.toString()} className="px-6 py-3.5 flex items-center justify-between gap-4 hover:bg-slate-50 transition-colors">
+                  <div className="min-w-0 flex items-center gap-3">
+                    <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <Briefcase className="h-4 w-4 text-primary" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-slate-900 truncate">{j.title}</p>
+                      <p className="text-xs text-slate-400 mt-0.5">
+                        <span className="inline-block bg-slate-100 text-slate-600 rounded px-1.5 py-0.5 mr-1.5">{j.category}</span>
+                        {formatRelativeTime(j.createdAt)}
+                      </p>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-sm font-medium">{formatCurrency(j.budget)}</span>
+                  <div className="flex items-center gap-3 flex-shrink-0">
+                    <span className="text-sm font-semibold text-slate-800">{formatCurrency(j.budget)}</span>
                     <JobStatusBadge status={j.status} />
                   </div>
                 </li>
