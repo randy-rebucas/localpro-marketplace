@@ -1,4 +1,8 @@
-import { quoteRepository, jobRepository, activityRepository } from "@/repositories";
+import {
+  quoteRepository,
+  jobRepository,
+  activityRepository,
+} from "@/repositories";
 import {
   NotFoundError,
   ForbiddenError,
@@ -18,26 +22,38 @@ export class QuoteService {
   async submitQuote(user: TokenPayload, input: CreateQuoteInput) {
     const job = await jobRepository.getDocById(input.jobId);
     if (!job) throw new NotFoundError("Job");
-    if ((job as { status: string }).status !== "open") {
-      throw new UnprocessableError("This job is not accepting quotes");
-    }
-    if ((job as { clientId: { toString(): string } }).clientId.toString() === user.userId) {
+
+    const j = job as unknown as {
+      status: string;
+      clientId: { toString(): string };
+      title: string;
+    };
+
+    if (j.status !== "open") throw new UnprocessableError("This job is not accepting quotes");
+    if (j.clientId.toString() === user.userId) {
       throw new ForbiddenError("You cannot quote on your own job");
     }
 
     const existing = await quoteRepository.findPendingByProvider(input.jobId, user.userId);
     if (existing) throw new ConflictError("You have already submitted a quote for this job");
 
-    const quote = await quoteRepository.create({
-      ...input,
-      providerId: user.userId,
-    });
+    const quote = await quoteRepository.create({ ...input, providerId: user.userId });
 
     await activityRepository.log({
       userId: user.userId,
       eventType: "quote_submitted",
       jobId: input.jobId,
       metadata: { proposedAmount: input.proposedAmount },
+    });
+
+    // Notify client via notification service (SSE + email)
+    const { notificationService } = await import("@/services/notification.service");
+    await notificationService.push({
+      userId: j.clientId.toString(),
+      type: "quote_received",
+      title: "New quote received",
+      message: `A provider submitted a quote of ₱${input.proposedAmount.toLocaleString()} for "${j.title}".`,
+      data: { jobId: input.jobId, quoteId: quote._id!.toString() },
     });
 
     return quote;
@@ -50,14 +66,12 @@ export class QuoteService {
     const q = quote as unknown as {
       status: string;
       jobId: { toString(): string };
-      providerId: { toString(): string };
+      providerId: { toString(): string } | null;
       _id: { toString(): string };
       save(): Promise<void>;
     };
 
-    if (q.status !== "pending") {
-      throw new UnprocessableError("This quote has already been processed");
-    }
+    if (q.status !== "pending") throw new UnprocessableError("This quote has already been processed");
 
     const job = await jobRepository.getDocById(q.jobId.toString());
     if (!job) throw new NotFoundError("Job");
@@ -65,15 +79,14 @@ export class QuoteService {
     const j = job as unknown as {
       clientId: { toString(): string };
       status: string;
+      title: string;
       providerId: unknown;
       _id: { toString(): string };
       save(): Promise<void>;
     };
 
     if (j.clientId.toString() !== user.userId) throw new ForbiddenError();
-    if (j.status !== "open") {
-      throw new UnprocessableError("Job is no longer accepting quotes");
-    }
+    if (j.status !== "open") throw new UnprocessableError("Job is no longer accepting quotes");
 
     q.status = "accepted";
     await quote.save();
@@ -88,8 +101,20 @@ export class QuoteService {
       userId: user.userId,
       eventType: "quote_accepted",
       jobId: j._id.toString(),
-      metadata: { quoteId: q._id.toString(), providerId: q.providerId.toString() },
+      metadata: { quoteId: q._id.toString(), providerId: q.providerId?.toString() ?? "" },
     });
+
+    // Notify provider via notification service (SSE + email)
+    if (q.providerId) {
+      const { notificationService } = await import("@/services/notification.service");
+      await notificationService.push({
+        userId: q.providerId.toString(),
+        type: "quote_accepted",
+        title: "Your quote was accepted!",
+        message: `The client accepted your quote for "${j.title}". They'll fund escrow to get started.`,
+        data: { jobId: j._id.toString(), quoteId: q._id.toString() },
+      });
+    }
 
     return { quote, job };
   }
@@ -101,22 +126,33 @@ export class QuoteService {
     const q = quote as unknown as {
       status: string;
       jobId: { toString(): string };
+      providerId: { toString(): string } | null;
       save(): Promise<void>;
     };
 
-    if (q.status !== "pending") {
-      throw new UnprocessableError("This quote has already been processed");
-    }
+    if (q.status !== "pending") throw new UnprocessableError("This quote has already been processed");
 
     const job = await jobRepository.findById(q.jobId.toString());
     if (!job) throw new NotFoundError("Job");
-
     if ((job as { clientId: { toString(): string } }).clientId.toString() !== user.userId) {
       throw new ForbiddenError();
     }
 
     q.status = "rejected";
     await quote.save();
+
+    // Notify provider via notification service (SSE + email)
+    if (q.providerId) {
+      const { notificationService } = await import("@/services/notification.service");
+      await notificationService.push({
+        userId: q.providerId.toString(),
+        type: "quote_rejected",
+        title: "Quote not selected",
+        message: "The client chose a different provider for this job.",
+        data: { jobId: q.jobId.toString(), quoteId },
+      });
+    }
+
     return quote;
   }
 

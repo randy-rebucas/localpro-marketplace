@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { useAuthStore } from "@/stores/authStore";
+import NotificationBell from "@/components/shared/NotificationBell";
 
 interface HeaderProps {
   title?: string;
@@ -38,6 +39,9 @@ export default function Header({ title }: HeaderProps) {
 
       {/* Right controls */}
       <div className="flex items-center gap-3">
+        {/* Notification bell */}
+        <NotificationBell />
+
         {/* User menu */}
         <div className="relative">
           <button

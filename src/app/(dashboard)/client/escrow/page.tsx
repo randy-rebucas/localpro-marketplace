@@ -6,9 +6,35 @@ import { formatCurrency, formatDate } from "@/lib/utils";
 import Link from "next/link";
 import type { IJob } from "@/types";
 
-export default async function EscrowPage() {
+interface EscrowPageProps {
+  searchParams: Promise<Record<string, string | undefined>>;
+}
+
+export default async function EscrowPage({ searchParams }: EscrowPageProps) {
   const user = await getCurrentUser();
   if (!user) return null;
+
+  // Handle PayMongo checkout session redirect
+  const params = await searchParams;
+  const sessionId = params.session_id;
+  const sessionJobId = params.jobId;
+  let paymentConfirmed = false;
+
+  if (sessionId && sessionJobId) {
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_APP_URL}/api/payments/${sessionId}?jobId=${sessionJobId}`,
+        {
+          cache: "no-store",
+          headers: { cookie: "" }, // server-to-server; auth is by session lookup not cookie here
+        }
+      );
+      const data = await res.json();
+      paymentConfirmed = data?.liveStatus === "paid";
+    } catch {
+      // silently ignore — page still renders
+    }
+  }
 
   await connectDB();
 
@@ -26,6 +52,17 @@ export default async function EscrowPage() {
 
   return (
     <div className="space-y-6">
+      {paymentConfirmed && (
+        <div className="rounded-xl border border-green-200 bg-green-50 px-5 py-4 flex items-center gap-3">
+          <svg className="h-5 w-5 text-green-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+          </svg>
+          <p className="text-sm font-medium text-green-800">
+            Payment confirmed! Escrow has been funded. The provider can now begin work.
+          </p>
+        </div>
+      )}
+
       <div>
         <h2 className="text-2xl font-bold text-slate-900">Escrow</h2>
         <p className="text-slate-500 text-sm mt-0.5">

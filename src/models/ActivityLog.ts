@@ -22,6 +22,7 @@ const ActivityLogSchema = new Schema<ActivityLogDocument>(
         "quote_submitted",
         "quote_accepted",
         "escrow_funded",
+        "job_started",
         "job_completed",
         "escrow_released",
         "dispute_opened",

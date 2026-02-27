@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import type { PublicUser } from "@/types";
+import { useNotificationStore } from "@/stores/notificationStore";
 
 interface AuthState {
   user: PublicUser | null;
@@ -43,6 +44,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       await fetch("/api/auth/logout", { method: "POST" });
     } finally {
       set({ user: null, isAuthenticated: false });
+      useNotificationStore.getState().reset();
     }
   },
 }));

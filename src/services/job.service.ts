@@ -1,10 +1,7 @@
-import { jobRepository } from "@/repositories";
-import { activityRepository } from "@/repositories";
+import { jobRepository, activityRepository, providerProfileRepository } from "@/repositories";
 import { calculateRiskScore } from "@/lib/riskScore";
-import {
-  NotFoundError,
-  ForbiddenError,
-} from "@/lib/errors";
+import { rankJobsForProvider } from "@/lib/openai";
+import { NotFoundError, ForbiddenError } from "@/lib/errors";
 import type { TokenPayload } from "@/lib/auth";
 import type { PaginatedJobs } from "@/repositories/job.repository";
 
@@ -22,32 +19,43 @@ export interface JobFilters {
   category?: string;
   page?: number;
   limit?: number;
+  /** When true and user is a provider, use AI to rank open jobs by relevance */
+  aiRank?: boolean;
 }
 
 export class JobService {
-  async listJobs(user: TokenPayload, filters: JobFilters): Promise<PaginatedJobs> {
-    const { status, category, page = 1, limit = 20 } = filters;
+  async listJobs(user: TokenPayload, filters: JobFilters): Promise<PaginatedJobs & { ranked?: boolean }> {
+    const { status, category, page = 1, limit = 20, aiRank = false } = filters;
     const filter: Record<string, unknown> = {};
 
     if (user.role === "client") {
       filter.clientId = user.userId;
       if (status) filter.status = status;
     } else if (user.role === "provider") {
-      if (status === "open") {
+      if (status === "open" || !status) {
         filter.status = "open";
       } else {
         filter.providerId = user.userId;
-        if (status) filter.status = status;
+        filter.status = status;
       }
     }
-    // admin: no default filter, sees everything
 
     if (category) filter.category = { $regex: category, $options: "i" };
 
-    return jobRepository.findPaginated(filter as never, {
+    const result = await jobRepository.findPaginated(filter as never, {
       page: Math.max(1, page),
       limit: Math.min(50, limit),
     });
+
+    // AI ranking: only for providers browsing the open marketplace
+    if (aiRank && user.role === "provider" && (status === "open" || !status) && result.data.length > 1) {
+      const profile = await providerProfileRepository.findByUserId(user.userId);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const rankedJobs = await rankJobsForProvider(result.data as any, profile);
+      return { ...result, data: rankedJobs.map((r) => r.job) as typeof result.data, ranked: true };
+    }
+
+    return result;
   }
 
   async createJob(user: TokenPayload, input: CreateJobInput) {
@@ -68,6 +76,15 @@ export class JobService {
       jobId: job._id!.toString(),
     });
 
+    // Notify all admins about the new pending job
+    const { notificationService } = await import("@/services/notification.service");
+    await notificationService.notifyAdmins(
+      "job_submitted",
+      "New job pending review",
+      `A new job "${input.title}" has been submitted and needs validation.`,
+      { jobId: job._id!.toString() }
+    );
+
     return job;
   }
 
@@ -75,7 +92,6 @@ export class JobService {
     const job = await jobRepository.findByIdPopulated(jobId);
     if (!job) throw new NotFoundError("Job");
 
-    // Clients may only see their own jobs
     if (
       user.role === "client" &&
       (job as { clientId: { toString(): string } | string }).clientId.toString() !== user.userId

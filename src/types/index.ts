@@ -117,6 +117,7 @@ export type ActivityEventType =
   | "quote_submitted"
   | "quote_accepted"
   | "escrow_funded"
+  | "job_started"
   | "job_completed"
   | "escrow_released"
   | "dispute_opened"
@@ -155,4 +156,134 @@ export interface AdminStats {
   escrowBalance: number;
   openDisputes: number;
   jobsByStatus: Record<JobStatus, number>;
+}
+
+// ─── Notification ─────────────────────────────────────────────────────────────
+
+export type NotificationType =
+  | "job_submitted"
+  | "job_approved"
+  | "job_rejected"
+  | "quote_received"
+  | "quote_accepted"
+  | "quote_rejected"
+  | "escrow_funded"
+  | "payment_confirmed"
+  | "payment_failed"
+  | "job_completed"
+  | "escrow_released"
+  | "dispute_opened"
+  | "dispute_resolved"
+  | "review_received"
+  | "new_message";
+
+export interface INotification {
+  _id: Types.ObjectId | string;
+  userId: Types.ObjectId | string;
+  type: NotificationType;
+  title: string;
+  message: string;
+  data?: {
+    jobId?: string;
+    quoteId?: string;
+    disputeId?: string;
+    messageThreadId?: string;
+    paymentIntentId?: string;
+  };
+  readAt?: Date | null;
+  createdAt: Date;
+}
+
+// ─── Message ──────────────────────────────────────────────────────────────────
+
+export interface IMessage {
+  _id: Types.ObjectId | string;
+  /** Scoped to a job (one thread per job) */
+  threadId: string;
+  senderId: Types.ObjectId | string | IUser;
+  receiverId: Types.ObjectId | string | IUser;
+  body: string;
+  readAt?: Date | null;
+  createdAt: Date;
+}
+
+// ─── ProviderProfile ──────────────────────────────────────────────────────────
+
+export type AvailabilityStatus = "available" | "busy" | "unavailable";
+
+export type DayOfWeek = "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun";
+
+export interface WorkSlot {
+  /** Whether the provider works on this day */
+  enabled: boolean;
+  /** Start time in "HH:MM" 24-hour format */
+  from: string;
+  /** End time in "HH:MM" 24-hour format */
+  to: string;
+}
+
+export type WeeklySchedule = Record<DayOfWeek, WorkSlot>;
+
+export const DEFAULT_SCHEDULE: WeeklySchedule = {
+  mon: { enabled: true,  from: "08:00", to: "17:00" },
+  tue: { enabled: true,  from: "08:00", to: "17:00" },
+  wed: { enabled: true,  from: "08:00", to: "17:00" },
+  thu: { enabled: true,  from: "08:00", to: "17:00" },
+  fri: { enabled: true,  from: "08:00", to: "17:00" },
+  sat: { enabled: true,  from: "08:00", to: "13:00" },
+  sun: { enabled: false, from: "08:00", to: "17:00" },
+};
+
+export interface PortfolioItem {
+  title: string;
+  description: string;
+  imageUrl?: string;
+}
+
+export interface IProviderProfile {
+  _id: Types.ObjectId | string;
+  userId: Types.ObjectId | string | IUser;
+  bio: string;
+  skills: string[];
+  yearsExperience: number;
+  hourlyRate?: number;
+  portfolioItems: PortfolioItem[];
+  availabilityStatus: AvailabilityStatus;
+  schedule: WeeklySchedule;
+  /** Recomputed on each review submission */
+  avgRating: number;
+  completedJobCount: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// ─── Payment ──────────────────────────────────────────────────────────────────
+
+export type PaymentStatus =
+  | "awaiting_payment"
+  | "processing"
+  | "paid"
+  | "failed"
+  | "refunded";
+
+export interface IPayment {
+  _id: Types.ObjectId | string;
+  jobId: Types.ObjectId | string | IJob;
+  clientId: Types.ObjectId | string | IUser;
+  providerId?: Types.ObjectId | string | IUser | null;
+  /** PayMongo payment_intent id (pi_xxx) */
+  paymentIntentId: string;
+  /** Frontend key for attaching a payment method */
+  clientKey: string;
+  /** Amount in PHP */
+  amount: number;
+  amountInCentavos: number;
+  currency: string;
+  status: PaymentStatus;
+  paymentMethodType?: string;
+  /** PayMongo payment id (pay_xxx) set on webhook confirmation */
+  paymentId?: string;
+  refundId?: string;
+  createdAt: Date;
+  updatedAt: Date;
 }

@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { type ClassValue, clsx } from "clsx";
 import { AppError } from "@/lib/errors";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 export function cn(...inputs: ClassValue[]): string {
   return inputs
@@ -22,6 +23,15 @@ export function formatCurrency(amount: number, currency = "USD"): string {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  }).format(amount);
+}
+
+export function formatPHP(amount: number): string {
+  return new Intl.NumberFormat("en-PH", {
+    style: "currency",
+    currency: "PHP",
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
   }).format(amount);
@@ -73,8 +83,10 @@ export function apiError(message: string, status = 400) {
 }
 
 // ─── withHandler ──────────────────────────────────────────────────────────────
-// Wraps a route handler so AppError subclasses are converted to HTTP responses
-// and all other errors fall back to 500.
+// Wraps a route handler:
+//   1. Rate limiting (100 req / 60s per IP)
+//   2. AppError → typed HTTP response
+//   3. Unhandled errors → 500
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type RouteContext = { params: Promise<any> };
@@ -82,6 +94,32 @@ type RouteHandler = (req: NextRequest, ctx: RouteContext) => Promise<Response>;
 
 export function withHandler(fn: RouteHandler): RouteHandler {
   return async (req: NextRequest, ctx: RouteContext) => {
+    // Rate limit by IP (skip for SSE endpoints — they hold connections open)
+    const isSSE = req.headers.get("accept") === "text/event-stream";
+    if (!isSSE) {
+      const ip =
+        req.headers.get("x-forwarded-for")?.split(",")[0].trim() ??
+        req.headers.get("x-real-ip") ??
+        "unknown";
+
+      const rl = checkRateLimit(ip, { windowMs: 60_000, max: 100 });
+      if (!rl.ok) {
+        return new Response(
+          JSON.stringify({ error: "Too many requests. Please slow down." }),
+          {
+            status: 429,
+            headers: {
+              "Content-Type": "application/json",
+              "Retry-After": String(
+                Math.ceil((rl.resetAt - Date.now()) / 1000)
+              ),
+              "X-RateLimit-Remaining": "0",
+            },
+          }
+        );
+      }
+    }
+
     try {
       return await fn(req, ctx);
     } catch (err) {

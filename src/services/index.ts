@@ -5,3 +5,7 @@ export { escrowService } from "./escrow.service";
 export { disputeService } from "./dispute.service";
 export { reviewService } from "./review.service";
 export { adminService } from "./admin.service";
+export { notificationService } from "./notification.service";
+export { messagingService } from "./messaging.service";
+export { providerProfileService } from "./providerProfile.service";
+export { paymentService } from "./payment.service";

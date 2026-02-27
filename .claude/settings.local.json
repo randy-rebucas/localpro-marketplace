@@ -12,7 +12,12 @@
       "Bash(ls -la /c/Users/corew/localpro-marketplace/src/app/\\\\\\(dashboard\\\\\\)/admin/jobs/)",
       "Bash(find /c/Users/corew/localpro-marketplace/src/app/\\\\\\(dashboard\\\\\\)/client/jobs/[id] -type f -name \"*.tsx\")",
       "Bash(grep -h \"^export interface\" c:/Users/corew/localpro-marketplace/src/models/*.ts)",
-      "Bash(__NEW_LINE_a51af46e5bf5ed7c__ cat)"
+      "Bash(__NEW_LINE_a51af46e5bf5ed7c__ cat)",
+      "Bash(pnpm add nodemailer openai)",
+      "Bash(pnpm add -D @types/nodemailer)",
+      "Bash(ls -la /c/Users/corew/localpro-marketplace/src/app/\\\\\\(dashboard\\\\\\)/provider/)",
+      "Bash(ls -la /c/Users/corew/localpro-marketplace/.env*)",
+      "Bash(find \"c:\\\\Users\\\\corew\\\\localpro-marketplace\\\\src\\\\app\\\\\\(dashboard\\)\\\\admin\" -type f \\\\\\( -name \"*.tsx\" -o -name \"*.ts\" \\\\\\))"
     ]
   }
 }

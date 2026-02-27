@@ -5,3 +5,8 @@ export { transactionRepository } from "./transaction.repository";
 export { reviewRepository } from "./review.repository";
 export { disputeRepository } from "./dispute.repository";
 export { activityRepository } from "./activity.repository";
+export { notificationRepository } from "./notification.repository";
+export { messageRepository } from "./message.repository";
+export { providerProfileRepository } from "./providerProfile.repository";
+export { paymentRepository } from "./payment.repository";
+export { skillRepository } from "./skill.repository";

@@ -4,7 +4,9 @@ import {
   disputeRepository,
   userRepository,
   activityRepository,
+  notificationRepository,
 } from "@/repositories";
+import { pushNotification } from "@/lib/events";
 import { NotFoundError, UnprocessableError } from "@/lib/errors";
 import type { JobStatus, AdminStats } from "@/types";
 
@@ -35,21 +37,21 @@ export class AdminService {
       (jobsByStatus.assigned ?? 0) +
       (jobsByStatus.in_progress ?? 0);
 
-    return {
-      totalGMV,
-      totalCommission,
-      activeJobs,
-      escrowBalance,
-      openDisputes,
-      jobsByStatus,
-    };
+    return { totalGMV, totalCommission, activeJobs, escrowBalance, openDisputes, jobsByStatus };
   }
 
   async approveJob(adminUserId: string, jobId: string, riskScore?: number) {
     const jobDoc = await jobRepository.getDocById(jobId);
     if (!jobDoc) throw new NotFoundError("Job");
 
-    const j = jobDoc as unknown as { status: string; riskScore: number; save(): Promise<void> };
+    const j = jobDoc as unknown as {
+      status: string;
+      riskScore: number;
+      clientId: { toString(): string };
+      title: string;
+      _id: { toString(): string };
+      save(): Promise<void>;
+    };
     if (j.status !== "pending_validation") {
       throw new UnprocessableError("Only jobs pending validation can be approved");
     }
@@ -65,6 +67,16 @@ export class AdminService {
       metadata: { riskScore: j.riskScore },
     });
 
+    // Notify client
+    const notification = await notificationRepository.create({
+      userId: j.clientId.toString(),
+      type: "job_approved",
+      title: "Your job has been approved!",
+      message: `"${j.title}" is now live and accepting quotes from providers.`,
+      data: { jobId },
+    });
+    pushNotification(j.clientId.toString(), notification);
+
     return jobDoc;
   }
 
@@ -72,7 +84,12 @@ export class AdminService {
     const jobDoc = await jobRepository.getDocById(jobId);
     if (!jobDoc) throw new NotFoundError("Job");
 
-    const j = jobDoc as unknown as { status: string; save(): Promise<void> };
+    const j = jobDoc as unknown as {
+      status: string;
+      clientId: { toString(): string };
+      title: string;
+      save(): Promise<void>;
+    };
     if (j.status !== "pending_validation") {
       throw new UnprocessableError("Only jobs pending validation can be rejected");
     }
@@ -80,11 +97,17 @@ export class AdminService {
     j.status = "rejected";
     await jobDoc.save();
 
-    await activityRepository.log({
-      userId: adminUserId,
-      eventType: "job_rejected",
-      jobId,
+    await activityRepository.log({ userId: adminUserId, eventType: "job_rejected", jobId });
+
+    // Notify client
+    const notification = await notificationRepository.create({
+      userId: j.clientId.toString(),
+      type: "job_rejected",
+      title: "Job not approved",
+      message: `"${j.title}" was not approved. Please review our guidelines and resubmit.`,
+      data: { jobId },
     });
+    pushNotification(j.clientId.toString(), notification);
 
     return jobDoc;
   }

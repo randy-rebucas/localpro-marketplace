@@ -5,6 +5,11 @@ import { requireUser } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { ValidationError, ForbiddenError } from "@/lib/errors";
 
+const JOB_STATUSES = [
+  "pending_validation", "open", "assigned", "in_progress",
+  "completed", "disputed", "rejected", "refunded",
+] as const;
+
 const CreateJobSchema = z.object({
   title: z.string().min(5).max(200),
   category: z.string().min(1),
@@ -18,11 +23,17 @@ export const GET = withHandler(async (req: NextRequest) => {
   const user = await requireUser();
   const { searchParams } = new URL(req.url);
 
+  const rawStatus = searchParams.get("status");
+  const status = rawStatus && (JOB_STATUSES as readonly string[]).includes(rawStatus)
+    ? rawStatus
+    : undefined;
+
   const result = await jobService.listJobs(user, {
-    status: searchParams.get("status") ?? undefined,
+    status,
     category: searchParams.get("category") ?? undefined,
     page: parseInt(searchParams.get("page") ?? "1"),
     limit: parseInt(searchParams.get("limit") ?? "20"),
+    aiRank: searchParams.get("aiRank") === "true",
   });
 
   return NextResponse.json(result);

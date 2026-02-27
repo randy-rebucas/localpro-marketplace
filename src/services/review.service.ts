@@ -1,4 +1,10 @@
-import { reviewRepository, jobRepository, activityRepository } from "@/repositories";
+import {
+  reviewRepository,
+  jobRepository,
+  activityRepository,
+  notificationRepository,
+} from "@/repositories";
+import { pushNotification } from "@/lib/events";
 import {
   NotFoundError,
   ForbiddenError,
@@ -33,15 +39,11 @@ export class ReviewService {
 
     const j = job as unknown as IJob;
     if (j.clientId.toString() !== user.userId) throw new ForbiddenError();
-    if (j.status !== "completed") {
-      throw new UnprocessableError("Can only review completed jobs");
-    }
+    if (j.status !== "completed") throw new UnprocessableError("Can only review completed jobs");
     if (j.escrowStatus !== "released") {
       throw new UnprocessableError("Escrow must be released before reviewing");
     }
-    if (!j.providerId) {
-      throw new UnprocessableError("No provider assigned to this job");
-    }
+    if (!j.providerId) throw new UnprocessableError("No provider assigned to this job");
 
     const existing = await reviewRepository.existsForJob(input.jobId);
     if (existing) throw new ConflictError("You have already reviewed this job");
@@ -58,6 +60,21 @@ export class ReviewService {
       jobId: input.jobId,
       metadata: { rating: input.rating },
     });
+
+    // Recompute provider stats
+    const { providerProfileService } = await import("@/services/providerProfile.service");
+    await providerProfileService.recalculateStats(j.providerId.toString());
+
+    // Notify provider
+    const stars = "★".repeat(input.rating) + "☆".repeat(5 - input.rating);
+    const notification = await notificationRepository.create({
+      userId: j.providerId.toString(),
+      type: "review_received",
+      title: "New review received",
+      message: `${stars} — "${input.feedback.slice(0, 60)}${input.feedback.length > 60 ? "…" : ""}"`,
+      data: { jobId: input.jobId },
+    });
+    pushNotification(j.providerId.toString(), notification);
 
     return review;
   }
