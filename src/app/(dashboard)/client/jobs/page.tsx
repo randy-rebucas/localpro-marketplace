@@ -1,6 +1,7 @@
 import { getCurrentUser } from "@/lib/auth";
 import { connectDB } from "@/lib/db";
 import Job from "@/models/Job";
+import Quote from "@/models/Quote";
 import { JobStatusBadge, EscrowBadge } from "@/components/ui/Badge";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import Link from "next/link";
@@ -9,17 +10,26 @@ import RealtimeRefresher from "@/components/shared/RealtimeRefresher";
 
 async function getClientJobs(clientId: string) {
   await connectDB();
-  return Job.find({ clientId })
+  const jobs = await Job.find({ clientId })
     .sort({ createdAt: -1 })
     .populate("providerId", "name")
     .lean();
+
+  const jobIds = jobs.map((j) => (j as unknown as IJob)._id);
+  const quoteCounts = await Quote.aggregate([
+    { $match: { jobId: { $in: jobIds }, status: "pending" } },
+    { $group: { _id: "$jobId", count: { $sum: 1 } } },
+  ]) as { _id: unknown; count: number }[];
+
+  const quoteCountMap = new Map(quoteCounts.map((q) => [String(q._id), q.count]));
+  return { jobs, quoteCountMap };
 }
 
 export default async function ClientJobsPage() {
   const user = await getCurrentUser();
   if (!user) return null;
 
-  const jobs = await getClientJobs(user.userId);
+  const { jobs, quoteCountMap } = await getClientJobs(user.userId);
 
   return (
     <div className="space-y-6">
@@ -43,6 +53,7 @@ export default async function ClientJobsPage() {
         <div className="space-y-3">
           {jobs.map((job) => {
             const j = job as unknown as IJob & { providerId?: { name: string } };
+            const pendingQuotes = quoteCountMap.get(j._id.toString()) ?? 0;
             return (
               <Link
                 key={j._id.toString()}
@@ -58,6 +69,11 @@ export default async function ClientJobsPage() {
                     {j.providerId && (
                       <p className="text-xs text-slate-500 mt-1">
                         Provider: <span className="font-medium">{j.providerId.name}</span>
+                      </p>
+                    )}
+                    {pendingQuotes > 0 && (
+                      <p className="text-xs font-medium text-blue-600 mt-1">
+                        {pendingQuotes} pending quote{pendingQuotes !== 1 ? "s" : ""}
                       </p>
                     )}
                   </div>
