@@ -3,6 +3,7 @@
 import { useRef, useEffect, useState } from "react";
 import usePlacesAutocomplete, { getGeocode, getLatLng } from "use-places-autocomplete";
 import { MapPin, X, Loader2 } from "lucide-react";
+import Image from "next/image";
 
 interface Props {
   value: string;
@@ -161,9 +162,11 @@ function AutocompleteInput({ value, onChange, placeholder, error, className = ""
       {/* Static map pin preview — only shown after a suggestion is confirmed */}
       {coords && process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY && (
         <div className="mt-2 overflow-hidden rounded-xl border border-slate-200 shadow-sm">
-          <img
+          <Image
             src={`https://maps.googleapis.com/maps/api/staticmap?center=${coords.lat},${coords.lng}&zoom=16&size=640x180&markers=color:red%7Clabel:P%7C${coords.lat},${coords.lng}&scale=2&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`}
             alt="Selected location"
+            width={640}
+            height={160}
             className="w-full h-[160px] object-cover"
           />
           <div className="flex items-center justify-between bg-slate-50 px-3 py-1.5">

@@ -4,6 +4,7 @@ import { useRef, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { UploadCloud, X, Plus, ChevronLeft, ChevronRight } from "lucide-react";
+import Image from "next/image";
 import Button from "@/components/ui/Button";
 import Modal from "@/components/ui/Modal";
 import type { JobStatus, EscrowStatus, UploadFolder } from "@/types";
@@ -99,7 +100,7 @@ function PhotoStrip({ urls, label }: { urls: string[]; label: string }) {
             onClick={() => setLightbox(i)}
             className="overflow-hidden rounded-lg border border-slate-200 hover:ring-2 hover:ring-primary/50 transition-all focus:outline-none focus:ring-2 focus:ring-primary"
           >
-            <img src={url} alt={`${label} ${i + 1}`} className="h-12 w-12 object-cover" />
+            <Image src={url} alt={`${label} ${i + 1}`} width={48} height={48} className="h-12 w-12 object-cover" />
           </button>
         ))}
       </div>

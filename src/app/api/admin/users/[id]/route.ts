@@ -8,6 +8,7 @@ import { ValidationError } from "@/lib/errors";
 const UpdateUserSchema = z.object({
   isVerified: z.boolean().optional(),
   isSuspended: z.boolean().optional(),
+  approvalStatus: z.enum(["pending_approval", "approved", "rejected"]).optional(),
 });
 
 export const GET = withHandler(async (

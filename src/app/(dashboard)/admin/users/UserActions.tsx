@@ -7,15 +7,17 @@ import Button from "@/components/ui/Button";
 
 interface Props {
   userId: string;
+  role: string;
   isVerified: boolean;
   isSuspended: boolean;
+  approvalStatus: string;
 }
 
-export default function UserActions({ userId, isVerified, isSuspended }: Props) {
+export default function UserActions({ userId, role, isVerified, isSuspended, approvalStatus }: Props) {
   const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
 
-  async function update(patch: { isVerified?: boolean; isSuspended?: boolean }) {
+  async function update(patch: Record<string, unknown>) {
     const key = Object.keys(patch)[0];
     setLoading(key);
     try {
@@ -37,7 +39,39 @@ export default function UserActions({ userId, isVerified, isSuspended }: Props) 
   }
 
   return (
-    <div className="flex gap-2">
+    <div className="flex flex-wrap gap-2">
+      {/* Provider approval buttons */}
+      {role === "provider" && approvalStatus === "pending_approval" && (
+        <>
+          <Button
+            size="sm"
+            isLoading={loading === "approvalStatus_approved"}
+            onClick={() => update({ approvalStatus: "approved" })}
+          >
+            Approve
+          </Button>
+          <Button
+            size="sm"
+            variant="danger"
+            isLoading={loading === "approvalStatus_rejected"}
+            onClick={() => update({ approvalStatus: "rejected" })}
+          >
+            Reject
+          </Button>
+        </>
+      )}
+      {role === "provider" && approvalStatus === "rejected" && (
+        <Button
+          size="sm"
+          variant="secondary"
+          isLoading={loading === "approvalStatus_approved"}
+          onClick={() => update({ approvalStatus: "approved" })}
+        >
+          Re-approve
+        </Button>
+      )}
+
+      {/* Verify / Suspend */}
       <Button size="sm" variant="outline"
         isLoading={loading === "isVerified"}
         onClick={() => update({ isVerified: !isVerified })}>

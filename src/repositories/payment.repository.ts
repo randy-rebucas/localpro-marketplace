@@ -37,6 +37,24 @@ export class PaymentRepository extends BaseRepository<PaymentDocument> {
     ).lean() as unknown as PaymentDocument | null;
   }
 
+  /**
+   * Atomic idempotent mark-paid: only updates if status is NOT already "paid".
+   * Returns the updated document on success, null if already paid or not found.
+   * Prevents race conditions from duplicate webhook deliveries.
+   */
+  async atomicMarkPaid(
+    sessionId: string,
+    paymentIntentId: string,
+    paymentMethodType: string
+  ): Promise<PaymentDocument | null> {
+    await this.connect();
+    return Payment.findOneAndUpdate(
+      { paymentIntentId: sessionId, status: { $ne: "paid" } },
+      { status: "paid", paymentId: paymentIntentId, paymentMethodType },
+      { new: true }
+    ).lean() as unknown as PaymentDocument | null;
+  }
+
   async markRefunded(
     paymentIntentId: string,
     refundId: string

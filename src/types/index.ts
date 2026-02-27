@@ -16,6 +16,7 @@ export interface IUser {
   role: UserRole;
   isVerified: boolean;
   isSuspended: boolean;
+  approvalStatus: "pending_approval" | "approved" | "rejected";
   createdAt: Date;
   updatedAt: Date;
 }

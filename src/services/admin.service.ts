@@ -13,6 +13,7 @@ import type { JobStatus, AdminStats } from "@/types";
 export interface UpdateUserInput {
   isVerified?: boolean;
   isSuspended?: boolean;
+  approvalStatus?: "pending_approval" | "approved" | "rejected";
 }
 
 export class AdminService {
@@ -139,13 +140,35 @@ export class AdminService {
     return jobDoc;
   }
 
-  async listUsers(filter: Record<string, unknown> = {}) {
-    return userRepository.findAll(filter);
+  async listUsers(
+    filter: Record<string, unknown> = {},
+    page = 1,
+    limit = 50
+  ): Promise<{ users: unknown[]; total: number; totalPages: number }> {
+    const safeLimit = Math.min(limit, 100);
+    const { users, total } = await userRepository.findPaginated(filter, page, safeLimit);
+    return { users, total, totalPages: Math.ceil(total / safeLimit) };
   }
 
   async updateUser(adminUserId: string, userId: string, updates: UpdateUserInput) {
     const user = await userRepository.updateUser(userId, updates);
     if (!user) throw new NotFoundError("User");
+
+    // Fire approval/rejection emails when approvalStatus changes
+    if (updates.approvalStatus === "approved") {
+      const { sendProviderApprovedEmail } = await import("@/lib/email");
+      sendProviderApprovedEmail(
+        (user as { email: string }).email,
+        (user as { name: string }).name
+      ).catch((err) => console.error("[EMAIL] provider approved:", err));
+    } else if (updates.approvalStatus === "rejected") {
+      const { sendProviderRejectedEmail } = await import("@/lib/email");
+      sendProviderRejectedEmail(
+        (user as { email: string }).email,
+        (user as { name: string }).name
+      ).catch((err) => console.error("[EMAIL] provider rejected:", err));
+    }
+
     return user;
   }
 

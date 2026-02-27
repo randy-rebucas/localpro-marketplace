@@ -4,6 +4,10 @@ import type { IUser } from "@/types";
 
 export interface UserDocument extends Omit<IUser, "_id">, Document {
   comparePassword(candidate: string): Promise<boolean>;
+  verificationToken?: string;
+  verificationTokenExpiry?: Date;
+  resetPasswordToken?: string;
+  resetPasswordTokenExpiry?: Date;
 }
 
 const UserSchema = new Schema<UserDocument>(
@@ -42,6 +46,15 @@ const UserSchema = new Schema<UserDocument>(
       type: Boolean,
       default: false,
     },
+    approvalStatus: {
+      type: String,
+      enum: ["pending_approval", "approved", "rejected"],
+      default: "approved",
+    },
+    verificationToken: { type: String, select: false },
+    verificationTokenExpiry: { type: Date, select: false },
+    resetPasswordToken: { type: String, select: false },
+    resetPasswordTokenExpiry: { type: Date, select: false },
   },
   {
     timestamps: true,

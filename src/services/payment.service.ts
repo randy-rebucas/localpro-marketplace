@@ -169,22 +169,21 @@ export class PaymentService {
     paymentIntentId: string,
     paymentMethodType: string
   ): Promise<void> {
-    // Find the payment record by session id (stored in paymentIntentId field)
-    const payment = await paymentRepository.getDocByPaymentIntentId(sessionId);
-    if (!payment) return;
+    // Atomic idempotent update: only proceeds if status is NOT already "paid".
+    // Prevents double-processing from duplicate webhook deliveries.
+    const payment = await paymentRepository.atomicMarkPaid(
+      sessionId,
+      paymentIntentId,
+      paymentMethodType
+    );
+    if (!payment) return; // already paid or not found
 
     const p = payment as unknown as {
-      status: string;
       jobId: { toString(): string };
       clientId: { toString(): string };
       providerId: { toString(): string } | null;
       amount: number;
-      save(): Promise<void>;
     };
-
-    if (p.status === "paid") return; // idempotent
-
-    await paymentRepository.markPaid(sessionId, paymentIntentId, paymentMethodType);
 
     const jobDoc = await jobRepository.getDocById(p.jobId.toString());
     if (!jobDoc) return;

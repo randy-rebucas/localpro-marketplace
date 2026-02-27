@@ -128,6 +128,86 @@ function buildEmailBody(ctx: EmailContext): { subject: string; html: string } {
   };
 }
 
+// ─── Verification / Reset templates ──────────────────────────────────────────
+
+/** Send email verification link to a new user. */
+export async function sendVerificationEmail(
+  to: string,
+  name: string,
+  token: string
+): Promise<void> {
+  const verifyUrl = `${APP_URL}/verify-email?token=${token}`;
+  const html = baseTemplate(
+    "Verify your email address",
+    `<p style="color:#334155;font-size:15px;line-height:1.6;margin:0 0 12px">
+      Hi <strong>${name}</strong>,
+    </p>
+    <p style="color:#334155;font-size:15px;line-height:1.6;margin:0">
+      Thanks for signing up! Please verify your email address to activate your LocalPro account.
+      This link expires in <strong>24 hours</strong>.
+    </p>`,
+    verifyUrl,
+    "Verify Email Address"
+  );
+  await sendEmail(to, "Verify your LocalPro account", html);
+}
+
+/** Send password reset link. */
+export async function sendPasswordResetEmail(
+  to: string,
+  name: string,
+  token: string
+): Promise<void> {
+  const resetUrl = `${APP_URL}/reset-password?token=${token}`;
+  const html = baseTemplate(
+    "Reset your password",
+    `<p style="color:#334155;font-size:15px;line-height:1.6;margin:0 0 12px">
+      Hi <strong>${name}</strong>,
+    </p>
+    <p style="color:#334155;font-size:15px;line-height:1.6;margin:0">
+      We received a request to reset your LocalPro password. Click the button below to choose a new one.
+      This link expires in <strong>1 hour</strong>. If you didn't request this, you can safely ignore this email.
+    </p>`,
+    resetUrl,
+    "Reset Password"
+  );
+  await sendEmail(to, "Reset your LocalPro password", html);
+}
+
+/** Notify a provider that their account has been approved. */
+export async function sendProviderApprovedEmail(to: string, name: string): Promise<void> {
+  const html = baseTemplate(
+    "Your provider account is approved!",
+    `<p style="color:#334155;font-size:15px;line-height:1.6;margin:0 0 12px">
+      Hi <strong>${name}</strong>,
+    </p>
+    <p style="color:#334155;font-size:15px;line-height:1.6;margin:0">
+      Great news — your LocalPro provider account has been reviewed and approved.
+      You can now browse the marketplace and submit quotes on jobs.
+    </p>`,
+    `${APP_URL}/provider/marketplace`,
+    "Browse the Marketplace"
+  );
+  await sendEmail(to, "Your LocalPro provider account is approved", html);
+}
+
+/** Notify a provider that their account has been rejected. */
+export async function sendProviderRejectedEmail(to: string, name: string): Promise<void> {
+  const html = baseTemplate(
+    "Provider application update",
+    `<p style="color:#334155;font-size:15px;line-height:1.6;margin:0 0 12px">
+      Hi <strong>${name}</strong>,
+    </p>
+    <p style="color:#334155;font-size:15px;line-height:1.6;margin:0">
+      After reviewing your provider application, we were unable to approve your account at this time.
+      If you believe this was a mistake, please contact our support team.
+    </p>`,
+    `${APP_URL}/contact`,
+    "Contact Support"
+  );
+  await sendEmail(to, "Your LocalPro provider application status", html);
+}
+
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 /** Send a single transactional email. Non-blocking — errors are swallowed and logged. */

@@ -21,7 +21,8 @@
       "Bash(find \"c:\\\\Users\\\\corew\\\\localpro-marketplace\\\\src\\\\app\\\\\\(dashboard\\)\\\\client\\\\profile\" -type f)",
       "Bash(find \"c:/Users/corew/localpro-marketplace/src/app/\\(dashboard\\)/admin/\" -type f -name \"*.tsx\" -o -name \"*.ts\" -o -name \"*.jsx\" -o -name \"*.js\")",
       "Bash(find \"c:\\\\Users\\\\corew\\\\localpro-marketplace\\\\src\\\\app\\\\\\(dashboard\\)\\\\provider\"\" -type f -name \"*.tsx \")",
-      "Bash(find \"/c/Users/corew/localpro-marketplace/src/app/\\(dashboard\\)/provider\" -type f -name \"*.tsx\")"
+      "Bash(find \"/c/Users/corew/localpro-marketplace/src/app/\\(dashboard\\)/provider\" -type f -name \"*.tsx\")",
+      "Bash(grep -l \"findPaginated\\\\|pagination\\\\|limit\\\\|page\" /c/Users/corew/localpro-marketplace/src/app/api/admin/*route.ts)"
     ]
   }
 }
