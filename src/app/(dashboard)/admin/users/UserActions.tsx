@@ -22,6 +22,7 @@ export default function UserActions({ userId, isVerified, isSuspended }: Props) 
       const res = await fetch(`/api/admin/users/${userId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify(patch),
       });
       const data = await res.json();

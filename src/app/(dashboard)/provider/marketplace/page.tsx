@@ -29,7 +29,7 @@ export default function MarketplacePage() {
     try {
       const params = new URLSearchParams({ status: "open" });
       if (category !== "All") params.set("category", category);
-      const res = await fetch(`/api/jobs?${params}`);
+      const res = await fetch(`/api/jobs?${params}`, { credentials: "include" });
       if (!res.ok) return;
       const data = await res.json();
       setJobs(data.data);
@@ -55,6 +55,7 @@ export default function MarketplacePage() {
       const res = await fetch("/api/quotes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
           jobId: quoteModal.job._id,
           proposedAmount: Number(quoteForm.proposedAmount),

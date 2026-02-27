@@ -42,6 +42,14 @@ export function canTransition(
     };
   }
 
+  // Business rule: cannot start a job if escrow is not funded
+  if (newStatus === "in_progress" && job.escrowStatus !== "funded") {
+    return {
+      allowed: false,
+      reason: "Escrow must be funded before the job can be started",
+    };
+  }
+
   return { allowed: true };
 }
 

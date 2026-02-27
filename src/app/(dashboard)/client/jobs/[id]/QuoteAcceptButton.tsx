@@ -11,7 +11,7 @@ export default function QuoteAcceptButton({ quoteId }: { quoteId: string }) {
   async function accept() {
     setLoading(true);
     try {
-      const res = await fetch(`/api/quotes/${quoteId}/accept`, { method: "PATCH" });
+      const res = await fetch(`/api/quotes/${quoteId}/accept`, { method: "PATCH", credentials: "include" });
       const data = await res.json();
       if (!res.ok) { toast.error(data.error ?? "Failed to accept quote"); return; }
       toast.success("Quote accepted! Provider has been assigned.");

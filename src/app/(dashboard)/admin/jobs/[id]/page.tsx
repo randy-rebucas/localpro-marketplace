@@ -7,6 +7,7 @@ import { formatCurrency, formatDate } from "@/lib/utils";
 import AdminJobActions from "../AdminJobActions";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 import type { IJob, IQuote } from "@/types";
 
 export default async function AdminJobDetailPage({
@@ -46,9 +47,7 @@ export default async function AdminJobDetailPage({
         href="/admin/jobs"
         className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-primary transition-colors"
       >
-        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-        </svg>
+        <ArrowLeft className="w-4 h-4" />
         Back to validation queue
       </Link>
 

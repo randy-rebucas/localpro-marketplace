@@ -42,7 +42,7 @@ export function setAuthCookies(
   response.cookies.set("access_token", accessToken, {
     httpOnly: true,
     secure: isProd,
-    sameSite: "strict",
+    sameSite: "lax",
     maxAge: 60 * 15, // 15 minutes
     path: "/",
   });
@@ -50,7 +50,7 @@ export function setAuthCookies(
   response.cookies.set("refresh_token", refreshToken, {
     httpOnly: true,
     secure: isProd,
-    sameSite: "strict",
+    sameSite: "lax",
     maxAge: 60 * 60 * 24 * 7, // 7 days
     path: "/",
   });

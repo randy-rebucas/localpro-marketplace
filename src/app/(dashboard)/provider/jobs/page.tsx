@@ -35,7 +35,7 @@ export default async function ProviderJobsPage() {
       ) : (
         <div className="space-y-4">
           {jobs.map((job) => {
-            const j = job as unknown as IJob & { clientId: { name: string } };
+            const j = job as unknown as IJob & { clientId: { name: string }; beforePhoto?: string | null; afterPhoto?: string | null };
             return (
               <div key={j._id.toString()} className="bg-white rounded-xl border border-slate-200 shadow-card p-5">
                 <div className="flex items-start justify-between gap-4">
@@ -54,7 +54,7 @@ export default async function ProviderJobsPage() {
                 </div>
 
                 <div className="mt-4 pt-4 border-t border-slate-100 flex flex-wrap items-center gap-4">
-                  <ProviderJobActions jobId={j._id.toString()} status={j.status} escrowStatus={j.escrowStatus} />
+                  <ProviderJobActions jobId={j._id.toString()} status={j.status} escrowStatus={j.escrowStatus} beforePhoto={j.beforePhoto} afterPhoto={j.afterPhoto} />
                   <RaiseDisputeButton jobId={j._id.toString()} status={j.status} />
                 </div>
               </div>

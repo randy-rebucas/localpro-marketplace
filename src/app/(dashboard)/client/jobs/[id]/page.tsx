@@ -8,17 +8,24 @@ import JobActionButtons from "./JobActionButtons";
 import QuoteAcceptButton from "./QuoteAcceptButton";
 import RaiseDisputeButton from "@/components/shared/RaiseDisputeButton";
 import { notFound } from "next/navigation";
+import { AlertCircle } from "lucide-react";
 import type { IJob, IQuote } from "@/types";
 
 export default async function JobDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const user = await getCurrentUser();
   if (!user) return null;
 
   const { id } = await params;
+  const sp = await searchParams;
+  const paymentCancelled = sp.payment === "cancelled";
+  const paymentSuccess = sp.payment === "success";
+
   await connectDB();
 
   const job = await Job.findOne({ _id: id, clientId: user.userId })
@@ -42,6 +49,15 @@ export default async function JobDetailPage({
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
+      {/* Payment status banners */}
+      {paymentCancelled && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-5 py-4 flex items-center gap-3">
+          <AlertCircle className="h-5 w-5 text-amber-500 flex-shrink-0" />
+          <p className="text-sm font-medium text-amber-800">
+            Payment was cancelled. You can try funding escrow again when ready.
+          </p>
+        </div>
+      )}
       {/* Header */}
       <div>
         <h2 className="text-2xl font-bold text-slate-900">{j.title}</h2>
@@ -85,7 +101,7 @@ export default async function JobDetailPage({
 
       {/* Action buttons (client-side component for interactivity) */}
       <div className="flex flex-wrap items-center gap-4">
-        <JobActionButtons jobId={j._id.toString()} status={j.status} escrowStatus={j.escrowStatus} />
+        <JobActionButtons jobId={j._id.toString()} status={j.status} escrowStatus={j.escrowStatus} budget={j.budget} />
         <RaiseDisputeButton jobId={j._id.toString()} status={j.status} />
       </div>
 

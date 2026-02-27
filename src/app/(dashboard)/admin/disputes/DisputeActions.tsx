@@ -24,6 +24,7 @@ export default function DisputeActions({ disputeId, currentStatus, escrowStatus 
       const res = await fetch(`/api/admin/disputes/${disputeId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
           status,
           resolutionNotes: notes || undefined,

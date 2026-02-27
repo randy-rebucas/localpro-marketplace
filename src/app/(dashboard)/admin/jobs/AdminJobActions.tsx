@@ -24,6 +24,7 @@ export default function AdminJobActions({ jobId, riskScore }: Props) {
       const res = await fetch(`/api/admin/jobs/${jobId}/approve`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ riskScore: adjustedRisk }),
       });
       const data = await res.json();
@@ -46,6 +47,7 @@ export default function AdminJobActions({ jobId, riskScore }: Props) {
       const res = await fetch(`/api/admin/jobs/${jobId}/reject`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ reason: rejectReason }),
       });
       const data = await res.json();

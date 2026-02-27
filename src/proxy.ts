@@ -70,7 +70,10 @@ export async function proxy(req: NextRequest) {
 
   // Try silent refresh if refresh token exists
   if (refreshToken) {
-    const refreshUrl = new URL("/api/auth/refresh", req.url);
+    // Always call localhost directly — using req.url would route through ngrok
+    // (or any external base URL) causing "fetch failed" in middleware.
+    const internalBase = process.env.NEXT_INTERNAL_URL ?? "http://localhost:3000";
+    const refreshUrl = new URL("/api/auth/refresh", internalBase);
     const refreshRes = await fetch(refreshUrl.toString(), {
       method: "POST",
       headers: { cookie: req.headers.get("cookie") ?? "" },

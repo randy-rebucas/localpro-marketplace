@@ -45,6 +45,8 @@ export interface IJob {
   location: string;
   scheduleDate: Date;
   riskScore: number;
+  beforePhoto?: string | null;
+  afterPhoto?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }

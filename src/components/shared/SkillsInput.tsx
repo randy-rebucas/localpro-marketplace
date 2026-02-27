@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, KeyboardEvent } from "react";
+import { X } from "lucide-react";
 
 interface SkillsInputProps {
   value: string[];
@@ -128,9 +129,7 @@ export default function SkillsInput({
               className="flex-shrink-0 rounded hover:bg-primary/20 transition-colors p-0.5"
               aria-label={`Remove ${skill}`}
             >
-              <svg className="h-3 w-3" viewBox="0 0 12 12" fill="none">
-                <path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-              </svg>
+              <X className="h-3 w-3" />
             </button>
           </span>
         ))}

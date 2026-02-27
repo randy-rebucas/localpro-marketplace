@@ -20,13 +20,14 @@ export class EscrowService {
     return paymentService.initiateEscrowPayment(user, jobId);
   }
 
-  async startJob(user: TokenPayload, jobId: string) {
+  async startJob(user: TokenPayload, jobId: string, beforePhoto: string) {
     const jobDoc = await jobRepository.getDocById(jobId);
     if (!jobDoc) throw new NotFoundError("Job");
 
     const job = jobDoc as unknown as IJob & {
       providerId: { toString(): string } | null;
       clientId: { toString(): string };
+      beforePhoto: string | null;
       save(): Promise<void>;
     };
 
@@ -36,6 +37,7 @@ export class EscrowService {
     if (!check.allowed) throw new UnprocessableError(check.reason!);
 
     job.status = "in_progress";
+    job.beforePhoto = beforePhoto;
     await jobDoc.save();
 
     await activityRepository.log({
@@ -47,13 +49,14 @@ export class EscrowService {
     return { job };
   }
 
-  async markJobComplete(user: TokenPayload, jobId: string) {
+  async markJobComplete(user: TokenPayload, jobId: string, afterPhoto: string) {
     const jobDoc = await jobRepository.getDocById(jobId);
     if (!jobDoc) throw new NotFoundError("Job");
 
     const job = jobDoc as unknown as IJob & {
       providerId: { toString(): string } | null;
       clientId: { toString(): string };
+      afterPhoto: string | null;
       save(): Promise<void>;
     };
 
@@ -63,6 +66,7 @@ export class EscrowService {
     if (!check.allowed) throw new UnprocessableError(check.reason!);
 
     job.status = "completed";
+    job.afterPhoto = afterPhoto;
     await jobDoc.save();
 
     await activityRepository.log({

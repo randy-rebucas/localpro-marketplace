@@ -133,9 +133,12 @@ export interface CreateCheckoutSessionInput {
 export interface CheckoutSessionData {
   id: string;
   checkoutUrl: string;
+  /** Session lifecycle status: "active" | "expired" (never "paid") */
   status: string;
   referenceNumber: string;
   paymentIntentId: string | null;
+  /** Resolved payment intent status: "succeeded" | "awaiting_payment_method" | etc. */
+  paymentIntentStatus: string | null;
 }
 
 export async function createCheckoutSession(
@@ -184,6 +187,7 @@ export async function createCheckoutSession(
     status: res.data.attributes.status,
     referenceNumber: res.data.attributes.reference_number,
     paymentIntentId: res.data.attributes.payment_intent?.id ?? null,
+    paymentIntentStatus: null, // not available at creation time
   };
 }
 
@@ -195,17 +199,21 @@ export async function getCheckoutSession(id: string): Promise<CheckoutSessionDat
         checkout_url: string;
         status: string;
         reference_number: string;
-        payment_intent: { id: string } | null;
+        // PayMongo may return either just the id or the full expanded object
+        payment_intent: { id: string; attributes?: { status: string } } | null;
       };
     };
   }>("GET", `/checkout_sessions/${id}`);
+
+  const pi = res.data.attributes.payment_intent;
 
   return {
     id: res.data.id,
     checkoutUrl: res.data.attributes.checkout_url,
     status: res.data.attributes.status,
     referenceNumber: res.data.attributes.reference_number,
-    paymentIntentId: res.data.attributes.payment_intent?.id ?? null,
+    paymentIntentId: pi?.id ?? null,
+    paymentIntentStatus: pi?.attributes?.status ?? null,
   };
 }
 
@@ -259,22 +267,39 @@ export function verifyWebhookSignature(
   rawBody: string,
   signatureHeader: string
 ): boolean {
-  const secret = process.env.PAYMONGO_WEBHOOK_SECRET;
+  // Trim to remove accidental trailing whitespace from .env inline comments
+  const secret = process.env.PAYMONGO_WEBHOOK_SECRET?.trim();
   if (!secret) return false;
 
-  const parts = Object.fromEntries(
-    signatureHeader.split(",").map((p) => p.split("=") as [string, string])
-  );
+  // Split each "key=value" pair on the FIRST "=" only
+  const parts: Record<string, string> = {};
+  for (const segment of signatureHeader.split(",")) {
+    const idx = segment.indexOf("=");
+    if (idx === -1) continue;
+    parts[segment.slice(0, idx)] = segment.slice(idx + 1);
+  }
+
   const timestamp = parts.t;
   const isTest = process.env.NODE_ENV !== "production";
   const sig = isTest ? parts.te : parts.li;
 
-  if (!timestamp || !sig) return false;
+  if (!timestamp || !sig) {
+    console.error("[PAYMONGO] Missing timestamp or sig in header:", signatureHeader);
+    return false;
+  }
 
   const expected = crypto
     .createHmac("sha256", secret)
     .update(`${timestamp}.${rawBody}`)
     .digest("hex");
 
-  return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(sig));
+  try {
+    return crypto.timingSafeEqual(
+      Buffer.from(expected, "utf8"),
+      Buffer.from(sig, "utf8")
+    );
+  } catch (err) {
+    console.error("[PAYMONGO] timingSafeEqual failed:", err);
+    return false;
+  }
 }

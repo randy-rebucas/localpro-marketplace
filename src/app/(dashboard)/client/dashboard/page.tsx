@@ -6,6 +6,7 @@ import KpiCard from "@/components/ui/KpiCard";
 import { JobStatusBadge } from "@/components/ui/Badge";
 import { formatCurrency, formatRelativeTime } from "@/lib/utils";
 import Link from "next/link";
+import { Briefcase, Lock, CircleDollarSign } from "lucide-react";
 import type { IJob } from "@/types";
 
 async function getClientStats(clientId: string) {
@@ -55,31 +56,19 @@ export default async function ClientDashboardPage() {
           title="Active Jobs"
           value={activeJobs}
           subtitle="Open, assigned & in-progress"
-          icon={
-            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-            </svg>
-          }
+          icon={<Briefcase className="h-6 w-6" />}
         />
         <KpiCard
           title="Escrow Locked"
           value={formatCurrency(escrowLocked)}
           subtitle="Held in escrow"
-          icon={
-            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-            </svg>
-          }
+          icon={<Lock className="h-6 w-6" />}
         />
         <KpiCard
           title="Total Spend"
           value={formatCurrency(totalSpend)}
           subtitle="All completed jobs"
-          icon={
-            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          }
+          icon={<CircleDollarSign className="h-6 w-6" />}
         />
       </div>
 

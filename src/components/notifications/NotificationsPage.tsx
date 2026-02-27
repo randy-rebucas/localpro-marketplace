@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { ChevronRight } from "lucide-react";
 import { useNotificationStore } from "@/stores/notificationStore";
 import { useAuthStore } from "@/stores/authStore";
 import { getNotificationLink } from "@/lib/notificationLinks";
@@ -177,11 +178,7 @@ export default function NotificationsPage() {
                     {isUnread && (
                       <div className="h-2.5 w-2.5 rounded-full bg-blue-500" />
                     )}
-                    {link && (
-                      <svg className="h-4 w-4 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                    )}
+                    {link && <ChevronRight className="h-4 w-4 text-slate-300" />}
                   </div>
                 </button>
               );

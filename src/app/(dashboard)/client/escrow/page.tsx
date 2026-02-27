@@ -1,9 +1,12 @@
 import { getCurrentUser } from "@/lib/auth";
 import { connectDB } from "@/lib/db";
 import Job from "@/models/Job";
+import { paymentService } from "@/services";
+import { paymentRepository } from "@/repositories";
 import { EscrowBadge } from "@/components/ui/Badge";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import Link from "next/link";
+import { CheckCircle } from "lucide-react";
 import type { IJob } from "@/types";
 
 interface EscrowPageProps {
@@ -16,23 +19,22 @@ export default async function EscrowPage({ searchParams }: EscrowPageProps) {
 
   // Handle PayMongo checkout session redirect
   const params = await searchParams;
-  const sessionId = params.session_id;
   const sessionJobId = params.jobId;
+  const paymentSuccess = params.payment === "success";
   let paymentConfirmed = false;
 
-  if (sessionId && sessionJobId) {
+  if (paymentSuccess && sessionJobId && process.env.PAYMONGO_SECRET_KEY) {
     try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_APP_URL}/api/payments/${sessionId}?jobId=${sessionJobId}`,
-        {
-          cache: "no-store",
-          headers: { cookie: "" }, // server-to-server; auth is by session lookup not cookie here
-        }
-      );
-      const data = await res.json();
-      paymentConfirmed = data?.liveStatus === "paid";
+      // Look up the checkout session ID from the stored payment record (avoids
+      // relying on PayMongo's {CHECKOUT_SESSION_ID} URL placeholder)
+      const payment = await paymentRepository.findByJobId(sessionJobId);
+      if (payment) {
+        const sid = (payment as unknown as { paymentIntentId: string }).paymentIntentId;
+        const result = await paymentService.pollCheckoutSession(user, sid, sessionJobId);
+        paymentConfirmed = result.status === "paid";
+      }
     } catch {
-      // silently ignore — page still renders
+      // silently ignore — page still renders without the confirmation banner
     }
   }
 
@@ -54,9 +56,7 @@ export default async function EscrowPage({ searchParams }: EscrowPageProps) {
     <div className="space-y-6">
       {paymentConfirmed && (
         <div className="rounded-xl border border-green-200 bg-green-50 px-5 py-4 flex items-center gap-3">
-          <svg className="h-5 w-5 text-green-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-          </svg>
+          <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0" />
           <p className="text-sm font-medium text-green-800">
             Payment confirmed! Escrow has been funded. The provider can now begin work.
           </p>

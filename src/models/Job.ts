@@ -73,6 +73,8 @@ const JobSchema = new Schema<JobDocument>(
       max: 100,
       default: 0,
     },
+    beforePhoto: { type: String, default: null },
+    afterPhoto: { type: String, default: null },
   },
   {
     timestamps: true,

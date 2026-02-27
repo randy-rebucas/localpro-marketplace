@@ -70,6 +70,7 @@ export default function PostJobPage() {
       const res = await fetch("/api/jobs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
           ...form,
           budget: Number(form.budget),

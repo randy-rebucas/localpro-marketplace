@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import toast from "react-hot-toast";
+import { Loader2, CreditCard } from "lucide-react";
 
 interface PayMongoButtonProps {
   jobId: string;
@@ -71,17 +72,12 @@ export default function PayMongoButton({
     >
       {loading ? (
         <>
-          <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-          </svg>
+          <Loader2 className="h-4 w-4 animate-spin" />
           Processing…
         </>
       ) : (
         <>
-          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-          </svg>
+          <CreditCard className="h-4 w-4" />
           {label}
           <span className="text-primary-200 font-normal text-xs">
             ₱{amountPHP.toLocaleString()}

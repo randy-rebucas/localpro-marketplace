@@ -39,8 +39,9 @@ export const GET = withHandler(async (
       const session = await getCheckoutSession(id);
       liveStatus = session.status;
 
-      // If session just became paid and we have a jobId, confirm escrow
-      if (session.status === "paid" && jobId) {
+      // PayMongo session status is never "paid" — check the payment intent status.
+      // paymentIntentStatus is "succeeded" when the PI is expanded on the session.
+      if (session.paymentIntentStatus === "succeeded" && jobId) {
         await paymentService.confirmEscrowFunding(
           id,
           session.paymentIntentId ?? "",

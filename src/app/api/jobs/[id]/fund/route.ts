@@ -6,12 +6,17 @@ import { withHandler } from "@/lib/utils";
 /**
  * PATCH /api/jobs/[id]/fund
  *
- * Initiates escrow funding via PayMongo.
- * If PAYMONGO_SECRET_KEY is set: returns { clientKey, paymentIntentId }
- *   — frontend must attach a payment method using clientKey.
- *   — escrow is funded when the PayMongo webhook fires.
+ * Initiates escrow funding via a PayMongo Checkout Session.
  *
- * If not set (dev/simulation): funds escrow immediately.
+ * Live (PAYMONGO_SECRET_KEY set):
+ *   Returns { simulated: false, checkoutUrl, checkoutSessionId, referenceNumber, amountPHP }
+ *   — redirect the user to checkoutUrl to complete payment.
+ *   — escrow is funded when PayMongo fires the webhook, or when the
+ *     success-redirect page calls pollCheckoutSession.
+ *
+ * Dev / simulation (no key set):
+ *   Returns { simulated: true, message }
+ *   — escrow is funded immediately in MongoDB.
  */
 export const PATCH = withHandler(async (
   _req: NextRequest,

@@ -91,7 +91,7 @@ export class PaymentService {
       amountPHP: job.budget,
       description: `Escrow for: ${jobTitle}`,
       lineItemName: jobTitle,
-      successUrl: `${APP_URL}/client/escrow?session_id={CHECKOUT_SESSION_ID}&jobId=${jobId}`,
+      successUrl: `${APP_URL}/client/escrow?jobId=${jobId}&payment=success`,
       cancelUrl: `${APP_URL}/client/jobs/${jobId}?payment=cancelled`,
       metadata: {
         jobId: job._id!.toString(),
@@ -122,17 +122,36 @@ export class PaymentService {
   }
 
   /**
-   * Poll the checkout session status (called from success page redirect).
-   * If session is paid but escrow not yet funded, process it now.
+   * Poll the checkout session status (called from success-page redirect).
+   * Verifies the session belongs to the requesting user, then confirms
+   * escrow funding if the session is active.
    */
   async pollCheckoutSession(user: TokenPayload, sessionId: string, jobId: string) {
-    const session = await getCheckoutSession(sessionId);
-
-    if (session.status === "paid" && session.paymentIntentId) {
-      await this.confirmEscrowFunding(session.id, session.paymentIntentId, "checkout");
+    // Verify ownership — the payment record must belong to this client
+    const payment = await paymentRepository.findByPaymentIntentId(sessionId);
+    if (!payment) throw new NotFoundError("Payment");
+    if ((payment as { clientId: { toString(): string } }).clientId.toString() !== user.userId) {
+      throw new ForbiddenError();
     }
 
-    return { status: session.status };
+    const session = await getCheckoutSession(sessionId);
+
+    // session.status is "active" or "expired" — never "paid".
+    // Attempt confirmation if not expired; confirmEscrowFunding is idempotent.
+    if (session.status === "active") {
+      await this.confirmEscrowFunding(
+        session.id,
+        session.paymentIntentId ?? "",
+        "checkout"
+      );
+    }
+
+    // Re-read from DB so callers get the real "paid" / "awaiting_payment" status.
+    const confirmed = await paymentRepository.findByPaymentIntentId(sessionId);
+    const dbStatus =
+      (confirmed as unknown as { status: string } | null)?.status ??
+      session.status;
+    return { status: dbStatus };
   }
 
   /**

@@ -21,7 +21,7 @@ export default function ClientReviewsPage() {
     async function fetchJobs() {
       try {
         // Get completed jobs with released escrow
-        const res = await fetch("/api/jobs?status=completed");
+        const res = await fetch("/api/jobs?status=completed", { credentials: "include" });
         if (!res.ok) return;
         const data = await res.json();
 
@@ -50,6 +50,7 @@ export default function ClientReviewsPage() {
       const res = await fetch("/api/reviews", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ jobId: reviewModal.job._id, rating, feedback }),
       });
       const data = await res.json();
