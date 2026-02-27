@@ -157,6 +157,12 @@ export default function RegisterForm() {
         <button type="submit" className="btn-primary w-full py-2.5" disabled={isLoading}>
           {isLoading ? "Creating account..." : "Create account"}
         </button>
+        <p className="text-center text-xs text-slate-400 mt-2">
+          By creating an account you agree to our{" "}
+          <Link href="/terms"   className="underline hover:text-primary transition-colors">Terms of Service</Link>
+          {" "}&amp;{" "}
+          <Link href="/privacy" className="underline hover:text-primary transition-colors">Privacy Policy</Link>.
+        </p>
       </form>
 
       <p className="mt-6 text-center text-sm text-slate-500">

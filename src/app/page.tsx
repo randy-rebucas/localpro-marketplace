@@ -253,6 +253,8 @@ export default async function RootPage() {
           <div className="flex items-center gap-6 text-sm">
             <Link href="/login"    className="hover:text-white transition-colors">Log in</Link>
             <Link href="/register" className="hover:text-white transition-colors">Register</Link>
+            <Link href="/privacy"  className="hover:text-white transition-colors">Privacy</Link>
+            <Link href="/terms"    className="hover:text-white transition-colors">Terms</Link>
           </div>
           <p className="text-xs">© {new Date().getFullYear()} LocalPro. All rights reserved.</p>
         </div>
