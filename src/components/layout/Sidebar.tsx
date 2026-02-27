@@ -101,7 +101,9 @@ export default function Sidebar({ role }: SidebarProps) {
         <div className="flex-shrink-0 w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
           <MapPin className="w-5 h-5 text-white" />
         </div>
-        <span className="text-lg font-bold text-white">LocalPro</span>
+        <span className="text-lg font-bold">
+          <span className="text-primary-300">Local</span><span className="text-brand-400">Pro</span>
+        </span>
       </div>
 
       {/* Role badge */}

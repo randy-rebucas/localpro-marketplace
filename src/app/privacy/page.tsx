@@ -13,10 +13,12 @@ export default function PrivacyPage() {
       <header className="sticky top-0 z-50 bg-white/80 backdrop-blur border-b border-slate-200">
         <div className="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-              <span className="text-white font-bold text-sm">LP</span>
+            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shadow-sm">
+              <span className="text-white font-bold text-xs leading-none">LP</span>
             </div>
-            <span className="text-lg font-bold text-slate-900">LocalPro</span>
+            <span className="text-lg font-bold">
+              <span className="text-primary">Local</span><span className="text-brand">Pro</span>
+            </span>
           </Link>
           <nav className="flex items-center gap-3 text-sm">
             <Link href="/login" className="font-medium text-slate-600 hover:text-slate-900 transition-colors">Log in</Link>
@@ -172,9 +174,11 @@ export default function PrivacyPage() {
         <div className="max-w-4xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center">
-              <span className="text-white font-bold text-xs">LP</span>
+              <span className="text-white font-bold text-xs leading-none">LP</span>
             </div>
-            <span className="text-sm font-semibold text-white">LocalPro</span>
+            <span className="text-sm font-bold">
+              <span className="text-primary-300">Local</span><span className="text-brand-400">Pro</span>
+            </span>
           </div>
           <div className="flex items-center gap-6 text-sm">
             <Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link>

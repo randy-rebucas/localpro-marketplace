@@ -4,7 +4,8 @@
 
 @layer base {
   :root {
-    --primary: 29 78 216;
+    --primary: 26 95 168;   /* #1a5fa8 — logo blue  */
+    --brand:   62 165 62;   /* #3ea53e — logo green */
     --surface: 248 250 252;
   }
 

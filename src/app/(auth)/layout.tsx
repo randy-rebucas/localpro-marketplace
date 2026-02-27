@@ -13,7 +13,9 @@ export default function AuthLayout({
           <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-white/10 backdrop-blur mb-4">
             <MapPin className="w-7 h-7 text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-white">LocalPro</h1>
+          <h1 className="text-2xl font-bold">
+              <span className="text-primary-300">Local</span><span className="text-brand-400">Pro</span>
+            </h1>
           <p className="text-primary-300 text-sm mt-1">
             Connecting communities with trusted professionals
           </p>

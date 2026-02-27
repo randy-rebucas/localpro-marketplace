@@ -64,9 +64,11 @@ export default async function RootPage() {
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2 shrink-0">
             <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shadow-sm">
-              <span className="text-white font-bold text-sm">LP</span>
+              <span className="text-white font-bold text-xs leading-none">LP</span>
             </div>
-            <span className="text-lg font-bold text-slate-900">LocalPro</span>
+            <span className="text-lg font-bold">
+              <span className="text-primary">Local</span><span className="text-brand">Pro</span>
+            </span>
           </Link>
           <nav className="flex items-center gap-2">
             <Link href="/login"    className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors px-3 py-1.5 rounded-lg hover:bg-slate-100">Log in</Link>
@@ -94,7 +96,7 @@ export default async function RootPage() {
           {/* Headline */}
           <h1 className="text-5xl md:text-6xl font-extrabold text-slate-900 leading-[1.1] tracking-tight mb-6">
             Hire Trusted Local<br />
-            <span className="text-primary">Service Professionals</span>
+            <span className="text-primary">Service </span><span className="text-brand">Professionals</span>
           </h1>
           <p className="text-lg text-slate-500 mb-10 max-w-xl mx-auto leading-relaxed">
             Post a job, receive quotes from verified providers, and pay with full escrow protection. Plumbing, electrical, cleaning, and more.
@@ -119,9 +121,9 @@ export default async function RootPage() {
           {/* Social proof row */}
           <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-slate-500">
             {[
-              { icon: <CheckCircle className="h-4 w-4 text-emerald-500" />, text: "Free to post a job" },
-              { icon: <Lock        className="h-4 w-4 text-primary"      />, text: "Escrow payment protection" },
-              { icon: <Users       className="h-4 w-4 text-violet-500"   />, text: "500+ verified providers" },
+              { icon: <CheckCircle className="h-4 w-4 text-brand" />, text: "Free to post a job" },
+              { icon: <Lock        className="h-4 w-4 text-primary" />, text: "Escrow payment protection" },
+              { icon: <Users       className="h-4 w-4 text-brand"  />, text: "500+ verified providers" },
             ].map((i) => (
               <span key={i.text} className="flex items-center gap-1.5">
                 {i.icon} {i.text}
@@ -136,7 +138,7 @@ export default async function RootPage() {
         <div className="max-w-3xl mx-auto grid grid-cols-3 gap-6 text-center">
           {[
             { icon: <TrendingUp className="h-5 w-5 text-primary mx-auto mb-1" />, value: "10,000+", label: "Jobs completed" },
-            { icon: <Users      className="h-5 w-5 text-violet-500 mx-auto mb-1" />, value: "500+",    label: "Verified providers" },
+            { icon: <Users      className="h-5 w-5 text-brand mx-auto mb-1" />,   value: "500+",    label: "Verified providers" },
             { icon: <Star       className="h-5 w-5 text-amber-400 fill-amber-400 mx-auto mb-1" />, value: "4.8",      label: "Average rating" },
           ].map((s) => (
             <div key={s.label}>
@@ -295,10 +297,10 @@ export default async function RootPage() {
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
             {[
-              { icon: <Shield    className="h-6 w-6 text-primary" />,      title: "Escrow Protection",   desc: "Your payment is only released when you're 100% satisfied with the work." },
-              { icon: <CheckCircle className="h-6 w-6 text-emerald-500" />, title: "Verified Providers",  desc: "Every provider goes through identity and background verification (KYC)." },
-              { icon: <MapPin    className="h-6 w-6 text-rose-500" />,     title: "Local, Not Global",   desc: "We focus on Filipino neighborhoods and local service providers — no overseas middlemen." },
-              { icon: <TrendingUp className="h-6 w-6 text-violet-500" />,  title: "Rated & Reviewed",    desc: "Transparent reviews from real clients keep quality high and providers accountable." },
+              { icon: <Shield      className="h-6 w-6 text-primary" />, title: "Escrow Protection",  desc: "Your payment is only released when you're 100% satisfied with the work." },
+              { icon: <CheckCircle className="h-6 w-6 text-brand"   />, title: "Verified Providers", desc: "Every provider goes through identity and background verification (KYC)." },
+              { icon: <MapPin      className="h-6 w-6 text-primary" />, title: "Local, Not Global",  desc: "We focus on Filipino neighborhoods and local service providers — no overseas middlemen." },
+              { icon: <TrendingUp  className="h-6 w-6 text-brand"   />, title: "Rated & Reviewed",   desc: "Transparent reviews from real clients keep quality high and providers accountable." },
             ].map((f) => (
               <div key={f.title} className="bg-white rounded-2xl border border-slate-200 shadow-card p-6 flex flex-col gap-3">
                 <div className="w-11 h-11 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-center">
@@ -348,9 +350,11 @@ export default async function RootPage() {
             <div className="flex flex-col gap-3 max-w-xs">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-                  <span className="text-white font-bold text-sm">LP</span>
+                  <span className="text-white font-bold text-xs leading-none">LP</span>
                 </div>
-                <span className="text-base font-bold text-white">LocalPro</span>
+                <span className="text-base font-bold">
+                  <span className="text-primary-300">Local</span><span className="text-brand-400">Pro</span>
+                </span>
               </div>
               <p className="text-xs text-slate-500 leading-relaxed">
                 The trusted marketplace connecting Filipino clients with verified local service professionals.
