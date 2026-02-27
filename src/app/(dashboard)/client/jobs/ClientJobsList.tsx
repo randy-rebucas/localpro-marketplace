@@ -6,8 +6,9 @@ import { JobStatusBadge, EscrowBadge } from "@/components/ui/Badge";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { MapPin, Calendar, MessageSquare } from "lucide-react";
 import type { IJob, JobStatus } from "@/types";
+import ProviderInfoButton from "@/components/shared/ProviderInfoButton";
 
-type JobWithProvider = IJob & { providerId?: { name: string } };
+type JobWithProvider = IJob & { providerId?: { _id: string; name: string; email: string; isVerified: boolean } };
 
 interface ClientJobsListProps {
   jobs: JobWithProvider[];
@@ -67,11 +68,12 @@ export default function ClientJobsList({ jobs, quoteCountMap }: ClientJobsListPr
           {filtered.map((j) => {
             const pendingQuotes = quoteCountMap[j._id.toString()] ?? 0;
             return (
-              <Link
+              <div
                 key={j._id.toString()}
-                href={`/client/jobs/${j._id}`}
-                className="block bg-white rounded-xl border border-slate-200 shadow-card hover:shadow-card-hover hover:border-primary/30 transition-all p-5"
+                className="relative block bg-white rounded-xl border border-slate-200 shadow-card hover:shadow-card-hover hover:border-primary/30 transition-all p-5"
               >
+                {/* Overlay link covers the whole card except interactive children */}
+                <Link href={`/client/jobs/${j._id}`} className="absolute inset-0 rounded-xl" aria-label={j.title} />
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0 flex-1 space-y-2">
                     <h3 className="font-semibold text-slate-900 truncate">{j.title}</h3>
@@ -88,12 +90,16 @@ export default function ClientJobsList({ jobs, quoteCountMap }: ClientJobsListPr
                     </div>
                     <div className="flex flex-wrap items-center gap-3">
                       {j.providerId && (
-                        <span className="text-xs text-slate-500">
+                        <span className="relative z-10 flex items-center gap-2 text-xs text-slate-500">
                           Provider: <span className="font-medium text-slate-700">{j.providerId.name}</span>
+                          <ProviderInfoButton
+                            providerId={j.providerId._id}
+                            providerName={j.providerId.name}
+                          />
                         </span>
                       )}
                       {pendingQuotes > 0 && (
-                        <span className="inline-flex items-center gap-1 text-xs font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
+                        <span className="relative z-10 inline-flex items-center gap-1 text-xs font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
                           <MessageSquare className="h-3 w-3" />
                           {pendingQuotes} new quote{pendingQuotes !== 1 ? "s" : ""}
                         </span>
@@ -106,7 +112,7 @@ export default function ClientJobsList({ jobs, quoteCountMap }: ClientJobsListPr
                     <EscrowBadge status={j.escrowStatus} />
                   </div>
                 </div>
-              </Link>
+              </div>
             );
           })}
         </div>

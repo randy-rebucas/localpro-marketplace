@@ -8,6 +8,7 @@ import JobActionButtons from "./JobActionButtons";
 import QuoteAcceptButton from "./QuoteAcceptButton";
 import RaiseDisputeButton from "@/components/shared/RaiseDisputeButton";
 import RealtimeRefresher from "@/components/shared/RealtimeRefresher";
+import ProviderInfoButton from "@/components/shared/ProviderInfoButton";
 import { notFound } from "next/navigation";
 import { AlertCircle } from "lucide-react";
 import type { IJob, IQuote } from "@/types";
@@ -31,13 +32,13 @@ export default async function JobDetailPage({
 
   const job = await Job.findOne({ _id: id, clientId: user.userId })
     .populate("clientId", "name email")
-    .populate("providerId", "name email")
+    .populate("providerId", "name email isVerified")
     .lean();
 
   if (!job) notFound();
 
   const j = job as unknown as IJob & {
-    providerId?: { _id: string; name: string; email: string };
+    providerId?: { _id: string; name: string; email: string; isVerified: boolean };
     clientId: { name: string; email: string };
   };
 
@@ -96,6 +97,12 @@ export default async function JobDetailPage({
             <div>
               <p className="text-xs text-slate-500">Assigned Provider</p>
               <p className="font-semibold text-slate-900">{j.providerId.name}</p>
+              <div className="mt-1">
+                <ProviderInfoButton
+                  providerId={String(j.providerId._id)}
+                  providerName={j.providerId.name}
+                />
+              </div>
             </div>
           )}
         </div>

@@ -22,9 +22,15 @@ export default async function ProviderJobsPage() {
 
   const serialized = JSON.parse(JSON.stringify(jobs)) as (IJob & {
     clientId: { name: string };
-    beforePhoto?: string[];
-    afterPhoto?: string[];
+    beforePhoto: string[];
+    afterPhoto: string[];
   })[];
+
+  // Normalize legacy docs where the field may be a string instead of an array
+  for (const j of serialized) {
+    if (!Array.isArray(j.beforePhoto)) j.beforePhoto = j.beforePhoto ? [j.beforePhoto as unknown as string] : [];
+    if (!Array.isArray(j.afterPhoto))  j.afterPhoto  = j.afterPhoto  ? [j.afterPhoto  as unknown as string] : [];
+  }
 
   return (
     <div className="space-y-6">

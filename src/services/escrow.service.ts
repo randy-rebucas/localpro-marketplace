@@ -3,6 +3,7 @@ import {
   transactionRepository,
   activityRepository,
 } from "@/repositories";
+import Job from "@/models/Job";
 import { canTransition, canTransitionEscrow } from "@/lib/jobLifecycle";
 import { pushStatusUpdateMany } from "@/lib/events";
 import { calculateCommission } from "@/lib/commission";
@@ -37,9 +38,13 @@ export class EscrowService {
     const check = canTransition(job as unknown as IJob, "in_progress");
     if (!check.allowed) throw new UnprocessableError(check.reason!);
 
-    job.status = "in_progress";
-    job.beforePhoto = [...(Array.isArray(job.beforePhoto) ? job.beforePhoto : []), ...photos].slice(0, 3);
-    await jobDoc.save();
+    // Use the native driver to fully bypass Mongoose schema casting
+    const existing = Array.isArray(job.beforePhoto) ? job.beforePhoto : [];
+    const merged = [...existing, ...photos].slice(0, 3);
+    await Job.collection.updateOne(
+      { _id: jobDoc._id },
+      { $set: { status: "in_progress", beforePhoto: merged } }
+    );
 
     await activityRepository.log({
       userId: user.userId,
@@ -71,9 +76,13 @@ export class EscrowService {
     const check = canTransition(job as unknown as IJob, "completed");
     if (!check.allowed) throw new UnprocessableError(check.reason!);
 
-    job.status = "completed";
-    job.afterPhoto = [...(Array.isArray(job.afterPhoto) ? job.afterPhoto : []), ...photos].slice(0, 3);
-    await jobDoc.save();
+    // Use the native driver to fully bypass Mongoose schema casting
+    const existing = Array.isArray(job.afterPhoto) ? job.afterPhoto : [];
+    const merged = [...existing, ...photos].slice(0, 3);
+    await Job.collection.updateOne(
+      { _id: jobDoc._id },
+      { $set: { status: "completed", afterPhoto: merged } }
+    );
 
     await activityRepository.log({
       userId: user.userId,

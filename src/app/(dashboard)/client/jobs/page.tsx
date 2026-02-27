@@ -11,7 +11,7 @@ async function getClientJobs(clientId: string) {
   await connectDB();
   const jobs = await Job.find({ clientId })
     .sort({ createdAt: -1 })
-    .populate("providerId", "name")
+    .populate("providerId", "name email isVerified")
     .lean();
 
   const jobIds = jobs.map((j) => (j as unknown as IJob)._id);
@@ -31,7 +31,7 @@ export default async function ClientJobsPage() {
   const { jobs, quoteCountMap } = await getClientJobs(user.userId);
 
   // Serialize for client component (ObjectIds → strings, Dates → ISO strings)
-  const jobsForClient = JSON.parse(JSON.stringify(jobs)) as (IJob & { providerId?: { name: string } })[];
+  const jobsForClient = JSON.parse(JSON.stringify(jobs)) as (IJob & { providerId?: { _id: string; name: string; email: string; isVerified: boolean } })[];
   const quoteCountObj = Object.fromEntries(quoteCountMap);
 
   return (

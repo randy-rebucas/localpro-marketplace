@@ -99,7 +99,10 @@ JobSchema.index({ providerId: 1, status: 1 });
 JobSchema.index({ category: 1, status: 1 });
 JobSchema.index({ coordinates: "2dsphere" }, { sparse: true });
 
-const Job: Model<JobDocument> =
-  mongoose.models.Job ?? mongoose.model<JobDocument>("Job", JobSchema);
+// Always delete the cached model so hot-reloads pick up schema changes
+// (no-op in production where the module is loaded once)
+delete (mongoose.models as Record<string, unknown>).Job;
+
+const Job: Model<JobDocument> = mongoose.model<JobDocument>("Job", JobSchema);
 
 export default Job;

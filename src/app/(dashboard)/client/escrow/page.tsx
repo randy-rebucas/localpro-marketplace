@@ -7,6 +7,7 @@ import { EscrowBadge } from "@/components/ui/Badge";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import Link from "next/link";
 import { CheckCircle, Zap, Clock, CircleCheck } from "lucide-react";
+import ProviderInfoButton from "@/components/shared/ProviderInfoButton";
 import type { IJob } from "@/types";
 
 interface EscrowPageProps {
@@ -44,7 +45,7 @@ export default async function EscrowPage({ searchParams }: EscrowPageProps) {
     clientId: user.userId,
     status: { $in: ["assigned", "in_progress", "completed"] },
   })
-    .populate("providerId", "name")
+    .populate("providerId", "name email isVerified")
     .sort({ createdAt: -1 })
     .lean();
 
@@ -81,17 +82,17 @@ export default async function EscrowPage({ searchParams }: EscrowPageProps) {
           No jobs requiring escrow action.
         </div>
       ) : (() => {
-        const needsAction = (jobs as unknown as (IJob & { providerId?: { name: string } })[]).filter(
+        const needsAction = (jobs as unknown as (IJob & { providerId?: { _id: string; name: string; email: string; isVerified: boolean } })[]).filter(
           (j) => (j.status === "assigned" && j.escrowStatus === "not_funded") || (j.status === "completed" && j.escrowStatus === "funded")
         );
-        const inProgress = (jobs as unknown as (IJob & { providerId?: { name: string } })[]).filter(
+        const inProgress = (jobs as unknown as (IJob & { providerId?: { _id: string; name: string; email: string; isVerified: boolean } })[]).filter(
           (j) => j.escrowStatus === "funded" && j.status !== "completed"
         );
-        const done = (jobs as unknown as (IJob & { providerId?: { name: string } })[]).filter(
+        const done = (jobs as unknown as (IJob & { providerId?: { _id: string; name: string; email: string; isVerified: boolean } })[]).filter(
           (j) => j.escrowStatus === "released"
         );
 
-        function EscrowCard({ j }: { j: IJob & { providerId?: { name: string } } }) {
+        function EscrowCard({ j }: { j: IJob & { providerId?: { _id: string; name: string; email: string; isVerified: boolean } } }) {
           return (
             <div className="bg-white rounded-xl border border-slate-200 shadow-card p-5">
               <div className="flex items-start justify-between gap-4">
@@ -103,6 +104,14 @@ export default async function EscrowPage({ searchParams }: EscrowPageProps) {
                     Provider: <span className="font-medium text-slate-600">{j.providerId?.name ?? "—"}</span>
                     {" · "}Scheduled {formatDate(j.scheduleDate)}
                   </p>
+                  {j.providerId?._id && (
+                    <div className="mt-1.5">
+                      <ProviderInfoButton
+                        providerId={j.providerId._id.toString()}
+                        providerName={j.providerId.name}
+                      />
+                    </div>
+                  )}
                 </div>
                 <div className="flex flex-col items-end gap-2 flex-shrink-0">
                   <p className="text-lg font-bold text-slate-900">{formatCurrency(j.budget)}</p>
