@@ -172,21 +172,6 @@ export default function RegisterForm() {
         </Link>
       </p>
 
-      <div className="flex items-center gap-3 my-4">
-        <div className="border-t border-slate-200 flex-1" />
-        <span className="text-xs text-slate-400">or sign up with</span>
-        <div className="border-t border-slate-200 flex-1" />
-      </div>
-
-      <a
-        href="/api/auth/facebook"
-        className="flex items-center justify-center gap-3 w-full py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-[#1877F2] hover:text-white hover:border-[#1877F2] transition-colors text-sm font-medium text-slate-700"
-      >
-        <svg className="h-5 w-5 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M24 12.073C24 5.405 18.627 0 12 0S0 5.405 0 12.073C0 18.1 4.388 23.094 10.125 24v-8.437H7.078v-3.49h3.047v-2.66c0-3.025 1.791-4.697 4.533-4.697 1.312 0 2.686.235 2.686.235v2.97h-1.513c-1.491 0-1.956.932-1.956 1.887v2.265h3.328l-.532 3.49h-2.796V24C19.612 23.094 24 18.1 24 12.073z" />
-        </svg>
-        Continue with Facebook
-      </a>
     </>
   );
 }
