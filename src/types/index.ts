@@ -54,6 +54,8 @@ export interface IJob {
   beforePhoto?: string[];
   afterPhoto?: string[];
   coordinates?: { type: "Point"; coordinates: [number, number] } | null;
+  /** When set, admin approval assigns this job directly to the provider */
+  invitedProviderId?: Types.ObjectId | string | IUser | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -195,7 +197,8 @@ export type NotificationType =
   | "reminder_fund_escrow"
   | "reminder_no_quotes"
   | "payout_requested"
-  | "payout_status_update";
+  | "payout_status_update"
+  | "job_direct_invite";
 
 export interface INotification {
   _id: Types.ObjectId | string;
@@ -324,6 +327,15 @@ export interface IPayout {
   processedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
+}
+
+// ─── Favorite Provider ───────────────────────────────────────────────────────
+
+export interface IFavoriteProvider {
+  _id: Types.ObjectId | string;
+  clientId: Types.ObjectId | string | IUser;
+  providerId: Types.ObjectId | string | IUser;
+  createdAt: Date;
 }
 
 // ─── Category ─────────────────────────────────────────────────────────────────

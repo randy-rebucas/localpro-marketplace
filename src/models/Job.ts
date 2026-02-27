@@ -85,6 +85,11 @@ const JobSchema = new Schema<JobDocument>(
       type: { type: String, enum: ["Point"] },
       coordinates: { type: [Number] },
     },
+    invitedProviderId: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
   },
   {
     timestamps: true,

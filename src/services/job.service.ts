@@ -13,6 +13,7 @@ export interface CreateJobInput {
   location: string;
   scheduleDate: string;
   coordinates?: { type: "Point"; coordinates: [number, number] };
+  invitedProviderId?: string;
 }
 
 export interface JobFilters {
@@ -60,12 +61,14 @@ export class JobService {
   }
 
   async createJob(user: TokenPayload, input: CreateJobInput) {
+    const { invitedProviderId, ...rest } = input;
     const jobData = {
-      ...input,
+      ...rest,
       scheduleDate: new Date(input.scheduleDate),
       clientId: user.userId,
       status: "pending_validation" as const,
       escrowStatus: "not_funded" as const,
+      ...(invitedProviderId ? { invitedProviderId } : {}),
     };
 
     const riskScore = calculateRiskScore(jobData);
@@ -75,14 +78,16 @@ export class JobService {
       userId: user.userId,
       eventType: "job_created",
       jobId: job._id!.toString(),
+      ...(invitedProviderId ? { metadata: { invitedProviderId } } : {}),
     });
 
     // Notify all admins about the new pending job
     const { notificationService } = await import("@/services/notification.service");
+    const directNote = invitedProviderId ? " (direct invite to a specific provider)" : "";
     await notificationService.notifyAdmins(
       "job_submitted",
       "New job pending review",
-      `A new job "${input.title}" has been submitted and needs validation.`,
+      `A new job "${input.title}" has been submitted and needs validation${directNote}.`,
       { jobId: job._id!.toString() }
     );
 

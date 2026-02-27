@@ -1,9 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Modal from "@/components/ui/Modal";
 import { formatCurrency } from "@/lib/utils";
-import { Star, Briefcase, Clock, CheckCircle, XCircle, User, Calendar } from "lucide-react";
+import { Star, Briefcase, Clock, CheckCircle, XCircle, User, Calendar, Heart, Sparkles } from "lucide-react";
+import toast from "react-hot-toast";
+import { useAuthStore } from "@/stores/authStore";
+import DirectJobModal from "@/components/client/DirectJobModal";
 
 interface WorkSlot { enabled: boolean; from: string; to: string; }
 
@@ -46,10 +49,50 @@ export default function ProviderInfoButton({
   providerId: string;
   providerName: string;
 }) {
+  const { user } = useAuthStore();
+  const isClient = user?.role === "client";
+
   const [open, setOpen] = useState(false);
   const [profile, setProfile] = useState<ProviderProfile | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [favLoading, setFavLoading] = useState(false);
+  const [showDirectJob, setShowDirectJob] = useState(false);
+
+  useEffect(() => {
+    if (!isClient || !open) return;
+    fetch(`/api/favorites`, { credentials: "include" })
+      .then((r) => r.json())
+      .then((data: Array<{ provider: { _id: string } }>) => {
+        setIsFavorite(data.some((f) => f.provider._id === providerId));
+      })
+      .catch(() => {});
+  }, [open, isClient, providerId]);
+
+  async function toggleFavorite() {
+    setFavLoading(true);
+    try {
+      if (isFavorite) {
+        await fetch(`/api/favorites/${providerId}`, { method: "DELETE", credentials: "include" });
+        setIsFavorite(false);
+        toast.success("Removed from favorites");
+      } else {
+        await fetch("/api/favorites", {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ providerId }),
+        });
+        setIsFavorite(true);
+        toast.success("Added to favorites!");
+      }
+    } catch {
+      toast.error("Something went wrong");
+    } finally {
+      setFavLoading(false);
+    }
+  }
 
   async function openModal() {
     setOpen(true);
@@ -79,7 +122,15 @@ export default function ProviderInfoButton({
         View provider
       </button>
 
-      <Modal isOpen={open} onClose={() => setOpen(false)} title="Provider Details" size="md">
+      {showDirectJob && (
+      <DirectJobModal
+        providerId={providerId}
+        providerName={providerName}
+        onClose={() => setShowDirectJob(false)}
+      />
+    )}
+
+    <Modal isOpen={open} onClose={() => setOpen(false)} title="Provider Details" size="md">
         <div className="p-5 space-y-5">
           {loading && (
             <div className="flex justify-center py-8">
@@ -91,6 +142,30 @@ export default function ProviderInfoButton({
             <p className="text-center text-sm text-slate-500 py-6">
               Could not load provider profile.
             </p>
+          )}
+
+          {isClient && !loading && profile && (
+            <div className="flex gap-2 px-5 pb-4 border-b border-slate-100">
+              <button
+                onClick={toggleFavorite}
+                disabled={favLoading}
+                className={`flex-1 flex items-center justify-center gap-1.5 rounded-lg border py-2 text-xs font-medium transition-colors ${
+                  isFavorite
+                    ? "border-red-200 text-red-500 hover:bg-red-50"
+                    : "border-slate-200 text-slate-600 hover:bg-slate-50"
+                }`}
+              >
+                <Heart className={`h-3.5 w-3.5 ${isFavorite ? "fill-red-400 text-red-400" : ""}`} />
+                {isFavorite ? "Unfavorite" : "Save to Favorites"}
+              </button>
+              <button
+                onClick={() => { setOpen(false); setShowDirectJob(true); }}
+                className="flex-1 flex items-center justify-center gap-1.5 rounded-lg bg-primary text-white py-2 text-xs font-medium hover:bg-primary/90 transition-colors"
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                Post Job
+              </button>
+            </div>
           )}
 
           {profile && !loading && (

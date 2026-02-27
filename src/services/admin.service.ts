@@ -48,15 +48,23 @@ export class AdminService {
       status: string;
       riskScore: number;
       clientId: { toString(): string };
+      providerId: unknown;
       title: string;
       _id: { toString(): string };
+      invitedProviderId?: { toString(): string } | null;
       save(): Promise<void>;
     };
     if (j.status !== "pending_validation") {
       throw new UnprocessableError("Only jobs pending validation can be approved");
     }
 
-    j.status = "open";
+    // Direct invite: skip open marketplace and assign to the invited provider
+    if (j.invitedProviderId) {
+      j.status = "assigned";
+      j.providerId = j.invitedProviderId;
+    } else {
+      j.status = "open";
+    }
     if (riskScore !== undefined) j.riskScore = riskScore;
     await jobDoc.save();
 
@@ -64,19 +72,36 @@ export class AdminService {
       userId: adminUserId,
       eventType: "job_approved",
       jobId,
-      metadata: { riskScore: j.riskScore },
+      metadata: { riskScore: j.riskScore, direct: !!j.invitedProviderId },
     });
 
     // Notify client
+    const statusLabel = j.invitedProviderId ? "assigned to your chosen provider" : "live and accepting quotes from providers";
     const notification = await notificationRepository.create({
       userId: j.clientId.toString(),
       type: "job_approved",
       title: "Your job has been approved!",
-      message: `"${j.title}" is now live and accepting quotes from providers.`,
+      message: `"${j.title}" is now ${statusLabel}.`,
       data: { jobId },
     });
     pushNotification(j.clientId.toString(), notification);
-    pushStatusUpdate(j.clientId.toString(), { entity: "job", id: jobId, status: "open" });
+    pushStatusUpdate(j.clientId.toString(), {
+      entity: "job",
+      id: jobId,
+      status: j.invitedProviderId ? "assigned" : "open",
+    });
+
+    // Notify invited provider about the direct job
+    if (j.invitedProviderId) {
+      const providerNotif = await notificationRepository.create({
+        userId: j.invitedProviderId.toString(),
+        type: "job_direct_invite",
+        title: "You have a new job!",
+        message: `A client has posted "${j.title}" directly to you. Check your active jobs.`,
+        data: { jobId },
+      });
+      pushNotification(j.invitedProviderId.toString(), providerNotif);
+    }
 
     return jobDoc;
   }

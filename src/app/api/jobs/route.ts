@@ -22,6 +22,7 @@ const CreateJobSchema = z.object({
     type: z.literal("Point"),
     coordinates: z.tuple([z.number(), z.number()]),
   }).optional(),
+  invitedProviderId: z.string().optional(),
 });
 
 export const GET = withHandler(async (req: NextRequest) => {
