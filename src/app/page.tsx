@@ -11,29 +11,34 @@ import { CheckCircle, Briefcase, Star, Shield, Clock, ArrowRight } from "lucide-
 // ── data helpers ──────────────────────────────────────────────────────────────
 
 async function getHomeData() {
-  await connectDB();
+  try {
+    await connectDB();
 
-  const [categories, topProviders] = await Promise.all([
-    Category.find().sort({ order: 1 }).limit(12).lean(),
-    ProviderProfile.find({ availabilityStatus: "available" })
-      .sort({ avgRating: -1, completedJobCount: -1 })
-      .limit(6)
-      .populate("userId", "name isVerified")
-      .lean(),
-  ]);
+    const [categories, topProviders] = await Promise.all([
+      Category.find().sort({ order: 1 }).limit(12).lean(),
+      ProviderProfile.find({ availabilityStatus: "available" })
+        .sort({ avgRating: -1, completedJobCount: -1 })
+        .limit(6)
+        .populate("userId", "name isVerified")
+        .lean(),
+    ]);
 
-  const providerIds = topProviders.map((p) => {
-    const uid = p.userId as unknown as { _id: string } | string;
-    return typeof uid === "string" ? uid : uid._id;
-  });
-  const reviewCounts = await Review.aggregate([
-    { $match: { providerId: { $in: providerIds } } },
-    { $group: { _id: "$providerId", count: { $sum: 1 } } },
-  ]);
-  const countMap: Record<string, number> = {};
-  for (const r of reviewCounts) countMap[String(r._id)] = r.count;
+    const providerIds = topProviders.map((p) => {
+      const uid = p.userId as unknown as { _id: string } | string;
+      return typeof uid === "string" ? uid : uid._id;
+    });
+    const reviewCounts = await Review.aggregate([
+      { $match: { providerId: { $in: providerIds } } },
+      { $group: { _id: "$providerId", count: { $sum: 1 } } },
+    ]);
+    const countMap: Record<string, number> = {};
+    for (const r of reviewCounts) countMap[String(r._id)] = r.count;
 
-  return { categories, topProviders, countMap };
+    return { categories, topProviders, countMap };
+  } catch (err) {
+    console.error("[homepage] getHomeData failed:", err);
+    return { categories: [], topProviders: [], countMap: {} as Record<string, number> };
+  }
 }
 
 // ── page component ────────────────────────────────────────────────────────────

@@ -1,0 +1,16 @@
+{
+  "name": "LocalPro Marketplace",
+  "short_name": "LocalPro",
+  "description": "Find trusted local service professionals in the Philippines",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2563eb",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "any",
+      "type": "image/x-icon"
+    }
+  ]
+}
