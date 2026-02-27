@@ -28,7 +28,7 @@ export default async function ProviderCalendarPage() {
         <h2 className="text-2xl font-bold text-slate-900">Calendar</h2>
         <p className="text-slate-500 text-sm mt-0.5">Your scheduled jobs for the month.</p>
       </div>
-      <CalendarView jobs={JSON.parse(JSON.stringify(jobs)) as IJob[]} />
+      <CalendarView jobs={jobs as IJob[]} />
     </div>
   );
 }

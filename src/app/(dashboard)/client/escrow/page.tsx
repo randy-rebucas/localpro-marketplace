@@ -49,6 +49,7 @@ export default async function EscrowPage({ searchParams }: EscrowPageProps) {
     clientId: user.userId,
     status: { $in: ["assigned", "in_progress", "completed"] },
   })
+    .select("title category budget status escrowStatus providerId createdAt partialReleaseAmount")
     .populate("providerId", "name email isVerified")
     .sort({ createdAt: -1 })
     .lean();

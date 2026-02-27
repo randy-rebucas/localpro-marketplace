@@ -24,7 +24,7 @@ export default async function AdminUsersPage({
 
   const [rawUsers, total] = await Promise.all([
     User.find()
-      .select("-password")
+      .select("name email role isVerified isSuspended kycStatus approvalStatus avatar createdAt")
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(limit)
@@ -32,7 +32,7 @@ export default async function AdminUsersPage({
     User.countDocuments(),
   ]);
 
-  const users = JSON.parse(JSON.stringify(rawUsers)) as IUser[];
+  const users = rawUsers as unknown as IUser[];
   const totalPages = Math.ceil(total / limit);
 
   return (

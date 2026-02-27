@@ -6,67 +6,84 @@ import User from "@/models/User";
 import Job from "@/models/Job";
 import KpiCard from "@/components/ui/KpiCard";
 import { formatCurrency } from "@/lib/utils";
-import { RevenueLineChart, JobsBarChart } from "./RevenueCharts";
+import dynamic from "next/dynamic";
 import { CircleDollarSign, TrendingUp, Users, Briefcase } from "lucide-react";
-import type { ITransaction, IJob, IUser } from "@/types";
+import type { IUser } from "@/types";
+
+// Lazy-load Recharts bundle (~300 KB) — code-split so it's not in the initial JS bundle
+const RevenueLineChart = dynamic(
+  () => import("./RevenueCharts").then((m) => m.RevenueLineChart),
+  { loading: () => <div className="h-60 animate-pulse bg-slate-100 rounded-lg" /> }
+);
+const JobsBarChart = dynamic(
+  () => import("./RevenueCharts").then((m) => m.JobsBarChart),
+  { loading: () => <div className="h-60 animate-pulse bg-slate-100 rounded-lg" /> }
+);
 
 export const metadata: Metadata = { title: "Revenue Dashboard" };
 
 async function getRevenueStats() {
   await connectDB();
 
-  const [completedTxns, totalUsers, completedJobs] = await Promise.all([
-    Transaction.find({ status: "completed" })
-      .select("amount commission netAmount createdAt payeeId")
-      .lean() as unknown as ITransaction[],
+  // ── Use MongoDB aggregation instead of loading all transactions into memory ──
+  const [totalsAgg, monthlyAgg, topPayeesAgg, totalUsers, completedJobs] = await Promise.all([
+    // Overall totals
+    Transaction.aggregate([
+      { $match: { status: "completed" } },
+      { $group: { _id: null, gmv: { $sum: "$amount" }, commission: { $sum: "$commission" } } },
+    ]),
+    // Monthly breakdown for last 12 months
+    Transaction.aggregate([
+      {
+        $match: {
+          status: "completed",
+          createdAt: { $gte: new Date(new Date().setFullYear(new Date().getFullYear() - 1)) },
+        },
+      },
+      {
+        $group: {
+          _id: { year: { $year: "$createdAt" }, month: { $month: "$createdAt" } },
+          gmv:        { $sum: "$amount" },
+          commission: { $sum: "$commission" },
+          jobs:       { $sum: 1 },
+        },
+      },
+      { $sort: { "_id.year": 1, "_id.month": 1 } },
+    ]),
+    // Top 5 providers by net payout
+    Transaction.aggregate([
+      { $match: { status: "completed" } },
+      { $group: { _id: "$payeeId", earned: { $sum: "$netAmount" } } },
+      { $sort: { earned: -1 } },
+      { $limit: 5 },
+    ]),
     User.countDocuments(),
     Job.countDocuments({ status: "completed" }),
   ]);
 
-  const totalGMV = completedTxns.reduce((s, t) => s + t.amount, 0);
-  const totalCommission = completedTxns.reduce((s, t) => s + t.commission, 0);
+  const totalGMV        = (totalsAgg[0]?.gmv        ?? 0) as number;
+  const totalCommission = (totalsAgg[0]?.commission ?? 0) as number;
 
-  // Build last-12-months monthly data
+  // Build ordered 12-month labels (some months may have no data)
   const now = new Date();
-  const months: { month: string; gmv: number; commission: number; jobs: number }[] = [];
-  for (let i = 11; i >= 0; i--) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+  const months = Array.from({ length: 12 }, (_, i) => {
+    const d     = new Date(now.getFullYear(), now.getMonth() - (11 - i), 1);
     const label = d.toLocaleString("default", { month: "short", year: "2-digit" });
-    const start = new Date(d.getFullYear(), d.getMonth(), 1);
-    const end = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59);
+    const row   = (monthlyAgg as { _id: { year: number; month: number }; gmv: number; commission: number; jobs: number }[])
+      .find((r) => r._id.year === d.getFullYear() && r._id.month === d.getMonth() + 1);
+    return { month: label, gmv: row?.gmv ?? 0, commission: row?.commission ?? 0, jobs: row?.jobs ?? 0 };
+  });
 
-    const monthTxns = completedTxns.filter((t) => {
-      const c = new Date(t.createdAt);
-      return c >= start && c <= end;
-    });
-
-    months.push({
-      month: label,
-      gmv: monthTxns.reduce((s, t) => s + t.amount, 0),
-      commission: monthTxns.reduce((s, t) => s + t.commission, 0),
-      jobs: monthTxns.length,
-    });
-  }
-
-  // Top earning providers (by net payout)
-  const providerEarnings: Record<string, number> = {};
-  for (const t of completedTxns) {
-    const id = t.payeeId?.toString() ?? "";
-    if (id) providerEarnings[id] = (providerEarnings[id] ?? 0) + t.netAmount;
-  }
-  const topProviderIds = Object.entries(providerEarnings)
-    .sort(([, a], [, b]) => b - a)
-    .slice(0, 5)
-    .map(([id]) => id);
-
-  const topProviders = await User.find({ _id: { $in: topProviderIds } })
+  const providerIds = (topPayeesAgg as { _id: string; earned: number }[]).map((r) => r._id);
+  const topUsers    = await User.find({ _id: { $in: providerIds } })
     .select("name email")
     .lean() as unknown as IUser[];
 
-  const topProviderRows = topProviders.map((u) => ({
-    name: u.name,
-    email: u.email as string,
-    earned: providerEarnings[u._id.toString()] ?? 0,
+  const earningsMap = new Map((topPayeesAgg as { _id: string; earned: number }[]).map((r) => [String(r._id), r.earned]));
+  const topProviderRows = topUsers.map((u) => ({
+    name:   u.name,
+    email:  u.email as string,
+    earned: earningsMap.get(String(u._id)) ?? 0,
   })).sort((a, b) => b.earned - a.earned);
 
   return { totalGMV, totalCommission, totalUsers, completedJobs, months, topProviderRows };

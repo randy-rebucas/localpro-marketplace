@@ -18,11 +18,17 @@ export const metadata: Metadata = { title: "Admin Dashboard" };
 async function getAdminStats() {
   await connectDB();
 
-  const [jobStatusCounts, completedTxns, escrowJobs, openDisputes, totalUsers] =
+  const [jobStatusCounts, txnTotals, escrowTotals, openDisputes, totalUsers] =
     await Promise.all([
       Job.aggregate([{ $group: { _id: "$status", count: { $sum: 1 } } }]),
-      Transaction.find({ status: "completed" }).select("amount commission"),
-      Job.find({ escrowStatus: "funded" }).select("budget"),
+      Transaction.aggregate([
+        { $match: { status: "completed" } },
+        { $group: { _id: null, gmv: { $sum: "$amount" }, commission: { $sum: "$commission" } } },
+      ]),
+      Job.aggregate([
+        { $match: { escrowStatus: "funded" } },
+        { $group: { _id: null, balance: { $sum: "$budget" } } },
+      ]),
       Dispute.countDocuments({ status: { $in: ["open", "investigating"] } }),
       User.countDocuments(),
     ]);
@@ -31,9 +37,9 @@ async function getAdminStats() {
     jobStatusCounts.map((s: { _id: string; count: number }) => [s._id, s.count])
   ) as Record<JobStatus, number>;
 
-  const totalGMV = completedTxns.reduce((s, t) => s + t.amount, 0);
-  const totalCommission = completedTxns.reduce((s, t) => s + t.commission, 0);
-  const escrowBalance = escrowJobs.reduce((s, j) => s + j.budget, 0);
+  const totalGMV = txnTotals[0]?.gmv ?? 0;
+  const totalCommission = txnTotals[0]?.commission ?? 0;
+  const escrowBalance = escrowTotals[0]?.balance ?? 0;
   const activeJobs =
     (jobsByStatus.open ?? 0) + (jobsByStatus.assigned ?? 0) + (jobsByStatus.in_progress ?? 0);
   const pendingJobs = jobsByStatus.pending_validation ?? 0;

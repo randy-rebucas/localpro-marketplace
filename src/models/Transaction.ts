@@ -45,8 +45,11 @@ const TransactionSchema = new Schema<TransactionDocument>(
   { timestamps: { createdAt: true, updatedAt: false } }
 );
 
-TransactionSchema.index({ payeeId: 1, createdAt: -1 });
-TransactionSchema.index({ payerId: 1, createdAt: -1 });
+// Compound indexes that cover status+payeeId/payerId for dashboard queries
+TransactionSchema.index({ payeeId: 1, status: 1, createdAt: -1 });
+TransactionSchema.index({ payerId: 1, status: 1, createdAt: -1 });
+// Compound index for revenue aggregation & admin stats (filter by status first)
+TransactionSchema.index({ status: 1, createdAt: -1 });
 
 const Transaction: Model<TransactionDocument> =
   mongoose.models.Transaction ??

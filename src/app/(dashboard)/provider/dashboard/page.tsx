@@ -25,8 +25,8 @@ async function getProviderStats(providerId: string) {
       providerId,
       status: { $in: ["assigned", "in_progress"] },
     }),
-    Transaction.find({ payeeId: providerId, status: "completed" }).select("netAmount"),
-    Review.find({ providerId }).select("rating"),
+    Transaction.find({ payeeId: providerId, status: "completed" }).select("netAmount").lean(),
+    Review.find({ providerId }).select("rating").lean(),
     Job.find({ providerId })
       .sort({ createdAt: -1 })
       .limit(5)

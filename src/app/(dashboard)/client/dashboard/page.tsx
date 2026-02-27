@@ -22,8 +22,8 @@ async function getClientStats(clientId: string) {
       clientId,
       status: { $in: ["open", "assigned", "in_progress"] },
     }),
-    Job.find({ clientId, escrowStatus: "funded" }).select("budget"),
-    Transaction.find({ payerId: clientId, status: "completed" }).select("amount"),
+    Job.find({ clientId, escrowStatus: "funded" }).select("budget").lean(),
+    Transaction.find({ payerId: clientId, status: "completed" }).select("amount").lean(),
     Job.find({ clientId })
       .sort({ createdAt: -1 })
       .limit(5)
