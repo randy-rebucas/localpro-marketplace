@@ -3,16 +3,12 @@
 import { use, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import { useAuthStore } from "@/stores/authStore";
-import Link from "next/link";
-import { ChevronLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/fetchClient";
 
 const ChatWindow = dynamic(() => import("@/components/chat/ChatWindow"), {
   ssr: false,
-  loading: () => (
-    <div className="flex-1 bg-slate-100 animate-pulse rounded-xl" />
-  ),
+  loading: () => <div className="flex-1 bg-slate-100 animate-pulse" />,
 });
 
 export default function ClientJobChatPage({
@@ -30,7 +26,6 @@ export default function ClientJobChatPage({
     if (initialized && !user) router.replace("/login");
   }, [initialized, user, router]);
 
-  // Fetch job title for the header
   useEffect(() => {
     if (!user) return;
     apiFetch(`/api/jobs/${jobId}`)
@@ -42,20 +37,15 @@ export default function ClientJobChatPage({
   if (!initialized || !user) return null;
 
   return (
-    <div className="flex flex-col h-[calc(100vh-4rem)]">
-      <div className="flex items-center gap-2 px-4 py-3 border-b border-slate-200 bg-white flex-shrink-0">
-        <Link href="/client/messages" className="text-slate-500 hover:text-slate-800 transition-colors">
-          <ChevronLeft className="h-5 w-5" />
-        </Link>
-        <div className="min-w-0">
-          <h2 className="text-sm font-semibold text-slate-800 truncate">
-            {jobTitle ?? "Job Conversation"}
-          </h2>
-          {jobTitle && (
-            <p className="text-xs text-slate-400">Conversation</p>
-          )}
-        </div>
+    <div className="flex flex-col h-full overflow-hidden">
+      {/* Thread header */}
+      <div className="px-5 py-3.5 border-b border-slate-200 bg-white shrink-0">
+        <p className="text-sm font-semibold text-slate-800 truncate">
+          {jobTitle ?? "Job Conversation"}
+        </p>
+        <p className="text-xs text-slate-400">Conversation thread</p>
       </div>
+      {/* Chat */}
       <div className="flex-1 min-h-0">
         <ChatWindow
           fetchUrl={`/api/messages/${jobId}`}
@@ -67,3 +57,4 @@ export default function ClientJobChatPage({
     </div>
   );
 }
+

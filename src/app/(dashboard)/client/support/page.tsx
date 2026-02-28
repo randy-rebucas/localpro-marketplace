@@ -17,7 +17,7 @@ export default function ClientSupportPage() {
   if (!user) return null;
 
   return (
-    <div className="flex flex-col h-[calc(100vh-4rem)]">
+    <div className="flex flex-col h-[calc(100vh-8rem)]">
       <ChatWindow
         fetchUrl="/api/support"
         postUrl="/api/support"
