@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { connectDB } from "@/lib/db";
 import User from "@/models/User";
-import { getCurrentUser, requireUser } from "@/lib/auth";
-import { apiError, withHandler } from "@/lib/utils";
+import { requireUser } from "@/lib/auth";
+import { withHandler } from "@/lib/utils";
 import { ValidationError } from "@/lib/errors";
 
 const UpdateMeSchema = z.object({
@@ -45,33 +45,21 @@ export const PUT = withHandler(async (req: NextRequest) => {
   });
 });
 
-export async function GET() {
-  try {
-    const tokenUser = await getCurrentUser();
+export const GET = withHandler(async () => {
+  const tokenUser = await requireUser();
 
-    if (!tokenUser) {
-      return apiError("Not authenticated", 401);
-    }
+  await connectDB();
+  const user = await User.findById(tokenUser.userId);
+  if (!user) throw new ValidationError("User not found");
 
-    await connectDB();
-    const user = await User.findById(tokenUser.userId);
-
-    if (!user) {
-      return apiError("User not found", 404);
-    }
-
-    return NextResponse.json({
-      _id: user._id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      isVerified: user.isVerified,
-      isSuspended: user.isSuspended,
-      avatar: user.avatar ?? null,
-      createdAt: user.createdAt,
-    });
-  } catch (err) {
-    console.error("[ME]", err);
-    return apiError("Internal server error", 500);
-  }
-}
+  return NextResponse.json({
+    _id: user._id,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+    isVerified: user.isVerified,
+    isSuspended: user.isSuspended,
+    avatar: user.avatar ?? null,
+    createdAt: user.createdAt,
+  });
+});

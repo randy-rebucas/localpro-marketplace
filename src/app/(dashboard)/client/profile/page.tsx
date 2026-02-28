@@ -8,6 +8,7 @@ import Button from "@/components/ui/Button";
 import { useAuthStore } from "@/stores/authStore";
 import { formatDate } from "@/lib/utils";
 import { ShieldCheck, CalendarDays, Camera } from "lucide-react";
+import { apiFetch } from "@/lib/fetchClient";
 
 interface MeData {
   name: string;
@@ -40,8 +41,8 @@ export default function ClientProfilePage() {
 
   useEffect(() => {
     Promise.all([
-      fetch("/api/auth/me", { credentials: "include" }).then((r) => r.json()),
-      fetch("/api/jobs", { credentials: "include" }).then((r) => r.json()),
+      apiFetch("/api/auth/me").then((r) => r.json()),
+      apiFetch("/api/jobs").then((r) => r.json()),
     ])
       .then(([meData, jobsData]) => {
         setMe(meData);
@@ -69,14 +70,13 @@ export default function ClientProfilePage() {
       const form = new FormData();
       form.append("file", file);
       form.append("folder", "avatars");
-      const uploadRes = await fetch("/api/upload", { method: "POST", credentials: "include", body: form });
+      const uploadRes = await apiFetch("/api/upload", { method: "POST", body: form });
       const uploadData = await uploadRes.json();
       if (!uploadRes.ok) { toast.error(uploadData.error ?? "Upload failed"); return; }
 
       // 2. Save URL to user profile
-      const saveRes = await fetch("/api/auth/me", {
+      const saveRes = await apiFetch("/api/auth/me", {
         method: "PUT",
-        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ avatar: uploadData.url }),
       });
@@ -96,9 +96,8 @@ export default function ClientProfilePage() {
     if (!name.trim() || name === me?.name) return;
     setSavingName(true);
     try {
-      const res = await fetch("/api/auth/me", {
+      const res = await apiFetch("/api/auth/me", {
         method: "PUT",
-        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: name.trim() }),
       });
@@ -118,9 +117,8 @@ export default function ClientProfilePage() {
     if (newPassword.length < 8) { toast.error("Password must be at least 8 characters"); return; }
     setSavingPassword(true);
     try {
-      const res = await fetch("/api/auth/me", {
+      const res = await apiFetch("/api/auth/me", {
         method: "PUT",
-        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ currentPassword, newPassword }),
       });

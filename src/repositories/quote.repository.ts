@@ -41,6 +41,26 @@ export class QuoteRepository extends BaseRepository<QuoteDocument> {
     await this.connect();
     return Quote.find({ status: "pending", createdAt: { $lt: cutoffDate } }).lean() as unknown as QuoteDocument[];
   }
+
+  /** Quotes for a job with name/email/isVerified populated, sorted newest first. */
+  async findForJobWithProvider(jobId: string): Promise<(QuoteDocument & {
+    providerId: { _id: string; name: string; email: string; isVerified: boolean };
+  })[]> {
+    await this.connect();
+    return Quote.find({ jobId })
+      .populate("providerId", "name email isVerified")
+      .sort({ createdAt: -1 })
+      .lean() as never;
+  }
+
+  /** Pending quote counts grouped by jobId. Accepts ObjectId or string values. */
+  async countPendingByJobIds(jobIds: unknown[]): Promise<{ _id: unknown; count: number }[]> {
+    await this.connect();
+    return Quote.aggregate([
+      { $match: { jobId: { $in: jobIds }, status: "pending" } },
+      { $group: { _id: "$jobId", count: { $sum: 1 } } },
+    ]);
+  }
 }
 
 export const quoteRepository = new QuoteRepository();

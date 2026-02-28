@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { X, Sparkles, UserCheck } from "lucide-react";
 import Button from "@/components/ui/Button";
+import { apiFetch } from "@/lib/fetchClient";
 import LocationAutocomplete from "@/components/shared/LocationAutocomplete";
 import { formatCurrency } from "@/lib/utils";
 import type { ICategory } from "@/types";
@@ -46,7 +47,7 @@ export default function DirectJobModal({ providerId, providerName, onClose }: Pr
   const [categories, setCategories] = useState<string[]>([]);
 
   useEffect(() => {
-    fetch("/api/categories", { credentials: "include" })
+    apiFetch("/api/categories")
       .then((r) => r.json())
       .then((data: ICategory[]) => setCategories(data.map((c) => c.name)))
       .catch(() => {});
@@ -64,10 +65,9 @@ export default function DirectJobModal({ providerId, providerName, onClose }: Pr
     }
     setIsGenerating(true);
     try {
-      const res = await fetch("/api/ai/generate-description", {
+      const res = await apiFetch("/api/ai/generate-description", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify({ title: form.title, category: form.category }),
       });
       const data = await res.json();
@@ -108,10 +108,9 @@ export default function DirectJobModal({ providerId, providerName, onClose }: Pr
   async function submit() {
     setIsSubmitting(true);
     try {
-      const res = await fetch("/api/jobs", {
+      const res = await apiFetch("/api/jobs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify({
           ...form,
           budget: Number(form.budget),

@@ -13,6 +13,7 @@ import SkillsInput from "@/components/shared/SkillsInput";
 import KycUpload from "@/components/shared/KycUpload";
 import { Star, Camera } from "lucide-react";
 import { Skeleton } from "@/components/ui/Spinner";
+import { apiFetch } from "@/lib/fetchClient";
 
 // Lazy-load ScheduleEditor — it’s large and only needed below the fold
 const ScheduleEditor = dynamic(
@@ -93,8 +94,8 @@ export default function ProviderProfilePage() {
 
   useEffect(() => {
     Promise.all([
-      fetch("/api/auth/me", { credentials: "include" }).then((r) => r.json()),
-      fetch("/api/providers/profile", { credentials: "include" }).then((r) => r.json()),
+      apiFetch("/api/auth/me").then((r) => r.json()),
+      apiFetch("/api/providers/profile").then((r) => r.json()),
     ])
       .then(([meData, data]) => {
         setAvatar(meData?.avatar ?? null);
@@ -126,13 +127,12 @@ export default function ProviderProfilePage() {
       const form = new FormData();
       form.append("file", file);
       form.append("folder", "avatars");
-      const uploadRes = await fetch("/api/upload", { method: "POST", credentials: "include", body: form });
+      const uploadRes = await apiFetch("/api/upload", { method: "POST", body: form });
       const uploadData = await uploadRes.json();
       if (!uploadRes.ok) { toast.error(uploadData.error ?? "Upload failed"); return; }
 
-      const saveRes = await fetch("/api/auth/me", {
+      const saveRes = await apiFetch("/api/auth/me", {
         method: "PUT",
-        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ avatar: uploadData.url }),
       });
@@ -150,9 +150,8 @@ export default function ProviderProfilePage() {
   async function saveProfile() {
     setSaving(true);
     try {
-      const res = await fetch("/api/providers/profile", {
+      const res = await apiFetch("/api/providers/profile", {
         method: "PUT",
-        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           bio,

@@ -66,8 +66,7 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: "/favicon.ico",
-    shortcut: "/favicon-16x16.png",
-    apple: "/apple-touch-icon.png",
+    shortcut: "/favicon-16x16.png"
   },
 };
 
@@ -78,6 +77,20 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={`${inter.variable} h-full`}>
+      <head>
+        {process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION && (
+          <meta
+            name="google-site-verification"
+            content={process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION}
+          />
+        )}
+        {process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION && (
+          <meta
+            name="msvalidate.01"
+            content={process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION}
+          />
+        )}
+      </head>
       <body className="font-sans h-full">
         {process.env.NEXT_PUBLIC_GTM_ID && (
           <GoogleTagManagerNoscript gtmId={process.env.NEXT_PUBLIC_GTM_ID} />
@@ -86,12 +99,11 @@ export default function RootLayout({
           <GoogleTagManagerScript gtmId={process.env.NEXT_PUBLIC_GTM_ID} />
         )}
         {process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY && (
-          // &loading=async
           <Script
             id="google-maps"
-            src={`https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=places`}
+            src={`https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=places&loading=async`}
             strategy="afterInteractive"
-          /> 
+          />
         )}
         {children}
         <Toaster

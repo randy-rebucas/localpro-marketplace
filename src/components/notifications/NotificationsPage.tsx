@@ -53,8 +53,7 @@ export default function NotificationsPage() {
   // We only need to hydrate existing notifications here.
   useEffect(() => {
     hydrate();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [hydrate]);
 
   if (!hydrated) {
     return (
@@ -129,7 +128,7 @@ export default function NotificationsPage() {
 
               return (
                 <button
-                  key={n._id?.toString()}
+                  key={n._id?.toString() ?? String(n.createdAt)}
                   onClick={() => handleClick(n)}
                   className={`w-full flex items-start gap-4 px-5 py-4 text-left transition-colors hover:bg-slate-50 ${
                     isUnread ? "bg-blue-50/30" : ""

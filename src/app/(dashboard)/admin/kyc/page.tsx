@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { getCurrentUser } from "@/lib/auth";
-import { connectDB } from "@/lib/db";
-import User from "@/models/User";
+import { userRepository } from "@/repositories/user.repository";
 import AdminKycActions from "./AdminKycActions";
 import { ShieldCheck, ShieldX, Clock, ExternalLink } from "lucide-react";
 
@@ -20,7 +19,7 @@ interface ProviderWithKyc {
   kycStatus: string;
   kycDocuments: KycDoc[];
   kycRejectionReason?: string | null;
-  createdAt: string;
+  createdAt: string | Date;
 }
 
 const STATUS_CONFIG = {
@@ -33,18 +32,13 @@ export default async function AdminKycPage() {
   const user = await getCurrentUser();
   if (!user) return null;
 
-  await connectDB();
+  const [pending, reviewed] = await Promise.all([
+    userRepository.findProvidersByKycStatus("pending", { sort: 1 }),
+    userRepository.findProvidersByKycStatus(["approved", "rejected"], { sort: -1, limit: 20 }),
+  ]);
 
-  const pending = await User.find({ role: "provider", kycStatus: "pending" })
-    .select("name email kycStatus kycDocuments kycRejectionReason createdAt")
-    .sort({ createdAt: 1 })
-    .lean() as unknown as ProviderWithKyc[];
-
-  const reviewed = await User.find({ role: "provider", kycStatus: { $in: ["approved", "rejected"] } })
-    .select("name email kycStatus kycDocuments kycRejectionReason createdAt")
-    .sort({ createdAt: -1 })
-    .limit(20)
-    .lean() as unknown as ProviderWithKyc[];
+  const typedPending = pending as unknown as ProviderWithKyc[];
+  const typedReviewed = reviewed as unknown as ProviderWithKyc[];
 
   function ProviderRow({ p }: { p: ProviderWithKyc }) {
     const cfg = STATUS_CONFIG[p.kycStatus as keyof typeof STATUS_CONFIG];
@@ -102,31 +96,31 @@ export default async function AdminKycPage() {
       <div>
         <h2 className="text-2xl font-bold text-slate-900">KYC Review</h2>
         <p className="text-slate-500 text-sm mt-0.5">
-          {pending.length} provider{pending.length !== 1 ? "s" : ""} awaiting verification
+          {typedPending.length} provider{typedPending.length !== 1 ? "s" : ""} awaiting verification
         </p>
       </div>
 
       {/* Pending section */}
-      {pending.length === 0 ? (
+      {typedPending.length === 0 ? (
         <div className="bg-white rounded-xl border border-slate-200 p-12 text-center text-slate-400 text-sm">
           No pending KYC submissions.
         </div>
       ) : (
         <div className="space-y-4">
           <h3 className="text-sm font-semibold text-amber-700 uppercase tracking-wide">
-            Pending ({pending.length})
+            Pending ({typedPending.length})
           </h3>
-          {pending.map((p) => <ProviderRow key={p._id.toString()} p={p} />)}
+          {typedPending.map((p) => <ProviderRow key={p._id.toString()} p={p} />)}
         </div>
       )}
 
       {/* Reviewed section */}
-      {reviewed.length > 0 && (
+      {typedReviewed.length > 0 && (
         <div className="space-y-4">
           <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide">
             Recently Reviewed
           </h3>
-          {reviewed.map((p) => <ProviderRow key={p._id.toString()} p={p} />)}
+          {typedReviewed.map((p) => <ProviderRow key={p._id.toString()} p={p} />)}
         </div>
       )}
     </div>

@@ -8,6 +8,7 @@ import Image from "next/image";
 import Button from "@/components/ui/Button";
 import Modal from "@/components/ui/Modal";
 import type { JobStatus, EscrowStatus, UploadFolder } from "@/types";
+import { apiFetch } from "@/lib/fetchClient";
 
 interface Props {
   jobId: string;
@@ -118,9 +119,8 @@ async function uploadPhoto(file: File, folder: UploadFolder): Promise<string> {
   form.append("file", file);
   form.append("folder", folder);
 
-  const res = await fetch("/api/upload", {
+  const res = await apiFetch("/api/upload", {
     method: "POST",
-    credentials: "include",
     body: form,
   });
 
@@ -290,10 +290,9 @@ export default function ProviderJobActions({ jobId, status, escrowStatus, before
     try {
       const photoUrls = await Promise.all(files.map((f) => uploadPhoto(f, "jobs/before")));
 
-      const res = await fetch(`/api/jobs/${jobId}/start`, {
+      const res = await apiFetch(`/api/jobs/${jobId}/start`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify({ beforePhotos: photoUrls }),
       });
       const data = await res.json();
@@ -313,10 +312,9 @@ export default function ProviderJobActions({ jobId, status, escrowStatus, before
     try {
       const photoUrls = await Promise.all(files.map((f) => uploadPhoto(f, "jobs/after")));
 
-      const res = await fetch(`/api/jobs/${jobId}/mark-complete`, {
+      const res = await apiFetch(`/api/jobs/${jobId}/mark-complete`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify({ afterPhotos: photoUrls }),
       });
       const data = await res.json();

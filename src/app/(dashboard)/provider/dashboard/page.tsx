@@ -1,50 +1,43 @@
 import type { Metadata } from "next";
 import { getCurrentUser } from "@/lib/auth";
-import { connectDB } from "@/lib/db";
-import Job from "@/models/Job";
-import Transaction from "@/models/Transaction";
-import Review from "@/models/Review";
-import User from "@/models/User";
-import ProviderProfile from "@/models/ProviderProfile";
-// ↑ User is used inside getProviderStats — connectDB() is called only once there
+import { jobRepository } from "@/repositories/job.repository";
+import { transactionRepository } from "@/repositories/transaction.repository";
+import { reviewRepository } from "@/repositories/review.repository";
+import { userRepository } from "@/repositories/user.repository";
+import { providerProfileRepository } from "@/repositories/providerProfile.repository";
 import KpiCard from "@/components/ui/KpiCard";
 import { JobStatusBadge } from "@/components/ui/Badge";
 import { formatCurrency, formatRelativeTime } from "@/lib/utils";
 import Link from "next/link";
 import { CircleDollarSign, Briefcase, Star, Store, TrendingUp, Trophy, Flame } from "lucide-react";
-import type { IJob } from "@/types";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
 
 async function getProviderStats(providerId: string) {
-  await connectDB();
-
-  const [activeJobs, transactions, reviews, recentJobs, userDoc, profileDoc] = await Promise.all([
-    Job.countDocuments({
-      providerId,
-      status: { $in: ["assigned", "in_progress"] },
-    }),
-    Transaction.find({ payeeId: providerId, status: "completed" }).select("netAmount").lean(),
-    Review.find({ providerId }).select("rating").lean(),
-    Job.find({ providerId })
-      .sort({ createdAt: -1 })
-      .limit(5)
-      .lean(),
-    User.findById(providerId).select("name").lean() as Promise<{ name?: string } | null>,
-    ProviderProfile.findOne({ userId: providerId }).select("completionRate completedJobCount").lean() as Promise<{ completionRate?: number; completedJobCount?: number } | null>,
+  const [activeJobs, earnings, ratingSummary, recentJobs, userDoc, profileDoc] = await Promise.all([
+    jobRepository.countActiveForProvider(providerId),
+    transactionRepository.sumCompletedByPayee(providerId),
+    reviewRepository.getProviderRatingSummary(providerId),
+    jobRepository.findRecentForProvider(providerId, 5),
+    userRepository.findById(providerId) as Promise<{ name?: string } | null>,
+    providerProfileRepository.findByUserId(providerId) as Promise<{ completionRate?: number; completedJobCount?: number } | null>,
   ]);
 
-  const totalEarnings = transactions.reduce((sum, t) => sum + t.netAmount, 0);
-  const avgRating =
-    reviews.length > 0
-      ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
-      : 0;
   const firstName = userDoc?.name?.split(" ")[0] ?? "there";
   const completionRate = profileDoc?.completionRate ?? 100;
   const completedJobCount = profileDoc?.completedJobCount ?? 0;
 
-  return { activeJobs, totalEarnings, avgRating, reviewCount: reviews.length, recentJobs, firstName, completionRate, completedJobCount };
+  return {
+    activeJobs,
+    totalEarnings: earnings.net,
+    avgRating: ratingSummary.avgRating,
+    reviewCount: ratingSummary.count,
+    recentJobs,
+    firstName,
+    completionRate,
+    completedJobCount,
+  };
 }
 
 function getPerformanceTier(jobs: number, rating: number, rate: number) {
@@ -164,29 +157,26 @@ export default async function ProviderDashboardPage() {
           </div>
         ) : (
           <ul className="divide-y divide-slate-100">
-            {recentJobs.map((job) => {
-              const j = job as unknown as IJob;
-              return (
-                <li key={j._id.toString()} className="px-6 py-3.5 flex items-center justify-between gap-4 hover:bg-slate-50 transition-colors">
-                  <div className="min-w-0 flex items-center gap-3">
-                    <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                      <Briefcase className="h-4 w-4 text-primary" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-slate-900 truncate">{j.title}</p>
-                      <p className="text-xs text-slate-400 mt-0.5">
-                        <span className="inline-block bg-slate-100 text-slate-600 rounded px-1.5 py-0.5 mr-1.5">{j.category}</span>
-                        {formatRelativeTime(j.createdAt)}
-                      </p>
-                    </div>
+            {recentJobs.map((job) => (
+              <li key={String(job._id)} className="px-6 py-3.5 flex items-center justify-between gap-4 hover:bg-slate-50 transition-colors">
+                <div className="min-w-0 flex items-center gap-3">
+                  <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <Briefcase className="h-4 w-4 text-primary" />
                   </div>
-                  <div className="flex items-center gap-3 flex-shrink-0">
-                    <span className="text-sm font-semibold text-slate-800">{formatCurrency(j.budget)}</span>
-                    <JobStatusBadge status={j.status} />
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-slate-900 truncate">{job.title}</p>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      <span className="inline-block bg-slate-100 text-slate-600 rounded px-1.5 py-0.5 mr-1.5">{job.category}</span>
+                      {formatRelativeTime(job.createdAt)}
+                    </p>
                   </div>
-                </li>
-              );
-            })}
+                </div>
+                <div className="flex items-center gap-3 flex-shrink-0">
+                  <span className="text-sm font-semibold text-slate-800">{formatCurrency(job.budget)}</span>
+                  <JobStatusBadge status={job.status} />
+                </div>
+              </li>
+            ))}
           </ul>
         )}
       </div>

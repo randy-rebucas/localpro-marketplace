@@ -9,6 +9,7 @@ import LocationAutocomplete from "@/components/shared/LocationAutocomplete";
 import { Sparkles, LocateFixed, ImagePlus, X } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import type { ICategory } from "@/types";
+import { apiFetch } from "@/lib/fetchClient";
 
 interface FormData {
   title: string;
@@ -42,7 +43,7 @@ export default function PostJobPage() {
   const [uploadedPhotoUrls, setUploadedPhotoUrls] = useState<string[]>([]);
 
   useEffect(() => {
-    fetch("/api/categories", { credentials: "include" })
+    apiFetch("/api/categories")
       .then((r) => r.json())
       .then((data: ICategory[]) => setCategories(data.map((c) => c.name)))
       .catch(() => { /* silently fall back to empty list */ });
@@ -89,10 +90,9 @@ export default function PostJobPage() {
     }
     setIsGenerating(true);
     try {
-      const res = await fetch("/api/ai/generate-description", {
+      const res = await apiFetch("/api/ai/generate-description", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify({ title: form.title, category: form.category }),
       });
       const data = await res.json();
@@ -158,7 +158,7 @@ export default function PostJobPage() {
       for (const { file } of photoFiles) {
         const fd = new FormData();
         fd.append("file", file);
-        const res  = await fetch("/api/upload", { method: "POST", body: fd, credentials: "include" });
+        const res  = await apiFetch("/api/upload", { method: "POST", body: fd });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error ?? "Upload failed");
         urls.push(data.url as string);
@@ -186,10 +186,9 @@ export default function PostJobPage() {
   async function handleSubmit() {
     setIsSubmitting(true);
     try {
-      const res = await fetch("/api/jobs", {
+      const res = await apiFetch("/api/jobs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify({
           ...form,
           budget: Number(form.budget),

@@ -1,14 +1,12 @@
 import type { Metadata } from "next";
 import { getCurrentUser } from "@/lib/auth";
-import { connectDB } from "@/lib/db";
-import Transaction from "@/models/Transaction";
-import User from "@/models/User";
-import Job from "@/models/Job";
+import { transactionRepository } from "@/repositories/transaction.repository";
+import { userRepository } from "@/repositories/user.repository";
+import { jobRepository } from "@/repositories/job.repository";
 import KpiCard from "@/components/ui/KpiCard";
 import { formatCurrency } from "@/lib/utils";
 import dynamic from "next/dynamic";
 import { CircleDollarSign, TrendingUp, Users, Briefcase } from "lucide-react";
-import type { IUser } from "@/types";
 
 // Lazy-load Recharts bundle (~300 KB) — code-split so it's not in the initial JS bundle
 const RevenueLineChart = dynamic(
@@ -23,66 +21,37 @@ const JobsBarChart = dynamic(
 export const metadata: Metadata = { title: "Revenue Dashboard" };
 
 async function getRevenueStats() {
-  await connectDB();
+  const oneYearAgo = new Date();
+  oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
 
-  // ── Use MongoDB aggregation instead of loading all transactions into memory ──
-  const [totalsAgg, monthlyAgg, topPayeesAgg, totalUsers, completedJobs] = await Promise.all([
-    // Overall totals
-    Transaction.aggregate([
-      { $match: { status: "completed" } },
-      { $group: { _id: null, gmv: { $sum: "$amount" }, commission: { $sum: "$commission" } } },
-    ]),
-    // Monthly breakdown for last 12 months
-    Transaction.aggregate([
-      {
-        $match: {
-          status: "completed",
-          createdAt: { $gte: new Date(new Date().setFullYear(new Date().getFullYear() - 1)) },
-        },
-      },
-      {
-        $group: {
-          _id: { year: { $year: "$createdAt" }, month: { $month: "$createdAt" } },
-          gmv:        { $sum: "$amount" },
-          commission: { $sum: "$commission" },
-          jobs:       { $sum: 1 },
-        },
-      },
-      { $sort: { "_id.year": 1, "_id.month": 1 } },
-    ]),
-    // Top 5 providers by net payout
-    Transaction.aggregate([
-      { $match: { status: "completed" } },
-      { $group: { _id: "$payeeId", earned: { $sum: "$netAmount" } } },
-      { $sort: { earned: -1 } },
-      { $limit: 5 },
-    ]),
-    User.countDocuments(),
-    Job.countDocuments({ status: "completed" }),
+  const [totals, monthlyAgg, topPayeesAgg, totalUsers, completedJobs] = await Promise.all([
+    transactionRepository.getAdminTotals(),
+    transactionRepository.getMonthlyRevenue(oneYearAgo),
+    transactionRepository.getTopPayees(5),
+    userRepository.count({}),
+    jobRepository.count({ status: "completed" }),
   ]);
 
-  const totalGMV        = (totalsAgg[0]?.gmv        ?? 0) as number;
-  const totalCommission = (totalsAgg[0]?.commission ?? 0) as number;
+  const { gmv: totalGMV, commission: totalCommission } = totals;
 
   // Build ordered 12-month labels (some months may have no data)
   const now = new Date();
   const months = Array.from({ length: 12 }, (_, i) => {
     const d     = new Date(now.getFullYear(), now.getMonth() - (11 - i), 1);
     const label = d.toLocaleString("default", { month: "short", year: "2-digit" });
-    const row   = (monthlyAgg as { _id: { year: number; month: number }; gmv: number; commission: number; jobs: number }[])
-      .find((r) => r._id.year === d.getFullYear() && r._id.month === d.getMonth() + 1);
+    const row   = monthlyAgg.find(
+      (r) => r._id.year === d.getFullYear() && r._id.month === d.getMonth() + 1
+    );
     return { month: label, gmv: row?.gmv ?? 0, commission: row?.commission ?? 0, jobs: row?.jobs ?? 0 };
   });
 
-  const providerIds = (topPayeesAgg as { _id: string; earned: number }[]).map((r) => r._id);
-  const topUsers    = await User.find({ _id: { $in: providerIds } })
-    .select("name email")
-    .lean() as unknown as IUser[];
+  const providerIds = topPayeesAgg.map((r) => String(r._id));
+  const topUsers = await userRepository.findAll({ _id: { $in: providerIds } });
 
-  const earningsMap = new Map((topPayeesAgg as { _id: string; earned: number }[]).map((r) => [String(r._id), r.earned]));
+  const earningsMap = new Map(topPayeesAgg.map((r) => [String(r._id), r.earned]));
   const topProviderRows = topUsers.map((u) => ({
-    name:   u.name,
-    email:  u.email as string,
+    name:   (u as unknown as { name: string }).name,
+    email:  (u as unknown as { email: string }).email,
     earned: earningsMap.get(String(u._id)) ?? 0,
   })).sort((a, b) => b.earned - a.earned);
 

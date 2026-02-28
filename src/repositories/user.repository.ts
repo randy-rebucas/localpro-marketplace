@@ -109,6 +109,24 @@ export class UserRepository extends BaseRepository<UserDocument> {
     });
   }
 
+  /** Providers filtered by kycStatus for the admin KYC review queue. */
+  async findProvidersByKycStatus(
+    status: string | string[],
+    opts: { sort?: 1 | -1; limit?: number } = {}
+  ): Promise<Array<{
+    _id: { toString(): string }; name: string; email: string;
+    kycStatus: string; kycDocuments: { type: string; url: string; uploadedAt: string }[];
+    kycRejectionReason?: string | null; createdAt: string | Date;
+  }>> {
+    await this.connect();
+    const statusFilter = Array.isArray(status) ? { $in: status } : status;
+    let q = User.find({ role: "provider", kycStatus: statusFilter })
+      .select("name email kycStatus kycDocuments kycRejectionReason createdAt")
+      .sort({ createdAt: opts.sort ?? -1 });
+    if (opts.limit) q = q.limit(opts.limit);
+    return q.lean() as never;
+  }
+
   // ─── Provider Approval ───────────────────────────────────────────────────
 
   async updateApprovalStatus(

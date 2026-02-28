@@ -1,10 +1,8 @@
 import type { Metadata } from "next";
 import { getCurrentUser } from "@/lib/auth";
-import { connectDB } from "@/lib/db";
-import Transaction from "@/models/Transaction";
+import { transactionRepository } from "@/repositories/transaction.repository";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { CircleDollarSign, TrendingDown, Wallet, ArrowUpRight } from "lucide-react";
-import type { ITransaction, IJob } from "@/types";
 import { payoutService } from "@/services/payout.service";
 import RequestPayoutModal from "@/components/payment/RequestPayoutModal";
 import ExportEarningsButton from "@/components/payment/ExportEarningsButton";
@@ -17,20 +15,13 @@ export default async function EarningsPage() {
   const user = await getCurrentUser();
   if (!user) return null;
 
-  await connectDB();
-
-  const [transactions, availableBalance] = await Promise.all([
-    Transaction.find({ payeeId: user.userId })
-      .sort({ createdAt: -1 })
-      .populate("jobId", "title")
-      .lean() as unknown as Promise<(ITransaction & { jobId: { title: string } })[]>,
+  const [transactions, totals, availableBalance] = await Promise.all([
+    transactionRepository.findByPayeeWithJob(user.userId),
+    transactionRepository.sumCompletedByPayee(user.userId),
     payoutService.getAvailableBalance(user.userId),
   ]);
 
-  const completed = transactions.filter((t) => t.status === "completed");
-  const totalGross = completed.reduce((s, t) => s + t.amount, 0);
-  const totalCommission = completed.reduce((s, t) => s + t.commission, 0);
-  const totalNet = completed.reduce((s, t) => s + t.netAmount, 0);
+  const { gross: totalGross, commission: totalCommission, net: totalNet } = totals;
   const commissionPct = totalGross > 0 ? Math.round((totalCommission / totalGross) * 100) : 10;
   const netPct = 100 - commissionPct;
 
@@ -148,9 +139,9 @@ export default async function EarningsPage() {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {transactions.map((t) => (
-                  <tr key={t._id.toString()} className="hover:bg-slate-50/50 transition-colors">
+                  <tr key={String(t._id)} className="hover:bg-slate-50/50 transition-colors">
                     <td className="px-6 py-4 font-medium text-slate-900">
-                      {(t.jobId as unknown as IJob & { title: string })?.title ?? "—"}
+                      {t.jobId?.title ?? "—"}
                     </td>
                     <td className="px-6 py-4 text-right text-slate-700">{formatCurrency(t.amount)}</td>
                     <td className="px-6 py-4 text-right text-red-500">-{formatCurrency(t.commission)}</td>

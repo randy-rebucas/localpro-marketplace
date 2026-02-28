@@ -1,6 +1,5 @@
 import { getCurrentUser } from "@/lib/auth";
-import { connectDB } from "@/lib/db";
-import User from "@/models/User";
+import { userRepository } from "@/repositories/user.repository";
 import DashboardShell from "@/components/layout/DashboardShell";
 import { Clock, XCircle } from "lucide-react";
 
@@ -8,11 +7,7 @@ export default async function ProviderLayout({ children }: { children: React.Rea
   const currentUser = await getCurrentUser();
 
   if (currentUser) {
-    await connectDB();
-    const userDoc = await User.findById(currentUser.userId)
-      .select("approvalStatus")
-      .lean() as { approvalStatus?: string } | null;
-
+    const userDoc = await userRepository.findById(currentUser.userId) as { approvalStatus?: string } | null;
     const approvalStatus = userDoc?.approvalStatus ?? "approved";
 
     if (approvalStatus === "pending_approval") {

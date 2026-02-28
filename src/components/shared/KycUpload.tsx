@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
 import { ShieldCheck, ShieldX, Clock, Upload, ExternalLink } from "lucide-react";
 import Button from "@/components/ui/Button";
+import { apiFetch } from "@/lib/fetchClient";
 
 const DOC_TYPES = [
   { value: "government_id", label: "Government-issued ID (UMID, Passport, Driver's License)" },
@@ -35,7 +36,7 @@ export default function KycUpload() {
   const [selectedType, setSelectedType] = useState<DocType>("government_id");
 
   useEffect(() => {
-    fetch("/api/kyc", { credentials: "include" })
+    apiFetch("/api/kyc")
       .then((r) => r.json())
       .then((data: KycState) => { setState(data); setIsLoading(false); })
       .catch(() => setIsLoading(false));
@@ -47,7 +48,7 @@ export default function KycUpload() {
       const fd = new FormData();
       fd.append("file", file);
       fd.append("folder", "kyc");
-      const res = await fetch("/api/upload", { method: "POST", body: fd, credentials: "include" });
+      const res = await apiFetch("/api/upload", { method: "POST", body: fd });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Upload failed");
       return data.url as string;

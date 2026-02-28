@@ -6,6 +6,7 @@ import toast from "react-hot-toast";
 import { Wallet, X } from "lucide-react";
 import Button from "@/components/ui/Button";
 import { formatCurrency } from "@/lib/utils";
+import { apiFetch } from "@/lib/fetchClient";
 
 interface Props {
   availableBalance: number;
@@ -61,7 +62,7 @@ export default function RequestPayoutModal({ availableBalance }: Props) {
 
     setLoading(true);
     try {
-      const res = await fetch("/api/payouts", {
+      const res = await apiFetch("/api/payouts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

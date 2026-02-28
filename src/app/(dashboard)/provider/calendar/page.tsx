@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { getCurrentUser } from "@/lib/auth";
-import { connectDB } from "@/lib/db";
-import Job from "@/models/Job";
+import { jobRepository } from "@/repositories/job.repository";
 import type { IJob } from "@/types";
 import CalendarView from "./CalendarView";
 
@@ -11,16 +10,7 @@ export default async function ProviderCalendarPage() {
   const user = await getCurrentUser();
   if (!user) return null;
 
-  await connectDB();
-
-  const jobs = await Job.find({
-    providerId: user.userId,
-    status: { $in: ["assigned", "in_progress", "completed"] },
-    scheduleDate: { $exists: true },
-  })
-    .select("title category scheduleDate status budget location")
-    .sort({ scheduleDate: 1 })
-    .lean();
+  const jobs = await jobRepository.findCalendarJobsForProvider(user.userId);
 
   // Serialize dates for the CalendarView Client Component
   const serializedJobs = JSON.parse(JSON.stringify(jobs)) as IJob[];

@@ -4,8 +4,10 @@ import { connectDB } from "@/lib/db";
 import Category from "@/models/Category";
 import ProviderProfile from "@/models/ProviderProfile";
 import Review from "@/models/Review";
+import "@/models/User"; // ensure User schema is registered for ProviderProfile.populate
 import Link from "next/link";
 import { CheckCircle, Briefcase, Star, Shield, ArrowRight, MapPin, Users, TrendingUp, Lock } from "lucide-react";
+import Image from "next/image";
 
 // ── data helpers ──────────────────────────────────────────────────────────────
 
@@ -310,6 +312,32 @@ export default async function RootPage() {
                 <p className="text-xs text-slate-500 leading-relaxed">{f.desc}</p>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Partners ── */}
+      <section className="border-y border-slate-100 bg-white py-14 px-4">
+        <div className="max-w-4xl mx-auto text-center">
+          <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-8">Trusted Partners</p>
+          <div className="flex flex-wrap items-center justify-center gap-8">
+            {/* Ormoc City LGU */}
+            <div className="flex flex-col items-center gap-3 group">
+              <div className="w-20 h-20 rounded-2xl border border-slate-200 shadow-sm bg-white flex items-center justify-center overflow-hidden group-hover:border-primary/40 group-hover:shadow-card-hover transition-all p-2">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <Image
+                  src="/official_seal_ormoc.png"
+                  alt="Ormoc City official seal"
+                  className="w-full h-full object-contain"
+                  width={80}
+                  height={80}
+                />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-slate-800 leading-tight">Ormoc City LGU</p>
+                <p className="text-xs text-slate-400 mt-0.5">Official Government Partner</p>
+              </div>
+            </div>
           </div>
         </div>
       </section>

@@ -1,12 +1,10 @@
 import type { Metadata } from "next";
 import { getCurrentUser } from "@/lib/auth";
-import { connectDB } from "@/lib/db";
-import Job from "@/models/Job";
+import { jobRepository } from "@/repositories/job.repository";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import AdminJobActions from "./AdminJobActions";
 import RealtimeRefresher from "@/components/shared/RealtimeRefresher";
 import { MapPin, Calendar, User } from "lucide-react";
-import type { IJob } from "@/types";
 
 export const metadata: Metadata = { title: "Manage Jobs" };
 
@@ -33,12 +31,7 @@ export default async function AdminJobsPage() {
   const user = await getCurrentUser();
   if (!user) return null;
 
-  await connectDB();
-
-  const jobs = await Job.find({ status: "pending_validation" })
-    .sort({ createdAt: -1 })
-    .populate("clientId", "name email")
-    .lean() as unknown as (IJob & { clientId: { name: string; email: string } })[];
+  const jobs = await jobRepository.findPendingValidation();
 
   return (
     <div className="space-y-6">
@@ -57,7 +50,7 @@ export default async function AdminJobsPage() {
       ) : (
         <div className="space-y-4">
           {jobs.map((job) => (
-            <div key={job._id.toString()} className="bg-white rounded-xl border border-slate-200 shadow-card overflow-hidden">
+            <div key={String(job._id)} className="bg-white rounded-xl border border-slate-200 shadow-card overflow-hidden">
               {/* Card header with risk color strip */}
               <div className={`h-1 w-full ${job.riskScore > 60 ? "bg-red-400" : job.riskScore > 30 ? "bg-amber-400" : "bg-green-400"}`} />
               <div className="p-6">
@@ -86,7 +79,7 @@ export default async function AdminJobsPage() {
                   {job.description}
                 </div>
 
-                <AdminJobActions jobId={job._id.toString()} riskScore={job.riskScore} />
+                <AdminJobActions jobId={String(job._id)} riskScore={job.riskScore} />
               </div>
             </div>
           ))}

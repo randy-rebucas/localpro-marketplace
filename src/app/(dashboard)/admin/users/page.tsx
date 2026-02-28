@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { getCurrentUser } from "@/lib/auth";
-import { connectDB } from "@/lib/db";
-import User from "@/models/User";
+import { userRepository } from "@/repositories/user.repository";
 import AdminUsersList from "./AdminUsersList";
 import type { IUser } from "@/types";
 
@@ -20,17 +19,7 @@ export default async function AdminUsersPage({
   const page = Math.max(1, Number(params.page ?? 1));
   const limit = 50;
 
-  await connectDB();
-
-  const [rawUsers, total] = await Promise.all([
-    User.find()
-      .select("name email role isVerified isSuspended kycStatus approvalStatus avatar createdAt")
-      .sort({ createdAt: -1 })
-      .skip((page - 1) * limit)
-      .limit(limit)
-      .lean(),
-    User.countDocuments(),
-  ]);
+  const { users: rawUsers, total } = await userRepository.findPaginated({}, page, limit);
 
   const users = rawUsers.map((u) => ({
     ...u,

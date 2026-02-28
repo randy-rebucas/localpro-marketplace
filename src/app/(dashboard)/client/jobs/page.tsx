@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { getCurrentUser } from "@/lib/auth";
-import { connectDB } from "@/lib/db";
-import Job from "@/models/Job";
-import Quote from "@/models/Quote";
+import { redirect } from "next/navigation";
+import { jobRepository } from "@/repositories/job.repository";
+import { quoteRepository } from "@/repositories/quote.repository";
 import Link from "next/link";
 import type { IJob } from "@/types";
 import RealtimeRefresher from "@/components/shared/RealtimeRefresher";
@@ -10,19 +10,11 @@ import ClientJobsList from "./ClientJobsList";
 
 export const metadata: Metadata = { title: "My Jobs" };
 
-
 async function getClientJobs(clientId: string) {
-  await connectDB();
-  const jobs = await Job.find({ clientId })
-    .sort({ createdAt: -1 })
-    .populate("providerId", "name email isVerified")
-    .lean();
+  const jobs = await jobRepository.findAllForClient(clientId);
 
-  const jobIds = jobs.map((j) => (j as unknown as IJob)._id);
-  const quoteCounts = await Quote.aggregate([
-    { $match: { jobId: { $in: jobIds }, status: "pending" } },
-    { $group: { _id: "$jobId", count: { $sum: 1 } } },
-  ]) as { _id: unknown; count: number }[];
+  const jobIds = jobs.map((j) => j._id);
+  const quoteCounts = await quoteRepository.countPendingByJobIds(jobIds);
 
   const quoteCountMap = new Map(quoteCounts.map((q) => [String(q._id), q.count]));
   return { jobs, quoteCountMap };
@@ -30,7 +22,7 @@ async function getClientJobs(clientId: string) {
 
 export default async function ClientJobsPage() {
   const user = await getCurrentUser();
-  if (!user) return null;
+  if (!user) redirect("/login");
 
   const { jobs, quoteCountMap } = await getClientJobs(user.userId);
 

@@ -1,11 +1,13 @@
 import { create } from "zustand";
 import type { PublicUser } from "@/types";
 import { useNotificationStore } from "@/stores/notificationStore";
+import { apiFetch } from "@/lib/fetchClient";
 
 interface AuthState {
   user: PublicUser | null;
   isLoading: boolean;
   isAuthenticated: boolean;
+  initialized: boolean;
   setUser: (user: PublicUser | null) => void;
   setLoading: (loading: boolean) => void;
   fetchMe: () => Promise<void>;
@@ -16,6 +18,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   isLoading: false,
   isAuthenticated: false,
+  initialized: false,
 
   setUser: (user) =>
     set({ user, isAuthenticated: Boolean(user) }),
@@ -25,7 +28,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   fetchMe: async () => {
     set({ isLoading: true });
     try {
-      const res = await fetch("/api/auth/me");
+      const res = await apiFetch("/api/auth/me");
       if (res.ok) {
         const user = await res.json();
         set({ user, isAuthenticated: true });
@@ -35,7 +38,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     } catch {
       set({ user: null, isAuthenticated: false });
     } finally {
-      set({ isLoading: false });
+      set({ isLoading: false, initialized: true });
     }
   },
 

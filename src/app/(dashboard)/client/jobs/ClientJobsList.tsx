@@ -16,11 +16,15 @@ interface ClientJobsListProps {
 }
 
 const TABS: { label: string; value: JobStatus | "all" }[] = [
-  { label: "All", value: "all" },
-  { label: "Open", value: "open" },
-  { label: "Assigned", value: "assigned" },
+  { label: "All",        value: "all" },
+  { label: "Pending",   value: "pending_validation" },
+  { label: "Open",      value: "open" },
+  { label: "Assigned",  value: "assigned" },
   { label: "In Progress", value: "in_progress" },
   { label: "Completed", value: "completed" },
+  { label: "Disputed",  value: "disputed" },
+  { label: "Rejected",  value: "rejected" },
+  { label: "Refunded",  value: "refunded" },
 ];
 
 export default function ClientJobsList({ jobs, quoteCountMap }: ClientJobsListProps) {

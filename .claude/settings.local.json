@@ -29,7 +29,14 @@
       "Bash(find \"c:\\\\Users\\\\corew\\\\localpro-marketplace\\\\src\\\\app\" -type d -name \"\\(dashboard\\)\")",
       "Bash(ls -la \"c:\\\\Users\\\\corew\\\\localpro-marketplace\\\\src\\\\app\\\\\\(dashboard\\\\\\)\")",
       "Bash(ls \"c:\\\\Users\\\\corew\\\\localpro-marketplace\\\\src\\\\app\\\\\\(dashboard\\\\\\)\\\\client\")",
-      "Bash(npx tsc --noEmit)"
+      "Bash(npx tsc --noEmit)",
+      "Bash(find \"c:\\\\Users\\\\corew\\\\localpro-marketplace\\\\src\\\\app\\\\\\(dashboard\\)\\\\client\"\" -type f)",
+      "Bash(find \"/c/Users/corew/localpro-marketplace/src/app/\\(dashboard\\)/client/\" -type f)",
+      "Bash(find \"c:\\\\Users\\\\corew\\\\localpro-marketplace\\\\src\\\\app\\\\\\(dashboard\\)\\\\provider\"\" -type f \\\\\\( -name \"*.ts\" -o -name \"*.tsx \" \\\\\\))",
+      "Bash(find \"c:/Users/corew/localpro-marketplace/src/app/\\(dashboard\\)/provider/\" -type f \\\\\\( -name \"*.ts\" -o -name \"*.tsx\" \\\\\\))",
+      "Bash(find \"c:\\\\Users\\\\corew\\\\localpro-marketplace\\\\src\\\\app\\\\\\(dashboard\\)\\\\admin\" -type f)",
+      "Bash(pnpm list tailwind-merge)",
+      "Bash(pnpm add tailwind-merge)"
     ]
   }
 }

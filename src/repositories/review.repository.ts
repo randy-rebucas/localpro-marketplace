@@ -1,6 +1,6 @@
 import Review from "@/models/Review";
 import type { ReviewDocument } from "@/models/Review";
-import { FilterQuery } from "mongoose";
+import { FilterQuery, Types } from "mongoose";
 import { BaseRepository } from "./base.repository";
 
 export class ReviewRepository extends BaseRepository<ReviewDocument> {
@@ -22,6 +22,16 @@ export class ReviewRepository extends BaseRepository<ReviewDocument> {
 
   async existsForJob(jobId: string): Promise<boolean> {
     return this.exists({ jobId } as never);
+  }
+
+  /** Aggregated avg rating + review count for a provider. Single DB round-trip. */
+  async getProviderRatingSummary(providerId: string): Promise<{ avgRating: number; count: number }> {
+    await this.connect();
+    const [result] = await Review.aggregate<{ avgRating: number; count: number }>([
+      { $match: { providerId: new Types.ObjectId(providerId) } },
+      { $group: { _id: null, avgRating: { $avg: "$rating" }, count: { $sum: 1 } } },
+    ]);
+    return result ?? { avgRating: 0, count: 0 };
   }
 }
 

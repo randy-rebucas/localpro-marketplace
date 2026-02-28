@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import Button from "@/components/ui/Button";
+import { apiFetch } from "@/lib/fetchClient";
 import Modal from "@/components/ui/Modal";
 import { calculateCommission } from "@/lib/commission";
 import { formatCurrency } from "@/lib/utils";
@@ -21,6 +22,7 @@ export default function JobActionButtons({ jobId, status, escrowStatus, budget }
   const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
   const [showFundModal, setShowFundModal] = useState(false);
+  const [showReleaseModal, setShowReleaseModal] = useState(false);
 
   const breakdown = calculateCommission(budget);
 
@@ -28,7 +30,7 @@ export default function JobActionButtons({ jobId, status, escrowStatus, budget }
     setLoading("fund");
     setShowFundModal(false);
     try {
-      const res = await fetch(`/api/jobs/${jobId}/fund`, { method: "PATCH", credentials: "include" });
+      const res = await apiFetch(`/api/jobs/${jobId}/fund`, { method: "PATCH" });
       const data = await res.json();
       if (!res.ok) {
         toast.error(data.error ?? "Failed to fund escrow");
@@ -52,7 +54,7 @@ export default function JobActionButtons({ jobId, status, escrowStatus, budget }
   async function releaseEscrow() {
     setLoading("complete");
     try {
-      const res = await fetch(`/api/jobs/${jobId}/complete`, { method: "PATCH", credentials: "include" });
+      const res = await apiFetch(`/api/jobs/${jobId}/complete`, { method: "PATCH" });
       const data = await res.json();
       if (!res.ok) { toast.error(data.error ?? "Action failed"); return; }
       toast.success(data.message ?? "Payment released to provider");
@@ -79,12 +81,49 @@ export default function JobActionButtons({ jobId, status, escrowStatus, budget }
         {status === "completed" && escrowStatus === "funded" && (
           <Button
             isLoading={loading === "complete"}
-            onClick={releaseEscrow}
+            onClick={() => setShowReleaseModal(true)}
           >
             Approve &amp; Release Payment
           </Button>
         )}
       </div>
+
+      {/* Release Payment Confirmation Modal */}
+      <Modal
+        isOpen={showReleaseModal}
+        onClose={() => setShowReleaseModal(false)}
+        title="Release Payment"
+        size="sm"
+      >
+        <div className="p-6 space-y-4">
+          <div className="flex items-center gap-2.5 rounded-lg bg-blue-50 border border-blue-200 px-4 py-3">
+            <ShieldCheck className="h-5 w-5 text-blue-600 flex-shrink-0" />
+            <p className="text-sm font-medium text-blue-800">
+              This will release <span className="font-bold">{formatCurrency(breakdown.netAmount)}</span> to the provider. This action cannot be undone.
+            </p>
+          </div>
+          <p className="text-sm text-slate-600">
+            Only confirm if you are satisfied with the completed work. Once released, funds cannot be recovered.
+          </p>
+          <div className="flex gap-3 pt-1">
+            <Button
+              variant="secondary"
+              className="flex-1"
+              onClick={() => setShowReleaseModal(false)}
+              disabled={loading === "complete"}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="flex-1"
+              isLoading={loading === "complete"}
+              onClick={() => { setShowReleaseModal(false); releaseEscrow(); }}
+            >
+              Confirm Release
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Escrow Confirmation Modal */}
       <Modal

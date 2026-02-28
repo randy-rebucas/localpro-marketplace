@@ -23,20 +23,28 @@ if (!global.mongoose) {
 }
 
 export async function connectDB(): Promise<typeof mongoose> {
-  if (cached.conn) {
+  // Reuse only a genuinely connected instance (readyState 1 = connected)
+  if (cached.conn && mongoose.connection.readyState === 1) {
     return cached.conn;
+  }
+
+  // Stale / broken connection — reset and reconnect
+  if (cached.conn && mongoose.connection.readyState !== 1) {
+    cached.conn = null;
+    cached.promise = null;
   }
 
   if (!cached.promise) {
     const opts = {
       bufferCommands: false,
-      // Limit pool to avoid exhausting Atlas / container file descriptors
       maxPoolSize: 10,
       minPoolSize: 2,
-      // Fail fast on cold-start DB unavailability
-      serverSelectionTimeoutMS: 5_000,
-      // Release idle sockets after 45 s
-      socketTimeoutMS: 45_000,
+      // Give Atlas enough time to select a server on cold-start
+      serverSelectionTimeoutMS: 15_000,
+      // TCP connect timeout
+      connectTimeoutMS: 15_000,
+      // Don't set socketTimeoutMS — let the driver/Atlas manage it;
+      // a fixed socket timeout kills long-running aggregations
     };
     cached.promise = mongoose.connect(MONGODB_URI, opts);
   }
@@ -44,7 +52,9 @@ export async function connectDB(): Promise<typeof mongoose> {
   try {
     cached.conn = await cached.promise;
   } catch (err) {
+    // Always clear the promise so the next call retries a fresh connection
     cached.promise = null;
+    cached.conn = null;
     throw err;
   }
 

@@ -1,7 +1,7 @@
 import { jobRepository, activityRepository, providerProfileRepository } from "@/repositories";
 import { calculateRiskScore } from "@/lib/riskScore";
 import { rankJobsForProvider } from "@/lib/openai";
-import { NotFoundError, ForbiddenError } from "@/lib/errors";
+import { NotFoundError, ForbiddenError, UnprocessableError } from "@/lib/errors";
 import type { TokenPayload } from "@/lib/auth";
 import type { PaginatedJobs } from "@/repositories/job.repository";
 
@@ -44,7 +44,10 @@ export class JobService {
       }
     }
 
-    if (category) filter.category = { $regex: category, $options: "i" };
+    if (category) {
+      const escaped = category.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      filter.category = { $regex: escaped, $options: "i" };
+    }
 
     const result = await jobRepository.findPaginated(filter as never, {
       page: Math.max(1, page),
@@ -63,6 +66,13 @@ export class JobService {
   }
 
   async createJob(user: TokenPayload, input: CreateJobInput) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayCount = await jobRepository.countByClientSince(user.userId, today);
+    if (todayCount >= 10) {
+      throw new UnprocessableError("Daily job posting limit reached (10 per day)");
+    }
+
     const { invitedProviderId, ...rest } = input;
     const jobData = {
       ...rest,

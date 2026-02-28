@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Download } from "lucide-react";
+import { apiFetch } from "@/lib/fetchClient";
 
 export default function ExportEarningsButton() {
   const [isExporting, setIsExporting] = useState(false);
@@ -9,7 +10,7 @@ export default function ExportEarningsButton() {
   async function handleExport() {
     setIsExporting(true);
     try {
-      const res = await fetch("/api/transactions/export", { credentials: "include" });
+      const res = await apiFetch("/api/transactions/export");
       if (!res.ok) throw new Error("Export failed");
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);

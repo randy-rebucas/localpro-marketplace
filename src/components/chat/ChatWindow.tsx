@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import MessageBubble from "./MessageBubble";
 import MessageInput from "./MessageInput";
 import { PageLoader } from "@/components/ui/Spinner";
+import { apiFetch } from "@/lib/fetchClient";
 
 interface RawMessage {
   _id: string;
@@ -54,7 +55,7 @@ export default function ChatWindow({
   useEffect(() => {
     setLoading(true);
     setError(null);
-    fetch(fetchUrl)
+    apiFetch(fetchUrl)
       .then(async (r) => {
         if (!r.ok) {
           const errData = await r.json().catch(() => ({})) as { error?: string };
@@ -103,7 +104,7 @@ export default function ChatWindow({
   }, [streamUrl, streamTransform]);
 
   const handleSend = useCallback(async (body: string) => {
-    const res = await fetch(postUrl, {
+    const res = await apiFetch(postUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ body }),

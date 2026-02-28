@@ -3,14 +3,17 @@
 import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
 import Button from "@/components/ui/Button";
+import { apiFetch } from "@/lib/fetchClient";
 import Modal from "@/components/ui/Modal";
 import { formatDate, formatCurrency } from "@/lib/utils";
-import type { IJob } from "@/types";
+import type { IJob, IReview } from "@/types";
+
+type PopulatedJob = IJob & { providerId?: { _id: string; name: string } | null };
 
 export default function ClientReviewsPage() {
-  const [reviewableJobs, setReviewableJobs] = useState<IJob[]>([]);
+  const [reviewableJobs, setReviewableJobs] = useState<PopulatedJob[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [reviewModal, setReviewModal] = useState<{ open: boolean; job: IJob | null }>({
+  const [reviewModal, setReviewModal] = useState<{ open: boolean; job: PopulatedJob | null }>({
     open: false, job: null,
   });
   const [rating, setRating] = useState(5);
@@ -20,14 +23,25 @@ export default function ClientReviewsPage() {
   useEffect(() => {
     async function fetchJobs() {
       try {
-        // Get completed jobs with released escrow
-        const res = await fetch("/api/jobs?status=completed", { credentials: "include" });
-        if (!res.ok) return;
-        const data = await res.json();
+        // Fetch completed jobs and existing reviews in parallel
+        const [jobsRes, reviewsRes] = await Promise.all([
+          apiFetch("/api/jobs?status=completed"),
+          apiFetch("/api/reviews"),
+        ]);
+        if (!jobsRes.ok) return;
+        const [jobsData, reviewsData] = await Promise.all([
+          jobsRes.json(),
+          reviewsRes.ok ? reviewsRes.json() : Promise.resolve([]),
+        ]);
 
-        // Filter: escrow released
-        const eligible = data.data.filter(
-          (j: IJob) => j.escrowStatus === "released"
+        // Build set of already-reviewed jobIds
+        const reviewedJobIds = new Set<string>(
+          (reviewsData as IReview[]).map((r) => r.jobId?.toString())
+        );
+
+        // Keep only escrow-released jobs that haven't been reviewed yet
+        const eligible = (jobsData.data as PopulatedJob[]).filter(
+          (j) => j.escrowStatus === "released" && !reviewedJobIds.has(j._id?.toString())
         );
         setReviewableJobs(eligible);
       } catch {
@@ -47,10 +61,9 @@ export default function ClientReviewsPage() {
     }
     setIsSubmitting(true);
     try {
-      const res = await fetch("/api/reviews", {
+      const res = await apiFetch("/api/reviews", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify({ jobId: reviewModal.job._id, rating, feedback }),
       });
       const data = await res.json();
@@ -58,7 +71,7 @@ export default function ClientReviewsPage() {
       toast.success("Review submitted!");
       setReviewModal({ open: false, job: null });
       setFeedback(""); setRating(5);
-      setReviewableJobs((prev) => prev.filter((j) => j._id !== reviewModal.job!._id));
+      setReviewableJobs((prev) => prev.filter((j) => j._id?.toString() !== reviewModal.job!._id?.toString()));
     } catch {
       toast.error("Something went wrong");
     } finally {
@@ -93,7 +106,12 @@ export default function ClientReviewsPage() {
             <div key={job._id.toString()} className="bg-white rounded-xl border border-slate-200 shadow-card p-5 flex items-center justify-between gap-4">
               <div>
                 <p className="font-semibold text-slate-900 text-sm">{job.title}</p>
-                <p className="text-xs text-slate-400 mt-0.5">{job.category} · Completed {formatDate(job.createdAt)} · {formatCurrency(job.budget)}</p>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  {job.category}
+                  {job.providerId?.name ? ` · ${job.providerId.name}` : ""}
+                  {" · Completed "}{formatDate(job.updatedAt)}
+                  {" · "}{formatCurrency(job.budget)}
+                </p>
               </div>
               <Button size="sm" onClick={() => { setReviewModal({ open: true, job }); setRating(5); setFeedback(""); }}>
                 Leave Review
@@ -106,7 +124,7 @@ export default function ClientReviewsPage() {
       <Modal isOpen={reviewModal.open} onClose={() => setReviewModal({ open: false, job: null })} title="Leave a Review">
         <div className="space-y-4">
           <p className="text-sm text-slate-600">
-            How was your experience with <strong>{reviewModal.job?.title}</strong>?
+            How was your experience with <strong>{reviewModal.job?.providerId?.name ?? "the provider"}</strong> on <strong>{reviewModal.job?.title}</strong>?
           </p>
 
           {/* Star rating */}

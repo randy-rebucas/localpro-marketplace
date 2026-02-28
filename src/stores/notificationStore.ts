@@ -12,6 +12,7 @@
 import { create } from "zustand";
 import toast from "react-hot-toast";
 import type { INotification } from "@/types";
+import { apiFetch } from "@/lib/fetchClient";
 
 export type { INotification as Notification };
 
@@ -59,7 +60,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
   hydrate: async () => {
     if (get().hydrated) return;
     try {
-      const res = await fetch("/api/notifications", { credentials: "include" });
+      const res = await apiFetch("/api/notifications");
       if (!res.ok) return;
       // API returns { notifications: INotification[], unreadCount: number }
       const body = await res.json();
@@ -122,6 +123,8 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
   // ─── Mutations ────────────────────────────────────────────────────────────
 
   markRead: async (id: string) => {
+    // Optimistic update
+    const prev = get().notifications;
     set((state) => ({
       notifications: state.notifications.map((n) =>
         n._id?.toString() === id ? { ...n, readAt: new Date() } : n
@@ -131,21 +134,25 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
         state.notifications.filter((n) => !n.readAt && n._id?.toString() !== id).length
       ),
     }));
-    await fetch(`/api/notifications/${id}/read`, {
-      method: "PATCH",
-      credentials: "include",
-    }).catch(() => {});
+    const res = await apiFetch(`/api/notifications/${id}/read`, { method: "PATCH" }).catch(() => null);
+    if (!res || !res.ok) {
+      // Roll back
+      set({ notifications: prev, unreadCount: prev.filter((n) => !n.readAt).length });
+      toast.error("Failed to mark notification as read");
+    }
   },
 
   markAllRead: async () => {
+    const prev = get().notifications;
     set((state) => ({
       notifications: state.notifications.map((n) => ({ ...n, readAt: n.readAt ?? new Date() })),
       unreadCount: 0,
     }));
-    await fetch("/api/notifications", {
-      method: "PATCH",
-      credentials: "include",
-    }).catch(() => {});
+    const res = await apiFetch("/api/notifications", { method: "PATCH" }).catch(() => null);
+    if (!res || !res.ok) {
+      set({ notifications: prev, unreadCount: prev.filter((n) => !n.readAt).length });
+      toast.error("Failed to mark all notifications as read");
+    }
   },
 
   _ingest: (n: INotification, silent = false) => {

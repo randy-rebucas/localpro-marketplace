@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { getCurrentUser } from "@/lib/auth";
-import { connectDB } from "@/lib/db";
-import Job from "@/models/Job";
+import { jobRepository } from "@/repositories/job.repository";
 import Link from "next/link";
 import RealtimeRefresher from "@/components/shared/RealtimeRefresher";
 import ProviderJobsList from "./ProviderJobsList";
@@ -14,15 +13,7 @@ export default async function ProviderJobsPage() {
   const user = await getCurrentUser();
   if (!user) return null;
 
-  await connectDB();
-
-  const jobs = await Job.find({
-    providerId: user.userId,
-    status: { $in: ["assigned", "in_progress", "completed"] },
-  })
-    .populate("clientId", "name")
-    .sort({ createdAt: -1 })
-    .lean();
+  const jobs = await jobRepository.findActiveJobsForProvider(user.userId);
 
   const serialized = JSON.parse(JSON.stringify(jobs)) as (IJob & {
     clientId: { name: string };

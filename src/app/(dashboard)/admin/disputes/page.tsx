@@ -1,13 +1,11 @@
 import type { Metadata } from "next";
 import { getCurrentUser } from "@/lib/auth";
-import { connectDB } from "@/lib/db";
-import Dispute from "@/models/Dispute";
+import { disputeRepository } from "@/repositories/dispute.repository";
 import { DisputeStatusBadge } from "@/components/ui/Badge";
 import { formatDate, formatCurrency } from "@/lib/utils";
 import DisputeActions from "./DisputeActions";
 import RealtimeRefresher from "@/components/shared/RealtimeRefresher";
 import { AlertOctagon, Search, Lock } from "lucide-react";
-import type { IDispute } from "@/types";
 
 export const metadata: Metadata = { title: "Disputes" };
 
@@ -16,18 +14,7 @@ export default async function AdminDisputesPage() {
   const user = await getCurrentUser();
   if (!user) return null;
 
-  await connectDB();
-
-  const disputes = await Dispute.find({
-    status: { $in: ["open", "investigating"] },
-  })
-    .sort({ createdAt: -1 })
-    .populate("jobId", "title budget escrowStatus")
-    .populate("raisedBy", "name email role")
-    .lean() as unknown as (IDispute & {
-      jobId: { _id: string; title: string; budget: number; escrowStatus: string };
-      raisedBy: { name: string; email: string; role: string };
-    })[];
+  const disputes = await disputeRepository.findActiveWithRefs();
 
   return (
     <div className="space-y-6">
@@ -43,14 +30,10 @@ export default async function AdminDisputesPage() {
           <p className="text-slate-300 text-xs mt-1">All disputes have been resolved.</p>
         </div>
       ) : (() => {
-        type DisputeWithRefs = IDispute & {
-          jobId: { _id: string; title: string; budget: number; escrowStatus: string };
-          raisedBy: { name: string; email: string; role: string };
-        };
-        const open = (disputes as DisputeWithRefs[]).filter((d) => d.status === "open");
-        const investigating = (disputes as DisputeWithRefs[]).filter((d) => d.status === "investigating");
+        const open = disputes.filter((d) => d.status === "open");
+        const investigating = disputes.filter((d) => d.status === "investigating");
 
-        function DisputeCard({ dispute }: { dispute: DisputeWithRefs }) {
+        function DisputeCard({ dispute }: { dispute: typeof disputes[0] }) {
           const escrowAtRisk = dispute.jobId?.escrowStatus === "funded";
           return (
             <div className="bg-white rounded-xl border border-slate-200 shadow-card overflow-hidden">
@@ -58,7 +41,7 @@ export default async function AdminDisputesPage() {
                 <div className="bg-amber-50 border-b border-amber-200 px-5 py-2 flex items-center gap-2">
                   <Lock className="h-3.5 w-3.5 text-amber-600 flex-shrink-0" />
                   <p className="text-xs font-medium text-amber-700">
-                    Escrow funded — {formatCurrency(dispute.jobId.budget)} at risk
+                    Escrow funded — {formatCurrency(dispute.jobId!.budget)} at risk
                   </p>
                 </div>
               )}
@@ -84,7 +67,7 @@ export default async function AdminDisputesPage() {
                 </div>
 
                 <DisputeActions
-                  disputeId={dispute._id.toString()}
+                  disputeId={String(dispute._id)}
                   currentStatus={dispute.status}
                   escrowStatus={dispute.jobId?.escrowStatus}
                 />
@@ -103,7 +86,7 @@ export default async function AdminDisputesPage() {
                   <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-medium">{open.length}</span>
                 </div>
                 <div className="space-y-3">
-                  {open.map((d) => <DisputeCard key={d._id.toString()} dispute={d} />)}
+                  {open.map((d) => <DisputeCard key={String(d._id)} dispute={d} />)}
                 </div>
               </div>
             )}
@@ -115,7 +98,7 @@ export default async function AdminDisputesPage() {
                   <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">{investigating.length}</span>
                 </div>
                 <div className="space-y-3">
-                  {investigating.map((d) => <DisputeCard key={d._id.toString()} dispute={d} />)}
+                  {investigating.map((d) => <DisputeCard key={String(d._id)} dispute={d} />)}
                 </div>
               </div>
             )}

@@ -1,10 +1,9 @@
 import type { Metadata } from "next";
 import { getCurrentUser } from "@/lib/auth";
-import { connectDB } from "@/lib/db";
-import Job from "@/models/Job";
-import Transaction from "@/models/Transaction";
-import Dispute from "@/models/Dispute";
-import User from "@/models/User";
+import { jobRepository } from "@/repositories/job.repository";
+import { transactionRepository } from "@/repositories/transaction.repository";
+import { disputeRepository } from "@/repositories/dispute.repository";
+import { userRepository } from "@/repositories/user.repository";
 import KpiCard from "@/components/ui/KpiCard";
 import { formatCurrency } from "@/lib/utils";
 import AdminJobsChart from "./AdminJobsChart";
@@ -16,30 +15,19 @@ export const metadata: Metadata = { title: "Admin Dashboard" };
 
 
 async function getAdminStats() {
-  await connectDB();
-
-  const [jobStatusCounts, txnTotals, escrowTotals, openDisputes, totalUsers] =
-    await Promise.all([
-      Job.aggregate([{ $group: { _id: "$status", count: { $sum: 1 } } }]),
-      Transaction.aggregate([
-        { $match: { status: "completed" } },
-        { $group: { _id: null, gmv: { $sum: "$amount" }, commission: { $sum: "$commission" } } },
-      ]),
-      Job.aggregate([
-        { $match: { escrowStatus: "funded" } },
-        { $group: { _id: null, balance: { $sum: "$budget" } } },
-      ]),
-      Dispute.countDocuments({ status: { $in: ["open", "investigating"] } }),
-      User.countDocuments(),
-    ]);
+  const [jobStatusCounts, txnTotals, escrowBalance, openDisputes, totalUsers] = await Promise.all([
+    jobRepository.countByStatus(),
+    transactionRepository.getAdminTotals(),
+    jobRepository.sumFundedEscrowBalance(),
+    disputeRepository.countOpen(),
+    userRepository.count({}),
+  ]);
 
   const jobsByStatus = Object.fromEntries(
-    jobStatusCounts.map((s: { _id: string; count: number }) => [s._id, s.count])
+    jobStatusCounts.map((s) => [s._id, s.count])
   ) as Record<JobStatus, number>;
 
-  const totalGMV = txnTotals[0]?.gmv ?? 0;
-  const totalCommission = txnTotals[0]?.commission ?? 0;
-  const escrowBalance = escrowTotals[0]?.balance ?? 0;
+  const { gmv: totalGMV, commission: totalCommission } = txnTotals;
   const activeJobs =
     (jobsByStatus.open ?? 0) + (jobsByStatus.assigned ?? 0) + (jobsByStatus.in_progress ?? 0);
   const pendingJobs = jobsByStatus.pending_validation ?? 0;

@@ -21,6 +21,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import type { IJob, ICategory } from "@/types";
+import { apiFetch } from "@/lib/fetchClient";
 
 type SortKey = "newest" | "oldest" | "budget_desc" | "budget_asc";
 const SORT_OPTIONS: { value: SortKey; label: string }[] = [
@@ -57,7 +58,7 @@ export default function MarketplacePage() {
   const searchRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    fetch("/api/categories", { credentials: "include" })
+    apiFetch("/api/categories")
       .then((r) => r.json())
       .then((data: ICategory[]) => setCategories(["All", ...data.map((c) => c.name)]))
       .catch(() => {});
@@ -71,7 +72,7 @@ export default function MarketplacePage() {
     try {
       const params = new URLSearchParams({ status: "open" });
       if (category !== "All") params.set("category", category);
-      const res = await fetch(`/api/jobs?${params}`, { credentials: "include" });
+      const res = await apiFetch(`/api/jobs?${params}`);
       if (!res.ok) return;
       const data = await res.json();
       setJobs(data.data);
@@ -86,7 +87,7 @@ export default function MarketplacePage() {
   useEffect(() => { fetchJobs(); }, [fetchJobs]);
 
   useEffect(() => {
-    fetch("/api/quotes", { credentials: "include" })
+    apiFetch("/api/quotes")
       .then((r) => r.ok ? r.json() : null)
       .then((data) => {
         if (data?.quotedJobIds) setQuotedJobIds(new Set<string>(data.quotedJobIds));
@@ -138,10 +139,9 @@ export default function MarketplacePage() {
 
     setIsSubmitting(true);
     try {
-      const res = await fetch("/api/quotes", {
+      const res = await apiFetch("/api/quotes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify({
           jobId: quoteModal.job._id,
           proposedAmount: Number(quoteForm.proposedAmount),

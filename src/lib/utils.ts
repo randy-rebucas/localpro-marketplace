@@ -1,22 +1,11 @@
 import { NextRequest } from "next/server";
 import { type ClassValue, clsx } from "clsx";
+import { twMerge } from "tailwind-merge";
 import { AppError } from "@/lib/errors";
 import { checkRateLimit } from "@/lib/rateLimit";
 
 export function cn(...inputs: ClassValue[]): string {
-  return inputs
-    .flatMap((input) => {
-      if (!input) return [];
-      if (typeof input === "string") return [input];
-      if (Array.isArray(input)) return [cn(...input)];
-      if (typeof input === "object") {
-        return Object.entries(input)
-          .filter(([, value]) => Boolean(value))
-          .map(([key]) => key);
-      }
-      return [];
-    })
-    .join(" ");
+  return twMerge(clsx(inputs));
 }
 
 export function formatCurrency(amount: number, currency = "PHP"): string {

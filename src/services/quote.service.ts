@@ -2,6 +2,7 @@ import {
   quoteRepository,
   jobRepository,
   activityRepository,
+  userRepository,
 } from "@/repositories";
 import { pushStatusUpdate, pushStatusUpdateMany } from "@/lib/events";
 import {
@@ -90,6 +91,14 @@ export class QuoteService {
 
     if (j.clientId.toString() !== user.userId) throw new ForbiddenError();
     if (j.status !== "open") throw new UnprocessableError("Job is no longer accepting quotes");
+
+    if (q.providerId) {
+      const provider = await userRepository.findById(q.providerId.toString());
+      const approvalStatus = (provider as { approvalStatus?: string } | null)?.approvalStatus;
+      if (!provider || approvalStatus !== "approved") {
+        throw new UnprocessableError("This provider is no longer eligible to accept jobs");
+      }
+    }
 
     q.status = "accepted";
     await quote.save();

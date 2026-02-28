@@ -7,6 +7,7 @@ import { Star, Briefcase, Clock, CheckCircle, XCircle, User, Calendar, Heart, Sp
 import toast from "react-hot-toast";
 import { useAuthStore } from "@/stores/authStore";
 import DirectJobModal from "@/components/client/DirectJobModal";
+import { apiFetch } from "@/lib/fetchClient";
 
 interface WorkSlot { enabled: boolean; from: string; to: string; }
 
@@ -62,7 +63,7 @@ export default function ProviderInfoButton({
 
   useEffect(() => {
     if (!isClient || !open) return;
-    fetch(`/api/favorites`, { credentials: "include" })
+    apiFetch(`/api/favorites`)
       .then((r) => r.json())
       .then((data: Array<{ provider: { _id: string } }>) => {
         setIsFavorite(data.some((f) => f.provider._id === providerId));
@@ -74,16 +75,16 @@ export default function ProviderInfoButton({
     setFavLoading(true);
     try {
       if (isFavorite) {
-        await fetch(`/api/favorites/${providerId}`, { method: "DELETE", credentials: "include" });
+        await apiFetch(`/api/favorites/${providerId}`, { method: "DELETE" });
         setIsFavorite(false);
         toast.success("Removed from favorites");
       } else {
-        await fetch("/api/favorites", {
+        const res = await apiFetch("/api/favorites", {
           method: "POST",
-          credentials: "include",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ providerId }),
         });
+        if (!res.ok) throw new Error();
         setIsFavorite(true);
         toast.success("Added to favorites!");
       }
@@ -100,9 +101,7 @@ export default function ProviderInfoButton({
     setLoading(true);
     setError(false);
     try {
-      const res = await fetch(`/api/providers/${providerId}/profile`, {
-        credentials: "include",
-      });
+      const res = await apiFetch(`/api/providers/${providerId}/profile`);
       if (!res.ok) throw new Error();
       setProfile(await res.json());
     } catch {

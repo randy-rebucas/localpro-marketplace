@@ -19,6 +19,7 @@ import Button from "@/components/ui/Button";
 import { formatCurrency } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/Spinner";
 import DirectJobModal from "@/components/client/DirectJobModal";
+import { apiFetch } from "@/lib/fetchClient";
 
 interface FavoriteEntry {
   _id: string;
@@ -69,6 +70,119 @@ function Stars({ rating }: { rating: number }) {
   );
 }
 
+function ProviderCard({
+  id,
+  name,
+  email,
+  isVerified,
+  profile,
+  onRemove,
+  onFavoriteToggle,
+  onPostJob,
+  isFavorite,
+  isToggling,
+  isRemoving,
+}: {
+  id: string;
+  name: string;
+  email: string;
+  isVerified?: boolean;
+  profile: FavoriteEntry["profile"] | null;
+  onRemove?: () => void;
+  onFavoriteToggle?: () => void;
+  onPostJob: (id: string, name: string) => void;
+  isFavorite?: boolean;
+  isToggling?: boolean;
+  isRemoving?: boolean;
+}) {
+  const avail = profile?.availabilityStatus ?? "unavailable";
+  const cfg = availabilityConfig[avail];
+
+  return (
+    <div className="bg-white rounded-xl border border-slate-200 shadow-card p-5 flex flex-col gap-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-base flex-shrink-0">
+            {name.charAt(0).toUpperCase()}
+          </div>
+          <div>
+            <div className="flex items-center gap-1.5">
+              <p className="font-semibold text-slate-900">{name}</p>
+              {isVerified && (
+                <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-medium">Verified</span>
+              )}
+            </div>
+            <p className="text-xs text-slate-400">{email}</p>
+          </div>
+        </div>
+        <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium ${cfg.classes}`}>
+          {cfg.icon}{cfg.label}
+        </span>
+      </div>
+
+      {profile?.avgRating !== undefined && profile.avgRating > 0 && (
+        <Stars rating={profile.avgRating} />
+      )}
+
+      {profile?.bio && (
+        <p className="text-xs text-slate-500 line-clamp-2">{profile.bio}</p>
+      )}
+
+      <div className="flex flex-wrap gap-2">
+        {profile?.skills?.slice(0, 4).map((s) => (
+          <span key={s} className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">{s}</span>
+        ))}
+        {(profile?.skills?.length ?? 0) > 4 && (
+          <span className="text-xs text-slate-400">+{(profile?.skills?.length ?? 0) - 4} more</span>
+        )}
+      </div>
+
+      <div className="flex items-center gap-3 text-xs text-slate-400">
+        {profile?.completedJobCount !== undefined && (
+          <span className="flex items-center gap-1"><Briefcase className="h-3.5 w-3.5" />{profile.completedJobCount} jobs</span>
+        )}
+        {profile?.hourlyRate && (
+          <span>{formatCurrency(profile.hourlyRate)}/hr</span>
+        )}
+      </div>
+
+      <div className="flex gap-2 pt-1 border-t border-slate-100">
+        {onFavoriteToggle && (
+          <button
+            onClick={onFavoriteToggle}
+            disabled={isToggling}
+            className={`flex-1 flex items-center justify-center gap-1.5 rounded-lg border py-2 text-xs font-medium transition-colors ${
+              isFavorite
+                ? "border-red-200 text-red-500 hover:bg-red-50"
+                : "border-slate-200 text-slate-600 hover:bg-slate-50"
+            }`}
+          >
+            <Heart className={`h-3.5 w-3.5 ${isFavorite ? "fill-red-400 text-red-400" : ""}`} />
+            {isFavorite ? "Unfavorite" : "Favorite"}
+          </button>
+        )}
+        {onRemove && (
+          <button
+            onClick={onRemove}
+            disabled={isRemoving}
+            className="flex items-center justify-center gap-1.5 rounded-lg border border-red-200 text-red-500 hover:bg-red-50 px-3 py-2 text-xs font-medium transition-colors"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        )}
+        <Button
+          size="sm"
+          onClick={() => onPostJob(id, name)}
+          className="flex-1 flex items-center gap-1.5"
+        >
+          <Sparkles className="h-3.5 w-3.5" />
+          Post Job
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 export default function ClientFavoritesPage() {
   const [favorites, setFavorites] = useState<FavoriteEntry[]>([]);
   const [browse, setBrowse] = useState<ProviderResult[]>([]);
@@ -84,7 +198,7 @@ export default function ClientFavoritesPage() {
   const fetchFavorites = useCallback(async () => {
     setLoadingFavs(true);
     try {
-      const res = await fetch("/api/favorites", { credentials: "include" });
+      const res = await apiFetch("/api/favorites");
       if (!res.ok) throw new Error();
       setFavorites(await res.json());
     } catch {
@@ -102,7 +216,7 @@ export default function ClientFavoritesPage() {
       const params = new URLSearchParams();
       if (search.trim()) params.set("search", search.trim());
       if (availability) params.set("availability", availability);
-      const res = await fetch(`/api/providers?${params}`, { credentials: "include" });
+      const res = await apiFetch(`/api/providers?${params}`);
       if (!res.ok) throw new Error();
       setBrowse(await res.json());
     } catch {
@@ -119,10 +233,7 @@ export default function ClientFavoritesPage() {
   async function removeFavorite(providerId: string) {
     setRemovingId(providerId);
     try {
-      const res = await fetch(`/api/favorites/${providerId}`, {
-        method: "DELETE",
-        credentials: "include",
-      });
+      const res = await apiFetch(`/api/favorites/${providerId}`, { method: "DELETE" });
       if (!res.ok) throw new Error();
       setFavorites((prev) => prev.filter((f) => f.provider._id !== providerId));
       toast.success("Removed from favorites");
@@ -138,16 +249,17 @@ export default function ClientFavoritesPage() {
     setTogglingId(id);
     try {
       if (provider.isFavorite) {
-        await fetch(`/api/favorites/${id}`, { method: "DELETE", credentials: "include" });
+        const res = await apiFetch(`/api/favorites/${id}`, { method: "DELETE" });
+        if (!res.ok) throw new Error();
         setBrowse((prev) => prev.map((p) => p.userId._id === id ? { ...p, isFavorite: false } : p));
         toast.success("Removed from favorites");
       } else {
-        await fetch("/api/favorites", {
+        const res = await apiFetch("/api/favorites", {
           method: "POST",
-          credentials: "include",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ providerId: id }),
         });
+        if (!res.ok) throw new Error();
         setBrowse((prev) => prev.map((p) => p.userId._id === id ? { ...p, isFavorite: true } : p));
         toast.success("Added to favorites!");
       }
@@ -156,117 +268,6 @@ export default function ClientFavoritesPage() {
     } finally {
       setTogglingId(null);
     }
-  }
-
-  function ProviderCard({
-    id,
-    name,
-    email,
-    isVerified,
-    profile,
-    onRemove,
-    onFavoriteToggle,
-    isFavorite,
-    isToggling,
-    isRemoving,
-  }: {
-    id: string;
-    name: string;
-    email: string;
-    isVerified?: boolean;
-    profile: FavoriteEntry["profile"] | null;
-    onRemove?: () => void;
-    onFavoriteToggle?: () => void;
-    isFavorite?: boolean;
-    isToggling?: boolean;
-    isRemoving?: boolean;
-  }) {
-    const avail = profile?.availabilityStatus ?? "unavailable";
-    const cfg = availabilityConfig[avail];
-
-    return (
-      <div className="bg-white rounded-xl border border-slate-200 shadow-card p-5 flex flex-col gap-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-base flex-shrink-0">
-              {name.charAt(0).toUpperCase()}
-            </div>
-            <div>
-              <div className="flex items-center gap-1.5">
-                <p className="font-semibold text-slate-900">{name}</p>
-                {isVerified && (
-                  <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-medium">Verified</span>
-                )}
-              </div>
-              <p className="text-xs text-slate-400">{email}</p>
-            </div>
-          </div>
-          <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium ${cfg.classes}`}>
-            {cfg.icon}{cfg.label}
-          </span>
-        </div>
-
-        {profile?.avgRating !== undefined && profile.avgRating > 0 && (
-          <Stars rating={profile.avgRating} />
-        )}
-
-        {profile?.bio && (
-          <p className="text-xs text-slate-500 line-clamp-2">{profile.bio}</p>
-        )}
-
-        <div className="flex flex-wrap gap-2">
-          {profile?.skills?.slice(0, 4).map((s) => (
-            <span key={s} className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">{s}</span>
-          ))}
-          {(profile?.skills?.length ?? 0) > 4 && (
-            <span className="text-xs text-slate-400">+{(profile!.skills!.length) - 4} more</span>
-          )}
-        </div>
-
-        <div className="flex items-center gap-3 text-xs text-slate-400">
-          {profile?.completedJobCount !== undefined && (
-            <span className="flex items-center gap-1"><Briefcase className="h-3.5 w-3.5" />{profile.completedJobCount} jobs</span>
-          )}
-          {profile?.hourlyRate && (
-            <span>{formatCurrency(profile.hourlyRate)}/hr</span>
-          )}
-        </div>
-
-        <div className="flex gap-2 pt-1 border-t border-slate-100">
-          {onFavoriteToggle && (
-            <button
-              onClick={onFavoriteToggle}
-              disabled={isToggling}
-              className={`flex-1 flex items-center justify-center gap-1.5 rounded-lg border py-2 text-xs font-medium transition-colors ${
-                isFavorite
-                  ? "border-red-200 text-red-500 hover:bg-red-50"
-                  : "border-slate-200 text-slate-600 hover:bg-slate-50"
-              }`}
-            >
-              <Heart className={`h-3.5 w-3.5 ${isFavorite ? "fill-red-400 text-red-400" : ""}`} />
-              {isFavorite ? "Unfavorite" : "Favorite"}
-            </button>
-          )}
-          {onRemove && (
-            <button
-              onClick={onRemove}
-              disabled={isRemoving}
-              className="flex items-center justify-center gap-1.5 rounded-lg border border-red-200 text-red-500 hover:bg-red-50 px-3 py-2 text-xs font-medium transition-colors"
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-            </button>
-          )}
-          <Button
-            size="sm"
-            onClick={() => setDirectJobTarget({ id, name })}
-            className="flex-1 flex items-center gap-1.5"
-          >
-            <Sparkles className="h-3.5 w-3.5" />
-            Post Job
-          </Button>
-        </div>
-      </div>
-    );
   }
 
   return (
@@ -332,6 +333,7 @@ export default function ClientFavoritesPage() {
                   isVerified={f.provider.isVerified}
                   profile={f.profile}
                   onRemove={() => removeFavorite(f.provider._id)}
+                  onPostJob={(id, name) => setDirectJobTarget({ id, name })}
                   isRemoving={removingId === f.provider._id}
                 />
               ))}
@@ -396,6 +398,7 @@ export default function ClientFavoritesPage() {
                     availabilityStatus: p.availabilityStatus,
                   }}
                   onFavoriteToggle={() => toggleFavoriteFromDiscover(p)}
+                  onPostJob={(id, name) => setDirectJobTarget({ id, name })}
                   isFavorite={p.isFavorite}
                   isToggling={togglingId === p.userId._id}
                 />

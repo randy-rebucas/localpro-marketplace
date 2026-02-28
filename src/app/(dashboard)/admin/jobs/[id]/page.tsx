@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import { getCurrentUser } from "@/lib/auth";
-import { connectDB } from "@/lib/db";
-import Job from "@/models/Job";
-import Quote from "@/models/Quote";
+import { jobRepository } from "@/repositories/job.repository";
+import { quoteRepository } from "@/repositories/quote.repository";
 import { JobStatusBadge, EscrowBadge } from "@/components/ui/Badge";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import AdminJobActions from "../AdminJobActions";
@@ -24,26 +23,22 @@ export default async function AdminJobDetailPage({
   if (!user) return null;
 
   const { id } = await params;
-  await connectDB();
 
-  const job = await Job.findById(id)
-    .populate("clientId", "name email")
-    .populate("providerId", "name email")
-    .lean();
+  const [jobRaw, quotes] = await Promise.all([
+    jobRepository.findByIdPopulated(id),
+    quoteRepository.findForJob(id),
+  ]);
 
-  if (!job) notFound();
+  if (!jobRaw) notFound();
 
-  const j = job as unknown as IJob & {
+  const j = jobRaw as unknown as IJob & {
     clientId: { name: string; email: string };
     providerId?: { name: string; email: string };
   };
 
-  const quotes = await Quote.find({ jobId: id })
-    .populate("providerId", "name email")
-    .sort({ createdAt: -1 })
-    .lean() as unknown as (IQuote & {
-      providerId: { name: string; email: string };
-    })[];
+  const typedQuotes = quotes as unknown as (IQuote & {
+    providerId: { name: string; email: string };
+  })[];
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
@@ -119,13 +114,13 @@ export default async function AdminJobDetailPage({
       )}
 
       {/* Quotes received */}
-      {quotes.length > 0 && (
+      {typedQuotes.length > 0 && (
         <div className="bg-white rounded-xl border border-slate-200 shadow-card">
           <div className="px-6 py-4 border-b border-slate-100">
-            <h3 className="font-semibold text-slate-900">Quotes Received ({quotes.length})</h3>
+            <h3 className="font-semibold text-slate-900">Quotes Received ({typedQuotes.length})</h3>
           </div>
           <ul className="divide-y divide-slate-100">
-            {quotes.map((q) => (
+            {typedQuotes.map((q) => (
               <li key={q._id.toString()} className="px-6 py-4">
                 <div className="flex justify-between gap-4">
                   <div>

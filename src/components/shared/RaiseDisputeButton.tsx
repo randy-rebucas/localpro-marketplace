@@ -4,6 +4,7 @@ import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import Button from "@/components/ui/Button";
+import { apiFetch } from "@/lib/fetchClient";
 import { ImagePlus, X } from "lucide-react";
 import type { JobStatus } from "@/types";
 
@@ -51,7 +52,7 @@ export default function RaiseDisputeButton({ jobId, status }: Props) {
     for (const { file } of images) {
       const fd = new FormData();
       fd.append("file", file);
-      const res  = await fetch("/api/upload", { method: "POST", body: fd, credentials: "include" });
+      const res  = await apiFetch("/api/upload", { method: "POST", body: fd });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Upload failed");
       urls.push(data.url as string);

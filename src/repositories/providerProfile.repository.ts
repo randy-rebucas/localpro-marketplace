@@ -43,6 +43,16 @@ export class ProviderProfileRepository extends BaseRepository<ProviderProfileDoc
       { $set: { avgRating, completedJobCount } }
     );
   }
+
+  /** Batch fetch rating/completedJobCount for a list of provider user IDs. */
+  async findStatsByUserIds(
+    userIds: string[]
+  ): Promise<{ userId: { toString(): string }; avgRating?: number; completedJobCount?: number }[]> {
+    await this.connect();
+    return ProviderProfile.find({ userId: { $in: userIds } })
+      .select("userId avgRating completedJobCount")
+      .lean() as never;
+  }
 }
 
 export const providerProfileRepository = new ProviderProfileRepository();

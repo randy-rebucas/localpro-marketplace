@@ -74,7 +74,8 @@ export function getNotificationLink(
       return null;
 
     case "new_message":
-      // Messaging page not yet implemented
+      if (role === "client" && jobId) return `/client/messages/${jobId}`;
+      if (role === "provider" && jobId) return `/provider/messages/${jobId}`;
       return null;
 
     case "job_expired":

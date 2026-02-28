@@ -2,6 +2,7 @@ import Dispute from "@/models/Dispute";
 import type { DisputeDocument } from "@/models/Dispute";
 import { FilterQuery } from "mongoose";
 import { BaseRepository } from "./base.repository";
+import type { DisputeStatus } from "@/types";
 
 export class DisputeRepository extends BaseRepository<DisputeDocument> {
   constructor() {
@@ -40,6 +41,35 @@ export class DisputeRepository extends BaseRepository<DisputeDocument> {
     })
       .populate("jobId", "title")
       .lean() as unknown as DisputeDocument[];
+  }
+
+  /** Active disputes (open + investigating) with jobId title/budget/escrowStatus and raisedBy name/email/role. */
+  async findActiveWithRefs(): Promise<Array<{
+    _id: unknown; reason: string; status: DisputeStatus; createdAt: Date;
+    jobId: { _id: unknown; title: string; budget: number; escrowStatus: string } | null;
+    raisedBy: { name: string; email: string; role: string };
+  }>> {
+    await this.connect();
+    return Dispute.find({ status: { $in: ["open", "investigating"] } })
+      .sort({ createdAt: -1 })
+      .populate("jobId", "title budget escrowStatus")
+      .populate("raisedBy", "name email role")
+      .lean() as never;
+  }
+
+  /** Most recent dispute for a job, with only fields needed for the timeline UI. */
+  async findLatestByJobId(jobId: string): Promise<{
+    _id: string;
+    status: string;
+    reason: string;
+    resolutionNotes?: string;
+    createdAt: Date;
+  } | null> {
+    await this.connect();
+    return Dispute.findOne({ jobId })
+      .sort({ createdAt: -1 })
+      .select("status reason resolutionNotes createdAt")
+      .lean() as never;
   }
 }
 

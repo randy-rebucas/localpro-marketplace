@@ -1,5 +1,6 @@
 import { Document, Model, FilterQuery, UpdateQuery } from "mongoose";
 import { connectDB } from "@/lib/db";
+import "@/models/User"; // ensure User schema is registered for all populate() calls across repositories
 
 /**
  * Generic base repository.

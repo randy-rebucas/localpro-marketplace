@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores/authStore";
 import Sidebar from "./Sidebar";
 import Header from "./Header";
@@ -18,15 +19,27 @@ export default function DashboardShell({
   role,
   pageTitle,
 }: DashboardShellProps) {
-  const { user, isLoading, fetchMe } = useAuthStore();
+  const router = useRouter();
+  const { user, isLoading, initialized, fetchMe } = useAuthStore();
 
   useEffect(() => {
-    if (!user) {
+    if (!user && !isLoading && !initialized) {
       fetchMe();
     }
-  }, [user, fetchMe]);
+  }, [user, isLoading, initialized, fetchMe]);
 
-  if (isLoading || !user) {
+  // Show loader while fetching or before we've resolved for the first time
+  if (isLoading || !initialized) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-surface">
+        <PageLoader />
+      </div>
+    );
+  }
+
+  // After initialization, if still no user → redirect to login
+  if (!user) {
+    router.replace("/login");
     return (
       <div className="h-screen flex items-center justify-center bg-surface">
         <PageLoader />

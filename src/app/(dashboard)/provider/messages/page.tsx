@@ -1,23 +1,17 @@
 import type { Metadata } from "next";
 import { getCurrentUser } from "@/lib/auth";
-import { connectDB } from "@/lib/db";
 import { redirect } from "next/navigation";
-import Job from "@/models/Job";
+import { jobRepository } from "@/repositories/job.repository";
 import { messageRepository } from "@/repositories";
 import Link from "next/link";
 import { MessageSquare } from "lucide-react";
 import { formatRelativeTime } from "@/lib/utils";
-import type { IJob } from "@/types";
 
 export const metadata: Metadata = { title: "Messages" };
 
 
 async function getThreads(providerId: string) {
-  await connectDB();
-  const jobs = await Job.find({ providerId })
-    .select("_id title clientId status")
-    .sort({ updatedAt: -1 })
-    .lean() as unknown as (IJob & { _id: { toString(): string } })[];
+  const jobs = await jobRepository.findJobsForMessagesProvider(providerId);
 
   if (jobs.length === 0) return [];
 
