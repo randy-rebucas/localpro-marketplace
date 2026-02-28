@@ -79,9 +79,9 @@ export default function ProviderProfilePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  // Avatar
+  // Avatar — seeded directly from store (DashboardShell resolves fetchMe before rendering)
+  const [avatar, setAvatar] = useState<string | null>(user?.avatar ?? null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
-  const [avatar, setAvatar] = useState<string | null>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
   // Form state
@@ -93,12 +93,9 @@ export default function ProviderProfilePage() {
   const [schedule, setSchedule] = useState<WeeklySchedule>(DEFAULT_SCHEDULE);
 
   useEffect(() => {
-    Promise.all([
-      apiFetch("/api/auth/me").then((r) => r.json()),
-      apiFetch("/api/providers/profile").then((r) => r.json()),
-    ])
-      .then(([meData, data]) => {
-        setAvatar(meData?.avatar ?? null);
+    apiFetch("/api/providers/profile")
+      .then((r) => r.json())
+      .then((data) => {
         setProfile(data ?? {});
         setBio(data?.bio ?? "");
         setSkills(data?.skills ?? []);
@@ -113,10 +110,9 @@ export default function ProviderProfilePage() {
 
   async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
-    if (!e.target.files) return;
-    e.target.value = "";
+    e.target.value = ""; // reset so re-selecting same file re-triggers
     if (!file) return;
-    if (![".jpg", ".jpeg", ".png", ".webp"].some((ext) => file.name.toLowerCase().endsWith(ext))) {
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
       toast.error("Only JPEG, PNG and WEBP images are allowed");
       return;
     }
@@ -184,14 +180,50 @@ export default function ProviderProfilePage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-40">
-        <div className="h-6 w-6 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+      <div className="max-w-2xl space-y-6 animate-pulse">
+        <div>
+          <div className="h-7 w-32 bg-slate-200 rounded-md" />
+          <div className="h-4 w-64 bg-slate-100 rounded mt-2" />
+        </div>
+        {/* Header card skeleton */}
+        <div className="rounded-xl border border-slate-200 bg-white p-6 flex items-center gap-5">
+          <div className="h-16 w-16 rounded-full bg-slate-200 flex-shrink-0" />
+          <div className="flex-1 space-y-2">
+            <div className="h-4 w-32 bg-slate-200 rounded" />
+            <div className="h-3 w-48 bg-slate-100 rounded" />
+            <div className="h-5 w-20 bg-slate-100 rounded-full" />
+          </div>
+          <div className="hidden sm:flex gap-6">
+            <div className="h-12 w-14 bg-slate-100 rounded" />
+            <div className="h-12 w-14 bg-slate-100 rounded" />
+          </div>
+        </div>
+        {/* Profile details card skeleton */}
+        <div className="rounded-xl border border-slate-200 bg-white p-6 space-y-5">
+          <div className="h-4 w-28 bg-slate-200 rounded" />
+          <div className="h-24 w-full bg-slate-100 rounded-lg" />
+          <div className="h-9 w-full bg-slate-100 rounded-lg" />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="h-9 bg-slate-100 rounded-lg" />
+            <div className="h-9 bg-slate-100 rounded-lg" />
+          </div>
+          <div className="flex gap-2">
+            <div className="flex-1 h-10 bg-slate-100 rounded-lg" />
+            <div className="flex-1 h-10 bg-slate-100 rounded-lg" />
+            <div className="flex-1 h-10 bg-slate-100 rounded-lg" />
+          </div>
+        </div>
+        {/* Schedule card skeleton */}
+        <div className="rounded-xl border border-slate-200 bg-white p-6 space-y-3">
+          <div className="h-4 w-32 bg-slate-200 rounded" />
+          <div className="h-64 w-full bg-slate-100 rounded-lg" />
+        </div>
       </div>
     );
   }
 
   const initials = user?.name
-    ? user.name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()
+    ? user.name.split(" ").filter(Boolean).map((w) => w[0]).join("").slice(0, 2).toUpperCase()
     : "?";
 
   const cfg = AVAILABILITY_CONFIG[availability];
@@ -230,7 +262,7 @@ export default function ProviderProfilePage() {
               {avatar ? (
                 <Image
                   src={avatar}
-                  alt={user?.name ?? ""}
+                  alt={user?.name || "Profile picture"}
                   width={64}
                   height={64}
                   className="h-16 w-16 rounded-full object-cover"
