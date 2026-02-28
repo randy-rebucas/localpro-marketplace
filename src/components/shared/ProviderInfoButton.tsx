@@ -1,13 +1,16 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import dynamic from "next/dynamic";
 import Modal from "@/components/ui/Modal";
 import { formatCurrency } from "@/lib/utils";
 import { Star, Briefcase, Clock, CheckCircle, XCircle, User, Calendar, Heart, Sparkles } from "lucide-react";
 import toast from "react-hot-toast";
 import { useAuthStore } from "@/stores/authStore";
-import DirectJobModal from "@/components/client/DirectJobModal";
 import { apiFetch } from "@/lib/fetchClient";
+
+// Lazy-load: only mounted when user explicitly clicks "Hire directly" — never in initial render
+const DirectJobModal = dynamic(() => import("@/components/client/DirectJobModal"), { ssr: false });
 
 interface WorkSlot { enabled: boolean; from: string; to: string; }
 

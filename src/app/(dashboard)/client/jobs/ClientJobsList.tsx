@@ -6,7 +6,7 @@ import { JobStatusBadge, EscrowBadge } from "@/components/ui/Badge";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { MapPin, Calendar, MessageSquare } from "lucide-react";
 import type { IJob, JobStatus } from "@/types";
-import ProviderInfoButton from "@/components/shared/ProviderInfoButton";
+import ProviderInfoButton from "@/components/shared/ProviderInfoButtonLazy";
 
 type JobWithProvider = IJob & { providerId?: { _id: string; name: string; email: string; isVerified: boolean } };
 

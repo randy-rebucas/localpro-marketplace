@@ -8,7 +8,8 @@ import { EscrowBadge } from "@/components/ui/Badge";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import Link from "next/link";
 import { CheckCircle, Zap, Clock, CircleCheck } from "lucide-react";
-import ProviderInfoButton from "@/components/shared/ProviderInfoButton";
+import { Suspense } from "react";
+import ProviderInfoButton from "@/components/shared/ProviderInfoButtonLazy";
 
 export const metadata: Metadata = { title: "Escrow" };
 
@@ -17,6 +18,20 @@ interface EscrowPageProps {
 }
 
 type EscrowJob = Awaited<ReturnType<typeof jobRepository.findEscrowJobsForClient>>[number];
+
+// ─── Skeletons ────────────────────────────────────────────────────────────────
+
+function EscrowSkeleton() {
+  return (
+    <div className="space-y-3 animate-pulse">
+      {[...Array(3)].map((_, i) => (
+        <div key={i} className="bg-white rounded-xl border border-slate-200 h-28" />
+      ))}
+    </div>
+  );
+}
+
+// ─── Card ─────────────────────────────────────────────────────────────────────
 
 function EscrowCard({ j }: { j: EscrowJob }) {
   return (
@@ -58,12 +73,16 @@ function EscrowCard({ j }: { j: EscrowJob }) {
   );
 }
 
-export default async function EscrowPage({ searchParams }: EscrowPageProps) {
-  const user = await getCurrentUser();
-  if (!user) redirect("/login");
+// ─── Async data section ───────────────────────────────────────────────────────
 
-  // Handle PayMongo checkout session redirect (must run before jobs fetch so
-  // escrowStatus is up-to-date when we render the list)
+async function EscrowContent({
+  userId,
+  searchParams,
+}: {
+  userId: string;
+  searchParams: Promise<Record<string, string | undefined>>;
+}) {
+  // Resolve payment redirect query params
   const params = await searchParams;
   const sessionJobId = params.jobId;
   const paymentSuccess = params.payment === "success";
@@ -73,32 +92,32 @@ export default async function EscrowPage({ searchParams }: EscrowPageProps) {
     try {
       const payment = await paymentRepository.findByJobId(sessionJobId);
       if (payment) {
-        const result = await paymentService.pollCheckoutSession(user, payment.paymentIntentId, sessionJobId);
-        paymentConfirmed = result.status === "paid";
+        // Need full user token for paymentService — re-fetch current user context
+        const { getCurrentUser } = await import("@/lib/auth");
+        const user = await getCurrentUser();
+        if (user) {
+          const result = await paymentService.pollCheckoutSession(user, payment.paymentIntentId, sessionJobId);
+          paymentConfirmed = result.status === "paid";
+        }
       }
     } catch {
       // silently ignore — page still renders without the confirmation banner
     }
   }
 
-  // Jobs list and total locked computed in parallel — both read from DB independently
   const [jobs, totalLocked] = await Promise.all([
-    jobRepository.findEscrowJobsForClient(user.userId),
-    jobRepository.sumFundedEscrowForClient(user.userId),
+    jobRepository.findEscrowJobsForClient(userId),
+    jobRepository.sumFundedEscrowForClient(userId),
   ]);
 
   const needsAction = jobs.filter(
     (j) => (j.status === "assigned" && j.escrowStatus === "not_funded") || (j.status === "completed" && j.escrowStatus === "funded")
   );
-  const inProgress = jobs.filter(
-    (j) => j.escrowStatus === "funded" && j.status !== "completed"
-  );
-  const done = jobs.filter(
-    (j) => j.escrowStatus === "released"
-  );
+  const inProgress = jobs.filter((j) => j.escrowStatus === "funded" && j.status !== "completed");
+  const done = jobs.filter((j) => j.escrowStatus === "released");
 
   return (
-    <div className="space-y-6">
+    <>
       {paymentConfirmed && (
         <div className="rounded-xl border border-green-200 bg-green-50 px-5 py-4 flex items-center gap-3">
           <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0" />
@@ -108,18 +127,14 @@ export default async function EscrowPage({ searchParams }: EscrowPageProps) {
         </div>
       )}
 
-      <div className="flex items-start justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-slate-900">Escrow</h2>
-          <p className="text-slate-500 text-sm mt-0.5">Manage escrow payments for your jobs.</p>
-        </div>
-        {totalLocked > 0 && (
+      {totalLocked > 0 && (
+        <div className="flex justify-end">
           <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-2.5 text-right">
             <p className="text-xs text-amber-600 font-medium">Total Locked</p>
             <p className="text-xl font-bold text-amber-800">{formatCurrency(totalLocked)}</p>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {jobs.length === 0 ? (
         <div className="bg-white rounded-xl border border-slate-200 p-12 text-center text-slate-400 text-sm">
@@ -163,6 +178,28 @@ export default async function EscrowPage({ searchParams }: EscrowPageProps) {
           )}
         </div>
       )}
+    </>
+  );
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
+export default async function EscrowPage({ searchParams }: EscrowPageProps) {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+
+  return (
+    <div className="space-y-6">
+      {/* Header streams immediately — no data dependency */}
+      <div>
+        <h2 className="text-2xl font-bold text-slate-900">Escrow</h2>
+        <p className="text-slate-500 text-sm mt-0.5">Manage escrow payments for your jobs.</p>
+      </div>
+
+      {/* Payment check + jobs list stream in once both DB queries + optional poll resolve */}
+      <Suspense fallback={<EscrowSkeleton />}>
+        <EscrowContent userId={user.userId} searchParams={searchParams} />
+      </Suspense>
     </div>
   );
 }

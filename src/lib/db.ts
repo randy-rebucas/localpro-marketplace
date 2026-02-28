@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
+import { attachDatabasePool } from "@vercel/functions";
 
-const MONGODB_URI = process.env.MONGODB_URI as string;
+const MONGODB_URI = process.env.ATLAS_MONGODB_URI_MONGODB_URI as string;
 
 if (!MONGODB_URI) {
   throw new Error("Please define the MONGODB_URI environment variable in .env.local");
@@ -9,6 +10,8 @@ if (!MONGODB_URI) {
 interface MongooseCache {
   conn: typeof mongoose | null;
   promise: Promise<typeof mongoose> | null;
+  /** Whether attachDatabasePool has already been called for this process */
+  poolAttached: boolean;
 }
 
 declare global {
@@ -16,7 +19,11 @@ declare global {
   var mongoose: MongooseCache | undefined;
 }
 
-const cached: MongooseCache = global.mongoose ?? { conn: null, promise: null };
+const cached: MongooseCache = global.mongoose ?? {
+  conn: null,
+  promise: null,
+  poolAttached: false,
+};
 
 if (!global.mongoose) {
   global.mongoose = cached;
@@ -56,6 +63,17 @@ export async function connectDB(): Promise<typeof mongoose> {
     cached.promise = null;
     cached.conn = null;
     throw err;
+  }
+
+  // Tell Vercel Fluid Compute to keep this connection pool warm across
+  // function invocations. Only called once per process; no-ops outside Vercel.
+  if (!cached.poolAttached) {
+    try {
+      attachDatabasePool(cached.conn.connection.getClient());
+      cached.poolAttached = true;
+    } catch {
+      // Non-fatal — attachDatabasePool may not be available in all environments
+    }
   }
 
   return cached.conn;
