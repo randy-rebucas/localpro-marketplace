@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Headphones, User } from "lucide-react";
 import { formatRelativeTime } from "@/lib/utils";
+import { apiFetch } from "@/lib/fetchClient";
 
 interface SupportUser {
   _id: string;
@@ -25,7 +26,7 @@ export default function AdminSupportInboxPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/admin/support")
+    apiFetch("/api/admin/support")
       .then((r) => r.json())
       .then((data: SupportThread[]) => {
         setThreads(data);
@@ -34,21 +35,34 @@ export default function AdminSupportInboxPage() {
       .catch(() => setLoading(false));
   }, []);
 
-  // Real-time updates via SSE
+  // Real-time updates via SSE with auto-reconnect
   useEffect(() => {
-    const es = new EventSource("/api/admin/support/stream");
-    es.onmessage = (e) => {
-      try {
-        const data = JSON.parse(e.data) as Record<string, unknown>;
-        if (data.type === "connected") return;
-        // Refresh thread list on any new message
-        fetch("/api/admin/support")
-          .then((r) => r.json())
-          .then((updated: SupportThread[]) => setThreads(updated))
-          .catch(() => {});
-      } catch {}
+    let es: EventSource;
+    let retryTimer: ReturnType<typeof setTimeout>;
+
+    function connect() {
+      es = new EventSource("/api/admin/support/stream");
+      es.onmessage = (e) => {
+        try {
+          const data = JSON.parse(e.data) as Record<string, unknown>;
+          if (data.type === "connected") return;
+          apiFetch("/api/admin/support")
+            .then((r) => r.json())
+            .then((updated: SupportThread[]) => setThreads(updated))
+            .catch(() => {});
+        } catch {}
+      };
+      es.onerror = () => {
+        es.close();
+        retryTimer = setTimeout(connect, 5000);
+      };
+    }
+
+    connect();
+    return () => {
+      es?.close();
+      clearTimeout(retryTimer);
     };
-    return () => es.close();
   }, []);
 
   const totalUnread = threads.reduce((sum, t) => sum + t.unreadForAdmin, 0);

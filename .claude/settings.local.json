@@ -36,7 +36,8 @@
       "Bash(find \"c:/Users/corew/localpro-marketplace/src/app/\\(dashboard\\)/provider/\" -type f \\\\\\( -name \"*.ts\" -o -name \"*.tsx\" \\\\\\))",
       "Bash(find \"c:\\\\Users\\\\corew\\\\localpro-marketplace\\\\src\\\\app\\\\\\(dashboard\\)\\\\admin\" -type f)",
       "Bash(pnpm list tailwind-merge)",
-      "Bash(pnpm add tailwind-merge)"
+      "Bash(pnpm add tailwind-merge)",
+      "Bash(find \"c:/Users/corew/localpro-marketplace/src/app/\\(dashboard\\)/admin\" -type f)"
     ]
   }
 }

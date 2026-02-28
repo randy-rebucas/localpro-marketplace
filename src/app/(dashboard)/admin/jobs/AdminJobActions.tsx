@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import Button from "@/components/ui/Button";
 import Modal from "@/components/ui/Modal";
+import { apiFetch } from "@/lib/fetchClient";
 
 interface Props {
   jobId: string;
@@ -21,10 +22,9 @@ export default function AdminJobActions({ jobId, riskScore }: Props) {
   async function approve() {
     setLoading("approve");
     try {
-      const res = await fetch(`/api/admin/jobs/${jobId}/approve`, {
+      const res = await apiFetch(`/api/admin/jobs/${jobId}/approve`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify({ riskScore: adjustedRisk }),
       });
       const data = await res.json();
@@ -44,10 +44,9 @@ export default function AdminJobActions({ jobId, riskScore }: Props) {
     }
     setLoading("reject");
     try {
-      const res = await fetch(`/api/admin/jobs/${jobId}/reject`, {
+      const res = await apiFetch(`/api/admin/jobs/${jobId}/reject`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify({ reason: rejectReason }),
       });
       const data = await res.json();
@@ -67,10 +66,10 @@ export default function AdminJobActions({ jobId, riskScore }: Props) {
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2">
           <label className="text-xs text-slate-500">Risk Score (0-100):</label>
-          <input type="number" min="0" max="100"
+          <input type="number" min="0" max="100" step="1"
             className="input w-20 text-sm py-1"
             value={adjustedRisk}
-            onChange={(e) => setAdjustedRisk(Number(e.target.value))} />
+            onChange={(e) => setAdjustedRisk(Math.min(100, Math.max(0, Math.round(Number(e.target.value)))))} />
         </div>
         <div className="flex gap-2 ml-auto">
           <Button variant="danger" size="sm" isLoading={loading === "reject"}

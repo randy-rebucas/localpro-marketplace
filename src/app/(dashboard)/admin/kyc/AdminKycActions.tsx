@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import Button from "@/components/ui/Button";
+import { apiFetch } from "@/lib/fetchClient";
 
 export default function AdminKycActions({ userId }: { userId: string }) {
   const router = useRouter();
@@ -24,7 +25,7 @@ export default function AdminKycActions({ userId }: { userId: string }) {
 
     action === "approve" ? setIsApproving(true) : setIsRejecting(true);
     try {
-      const res = await fetch(`/api/admin/kyc/${userId}`, {
+      const res = await apiFetch(`/api/admin/kyc/${userId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action, reason: reason.trim() || undefined }),

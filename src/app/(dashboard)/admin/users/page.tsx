@@ -13,7 +13,7 @@ export default async function AdminUsersPage({
   searchParams: Promise<{ page?: string }>;
 }) {
   const user = await getCurrentUser();
-  if (!user) return null;
+  if (!user || user.role !== "admin") return null;
 
   const params = await searchParams;
   const page = Math.max(1, Number(params.page ?? 1));

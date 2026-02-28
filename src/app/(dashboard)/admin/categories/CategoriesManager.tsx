@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import Button from "@/components/ui/Button";
 import type { ICategory } from "@/types";
+import { apiFetch } from "@/lib/fetchClient";
 
 const COMMON_ICONS = ["🔧", "⚡", "🧹", "🌿", "🪚", "🎨", "🏠", "❄️", "📦", "🛠️", "📋", "🚿", "🐛", "🔑", "🪟"];
 
@@ -13,7 +13,6 @@ interface Props {
 }
 
 export default function CategoriesManager({ initialCategories }: Props) {
-  const router = useRouter();
   const [categories, setCategories] = useState<ICategory[]>(initialCategories);
   const [loading, setLoading] = useState<string | null>(null);
 
@@ -32,10 +31,9 @@ export default function CategoriesManager({ initialCategories }: Props) {
   async function toggleActive(cat: ICategory) {
     setLoading(`toggle-${cat._id}`);
     try {
-      const res = await fetch(`/api/admin/categories/${cat._id}`, {
+      const res = await apiFetch(`/api/admin/categories/${cat._id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify({ isActive: !cat.isActive }),
       });
       if (!res.ok) { toast.error("Failed to update"); return; }
@@ -49,9 +47,8 @@ export default function CategoriesManager({ initialCategories }: Props) {
     if (!confirm(`Delete "${cat.name}"? This cannot be undone.`)) return;
     setLoading(`delete-${cat._id}`);
     try {
-      const res = await fetch(`/api/admin/categories/${cat._id}`, {
+      const res = await apiFetch(`/api/admin/categories/${cat._id}`, {
         method: "DELETE",
-        credentials: "include",
       });
       if (!res.ok) { toast.error("Failed to delete"); return; }
       setCategories((prev) => prev.filter((c) => c._id !== cat._id));
@@ -64,10 +61,9 @@ export default function CategoriesManager({ initialCategories }: Props) {
     if (!editName.trim()) { toast.error("Name is required"); return; }
     setLoading(`save-${id}`);
     try {
-      const res = await fetch(`/api/admin/categories/${id}`, {
+      const res = await apiFetch(`/api/admin/categories/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify({ name: editName.trim(), icon: editIcon }),
       });
       const data = await res.json();
@@ -83,10 +79,9 @@ export default function CategoriesManager({ initialCategories }: Props) {
     if (!newName.trim()) { toast.error("Name is required"); return; }
     setAdding(true);
     try {
-      const res = await fetch("/api/admin/categories", {
+      const res = await apiFetch("/api/admin/categories", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify({ name: newName.trim(), icon: newIcon }),
       });
       const data = await res.json();

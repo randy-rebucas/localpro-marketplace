@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import Button from "@/components/ui/Button";
 import type { DisputeStatus } from "@/types";
+import { apiFetch } from "@/lib/fetchClient";
 
 interface Props {
   disputeId: string;
@@ -21,10 +22,9 @@ export default function DisputeActions({ disputeId, currentStatus, escrowStatus 
   async function update(status: DisputeStatus, action?: "release" | "refund") {
     setLoading(status);
     try {
-      const res = await fetch(`/api/admin/disputes/${disputeId}`, {
+      const res = await apiFetch(`/api/admin/disputes/${disputeId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify({
           status,
           resolutionNotes: notes || undefined,
@@ -33,7 +33,7 @@ export default function DisputeActions({ disputeId, currentStatus, escrowStatus 
       });
       const data = await res.json();
       if (!res.ok) { toast.error(data.error ?? "Failed to update"); return; }
-      toast.success(`Dispute ${status}`);
+      toast.success(status === "resolved" ? "Dispute resolved" : "Dispute marked as investigating");
       router.refresh();
     } catch {
       toast.error("Something went wrong");

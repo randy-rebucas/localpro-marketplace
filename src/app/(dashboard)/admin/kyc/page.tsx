@@ -30,7 +30,7 @@ const STATUS_CONFIG = {
 
 export default async function AdminKycPage() {
   const user = await getCurrentUser();
-  if (!user) return null;
+  if (!user || user.role !== "admin") return null;
 
   const [pending, reviewed] = await Promise.all([
     userRepository.findProvidersByKycStatus("pending", { sort: 1 }),

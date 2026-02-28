@@ -29,7 +29,7 @@ function RiskBadge({ score }: { score: number }) {
 
 export default async function AdminJobsPage() {
   const user = await getCurrentUser();
-  if (!user) return null;
+  if (!user || user.role !== "admin") return null;
 
   const jobs = await jobRepository.findPendingValidation();
 

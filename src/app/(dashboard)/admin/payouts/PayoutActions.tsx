@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import Button from "@/components/ui/Button";
+import { apiFetch } from "@/lib/fetchClient";
 import type { PayoutStatus } from "@/types";
 
 interface Props {
@@ -19,10 +20,9 @@ export default function PayoutActions({ payoutId, currentStatus }: Props) {
   async function update(status: PayoutStatus) {
     setLoading(status);
     try {
-      const res = await fetch(`/api/admin/payouts/${payoutId}`, {
+      const res = await apiFetch(`/api/admin/payouts/${payoutId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify({ status, notes: notes.trim() || undefined }),
       });
       const data = await res.json();

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import Button from "@/components/ui/Button";
+import { apiFetch } from "@/lib/fetchClient";
 
 interface Props {
   userId: string;
@@ -18,13 +19,12 @@ export default function UserActions({ userId, role, isVerified, isSuspended, app
   const [loading, setLoading] = useState<string | null>(null);
 
   async function update(patch: Record<string, unknown>) {
-    const key = Object.keys(patch)[0];
+    const key = Object.entries(patch).map(([k, v]) => `${k}_${v}`).join(",");
     setLoading(key);
     try {
-      const res = await fetch(`/api/admin/users/${userId}`, {
+      const res = await apiFetch(`/api/admin/users/${userId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify(patch),
       });
       const data = await res.json();

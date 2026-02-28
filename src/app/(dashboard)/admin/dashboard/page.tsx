@@ -40,7 +40,7 @@ async function getAdminStats() {
 
 export default async function AdminDashboardPage() {
   const user = await getCurrentUser();
-  if (!user) return null;
+  if (!user || user.role !== "admin") return null;
 
   const stats = await getAdminStats();
 
