@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import dynamic from "next/dynamic";
 import toast from "react-hot-toast";
 import {
   Heart,
@@ -18,8 +19,12 @@ import {
 import Button from "@/components/ui/Button";
 import { formatCurrency } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/Spinner";
-import DirectJobModal from "@/components/client/DirectJobModal";
 import { apiFetch } from "@/lib/fetchClient";
+
+const DirectJobModal = dynamic(
+  () => import("@/components/client/DirectJobModal"),
+  { ssr: false }
+);
 
 interface FavoriteEntry {
   _id: string;
@@ -408,7 +413,7 @@ export default function ClientFavoritesPage() {
         </>
       )}
 
-      {/* Direct Job Modal */}
+      {/* Direct Job Modal — loaded only when triggered */}
       {directJobTarget && (
         <DirectJobModal
           providerId={directJobTarget.id}

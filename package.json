@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "db:reset": "node --env-file=.env.local scripts/db-reset.mjs",
+    "db:seed": "node --env-file=.env.local scripts/db-reset.mjs --seed-only"
   },
   "dependencies": {
     "@tailwindcss/typography": "^0.5.19",

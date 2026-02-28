@@ -66,7 +66,13 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: "/favicon.ico",
-    shortcut: "/favicon-16x16.png"
+    shortcut: "/favicon-16x16.png",
+  },
+  verification: {
+    google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION,
+    other: process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION
+      ? { "msvalidate.01": process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION }
+      : undefined,
   },
 };
 
@@ -77,20 +83,6 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={`${inter.variable} h-full`}>
-      <head>
-        {process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION && (
-          <meta
-            name="google-site-verification"
-            content={process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION}
-          />
-        )}
-        {process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION && (
-          <meta
-            name="msvalidate.01"
-            content={process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION}
-          />
-        )}
-      </head>
       <body className="font-sans h-full">
         {process.env.NEXT_PUBLIC_GTM_ID && (
           <GoogleTagManagerNoscript gtmId={process.env.NEXT_PUBLIC_GTM_ID} />

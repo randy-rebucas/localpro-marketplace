@@ -7,12 +7,14 @@ import { disputeRepository } from "@/repositories/dispute.repository";
 import { providerProfileRepository } from "@/repositories/providerProfile.repository";
 import { JobStatusBadge, EscrowBadge, QuoteStatusBadge } from "@/components/ui/Badge";
 import { formatCurrency, formatDate, formatRelativeTime } from "@/lib/utils";
-import JobActionButtons from "./JobActionButtons";
-import QuoteAcceptButton from "./QuoteAcceptButton";
-import RaiseDisputeButton from "@/components/shared/RaiseDisputeButton";
-import PartialReleaseButton from "@/components/payment/PartialReleaseButton";
+import dynamic from "next/dynamic";
 import RealtimeRefresher from "@/components/shared/RealtimeRefresher";
 import ProviderInfoButton from "@/components/shared/ProviderInfoButton";
+
+const JobActionButtons = dynamic(() => import("./JobActionButtons"));
+const QuoteAcceptButton = dynamic(() => import("./QuoteAcceptButton"));
+const RaiseDisputeButton = dynamic(() => import("@/components/shared/RaiseDisputeButton"));
+const PartialReleaseButton = dynamic(() => import("@/components/payment/PartialReleaseButton"));
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { AlertCircle, ShieldCheck, Star, CheckCircle2, Clock, Search, ChevronLeft } from "lucide-react";

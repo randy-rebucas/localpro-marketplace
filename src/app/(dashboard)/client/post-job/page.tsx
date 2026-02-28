@@ -3,10 +3,18 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
+import dynamic from "next/dynamic";
 import Button from "@/components/ui/Button";
 import Card, { CardHeader, CardBody, CardFooter } from "@/components/ui/Card";
-import LocationAutocomplete from "@/components/shared/LocationAutocomplete";
 import { Sparkles, LocateFixed, ImagePlus, X } from "lucide-react";
+
+const LocationAutocomplete = dynamic(
+  () => import("@/components/shared/LocationAutocomplete"),
+  {
+    ssr: false,
+    loading: () => <input className="input w-full" placeholder="Loading location search…" disabled />,
+  }
+);
 import { formatCurrency } from "@/lib/utils";
 import type { ICategory } from "@/types";
 import { apiFetch } from "@/lib/fetchClient";

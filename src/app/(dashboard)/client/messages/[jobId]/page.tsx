@@ -1,12 +1,19 @@
 "use client";
 
 import { use, useEffect, useState } from "react";
-import ChatWindow from "@/components/chat/ChatWindow";
+import dynamic from "next/dynamic";
 import { useAuthStore } from "@/stores/authStore";
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/fetchClient";
+
+const ChatWindow = dynamic(() => import("@/components/chat/ChatWindow"), {
+  ssr: false,
+  loading: () => (
+    <div className="flex-1 bg-slate-100 animate-pulse rounded-xl" />
+  ),
+});
 
 export default function ClientJobChatPage({
   params,

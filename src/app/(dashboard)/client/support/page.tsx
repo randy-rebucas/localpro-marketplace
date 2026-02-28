@@ -1,8 +1,15 @@
 "use client";
 
-import ChatWindow from "@/components/chat/ChatWindow";
+import dynamic from "next/dynamic";
 import { useAuthStore } from "@/stores/authStore";
 import { Headphones } from "lucide-react";
+
+const ChatWindow = dynamic(() => import("@/components/chat/ChatWindow"), {
+  ssr: false,
+  loading: () => (
+    <div className="flex-1 bg-slate-100 animate-pulse rounded-xl" />
+  ),
+});
 
 export default function ClientSupportPage() {
   const user = useAuthStore((s) => s.user);

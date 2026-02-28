@@ -1,12 +1,14 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import dynamic from "next/dynamic";
 import toast from "react-hot-toast";
 import Button from "@/components/ui/Button";
 import { apiFetch } from "@/lib/fetchClient";
-import Modal from "@/components/ui/Modal";
 import { formatDate, formatCurrency } from "@/lib/utils";
 import type { IJob, IReview } from "@/types";
+
+const Modal = dynamic(() => import("@/components/ui/Modal"), { ssr: false });
 
 type PopulatedJob = IJob & { providerId?: { _id: string; name: string } | null };
 

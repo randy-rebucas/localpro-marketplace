@@ -21,12 +21,25 @@ interface MeData {
 
 export default function ClientProfilePage() {
   const { user, setUser } = useAuthStore();
-  const [me, setMe] = useState<MeData | null>(null);
+
+  // Seed directly from the store — DashboardShell already resolved fetchMe()
+  // before rendering children, so user is always populated here.
+  const [me, setMe] = useState<MeData | null>(
+    user
+      ? {
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          isVerified: user.isVerified,
+          avatar: user.avatar ?? null,
+          createdAt: String(user.createdAt),
+        }
+      : null
+  );
   const [jobCount, setJobCount] = useState(0);
-  const [loading, setLoading] = useState(true);
 
   // Edit name state
-  const [name, setName] = useState("");
+  const [name, setName] = useState(user?.name ?? "");
   const [savingName, setSavingName] = useState(false);
 
   // Avatar upload state
@@ -39,26 +52,19 @@ export default function ClientProfilePage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [savingPassword, setSavingPassword] = useState(false);
 
+  // Fetch job count independently — never blocks initial render
   useEffect(() => {
-    Promise.all([
-      apiFetch("/api/auth/me").then((r) => r.json()),
-      apiFetch("/api/jobs").then((r) => r.json()),
-    ])
-      .then(([meData, jobsData]) => {
-        setMe(meData);
-        setName(meData.name ?? "");
-        setJobCount(jobsData?.data?.length ?? 0);
-      })
-      .catch(() => toast.error("Failed to load profile"))
-      .finally(() => setLoading(false));
+    apiFetch("/api/jobs?limit=1")
+      .then((r) => r.json())
+      .then((data) => setJobCount(data?.total ?? data?.data?.length ?? 0))
+      .catch(() => {});
   }, []);
 
   async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
-    if (!e.target.files) return;
-    e.target.value = "";
+    e.target.value = ""; // reset so re-selecting the same file re-triggers
     if (!file) return;
-    if (![".jpg", ".jpeg", ".png", ".webp"].some((ext) => file.name.toLowerCase().endsWith(ext))) {
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
       toast.error("Only JPEG, PNG and WEBP images are allowed");
       return;
     }
@@ -133,16 +139,8 @@ export default function ClientProfilePage() {
     }
   }
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-40">
-        <div className="h-6 w-6 rounded-full border-2 border-primary border-t-transparent animate-spin" />
-      </div>
-    );
-  }
-
   const initials = me?.name
-    ? me.name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()
+    ? me.name.split(" ").filter(Boolean).map((w) => w[0]).join("").slice(0, 2).toUpperCase()
     : "?";
 
   return (
@@ -175,7 +173,7 @@ export default function ClientProfilePage() {
             {me?.avatar ? (
               <Image
                 src={me.avatar}
-                alt={me.name}
+                alt={me.name || "Profile picture"}
                 width={64}
                 height={64}
                 className="h-16 w-16 rounded-full object-cover"
