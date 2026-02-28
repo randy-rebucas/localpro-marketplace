@@ -41,11 +41,8 @@ export default function Header({ title }: HeaderProps) {
   }
 
   const initials = user?.name
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2) ?? "?";
+    ? user.name.split(" ").filter(Boolean).map((n) => n[0]).join("").toUpperCase().slice(0, 2)
+    : "?";
 
   const roleConfig = user?.role ? ROLE_CONFIG[user.role] : null;
   const RoleIcon = roleConfig?.icon ?? User;
@@ -60,7 +57,7 @@ export default function Header({ title }: HeaderProps) {
       {/* Page title */}
       <div>
         {title && (
-          <h1 className="text-lg font-semibold text-slate-900">{title}</h1>
+          <h1 className="text-base font-semibold text-slate-800 tracking-tight">{title}</h1>
         )}
       </div>
 
@@ -75,14 +72,15 @@ export default function Header({ title }: HeaderProps) {
             onClick={() => setMenuOpen((o) => !o)}
             aria-expanded={menuOpen}
             aria-haspopup="menu"
-            className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 hover:bg-slate-50 transition-colors"
+            aria-label="Open user menu"
+            className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 hover:bg-slate-100 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           >
             {/* Avatar */}
             <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0">
               {user?.avatar ? (
                 <Image
                   src={user.avatar}
-                  alt={user.name}
+                  alt={user.name || "Avatar"}
                   width={32}
                   height={32}
                   className="h-8 w-8 rounded-full object-cover"
@@ -136,14 +134,16 @@ export default function Header({ title }: HeaderProps) {
                 )}
 
                 {/* Sign out */}
-                <button
-                  role="menuitem"
-                  onClick={handleLogout}
-                  className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
-                >
-                  <LogOut className="h-4 w-4" />
-                  Sign out
-                </button>
+                <div className="border-t border-slate-100 mt-1 pt-1">
+                  <button
+                    role="menuitem"
+                    onClick={handleLogout}
+                    className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    Sign out
+                  </button>
+                </div>
               </div>
             </>
           )}

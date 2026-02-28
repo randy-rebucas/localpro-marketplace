@@ -14,32 +14,22 @@ interface DashboardShellProps {
   pageTitle?: string;
 }
 
-export default function DashboardShell({
-  children,
-  role,
-  pageTitle,
-}: DashboardShellProps) {
+export default function DashboardShell({ children, role, pageTitle }: DashboardShellProps) {
   const router = useRouter();
   const { user, isLoading, initialized, fetchMe } = useAuthStore();
 
+  // Bootstrap auth state once on mount
   useEffect(() => {
-    if (!user && !isLoading && !initialized) {
-      fetchMe();
-    }
-  }, [user, isLoading, initialized, fetchMe]);
+    if (!initialized && !isLoading) fetchMe();
+  }, [initialized, isLoading, fetchMe]);
 
-  // Show loader while fetching or before we've resolved for the first time
-  if (isLoading || !initialized) {
-    return (
-      <div className="h-screen flex items-center justify-center bg-surface">
-        <PageLoader />
-      </div>
-    );
-  }
+  // Redirect after initialization resolves with no user
+  useEffect(() => {
+    if (initialized && !user) router.replace("/login");
+  }, [initialized, user, router]);
 
-  // After initialization, if still no user → redirect to login
-  if (!user) {
-    router.replace("/login");
+  // Show loader until auth is resolved and user is confirmed
+  if (!initialized || isLoading || !user) {
     return (
       <div className="h-screen flex items-center justify-center bg-surface">
         <PageLoader />

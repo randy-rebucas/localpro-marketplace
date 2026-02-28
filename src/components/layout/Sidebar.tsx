@@ -39,42 +39,114 @@ interface NavItem {
   icon: React.ReactNode;
 }
 
-const navItems: Record<UserRole, NavItem[]> = {
+interface NavGroup {
+  heading?: string;
+  items: NavItem[];
+}
+
+const navGroups: Record<UserRole, NavGroup[]> = {
   client: [
-    { label: "Dashboard",     href: "/client/dashboard",     icon: <LayoutDashboard className="h-5 w-5" /> },
-    { label: "Post a Job",    href: "/client/post-job",      icon: <PlusCircle       className="h-5 w-5" /> },
-    { label: "My Jobs",       href: "/client/jobs",          icon: <ClipboardList    className="h-5 w-5" /> },
-    { label: "Messages",      href: "/client/messages",      icon: <MessageSquare    className="h-5 w-5" /> },
-    { label: "Support",       href: "/client/support",       icon: <Headphones       className="h-5 w-5" /> },
-    { label: "Escrow",        href: "/client/escrow",        icon: <Lock             className="h-5 w-5" /> },
-    { label: "Favorites",     href: "/client/favorites",     icon: <Heart            className="h-5 w-5" /> },
-    { label: "Reviews",       href: "/client/reviews",       icon: <Star             className="h-5 w-5" /> },
-    { label: "My Profile",    href: "/client/profile",       icon: <User             className="h-5 w-5" /> },
-    { label: "Notifications", href: "/client/notifications", icon: <Bell             className="h-5 w-5" /> },
+    {
+      items: [
+        { label: "Dashboard",  href: "/client/dashboard", icon: <LayoutDashboard className="h-5 w-5" /> },
+      ],
+    },
+    {
+      heading: "Jobs",
+      items: [
+        { label: "Post a Job", href: "/client/post-job",  icon: <PlusCircle    className="h-5 w-5" /> },
+        { label: "My Jobs",    href: "/client/jobs",      icon: <ClipboardList  className="h-5 w-5" /> },
+        { label: "Escrow",     href: "/client/escrow",    icon: <Lock           className="h-5 w-5" /> },
+        { label: "Favorites",  href: "/client/favorites", icon: <Heart          className="h-5 w-5" /> },
+        { label: "Reviews",    href: "/client/reviews",   icon: <Star           className="h-5 w-5" /> },
+      ],
+    },
+    {
+      heading: "Communication",
+      items: [
+        { label: "Messages",   href: "/client/messages",  icon: <MessageSquare  className="h-5 w-5" /> },
+        { label: "Support",    href: "/client/support",   icon: <Headphones     className="h-5 w-5" /> },
+      ],
+    },
+    {
+      heading: "Account",
+      items: [
+        { label: "My Profile",    href: "/client/profile",       icon: <User className="h-5 w-5" /> },
+        { label: "Notifications", href: "/client/notifications",  icon: <Bell className="h-5 w-5" /> },
+      ],
+    },
   ],
   provider: [
-    { label: "Dashboard",     href: "/provider/dashboard",    icon: <LayoutDashboard   className="h-5 w-5" /> },
-    { label: "Marketplace",   href: "/provider/marketplace",  icon: <Store             className="h-5 w-5" /> },
-    { label: "Active Jobs",   href: "/provider/jobs",         icon: <Briefcase         className="h-5 w-5" /> },
-    { label: "Messages",      href: "/provider/messages",     icon: <MessageSquare     className="h-5 w-5" /> },
-    { label: "Support",       href: "/provider/support",      icon: <Headphones        className="h-5 w-5" /> },
-    { label: "Earnings",      href: "/provider/earnings",     icon: <CircleDollarSign  className="h-5 w-5" /> },
-    { label: "Payouts",       href: "/provider/payouts",      icon: <Banknote          className="h-5 w-5" /> },
-    { label: "Calendar",      href: "/provider/calendar",     icon: <CalendarDays      className="h-5 w-5" /> },
-    { label: "My Profile",    href: "/provider/profile",      icon: <User              className="h-5 w-5" /> },
-    { label: "Notifications", href: "/provider/notifications",icon: <Bell              className="h-5 w-5" /> },
+    {
+      items: [
+        { label: "Dashboard",   href: "/provider/dashboard",  icon: <LayoutDashboard  className="h-5 w-5" /> },
+      ],
+    },
+    {
+      heading: "Work",
+      items: [
+        { label: "Marketplace", href: "/provider/marketplace", icon: <Store        className="h-5 w-5" /> },
+        { label: "Active Jobs", href: "/provider/jobs",        icon: <Briefcase    className="h-5 w-5" /> },
+        { label: "Calendar",    href: "/provider/calendar",    icon: <CalendarDays className="h-5 w-5" /> },
+      ],
+    },
+    {
+      heading: "Finance",
+      items: [
+        { label: "Earnings",    href: "/provider/earnings",   icon: <CircleDollarSign className="h-5 w-5" /> },
+        { label: "Payouts",     href: "/provider/payouts",    icon: <Banknote         className="h-5 w-5" /> },
+      ],
+    },
+    {
+      heading: "Communication",
+      items: [
+        { label: "Messages",    href: "/provider/messages",  icon: <MessageSquare className="h-5 w-5" /> },
+        { label: "Support",     href: "/provider/support",   icon: <Headphones    className="h-5 w-5" /> },
+      ],
+    },
+    {
+      heading: "Account",
+      items: [
+        { label: "My Profile",    href: "/provider/profile",        icon: <User className="h-5 w-5" /> },
+        { label: "Notifications", href: "/provider/notifications",  icon: <Bell className="h-5 w-5" /> },
+      ],
+    },
   ],
   admin: [
-    { label: "Dashboard",      href: "/admin/dashboard",      icon: <BarChart3      className="h-5 w-5" /> },
-    { label: "Validate Jobs",  href: "/admin/jobs",           icon: <CheckCircle    className="h-5 w-5" /> },
-    { label: "Revenue",        href: "/admin/revenue",        icon: <TrendingUp     className="h-5 w-5" /> },
-    { label: "KYC Review",     href: "/admin/kyc",            icon: <ShieldCheck    className="h-5 w-5" /> },
-    { label: "Disputes",       href: "/admin/disputes",       icon: <AlertTriangle  className="h-5 w-5" /> },
-    { label: "Support Inbox",  href: "/admin/support",        icon: <Headphones     className="h-5 w-5" /> },
-    { label: "Payouts",        href: "/admin/payouts",        icon: <Banknote       className="h-5 w-5" /> },
-    { label: "Users",          href: "/admin/users",          icon: <Users          className="h-5 w-5" /> },
-    { label: "Notifications",  href: "/admin/notifications",  icon: <Bell           className="h-5 w-5" /> },
-    { label: "Categories",     href: "/admin/categories",     icon: <Tag            className="h-5 w-5" /> },
+    {
+      items: [
+        { label: "Dashboard",  href: "/admin/dashboard", icon: <BarChart3  className="h-5 w-5" /> },
+      ],
+    },
+    {
+      heading: "Operations",
+      items: [
+        { label: "Validate Jobs", href: "/admin/jobs",      icon: <CheckCircle   className="h-5 w-5" /> },
+        { label: "KYC Review",    href: "/admin/kyc",       icon: <ShieldCheck   className="h-5 w-5" /> },
+        { label: "Disputes",      href: "/admin/disputes",  icon: <AlertTriangle className="h-5 w-5" /> },
+      ],
+    },
+    {
+      heading: "Finance",
+      items: [
+        { label: "Revenue", href: "/admin/revenue", icon: <TrendingUp className="h-5 w-5" /> },
+        { label: "Payouts", href: "/admin/payouts", icon: <Banknote   className="h-5 w-5" /> },
+      ],
+    },
+    {
+      heading: "Users",
+      items: [
+        { label: "Users",      href: "/admin/users",      icon: <Users className="h-5 w-5" /> },
+        { label: "Categories", href: "/admin/categories", icon: <Tag   className="h-5 w-5" /> },
+      ],
+    },
+    {
+      heading: "Communication",
+      items: [
+        { label: "Support Inbox",  href: "/admin/support",        icon: <Headphones className="h-5 w-5" /> },
+        { label: "Notifications",  href: "/admin/notifications",  icon: <Bell       className="h-5 w-5" /> },
+      ],
+    },
   ],
 };
 
@@ -86,7 +158,7 @@ export default function Sidebar({ role }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { logout } = useAuthStore();
-  const items = navItems[role] ?? [];
+  const groups = navGroups[role] ?? [];
 
   async function handleLogout() {
     await logout();
@@ -114,25 +186,36 @@ export default function Sidebar({ role }: SidebarProps) {
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 px-3 pb-4 space-y-1 sidebar-scroll overflow-y-auto">
-        {items.map((item) => {
-          const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
-                isActive
-                  ? "bg-primary text-white"
-                  : "text-primary-300 hover:bg-white/10 hover:text-white"
-              )}
-            >
-              {item.icon}
-              {item.label}
-            </Link>
-          );
-        })}
+      <nav className="flex-1 px-3 pb-4 sidebar-scroll overflow-y-auto">
+        {groups.map((group, gi) => (
+          <div key={gi} className={gi > 0 ? "mt-4" : ""}>
+            {group.heading && (
+              <p className="px-3 mb-1 text-[10px] font-semibold uppercase tracking-widest text-primary-500">
+                {group.heading}
+              </p>
+            )}
+            <div className="space-y-0.5">
+              {group.items.map((item) => {
+                const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={cn(
+                      "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
+                      isActive
+                        ? "bg-primary text-white"
+                        : "text-primary-300 hover:bg-white/10 hover:text-white"
+                    )}
+                  >
+                    {item.icon}
+                    {item.label}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </nav>
 
       {/* Sign out */}
