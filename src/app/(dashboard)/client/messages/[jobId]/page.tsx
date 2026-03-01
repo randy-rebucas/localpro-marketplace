@@ -52,6 +52,8 @@ export default function ClientJobChatPage({
           postUrl={`/api/messages/${jobId}`}
           streamUrl={`/api/messages/stream/${jobId}`}
           currentUserId={String(user._id)}
+          currentUserRole="client"
+          jobTitle={jobTitle ?? undefined}
         />
       </div>
     </div>

@@ -44,6 +44,9 @@ export default function PostJobPage() {
   const [errors, setErrors] = useState<Partial<FormData>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isEstimatingBudget, setIsEstimatingBudget] = useState(false);
+  const [budgetHint, setBudgetHint] = useState<{ min: number; max: number; midpoint: number; note: string } | null>(null);
+  const [isClassifying, setIsClassifying] = useState(false);
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [categories, setCategories] = useState<ICategory[]>([]);
   const [isGeolocating, setIsGeolocating] = useState(false);
@@ -151,6 +154,57 @@ export default function PostJobPage() {
       toast.error("Could not reach AI service.");
     } finally {
       setIsGenerating(false);
+    }
+  }
+
+  async function estimateBudget() {
+    if (!form.title || form.title.trim().length < 3) {
+      toast.error("Enter a job title first.");
+      return;
+    }
+    setIsEstimatingBudget(true);
+    setBudgetHint(null);
+    try {
+      const res = await apiFetch("/api/ai/estimate-budget", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: form.title, category: form.category, description: form.description }),
+      });
+      const data = await res.json();
+      if (!res.ok) { toast.error(data.error ?? "Budget estimation failed"); return; }
+      setBudgetHint(data);
+    } catch {
+      toast.error("Could not reach AI service.");
+    } finally {
+      setIsEstimatingBudget(false);
+    }
+  }
+
+  async function classifyCategory() {
+    if (!form.title || form.title.trim().length < 3) {
+      toast.error("Enter a job title first.");
+      return;
+    }
+    if (categories.length === 0) return;
+    setIsClassifying(true);
+    try {
+      const res = await apiFetch("/api/ai/classify-category", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: form.title,
+          description: form.description,
+          availableCategories: categories.map((c) => c.name),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) { toast.error(data.error ?? "Could not detect category"); return; }
+      update("category", data.category);
+      toast.success(`Category set to \"${data.category}\"`);
+    } catch {
+      toast.error("Could not reach AI service.");
+    } finally {
+      setIsClassifying(false);
     }
   }
 
@@ -314,7 +368,18 @@ export default function PostJobPage() {
                 {errors.title && <p className="mt-1 text-xs text-red-500">{errors.title}</p>}
               </div>
               <div>
-                <label className="label block mb-1">Category</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="label">Category</label>
+                  <button
+                    type="button"
+                    onClick={classifyCategory}
+                    disabled={isClassifying}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-violet-200 bg-violet-50 px-2.5 py-1 text-xs font-medium text-violet-700 hover:bg-violet-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <Sparkles className={`h-3.5 w-3.5 ${isClassifying ? "animate-pulse" : ""}`} />
+                    {isClassifying ? "Detecting…" : "Auto-detect"}
+                  </button>
+                </div>
                 <select className={`input w-full ${errors.category ? "border-red-400" : ""}`}
                   value={form.category} onChange={(e) => update("category", e.target.value)}>
                   <option value="">Select a category</option>
@@ -358,13 +423,39 @@ export default function PostJobPage() {
           {step === 1 && (
             <>
               <div>
-                <label className="label block mb-1">Budget (PHP)</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="label">Budget (PHP)</label>
+                  <button
+                    type="button"
+                    onClick={estimateBudget}
+                    disabled={isEstimatingBudget}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-violet-200 bg-violet-50 px-2.5 py-1 text-xs font-medium text-violet-700 hover:bg-violet-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <Sparkles className={`h-3.5 w-3.5 ${isEstimatingBudget ? "animate-pulse" : ""}`} />
+                    {isEstimatingBudget ? "Estimating…" : "Estimate with AI"}
+                  </button>
+                </div>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">₱</span>
                   <input type="number" min="1" className={`input w-full pl-7 ${errors.budget ? "border-red-400" : ""}`}
                     placeholder="1000"
-                    value={form.budget} onChange={(e) => update("budget", e.target.value)} />
+                    value={form.budget} onChange={(e) => { update("budget", e.target.value); setBudgetHint(null); }} />
                 </div>
+                {budgetHint && (
+                  <div className="mt-2 p-2.5 rounded-lg bg-violet-50 border border-violet-100 text-xs">
+                    <p className="font-medium text-violet-700">
+                      Suggested range: <span className="tabular-nums">₱{budgetHint.min.toLocaleString()} – ₱{budgetHint.max.toLocaleString()}</span>
+                    </p>
+                    {budgetHint.note && <p className="text-violet-500 mt-0.5">{budgetHint.note}</p>}
+                    <button
+                      type="button"
+                      onClick={() => { update("budget", String(budgetHint.midpoint)); setBudgetHint(null); }}
+                      className="mt-1.5 text-violet-700 font-medium hover:underline"
+                    >
+                      Use midpoint (₱{budgetHint.midpoint.toLocaleString()})
+                    </button>
+                  </div>
+                )}
                 {errors.budget && <p className="mt-1 text-xs text-red-500">{errors.budget}</p>}
               </div>
               <div>

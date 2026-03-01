@@ -57,6 +57,9 @@ function DisputeCard({ dispute }: { dispute: ActiveDispute }) {
           disputeId={String(dispute._id)}
           currentStatus={dispute.status}
           escrowStatus={dispute.jobId?.escrowStatus}
+          jobTitle={dispute.jobId?.title}
+          reason={dispute.reason}
+          raisedByRole={dispute.raisedBy.role}
         />
       </div>
     </div>

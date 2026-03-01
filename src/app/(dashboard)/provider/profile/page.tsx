@@ -85,6 +85,8 @@ export default function ProviderProfilePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [generatingBio, setGeneratingBio] = useState(false);
+  const [suggestingSkills, setSuggestingSkills] = useState(false);
+  const [skillSuggestions, setSkillSuggestions] = useState<string[]>([]);
 
   // Avatar — seeded directly from store (DashboardShell resolves fetchMe before rendering)
   const [avatar, setAvatar] = useState<string | null>(user?.avatar ?? null);
@@ -219,6 +221,31 @@ export default function ProviderProfilePage() {
       toast.success("Bio generated! Review and save when ready.");
     } finally {
       setGeneratingBio(false);
+    }
+  }
+
+  async function suggestSkills() {
+    setSuggestingSkills(true);
+    setSkillSuggestions([]);
+    try {
+      const res = await apiFetch("/api/ai/suggest-skills", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bio, existingSkills: skills }),
+      });
+      const data = await res.json();
+      if (!res.ok) { toast.error(data.error ?? "Failed to get skill suggestions"); return; }
+      // Filter out skills already added
+      const newSuggestions = (data.skills as string[]).filter(
+        (s) => !skills.map((x) => x.toLowerCase()).includes(s.toLowerCase())
+      );
+      if (newSuggestions.length === 0) {
+        toast("All suggested skills are already added!", { icon: "✅" });
+      } else {
+        setSkillSuggestions(newSuggestions);
+      }
+    } finally {
+      setSuggestingSkills(false);
     }
   }
 
@@ -690,12 +717,46 @@ export default function ProviderProfilePage() {
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label className="block text-sm font-medium text-slate-700">Skills</label>
-                {skills.length > 0 && (
-                  <span className="text-xs text-slate-400">{skills.length} skill{skills.length !== 1 ? "s" : ""} added</span>
-                )}
+                <div className="flex items-center gap-3">
+                  {skills.length > 0 && (
+                    <span className="text-xs text-slate-400">{skills.length} skill{skills.length !== 1 ? "s" : ""} added</span>
+                  )}
+                  <button
+                    type="button"
+                    onClick={suggestSkills}
+                    disabled={suggestingSkills}
+                    className="inline-flex items-center gap-1 text-[11px] font-medium text-primary hover:text-primary/80 disabled:opacity-50 transition-colors"
+                    title="Suggest skills using AI based on your bio"
+                  >
+                    {suggestingSkills
+                      ? <Loader2 className="h-3 w-3 animate-spin" />
+                      : <Sparkles className="h-3 w-3" />}
+                    {suggestingSkills ? "Suggesting…" : "Suggest with AI"}
+                  </button>
+                </div>
               </div>
               <SkillsInput value={skills} onChange={setSkills} />
-              {skills.length === 0 && (
+              {skillSuggestions.length > 0 && (
+                <div className="mt-2 p-2.5 rounded-lg bg-violet-50 border border-violet-100">
+                  <p className="text-[10px] font-semibold text-violet-500 uppercase tracking-wide mb-2">AI Suggestions — click to add</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {skillSuggestions.map((s) => (
+                      <button
+                        key={s}
+                        type="button"
+                        onClick={() => {
+                          setSkills((prev) => [...prev, s]);
+                          setSkillSuggestions((prev) => prev.filter((x) => x !== s));
+                        }}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-violet-200 bg-white text-violet-700 text-xs font-medium hover:bg-violet-100 transition-colors"
+                      >
+                        <span>+</span>{s}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {skills.length === 0 && skillSuggestions.length === 0 && (
                 <p className="text-xs text-slate-400 mt-1.5">Add skills so clients can find you when filtering by service type.</p>
               )}
             </div>

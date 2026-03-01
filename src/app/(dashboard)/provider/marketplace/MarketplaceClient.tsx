@@ -19,6 +19,7 @@ import {
   ChevronDown,
   ChevronUp,
   RefreshCw,
+  Sparkles,
 } from "lucide-react";
 import type { IJob } from "@/types";
 import { apiFetch } from "@/lib/fetchClient";
@@ -66,6 +67,7 @@ export default function MarketplaceClient({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [quotedJobIds, setQuotedJobIds] = useState<Set<string>>(new Set(initialQuotedJobIds));
   const [categories] = useState<string[]>(initialCategories);
+  const [isGeneratingQuoteMsg, setIsGeneratingQuoteMsg] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
 
   const debouncedSearch = useDebounce(search);
@@ -159,6 +161,35 @@ export default function MarketplaceClient({
       toast.error("Something went wrong");
     } finally {
       setIsSubmitting(false);
+    }
+  }
+
+  async function generateQuoteMessage() {
+    if (!quoteModal.job) return;
+    setIsGeneratingQuoteMsg(true);
+    try {
+      const res = await apiFetch("/api/ai/generate-quote-message", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          jobTitle: quoteModal.job.title,
+          jobDescription: quoteModal.job.description,
+          jobBudget: quoteModal.job.budget,
+          category: quoteModal.job.category,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) { toast.error(data.error ?? "Failed to generate message"); return; }
+      setQuoteForm((f) => ({
+        ...f,
+        message: data.message ?? f.message,
+        timeline: data.timeline && !f.timeline ? data.timeline : f.timeline,
+      }));
+      toast.success("Message generated! Review before sending.");
+    } catch {
+      toast.error("Could not reach AI service.");
+    } finally {
+      setIsGeneratingQuoteMsg(false);
     }
   }
 
@@ -427,7 +458,18 @@ export default function MarketplaceClient({
           </div>
 
           <div>
-            <label className="label block mb-1">Message to Client</label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="label">Message to Client</label>
+              <button
+                type="button"
+                onClick={generateQuoteMessage}
+                disabled={isGeneratingQuoteMsg}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-violet-200 bg-violet-50 px-2.5 py-1 text-xs font-medium text-violet-700 hover:bg-violet-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <Sparkles className={`h-3.5 w-3.5 ${isGeneratingQuoteMsg ? "animate-pulse" : ""}`} />
+                {isGeneratingQuoteMsg ? "Generating…" : "Generate with AI"}
+              </button>
+            </div>
             <textarea
               className="input w-full min-h-[100px] resize-none"
               placeholder="Introduce yourself and explain your approach…"

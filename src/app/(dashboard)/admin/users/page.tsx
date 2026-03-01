@@ -26,6 +26,10 @@ export default async function AdminUsersPage({
     ...u,
     _id: u._id.toString(),
     createdAt: u.createdAt instanceof Date ? u.createdAt.toISOString() : u.createdAt,
+    addresses: (u.addresses ?? []).map((a) => ({
+      ...a,
+      _id: a._id ? a._id.toString() : undefined,
+    })),
   })) as unknown as IUser[];
   const totalPages = Math.ceil(total / limit);
 

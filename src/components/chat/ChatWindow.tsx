@@ -30,6 +30,10 @@ interface ChatWindowProps {
   transformResponse?: (data: unknown) => RawMessage[];
   /** Transform/filter an SSE event before adding to list. Return null to skip the event. */
   streamTransform?: (data: unknown) => RawMessage | null;
+  /** Current user's role ("client" | "provider") — enables AI quick reply suggestions */
+  currentUserRole?: string;
+  /** Job title — used to give context to AI reply suggestions */
+  jobTitle?: string;
 }
 
 export default function ChatWindow({
@@ -41,6 +45,8 @@ export default function ChatWindow({
   emptyMessage = "No messages yet. Start the conversation!",
   transformResponse,
   streamTransform,
+  currentUserRole,
+  jobTitle,
 }: ChatWindowProps) {
   const [messages, setMessages] = useState<RawMessage[]>([]);
   const [loading, setLoading] = useState(true);
@@ -171,7 +177,17 @@ export default function ChatWindow({
         <div ref={bottomRef} />
       </div>
 
-      <MessageInput onSend={handleSend} />
+      <MessageInput
+        onSend={handleSend}
+        aiSuggestData={currentUserRole ? {
+          lastMessages: messages.slice(-5).map((m) => ({
+            body: m.body,
+            senderRole: getSenderRole(m) || currentUserRole,
+          })),
+          role: currentUserRole,
+          jobTitle,
+        } : undefined}
+      />
     </div>
   );
 }
