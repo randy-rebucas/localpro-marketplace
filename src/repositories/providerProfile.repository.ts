@@ -66,6 +66,24 @@ export class ProviderProfileRepository extends BaseRepository<ProviderProfileDoc
       .select("userId avgRating completedJobCount")
       .lean() as never;
   }
+
+  /**
+   * Reset availabilityStatus to "available" for any provider currently marked
+   * "busy" whose userId is NOT in the `activeProviderIds` set (i.e. they have
+   * no active assigned / in_progress jobs right now).
+   * Returns the number of profiles updated.
+   */
+  async resetBusyExcluding(activeProviderIds: string[]): Promise<number> {
+    await this.connect();
+    const result = await ProviderProfile.updateMany(
+      {
+        availabilityStatus: "busy",
+        userId: { $nin: activeProviderIds },
+      },
+      { $set: { availabilityStatus: "available" } }
+    );
+    return result.modifiedCount ?? 0;
+  }
 }
 
 export const providerProfileRepository = new ProviderProfileRepository();

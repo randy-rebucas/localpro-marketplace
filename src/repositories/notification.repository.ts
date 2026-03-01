@@ -33,6 +33,15 @@ export class NotificationRepository extends BaseRepository<NotificationDocument>
   async countUnread(userId: string): Promise<number> {
     return this.count({ userId, readAt: null } as never);
   }
+
+  /** Delete read notifications older than `before`. Returns the count removed. */
+  async pruneRead(before: Date): Promise<number> {
+    await this.connect();
+    const result = await Notification.deleteMany({
+      readAt: { $ne: null, $lt: before },
+    });
+    return result.deletedCount ?? 0;
+  }
 }
 
 export const notificationRepository = new NotificationRepository();

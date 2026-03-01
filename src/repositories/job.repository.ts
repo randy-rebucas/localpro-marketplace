@@ -105,6 +105,24 @@ export class JobRepository extends BaseRepository<JobDocument> {
     return Job.find({ status: "completed", escrowStatus: "released", updatedAt: { $lt: cutoffDate } }).lean() as unknown as JobDocument[];
   }
 
+  /** Jobs stuck in pending_validation older than cutoffDate (for admin alerts). */
+  async findStalePendingValidation(cutoffDate: Date): Promise<JobDocument[]> {
+    await this.connect();
+    return Job.find({ status: "pending_validation", createdAt: { $lt: cutoffDate } })
+      .select("_id title clientId createdAt")
+      .lean() as unknown as JobDocument[];
+  }
+
+  /** Distinct provider user-IDs for jobs currently in an active state (assigned or in_progress). */
+  async findActiveProviderIds(): Promise<string[]> {
+    await this.connect();
+    const docs = await Job.find(
+      { status: { $in: ["assigned", "in_progress"] }, providerId: { $ne: null } },
+      { providerId: 1 }
+    ).lean();
+    return [...new Set(docs.map((d) => (d.providerId as { toString(): string }).toString()))];
+  }
+
   /** All jobs for a client, newest first, with populated provider. For "My Jobs" list page. */
   async findAllForClient(clientId: string): Promise<JobDocument[]> {
     await this.connect();

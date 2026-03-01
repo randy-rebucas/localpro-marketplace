@@ -219,6 +219,7 @@ export type NotificationType =
   | "reminder_complete_job"
   | "reminder_leave_review"
   | "reminder_stale_dispute"
+  | "reminder_pending_validation"
   | "payout_requested"
   | "payout_status_update"
   | "job_direct_invite";

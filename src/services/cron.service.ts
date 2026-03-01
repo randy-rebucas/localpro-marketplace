@@ -1,5 +1,6 @@
-import { jobRepository, quoteRepository, transactionRepository, activityRepository, reviewRepository, disputeRepository } from "@/repositories";
+import { jobRepository, quoteRepository, transactionRepository, activityRepository, reviewRepository, disputeRepository, notificationRepository } from "@/repositories";
 import { payoutRepository } from "@/repositories/payout.repository";
+import { providerProfileRepository } from "@/repositories/providerProfile.repository";
 import { notificationService } from "@/services/notification.service";
 import { pushStatusUpdate, pushStatusUpdateMany } from "@/lib/events";
 import type { JobDocument } from "@/models/Job";
@@ -355,6 +356,63 @@ export class CronService {
     }
 
     return { expired: stalePayout.length };
+  }
+
+  /**
+   * Deletes read notifications older than `days` days to keep the collection lean.
+   * Runs daily. Default threshold: 60 days.
+   */
+  async pruneOldNotifications(days = 60): Promise<{ pruned: number }> {
+    const cutoff = daysAgo(days);
+    const pruned = await notificationRepository.pruneRead(cutoff);
+    return { pruned };
+  }
+
+  /**
+   * Deletes activity log entries older than `days` days.
+   * Runs daily. Default threshold: 90 days.
+   */
+  async pruneOldActivityLogs(days = 90): Promise<{ pruned: number }> {
+    const cutoff = daysAgo(days);
+    const pruned = await activityRepository.pruneOld(cutoff);
+    return { pruned };
+  }
+
+  /**
+   * Notifies admins about jobs still in `pending_validation` longer than `hours` hours.
+   * Runs daily. Default threshold: 48 hours.
+   */
+  async alertStalePendingValidation(hours = 48): Promise<{ alerted: number }> {
+    const cutoff = hoursAgo(hours);
+    const staleJobs = await jobRepository.findStalePendingValidation(cutoff);
+    if (staleJobs.length === 0) return { alerted: 0 };
+
+    for (const job of staleJobs) {
+      const j = job as unknown as JobDocument & {
+        _id: { toString(): string };
+        title: string;
+      };
+
+      await notificationService.notifyAdmins(
+        "reminder_pending_validation",
+        "Job awaiting validation",
+        `Job "${j.title}" has been in pending_validation for over ${hours} hours and needs admin review.`,
+        { jobId: j._id.toString() }
+      );
+    }
+
+    return { alerted: staleJobs.length };
+  }
+
+  /**
+   * Resets `availabilityStatus` from "busy" to "available" for providers who
+   * currently have no active (assigned / in_progress) jobs.
+   * Runs daily.
+   */
+  async resetProviderAvailability(): Promise<{ reset: number }> {
+    const activeProviderIds = await jobRepository.findActiveProviderIds();
+    const reset = await providerProfileRepository.resetBusyExcluding(activeProviderIds);
+    return { reset };
   }
 }
 
