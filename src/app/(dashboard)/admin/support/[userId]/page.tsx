@@ -1,11 +1,9 @@
 "use client";
 
-import { use, useCallback } from "react";
+import { use, useCallback, useEffect, useState } from "react";
 import ChatWindow from "@/components/chat/ChatWindow";
 import { useAuthStore } from "@/stores/authStore";
-import Link from "next/link";
-import { ChevronLeft, User } from "lucide-react";
-import { useEffect, useState } from "react";
+import { User } from "lucide-react";
 
 interface SupportUser {
   _id: string;
@@ -40,13 +38,11 @@ export default function AdminSupportThreadPage({
       .catch(() => {});
   }, [userId]);
 
-  // Extract messages array from { user, messages } response
   const transformResponse = useCallback(
     (data: unknown) => ((data as ThreadResponse).messages ?? []) as never[],
     []
   );
 
-  // Admin SSE pushes { userId, message } — filter to only this user's thread
   const streamTransform = useCallback(
     (data: unknown) => {
       const d = data as SSEAdminPayload;
@@ -61,7 +57,7 @@ export default function AdminSupportThreadPage({
   if (!admin) return null;
 
   return (
-    <div className="flex flex-col h-[calc(100vh-8rem)]">
+    <div className="flex flex-col h-full overflow-hidden">
       <ChatWindow
         fetchUrl={`/api/admin/support/${userId}`}
         postUrl={`/api/admin/support/${userId}`}
@@ -71,18 +67,17 @@ export default function AdminSupportThreadPage({
         streamTransform={streamTransform}
         header={
           <div className="flex items-center gap-3">
-            <Link href="/admin/support" className="text-slate-500 hover:text-slate-800 transition-colors mr-1">
-              <ChevronLeft className="h-5 w-5" />
-            </Link>
-            <div className="h-9 w-9 rounded-full bg-slate-100 flex items-center justify-center flex-shrink-0">
-              <User className="h-5 w-5 text-slate-500" />
+            <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+              <User className="h-4 w-4 text-primary" />
             </div>
             <div>
               <p className="text-sm font-semibold text-slate-800">
                 {targetUser?.name ?? "Loading…"}
               </p>
               {targetUser && (
-                <p className="text-xs text-slate-500">{targetUser.email} · {targetUser.role}</p>
+                <p className="text-xs text-slate-500 capitalize">
+                  {targetUser.email} · {targetUser.role}
+                </p>
               )}
             </div>
           </div>
@@ -92,3 +87,4 @@ export default function AdminSupportThreadPage({
     </div>
   );
 }
+
