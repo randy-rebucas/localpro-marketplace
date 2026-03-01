@@ -13,13 +13,14 @@ const getCachedCategories = unstable_cache(
     if (count === 0) {
       const docs = DEFAULT_CATEGORIES.map((c) => ({
         ...c,
-        slug: c.name.toLowerCase().replace(/\s+/g, "-"),
+        slug: c.name.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, ""),
+        isActive: true,
       }));
       await Category.insertMany(docs);
     }
     return Category.find({ isActive: true })
       .sort({ order: 1, name: 1 })
-      .select("_id name slug icon order")
+      .select("_id name slug icon description order")
       .lean();
   },
   ["categories"],

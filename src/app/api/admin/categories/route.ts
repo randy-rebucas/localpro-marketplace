@@ -23,7 +23,7 @@ export const POST = withHandler(async (req: NextRequest) => {
   requireRole(user, "admin");
   await connectDB();
 
-  const { name, icon, order } = await req.json();
+  const { name, icon, description, order } = await req.json();
   if (!name?.trim()) {
     return NextResponse.json({ error: "Name is required" }, { status: 400 });
   }
@@ -42,6 +42,7 @@ export const POST = withHandler(async (req: NextRequest) => {
     name: name.trim(),
     slug,
     icon: icon?.trim() || "🔧",
+    description: description?.trim() || "",
     order: nextOrder,
   });
 

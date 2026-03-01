@@ -44,7 +44,7 @@ export default function PostJobPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
-  const [categories, setCategories] = useState<string[]>([]);
+  const [categories, setCategories] = useState<ICategory[]>([]);
   const [isGeolocating, setIsGeolocating] = useState(false);
   const [photoFiles, setPhotoFiles]     = useState<{ file: File; preview: string }[]>([]);
   const [isUploadingPhotos, setIsUploadingPhotos] = useState(false);
@@ -53,7 +53,7 @@ export default function PostJobPage() {
   useEffect(() => {
     apiFetch("/api/categories")
       .then((r) => r.json())
-      .then((data: ICategory[]) => setCategories(data.map((c) => c.name)))
+      .then((data: ICategory[]) => setCategories(data))
       .catch(() => { /* silently fall back to empty list */ });
   }, []);
 
@@ -267,8 +267,17 @@ export default function PostJobPage() {
                 <select className={`input w-full ${errors.category ? "border-red-400" : ""}`}
                   value={form.category} onChange={(e) => update("category", e.target.value)}>
                   <option value="">Select a category</option>
-                  {categories.map((c) => <option key={c} value={c}>{c}</option>)}
+                  {categories.map((c) => <option key={c.name} value={c.name}>{c.icon} {c.name}</option>)}
                 </select>
+                {(() => {
+                  const selected = categories.find((c) => c.name === form.category);
+                  return selected?.description ? (
+                    <p className="mt-1.5 text-sm text-slate-500 flex items-start gap-1.5">
+                      <span className="mt-0.5 text-base leading-none">{selected.icon}</span>
+                      {selected.description}
+                    </p>
+                  ) : null;
+                })()}
                 {errors.category && <p className="mt-1 text-xs text-red-500">{errors.category}</p>}
               </div>
               <div>

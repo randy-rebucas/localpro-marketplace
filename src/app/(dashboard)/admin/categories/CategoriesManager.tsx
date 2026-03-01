@@ -19,12 +19,14 @@ export default function CategoriesManager({ initialCategories }: Props) {
   // ── Add form state ────────────────────────────────────────────────────────
   const [newName, setNewName] = useState("");
   const [newIcon, setNewIcon] = useState("🔧");
+  const [newDescription, setNewDescription] = useState("");
   const [adding, setAdding] = useState(false);
 
   // ── Inline edit ──────────────────────────────────────────────────────────
   const [editId, setEditId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const [editIcon, setEditIcon] = useState("");
+  const [editDescription, setEditDescription] = useState("");
 
   // ── Helpers ──────────────────────────────────────────────────────────────
 
@@ -64,11 +66,11 @@ export default function CategoriesManager({ initialCategories }: Props) {
       const res = await apiFetch(`/api/admin/categories/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: editName.trim(), icon: editIcon }),
+        body: JSON.stringify({ name: editName.trim(), icon: editIcon, description: editDescription.trim() }),
       });
       const data = await res.json();
       if (!res.ok) { toast.error(data.error ?? "Failed to save"); return; }
-      setCategories((prev) => prev.map((c) => c._id === id ? { ...c, name: data.name, slug: data.slug, icon: data.icon } : c));
+      setCategories((prev) => prev.map((c) => c._id === id ? { ...c, name: data.name, slug: data.slug, icon: data.icon, description: data.description } : c));
       setEditId(null);
       toast.success("Category updated");
     } catch { toast.error("Something went wrong"); }
@@ -82,13 +84,14 @@ export default function CategoriesManager({ initialCategories }: Props) {
       const res = await apiFetch("/api/admin/categories", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: newName.trim(), icon: newIcon }),
+        body: JSON.stringify({ name: newName.trim(), icon: newIcon, description: newDescription.trim() }),
       });
       const data = await res.json();
       if (!res.ok) { toast.error(data.error ?? "Failed to create"); return; }
       setCategories((prev) => [...prev, data]);
       setNewName("");
       setNewIcon("🔧");
+      setNewDescription("");
       toast.success(`"${data.name}" added`);
     } catch { toast.error("Something went wrong"); }
     finally { setAdding(false); }
@@ -111,8 +114,15 @@ export default function CategoriesManager({ initialCategories }: Props) {
               placeholder="e.g. Pool Maintenance"
               className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
-          </div>
-          <div>
+          </div>          <div className="flex-1">
+            <label className="block text-xs font-medium text-slate-600 mb-1">Description</label>
+            <input
+              value={newDescription}
+              onChange={(e) => setNewDescription(e.target.value)}
+              placeholder="Short description (optional)"
+              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>          <div>
             <label className="block text-xs font-medium text-slate-600 mb-1">Icon</label>
             <select
               value={newIcon}
@@ -157,6 +167,13 @@ export default function CategoriesManager({ initialCategories }: Props) {
                     if (e.key === "Enter") saveEdit(cat._id);
                     if (e.key === "Escape") setEditId(null);
                   }}
+                  placeholder="Name"
+                  className="w-32 border border-slate-300 rounded-md px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+                <input
+                  value={editDescription}
+                  onChange={(e) => setEditDescription(e.target.value)}
+                  placeholder="Description (optional)"
                   className="flex-1 border border-slate-300 rounded-md px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
                 <Button size="sm" variant="primary" isLoading={loading === `save-${cat._id}`} onClick={() => saveEdit(cat._id)}>
@@ -170,9 +187,14 @@ export default function CategoriesManager({ initialCategories }: Props) {
               /* ── view mode ── */
               <>
                 <span className="text-xl w-8 text-center">{cat.icon}</span>
-                <span className={`flex-1 text-sm font-medium ${cat.isActive ? "text-slate-800" : "text-slate-400 line-through"}`}>
-                  {cat.name}
-                </span>
+                <div className="flex-1 min-w-0">
+                  <span className={`text-sm font-medium ${cat.isActive ? "text-slate-800" : "text-slate-400 line-through"}`}>
+                    {cat.name}
+                  </span>
+                  {cat.description && (
+                    <p className="text-xs text-slate-400 truncate mt-0.5">{cat.description}</p>
+                  )}
+                </div>
                 <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${cat.isActive ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>
                   {cat.isActive ? "Active" : "Hidden"}
                 </span>
@@ -183,6 +205,7 @@ export default function CategoriesManager({ initialCategories }: Props) {
                     setEditId(cat._id);
                     setEditName(cat.name);
                     setEditIcon(cat.icon);
+                    setEditDescription(cat.description ?? "");
                   }}
                 >
                   Edit

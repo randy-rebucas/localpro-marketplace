@@ -1,48 +1,30 @@
-import mongoose, { Schema, Document, Model } from "mongoose";
-import type { ICategory } from "@/types";
+/**
+ * Category Seed Script
+ * --------------------
+ * Upserts all DEFAULT_CATEGORIES into the database.
+ * Safe to re-run — existing categories are updated in-place; missing ones are inserted.
+ *
+ * Usage:
+ *   node --env-file=.env.local scripts/seed-categories.mjs
+ *
+ * Optional flags:
+ *   --wipe   Drop all categories first, then re-insert from scratch
+ */
 
-export interface CategoryDocument extends Omit<ICategory, "_id">, Document {}
+import mongoose from "mongoose";
 
-const CategorySchema = new Schema<CategoryDocument>(
-  {
-    name: {
-      type: String,
-      required: [true, "Category name is required"],
-      trim: true,
-      unique: true,
-      maxlength: [60, "Name cannot exceed 60 characters"],
-    },
-    slug: {
-      type: String,
-      required: true,
-      unique: true,
-      lowercase: true,
-      trim: true,
-    },
-    icon: { type: String, default: "🔧" },
-    description: { type: String, default: "", maxlength: [300, "Description cannot exceed 300 characters"] },
-    isActive: { type: Boolean, default: true, index: true },
-    order: { type: Number, default: 0 },
-  },
-  { timestamps: true }
-);
+// ─── Parse CLI flags ──────────────────────────────────────────────────────────
+const WIPE = process.argv.includes("--wipe");
 
-// Auto-generate slug from name before save
-CategorySchema.pre("save", function (next) {
-  if (this.isModified("name")) {
-    this.slug = this.name.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
-  }
-  next();
-});
-
-const Category: Model<CategoryDocument> =
-  mongoose.models.Category ?? mongoose.model<CategoryDocument>("Category", CategorySchema);
-
-export default Category;
+// ─── Config ───────────────────────────────────────────────────────────────────
+const MONGODB_URI = process.env.MONGODB_URI;
+if (!MONGODB_URI) {
+  console.error("❌  MONGODB_URI is not set. Run with: node --env-file=.env.local scripts/seed-categories.mjs");
+  process.exit(1);
+}
 
 // ─── Seed data ────────────────────────────────────────────────────────────────
-
-export const DEFAULT_CATEGORIES = [
+const DEFAULT_CATEGORIES = [
   // Home & Building
   { name: "Plumbing",                   icon: "🔧", description: "Pipe installation, leak repairs, drain cleaning, and water system maintenance.", order: 0 },
   { name: "Electrical",                 icon: "⚡", description: "Wiring, panel upgrades, outlet installation, and electrical troubleshooting.", order: 1 },
@@ -84,3 +66,78 @@ export const DEFAULT_CATEGORIES = [
 
   { name: "Other",                      icon: "📋", description: "Services that do not fit into any other category.", order: 23 },
 ];
+
+// ─── Minimal schema (avoids importing TS source) ─────────────────────────────
+const CategorySchema = new mongoose.Schema(
+  {
+    name:        { type: String, required: true, unique: true, trim: true },
+    slug:        { type: String, required: true, unique: true, lowercase: true },
+    icon:        { type: String, default: "🔧" },
+    description: { type: String, default: "" },
+    isActive:    { type: Boolean, default: true },
+    order:       { type: Number, default: 0 },
+  },
+  { timestamps: true }
+);
+
+function slugify(name) {
+  return name.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+}
+
+function ok(msg)   { console.log(`  ✅ ${msg}`); }
+function warn(msg) { console.log(`  ⚠️  ${msg}`); }
+
+// ─── Main ─────────────────────────────────────────────────────────────────────
+async function main() {
+  console.log("\n🔌  Connecting to MongoDB…");
+  await mongoose.connect(MONGODB_URI, { bufferCommands: false });
+  console.log(`✅  Connected: ${mongoose.connection.name}\n`);
+
+  const Category = mongoose.models.Category ?? mongoose.model("Category", CategorySchema);
+
+  if (WIPE) {
+    console.log("🗑️   --wipe: clearing categories collection…");
+    await Category.deleteMany({});
+    warn("All categories removed.");
+    console.log();
+  }
+
+  console.log("📂  Seeding categories…");
+  let inserted = 0;
+  let updated  = 0;
+
+  for (const cat of DEFAULT_CATEGORIES) {
+    const slug = slugify(cat.name);
+    const result = await Category.findOneAndUpdate(
+      { slug },
+      { $set: { ...cat, slug, isActive: true } },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
+    if (result.createdAt?.getTime() === result.updatedAt?.getTime()) {
+      inserted++;
+    } else {
+      updated++;
+    }
+  }
+
+  ok(`Inserted: ${inserted}  |  Updated: ${updated}  |  Total: ${DEFAULT_CATEGORIES.length}`);
+
+  // Deactivate any category not in the seed list (orphaned)
+  const seedSlugs = DEFAULT_CATEGORIES.map((c) => slugify(c.name));
+  const deactivated = await Category.updateMany(
+    { slug: { $nin: seedSlugs } },
+    { $set: { isActive: false } }
+  );
+  if (deactivated.modifiedCount > 0) {
+    warn(`Deactivated ${deactivated.modifiedCount} orphaned category/categories not in seed list.`);
+  }
+
+  console.log();
+  await mongoose.disconnect();
+  console.log("✅  Category seed complete.\n");
+}
+
+main().catch((err) => {
+  console.error("\n❌  Seed failed:", err.message);
+  process.exit(1);
+});

@@ -373,6 +373,7 @@ export interface ICategory {
   name: string;
   slug: string;
   icon: string;
+  description?: string;
   isActive: boolean;
   order: number;
   createdAt: Date;
