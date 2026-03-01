@@ -12,19 +12,20 @@ import { JobStatusBadge } from "@/components/ui/Badge";
 import { formatCurrency, formatRelativeTime } from "@/lib/utils";
 import { calculateCommission } from "@/lib/commission";
 import Link from "next/link";
-import { CircleDollarSign, Briefcase, Star, Store, TrendingUp, Trophy, Flame, ShieldCheck } from "lucide-react";
+import { CircleDollarSign, Briefcase, Star, Store, TrendingUp, Trophy, Flame, ShieldCheck, Zap } from "lucide-react";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
 
 async function getProviderStats(providerId: string) {
-  const [activeJobs, earnings, ratingSummary, recentJobs, userDoc, profileDoc] = await Promise.all([
+  const [activeJobs, earnings, ratingSummary, recentJobs, userDoc, profileDoc, streak] = await Promise.all([
     jobRepository.countActiveForProvider(providerId),
     transactionRepository.sumCompletedByPayee(providerId),
     reviewRepository.getProviderRatingSummary(providerId),
     jobRepository.findRecentForProvider(providerId, 5),
     userRepository.findById(providerId) as Promise<{ name?: string } | null>,
-    providerProfileRepository.findByUserId(providerId) as Promise<{ completionRate?: number; completedJobCount?: number } | null>,
+    providerProfileRepository.findByUserId(providerId) as Promise<{ completionRate?: number; completedJobCount?: number; avgResponseTimeHours?: number } | null>,
+    reviewRepository.getFiveStarStreak(providerId),
   ]);
 
   const jobIds = recentJobs.map((j) => String(j._id));
@@ -35,6 +36,7 @@ async function getProviderStats(providerId: string) {
   const firstName = userDoc?.name?.split(" ")[0] ?? "there";
   const completionRate = profileDoc?.completionRate ?? 100;
   const completedJobCount = profileDoc?.completedJobCount ?? 0;
+  const avgResponseTimeHours = profileDoc?.avgResponseTimeHours ?? 0;
 
   return {
     activeJobs,
@@ -46,6 +48,8 @@ async function getProviderStats(providerId: string) {
     firstName,
     completionRate,
     completedJobCount,
+    streak,
+    avgResponseTimeHours,
   };
 }
 
@@ -90,7 +94,7 @@ function ProviderDashboardSkeleton() {
 }
 
 async function ProviderDashboardContent({ userId }: { userId: string }) {
-  const { activeJobs, totalEarnings, avgRating, reviewCount, recentJobs, fundedAmounts, firstName, completionRate, completedJobCount } =
+  const { activeJobs, totalEarnings, avgRating, reviewCount, recentJobs, fundedAmounts, firstName, completionRate, completedJobCount, streak, avgResponseTimeHours } =
     await getProviderStats(userId);
 
   const tier = getPerformanceTier(completedJobCount, avgRating, completionRate);
@@ -105,6 +109,16 @@ async function ProviderDashboardContent({ userId }: { userId: string }) {
             {isTopPro && (
               <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-200">
                 <Trophy className="h-3 w-3" /> Top Pro
+              </span>
+            )}
+            {streak >= 3 && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-orange-100 text-orange-800 border border-orange-200">
+                🔥 {streak}-Star Streak
+              </span>
+            )}
+            {avgResponseTimeHours > 0 && avgResponseTimeHours <= 2 && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 border border-blue-200">
+                <Zap className="h-3 w-3" /> Fast Responder
               </span>
             )}
           </div>
@@ -149,7 +163,7 @@ async function ProviderDashboardContent({ userId }: { userId: string }) {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <KpiCard
           title="Total Earnings"
           value={formatCurrency(totalEarnings)}
@@ -173,6 +187,14 @@ async function ProviderDashboardContent({ userId }: { userId: string }) {
           value={completedJobCount > 0 ? `${completionRate}%` : "—"}
           subtitle={`${completedJobCount} job${completedJobCount !== 1 ? "s" : ""} completed`}
           icon={<TrendingUp className="h-6 w-6" />}
+        />
+        <KpiCard
+          title="Avg Response"
+          value={avgResponseTimeHours > 0
+            ? (avgResponseTimeHours < 1 ? `${Math.round(avgResponseTimeHours * 60)}m` : `${avgResponseTimeHours.toFixed(1)}h`)
+            : "—"}
+          subtitle={avgResponseTimeHours > 0 && avgResponseTimeHours <= 2 ? "⚡ Fast Responder" : "Time to first update"}
+          icon={<Zap className="h-6 w-6" />}
         />
       </div>
 

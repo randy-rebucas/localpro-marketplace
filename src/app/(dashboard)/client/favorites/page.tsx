@@ -42,6 +42,8 @@ interface FavoriteEntry {
     avgRating?: number;
     completedJobCount?: number;
     availabilityStatus?: "available" | "busy" | "unavailable";
+    avgResponseTimeHours?: number;
+    completionRate?: number;
   } | null;
   createdAt: string;
 }
@@ -128,6 +130,25 @@ function ProviderCard({
       {profile?.avgRating !== undefined && profile.avgRating > 0 && (
         <Stars rating={profile.avgRating} />
       )}
+
+      {(() => {
+        const isTopRated = (profile?.avgRating ?? 0) >= 4.5 && (profile?.completedJobCount ?? 0) >= 10;
+        const isFastResponder = (profile?.avgResponseTimeHours ?? 0) > 0 && (profile?.avgResponseTimeHours ?? 0) <= 2;
+        return (isTopRated || isFastResponder) ? (
+          <div className="flex flex-wrap gap-1.5">
+            {isTopRated && (
+              <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+                ⭐ Top Rated
+              </span>
+            )}
+            {isFastResponder && (
+              <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+                ⚡ Fast Responder
+              </span>
+            )}
+          </div>
+        ) : null;
+      })()}
 
       {profile?.bio && (
         <p className="text-xs text-slate-500 line-clamp-2">{profile.bio}</p>

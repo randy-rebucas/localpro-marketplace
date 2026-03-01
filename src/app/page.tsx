@@ -4,11 +4,13 @@ import { connectDB } from "@/lib/db";
 import Category from "@/models/Category";
 import ProviderProfile from "@/models/ProviderProfile";
 import Review from "@/models/Review";
+import Job from "@/models/Job";
 import "@/models/User";
 import Link from "next/link";
-import { CheckCircle, Briefcase, Star, Shield, ArrowRight, MapPin, Users, TrendingUp, Lock } from "lucide-react";
+import { CheckCircle, Briefcase, Star, Shield, ArrowRight, MapPin, Users, TrendingUp, Lock, Zap } from "lucide-react";
 import Image from "next/image";
 import { Suspense } from "react";
+import { formatRelativeTime } from "@/lib/utils";
 
 // ── Async data sections (deferred behind Suspense) ────────────────────────────
 
@@ -44,11 +46,18 @@ async function CategoriesSection() {
 
 async function TopProvidersSection() {
   await connectDB();
-  const topProviders = await ProviderProfile.find({ availabilityStatus: "available" })
-    .sort({ avgRating: -1, completedJobCount: -1 })
-    .limit(6)
-    .populate("userId", "name isVerified")
-    .lean();
+  const [topProviders, availableCount, lastJob] = await Promise.all([
+    ProviderProfile.find({ availabilityStatus: "available" })
+      .sort({ avgRating: -1, completedJobCount: -1 })
+      .limit(6)
+      .populate("userId", "name isVerified")
+      .lean(),
+    ProviderProfile.countDocuments({ availabilityStatus: "available" }),
+    Job.findOne({ status: { $in: ["completed", "in_progress", "accepted"] } })
+      .sort({ updatedAt: -1 })
+      .select("updatedAt")
+      .lean(),
+  ]);
 
   if (!topProviders.length) return null;
 
@@ -74,6 +83,21 @@ async function TopProvidersSection() {
           Find more providers →
         </Link>
       </div>
+
+      {/* Liquidity signals */}
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-2 mb-8 px-4 py-3 rounded-xl bg-emerald-50 border border-emerald-100">
+        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700">
+          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+          <strong>{availableCount}</strong> providers available now
+        </span>
+        {lastJob && (
+          <span className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500">
+            <Zap className="h-3.5 w-3.5 text-amber-500" />
+            Last booking{" "}
+            {formatRelativeTime((lastJob as unknown as { updatedAt: Date }).updatedAt)}
+          </span>
+        )}
+      </div>
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
         {topProviders.map((p) => {
           const profile = p as unknown as {
@@ -82,12 +106,16 @@ async function TopProvidersSection() {
             bio: string;
             avgRating: number;
             completedJobCount: number;
+            completionRate: number;
+            avgResponseTimeHours: number;
             skills: string[];
             hourlyRate?: number;
           };
           const initials = profile.userId?.name
             ?.split(" ").filter(Boolean).map((w: string) => w[0]).join("").slice(0, 2).toUpperCase() ?? "??";
           const reviews = countMap[String(profile.userId?._id)] ?? 0;
+          const isTopRated = profile.avgRating >= 4.5 && profile.completedJobCount >= 10;
+          const isFastResponder = profile.avgResponseTimeHours > 0 && profile.avgResponseTimeHours <= 2;
 
           return (
             <div
@@ -119,6 +147,21 @@ async function TopProvidersSection() {
               </div>
               {profile.bio && (
                 <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">{profile.bio}</p>
+              )}
+              {/* Smart tags */}
+              {(isTopRated || isFastResponder) && (
+                <div className="flex flex-wrap gap-1.5">
+                  {isTopRated && (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+                      ⭐ Top Rated
+                    </span>
+                  )}
+                  {isFastResponder && (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+                      ⚡ Fast Responder
+                    </span>
+                  )}
+                </div>
               )}
               <div className="flex items-center justify-between gap-2 mt-auto pt-1">
                 {profile.skills.length > 0 && (

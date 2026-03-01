@@ -5,10 +5,18 @@ import { requireUser, requireRole } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { ValidationError } from "@/lib/errors";
 
+const BreakdownSchema = z.object({
+  quality:         z.number().int().min(1).max(5) as z.ZodType<1|2|3|4|5>,
+  professionalism: z.number().int().min(1).max(5) as z.ZodType<1|2|3|4|5>,
+  punctuality:     z.number().int().min(1).max(5) as z.ZodType<1|2|3|4|5>,
+  communication:   z.number().int().min(1).max(5) as z.ZodType<1|2|3|4|5>,
+});
+
 const CreateReviewSchema = z.object({
-  jobId: z.string().min(1),
-  rating: z.number().int().min(1).max(5) as z.ZodType<1 | 2 | 3 | 4 | 5>,
-  feedback: z.string().min(10).max(500),
+  jobId:     z.string().min(1),
+  rating:    z.number().int().min(1).max(5) as z.ZodType<1 | 2 | 3 | 4 | 5>,
+  feedback:  z.string().min(10).max(500),
+  breakdown: BreakdownSchema.optional(),
 });
 
 export const GET = withHandler(async (req: NextRequest) => {

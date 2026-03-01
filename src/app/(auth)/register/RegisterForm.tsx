@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
 import { useAuthStore } from "@/stores/authStore";
 
@@ -23,13 +23,14 @@ const ROLES: { value: Role; label: string; description: string }[] = [
 
 export default function RegisterForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { setUser } = useAuthStore();
   const [isLoading, setIsLoading] = useState(false);
   const [form, setForm] = useState({
     name: "",
     email: "",
     password: "",
-    role: "client" as Role,
+    role: (searchParams.get("role") === "provider" ? "provider" : "client") as Role,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 

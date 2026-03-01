@@ -9,7 +9,6 @@ const ReviewSchema = new Schema<ReviewDocument>(
       type: Schema.Types.ObjectId,
       ref: "Job",
       required: true,
-      unique: true, // one review per job
     },
     clientId: {
       type: Schema.Types.ObjectId,
@@ -28,6 +27,18 @@ const ReviewSchema = new Schema<ReviewDocument>(
       min: 1,
       max: 5,
     },
+    breakdown: {
+      type: new Schema(
+        {
+          quality:         { type: Number, min: 1, max: 5 },
+          professionalism: { type: Number, min: 1, max: 5 },
+          punctuality:     { type: Number, min: 1, max: 5 },
+          communication:   { type: Number, min: 1, max: 5 },
+        },
+        { _id: false }
+      ),
+      default: null,
+    },
     feedback: {
       type: String,
       required: [true, "Feedback is required"],
@@ -38,6 +49,9 @@ const ReviewSchema = new Schema<ReviewDocument>(
   },
   { timestamps: { createdAt: true, updatedAt: false } }
 );
+
+// One review per client per job (replaces the old jobId-only unique index)
+ReviewSchema.index({ jobId: 1, clientId: 1 }, { unique: true });
 
 const Review: Model<ReviewDocument> =
   mongoose.models.Review ??

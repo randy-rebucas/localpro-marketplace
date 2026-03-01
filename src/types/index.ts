@@ -104,12 +104,20 @@ export interface ITransaction {
 
 // ─── Review ───────────────────────────────────────────────────────────────────
 
+export interface IReviewBreakdown {
+  quality: 1 | 2 | 3 | 4 | 5;
+  professionalism: 1 | 2 | 3 | 4 | 5;
+  punctuality: 1 | 2 | 3 | 4 | 5;
+  communication: 1 | 2 | 3 | 4 | 5;
+}
+
 export interface IReview {
   _id: Types.ObjectId | string;
   jobId: Types.ObjectId | string | IJob;
   clientId: Types.ObjectId | string | IUser;
   providerId: Types.ObjectId | string | IUser;
   rating: 1 | 2 | 3 | 4 | 5;
+  breakdown?: IReviewBreakdown;
   feedback: string;
   createdAt: Date;
 }

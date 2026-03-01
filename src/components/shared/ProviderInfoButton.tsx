@@ -24,6 +24,9 @@ interface ProviderProfile {
   completedJobCount?: number;
   availabilityStatus?: "available" | "busy" | "unavailable";
   schedule?: Record<string, WorkSlot>;
+  avgResponseTimeHours?: number;
+  breakdown?: { quality: number; professionalism: number; punctuality: number; communication: number; count: number } | null;
+  streak?: number;
 }
 
 const statusColor: Record<string, string> = {
@@ -228,6 +231,50 @@ export default function ProviderInfoButton({
                   </div>
                 </div>
               </div>
+
+              {/* Streak + response time badges */}
+              {((profile.streak ?? 0) > 0 || (profile.avgResponseTimeHours != null && profile.avgResponseTimeHours > 0)) && (
+                <div className="flex flex-wrap gap-2">
+                  {(profile.streak ?? 0) >= 3 && (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                      🔥 {profile.streak}-Star Streak
+                    </span>
+                  )}
+                  {profile.avgResponseTimeHours != null && profile.avgResponseTimeHours > 0 && (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+                      <Sparkles className="h-3 w-3" />
+                      Responds in ~{profile.avgResponseTimeHours < 1
+                        ? `${Math.round(profile.avgResponseTimeHours * 60)}m`
+                        : `${profile.avgResponseTimeHours.toFixed(1)}h`}
+                    </span>
+                  )}
+                </div>
+              )}
+
+              {/* Rating breakdown bars */}
+              {profile.breakdown && profile.breakdown.count > 0 && (
+                <div className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 space-y-2.5">
+                  <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Detailed Ratings <span className="font-normal text-slate-400">({profile.breakdown.count} review{profile.breakdown.count !== 1 ? 's' : ''})</span></p>
+                  {([
+                    { key: "quality" as const,         label: "Quality of Work" },
+                    { key: "professionalism" as const, label: "Professionalism" },
+                    { key: "punctuality" as const,     label: "Punctuality" },
+                    { key: "communication" as const,   label: "Communication" },
+                  ]).map(({ key, label }) => {
+                    const val = profile.breakdown![key];
+                    const pct = Math.round((val / 5) * 100);
+                    return (
+                      <div key={key} className="flex items-center gap-3">
+                        <span className="text-xs text-slate-600 w-32 flex-shrink-0">{label}</span>
+                        <div className="flex-1 h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                          <div className="h-full bg-amber-400 rounded-full" style={{ width: `${pct}%` }} />
+                        </div>
+                        <span className="text-xs font-semibold text-slate-700 w-6 text-right">{val.toFixed(1)}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
 
               {/* Hourly rate */}
               {profile.hourlyRate != null && profile.hourlyRate > 0 && (

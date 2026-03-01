@@ -20,6 +20,7 @@ const JobActionButtons   = dynamic(() => import("./JobActionButtons"));
 const QuoteAcceptButton  = dynamic(() => import("./QuoteAcceptButton"));
 const RaiseDisputeButton = dynamic(() => import("@/components/shared/RaiseDisputeButton"));
 const PartialReleaseButton = dynamic(() => import("@/components/payment/PartialReleaseButton"));
+const StickyJobCTA = dynamic(() => import("./StickyJobCTA"));
 
 export async function generateMetadata({
   params,
@@ -273,7 +274,7 @@ export default async function JobDetailPage({
   }
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
+    <div className="max-w-3xl mx-auto space-y-6 pb-24">
       <RealtimeRefresher entity="job" id={id} />
 
       {/* Back navigation — streams immediately */}
@@ -359,6 +360,16 @@ export default async function JobDetailPage({
       <Suspense fallback={<SectionSkeleton rows={2} />}>
         <QuotesSection jobId={id} jobStatus={job.status} />
       </Suspense>
+
+      {/* Sticky CTA bar — primary action always visible at bottom */}
+      <StickyJobCTA
+        jobId={job._id.toString()}
+        status={job.status}
+        escrowStatus={job.escrowStatus}
+        budget={job.budget}
+        acceptedAmount={acceptedQuoteAmount}
+        fundedAmount={fundedAmount}
+      />
     </div>
   );
 }

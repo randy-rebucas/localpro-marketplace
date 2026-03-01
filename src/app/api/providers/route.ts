@@ -62,6 +62,8 @@ export const GET = withHandler(async (req: NextRequest) => {
         hourlyRate:        { $ifNull: ["$profileDoc.hourlyRate", null] },
         avgRating:         { $ifNull: ["$profileDoc.avgRating", 0] },
         completedJobCount: { $ifNull: ["$profileDoc.completedJobCount", 0] },
+        completionRate:    { $ifNull: ["$profileDoc.completionRate", 100] },
+        avgResponseTimeHours: { $ifNull: ["$profileDoc.avgResponseTimeHours", 0] },
         availabilityStatus: {
           $ifNull: ["$profileDoc.availabilityStatus", "available"],
         },

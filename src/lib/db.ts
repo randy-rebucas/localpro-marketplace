@@ -65,6 +65,14 @@ export async function connectDB(): Promise<typeof mongoose> {
     throw err;
   }
 
+  // One-time migration: drop the legacy single-column unique index on reviews.jobId
+  // (replaced by compound index { jobId, clientId } in the Review schema)
+  try {
+    await cached.conn.connection.collection("reviews").dropIndex("jobId_1");
+  } catch {
+    // Index doesn't exist or already dropped — safe to ignore
+  }
+
   // Tell Vercel Fluid Compute to keep this connection pool warm across
   // function invocations. Only called once per process; no-ops outside Vercel.
   if (!cached.poolAttached) {

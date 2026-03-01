@@ -18,6 +18,12 @@ export interface CreateReviewInput {
   jobId: string;
   rating: 1 | 2 | 3 | 4 | 5;
   feedback: string;
+  breakdown?: {
+    quality: 1 | 2 | 3 | 4 | 5;
+    professionalism: 1 | 2 | 3 | 4 | 5;
+    punctuality: 1 | 2 | 3 | 4 | 5;
+    communication: 1 | 2 | 3 | 4 | 5;
+  };
 }
 
 export interface ReviewFilters {
@@ -45,14 +51,23 @@ export class ReviewService {
     }
     if (!j.providerId) throw new UnprocessableError("No provider assigned to this job");
 
-    const existing = await reviewRepository.existsForJob(input.jobId);
+    const existing = await reviewRepository.existsForJob(input.jobId, user.userId);
     if (existing) throw new ConflictError("You have already reviewed this job");
 
-    const review = await reviewRepository.create({
-      ...input,
-      clientId: user.userId,
-      providerId: j.providerId,
-    });
+    let review;
+    try {
+      review = await reviewRepository.create({
+        ...input,
+        clientId: user.userId,
+        providerId: j.providerId,
+      });
+    } catch (err: unknown) {
+      // Mongo E11000 — compound unique (jobId + clientId) violated
+      if (typeof err === "object" && err !== null && (err as { code?: number }).code === 11000) {
+        throw new ConflictError("You have already reviewed this job");
+      }
+      throw err;
+    }
 
     await activityRepository.log({
       userId: user.userId,
