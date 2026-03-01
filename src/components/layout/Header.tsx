@@ -8,6 +8,7 @@ import toast from "react-hot-toast";
 import { ChevronDown, LogOut, User, Shield, Briefcase, UserCog } from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
 import NotificationBell from "@/components/shared/NotificationBell";
+import GlobalSearch from "@/components/shared/GlobalSearch";
 
 interface HeaderProps {
   title?: string;
@@ -64,6 +65,9 @@ export default function Header({ title }: HeaderProps) {
 
       {/* Right controls */}
       <div className="flex items-center gap-3">
+        {/* Global search */}
+        <GlobalSearch />
+
         {/* Notification bell */}
         <NotificationBell />
 

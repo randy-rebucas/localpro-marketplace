@@ -28,6 +28,7 @@ import {
   TrendingUp,
   ShieldCheck,
   UserCog,
+  ScrollText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/authStore";
@@ -124,9 +125,10 @@ const navGroups: Partial<Record<UserRole, NavGroup[]>> = {
     {
       heading: "Operations",
       items: [
-        { label: "Validate Jobs", href: "/admin/jobs",      icon: <CheckCircle   className="h-5 w-5" />, capability: "manage_jobs" },
-        { label: "KYC Review",    href: "/admin/kyc",       icon: <ShieldCheck   className="h-5 w-5" />, capability: "manage_kyc" },
-        { label: "Disputes",      href: "/admin/disputes",  icon: <AlertTriangle className="h-5 w-5" />, capability: "manage_disputes" },
+        { label: "Validate Jobs",  href: "/admin/jobs",      icon: <CheckCircle   className="h-5 w-5" />, capability: "manage_jobs" },
+        { label: "KYC Review",     href: "/admin/kyc",       icon: <ShieldCheck   className="h-5 w-5" />, capability: "manage_kyc" },
+        { label: "Disputes",       href: "/admin/disputes",  icon: <AlertTriangle className="h-5 w-5" />, capability: "manage_disputes" },
+        { label: "Activity Logs",  href: "/admin/logs",      icon: <ScrollText    className="h-5 w-5" />, capability: "__admin_only__" },
       ],
     },
     {
