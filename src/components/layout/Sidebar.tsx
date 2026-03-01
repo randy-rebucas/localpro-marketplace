@@ -27,6 +27,7 @@ import {
   CalendarDays,
   TrendingUp,
   ShieldCheck,
+  UserCog,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/authStore";
@@ -37,6 +38,8 @@ interface NavItem {
   label: string;
   href: string;
   icon: React.ReactNode;
+  /** null = always visible for all roles; string = capability key required; "__admin_only__" = hidden for staff */
+  capability?: string | null;
 }
 
 interface NavGroup {
@@ -44,7 +47,7 @@ interface NavGroup {
   items: NavItem[];
 }
 
-const navGroups: Record<UserRole, NavGroup[]> = {
+const navGroups: Partial<Record<UserRole, NavGroup[]>> = {
   client: [
     {
       items: [
@@ -115,50 +118,75 @@ const navGroups: Record<UserRole, NavGroup[]> = {
   admin: [
     {
       items: [
-        { label: "Dashboard",  href: "/admin/dashboard", icon: <BarChart3  className="h-5 w-5" /> },
+        { label: "Dashboard",  href: "/admin/dashboard", icon: <BarChart3 className="h-5 w-5" />, capability: null },
       ],
     },
     {
       heading: "Operations",
       items: [
-        { label: "Validate Jobs", href: "/admin/jobs",      icon: <CheckCircle   className="h-5 w-5" /> },
-        { label: "KYC Review",    href: "/admin/kyc",       icon: <ShieldCheck   className="h-5 w-5" /> },
-        { label: "Disputes",      href: "/admin/disputes",  icon: <AlertTriangle className="h-5 w-5" /> },
+        { label: "Validate Jobs", href: "/admin/jobs",      icon: <CheckCircle   className="h-5 w-5" />, capability: "manage_jobs" },
+        { label: "KYC Review",    href: "/admin/kyc",       icon: <ShieldCheck   className="h-5 w-5" />, capability: "manage_kyc" },
+        { label: "Disputes",      href: "/admin/disputes",  icon: <AlertTriangle className="h-5 w-5" />, capability: "manage_disputes" },
       ],
     },
     {
       heading: "Finance",
       items: [
-        { label: "Revenue", href: "/admin/revenue", icon: <TrendingUp className="h-5 w-5" /> },
-        { label: "Payouts", href: "/admin/payouts", icon: <Banknote   className="h-5 w-5" /> },
+        { label: "Revenue", href: "/admin/revenue", icon: <TrendingUp className="h-5 w-5" />, capability: "view_revenue" },
+        { label: "Payouts", href: "/admin/payouts", icon: <Banknote   className="h-5 w-5" />, capability: "manage_payouts" },
       ],
     },
     {
       heading: "Users",
       items: [
-        { label: "Users",      href: "/admin/users",      icon: <Users className="h-5 w-5" /> },
-        { label: "Categories", href: "/admin/categories", icon: <Tag   className="h-5 w-5" /> },
+        { label: "Users",      href: "/admin/users",      icon: <Users   className="h-5 w-5" />, capability: "manage_users" },
+        { label: "Staff",      href: "/admin/staff",      icon: <UserCog className="h-5 w-5" />, capability: "__admin_only__" },
+        { label: "Categories", href: "/admin/categories", icon: <Tag     className="h-5 w-5" />, capability: "manage_categories" },
       ],
     },
     {
       heading: "Communication",
       items: [
-        { label: "Support Inbox",  href: "/admin/support",        icon: <Headphones className="h-5 w-5" /> },
-        { label: "Notifications",  href: "/admin/notifications",  icon: <Bell       className="h-5 w-5" /> },
+        { label: "Support Inbox",  href: "/admin/support",        icon: <Headphones className="h-5 w-5" />, capability: "manage_support" },
+        { label: "Notifications",  href: "/admin/notifications",  icon: <Bell       className="h-5 w-5" />, capability: null },
       ],
     },
   ],
 };
 
-interface SidebarProps {
-  role: UserRole;
+/** Filter admin nav groups for a staff member based on their capabilities. */
+function filterForStaff(groups: NavGroup[], capabilities: string[]): NavGroup[] {
+  return groups
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) => {
+        if (item.capability === undefined || item.capability === null) return true;
+        if (item.capability === "__admin_only__") return false;
+        return capabilities.includes(item.capability);
+      }),
+    }))
+    .filter((group) => group.items.length > 0);
 }
 
-export default function Sidebar({ role }: SidebarProps) {
+interface SidebarProps {
+  role: UserRole;
+  capabilities?: string[];
+}
+
+export default function Sidebar({ role, capabilities }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { logout } = useAuthStore();
-  const groups = navGroups[role] ?? [];
+
+  // Staff shares the admin nav structure but filtered by capabilities
+  const sourceRole = role === "staff" ? "admin" : role;
+  const rawGroups = navGroups[sourceRole] ?? [];
+  const groups =
+    role === "staff" && capabilities
+      ? filterForStaff(rawGroups, capabilities)
+      : rawGroups;
+
+  const portalLabel = role === "staff" ? "staff portal" : `${role} portal`;
 
   async function handleLogout() {
     await logout();
@@ -181,7 +209,7 @@ export default function Sidebar({ role }: SidebarProps) {
       {/* Role badge */}
       <div className="px-6 pt-4 pb-2">
         <span className="text-xs font-medium text-primary-400 uppercase tracking-wider">
-          {role} portal
+          {portalLabel}
         </span>
       </div>
 

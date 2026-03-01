@@ -10,7 +10,7 @@ export default async function AdminSupportLayout({
   children: React.ReactNode;
 }) {
   const user = await getCurrentUser();
-  if (!user || user.role !== "admin") redirect("/login");
+  if (!user || (user.role !== "admin" && user.role !== "staff")) redirect("/login");
 
   const raw = await supportService.listThreads();
 

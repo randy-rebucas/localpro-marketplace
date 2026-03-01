@@ -157,6 +157,42 @@ export class UserRepository extends BaseRepository<UserDocument> {
   ): Promise<UserDocument | null> {
     return this.updateById(userId, { approvalStatus: status });
   }
+
+  // ─── Staff Management ─────────────────────────────────────────────────────
+
+  async findAllStaff(): Promise<UserDocument[]> {
+    await this.connect();
+    return User.find({ role: "staff" })
+      .select("-password")
+      .sort({ createdAt: -1 })
+      .lean() as unknown as UserDocument[];
+  }
+
+  async createStaffUser(data: {
+    name: string;
+    email: string;
+    password: string;
+    capabilities: string[];
+  }): Promise<UserDocument> {
+    await this.connect();
+    const doc = new User({
+      name: data.name,
+      email: data.email,
+      password: data.password,
+      role: "staff",
+      capabilities: data.capabilities,
+      isVerified: true,
+      approvalStatus: "approved",
+    });
+    return doc.save();
+  }
+
+  async updateStaff(
+    id: string,
+    updates: { capabilities?: string[]; isSuspended?: boolean }
+  ): Promise<UserDocument | null> {
+    return this.updateById(id, updates);
+  }
 }
 
 export const userRepository = new UserRepository();

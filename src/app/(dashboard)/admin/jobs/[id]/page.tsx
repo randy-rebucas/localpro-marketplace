@@ -42,7 +42,7 @@ export default async function AdminJobDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const user = await getCurrentUser();
-  if (!user || user.role !== "admin") return null;
+  if (!user || (user.role !== "admin" && user.role !== "staff")) return null;
 
   const { id } = await params;
 

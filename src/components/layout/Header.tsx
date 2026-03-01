@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import toast from "react-hot-toast";
-import { ChevronDown, LogOut, User, Shield, Briefcase } from "lucide-react";
+import { ChevronDown, LogOut, User, Shield, Briefcase, UserCog } from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
 import NotificationBell from "@/components/shared/NotificationBell";
 
@@ -17,6 +17,7 @@ const ROLE_CONFIG: Record<string, { label: string; icon: typeof User; color: str
   client:   { label: "Client",   icon: User,     color: "bg-blue-100 text-blue-700"    },
   provider: { label: "Provider", icon: Briefcase, color: "bg-violet-100 text-violet-700" },
   admin:    { label: "Admin",    icon: Shield,   color: "bg-amber-100 text-amber-700"  },
+  staff:    { label: "Staff",    icon: UserCog,  color: "bg-teal-100 text-teal-700"    },
 };
 
 export default function Header({ title }: HeaderProps) {
@@ -117,6 +118,18 @@ export default function Header({ title }: HeaderProps) {
                       <RoleIcon className="h-3 w-3" />
                       {roleConfig.label}
                     </span>
+                  )}
+                  {user?.role === "staff" && user.capabilities && user.capabilities.length > 0 && (
+                    <div className="mt-2.5">
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1">Capabilities</p>
+                      <div className="flex flex-wrap gap-1">
+                        {user.capabilities.map((cap) => (
+                          <span key={cap} className="text-[10px] px-1.5 py-0.5 bg-teal-50 text-teal-700 rounded font-medium">
+                            {cap.replace(/^(manage_|view_)/, "").replace(/_/g, " ")}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
                   )}
                 </div>
 

@@ -11,10 +11,11 @@ import type { UserRole } from "@/types";
 interface DashboardShellProps {
   children: React.ReactNode;
   role: UserRole;
+  capabilities?: string[];
   pageTitle?: string;
 }
 
-export default function DashboardShell({ children, role, pageTitle }: DashboardShellProps) {
+export default function DashboardShell({ children, role, capabilities, pageTitle }: DashboardShellProps) {
   const router = useRouter();
   const { user, isLoading, initialized, fetchMe } = useAuthStore();
 
@@ -39,7 +40,7 @@ export default function DashboardShell({ children, role, pageTitle }: DashboardS
 
   return (
     <div className="flex h-screen bg-surface overflow-hidden">
-      <Sidebar role={role} />
+      <Sidebar role={role} capabilities={capabilities} />
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header title={pageTitle} />
         <main className="flex-1 overflow-y-auto p-6">{children}</main>

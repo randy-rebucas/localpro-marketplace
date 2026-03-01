@@ -5,7 +5,8 @@ const ACCESS_SECRET = new TextEncoder().encode(process.env.JWT_SECRET);
 
 interface TokenPayload {
   userId: string;
-  role: "client" | "provider" | "admin";
+  role: "client" | "provider" | "admin" | "staff";
+  capabilities?: string[];
 }
 
 const ROLE_PREFIXES: Record<string, string> = {
@@ -36,7 +37,9 @@ export async function proxy(req: NextRequest) {
     if (accessToken) {
       const payload = await verifyToken(accessToken);
       if (payload) {
-        const dashboard = `/${payload.role}/dashboard`;
+        // Staff share the admin dashboard
+        const dashboardRole = payload.role === "staff" ? "admin" : payload.role;
+        const dashboard = `/${dashboardRole}/dashboard`;
         return NextResponse.redirect(new URL(dashboard, req.url));
       }
     }
@@ -58,10 +61,13 @@ export async function proxy(req: NextRequest) {
   if (accessToken) {
     const payload = await verifyToken(accessToken);
     if (payload) {
-      if (payload.role !== requiredRole) {
+      // Staff are allowed to access /admin/* routes
+      const effectiveRole = payload.role === "staff" ? "admin" : payload.role;
+      if (effectiveRole !== requiredRole) {
         // Redirect to the user's own dashboard
+        const dashboardRole = payload.role === "staff" ? "admin" : payload.role;
         return NextResponse.redirect(
-          new URL(`/${payload.role}/dashboard`, req.url)
+          new URL(`/${dashboardRole}/dashboard`, req.url)
         );
       }
       return NextResponse.next();

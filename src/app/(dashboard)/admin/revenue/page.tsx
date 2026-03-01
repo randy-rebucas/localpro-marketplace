@@ -61,7 +61,7 @@ async function getRevenueStats() {
 
 export default async function AdminRevenuePage() {
   const user = await getCurrentUser();
-  if (!user || user.role !== "admin") return null;
+  if (!user || (user.role !== "admin" && user.role !== "staff")) return null;
 
   const { totalGMV, totalCommission, totalUsers, completedJobs, months, topProviderRows } =
     await getRevenueStats();

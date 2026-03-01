@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminService } from "@/services";
-import { requireUser, requireRole } from "@/lib/auth";
+import { requireUser, requireCapability } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 
 export const GET = withHandler(async (req: NextRequest) => {
   const user = await requireUser();
-  requireRole(user, "admin");
+  requireCapability(user, "manage_users");
 
   const { searchParams } = new URL(req.url);
   const page = Math.max(1, Number(searchParams.get("page") ?? 1));

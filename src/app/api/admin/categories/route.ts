@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withHandler } from "@/lib/utils";
-import { requireUser, requireRole } from "@/lib/auth";
+import { requireUser, requireCapability } from "@/lib/auth";
 import { connectDB } from "@/lib/db";
 import Category from "@/models/Category";
 
 // GET /api/admin/categories — all categories (active + inactive)
 export const GET = withHandler(async () => {
   const user = await requireUser();
-  requireRole(user, "admin");
+  requireCapability(user, "manage_categories");
   await connectDB();
 
   const categories = await Category.find()
@@ -20,7 +20,7 @@ export const GET = withHandler(async () => {
 // POST /api/admin/categories — create a new category
 export const POST = withHandler(async (req: NextRequest) => {
   const user = await requireUser();
-  requireRole(user, "admin");
+  requireCapability(user, "manage_categories");
   await connectDB();
 
   const { name, icon, description, order } = await req.json();

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { requireUser, requireRole } from "@/lib/auth";
+import { requireUser, requireCapability } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { ValidationError } from "@/lib/errors";
 import { payoutService } from "@/services/payout.service";
@@ -15,7 +15,7 @@ export const PATCH = withHandler(async (
   { params }: { params: Promise<{ id: string }> }
 ) => {
   const user = await requireUser();
-  requireRole(user, "admin");
+  requireCapability(user, "manage_payouts");
 
   const { id } = await params;
   const body = await req.json();

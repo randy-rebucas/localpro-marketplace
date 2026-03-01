@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { disputeService } from "@/services";
-import { requireUser, requireRole } from "@/lib/auth";
+import { requireUser, requireCapability } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { ValidationError } from "@/lib/errors";
 
@@ -16,7 +16,7 @@ export const GET = withHandler(async (
   { params }: { params: Promise<{ id: string }> }
 ) => {
   const user = await requireUser();
-  requireRole(user, "admin");
+  requireCapability(user, "manage_disputes");
 
   const { id } = await params;
   const dispute = await disputeService.getDispute(id);
@@ -28,7 +28,7 @@ export const PATCH = withHandler(async (
   { params }: { params: Promise<{ id: string }> }
 ) => {
   const user = await requireUser();
-  requireRole(user, "admin");
+  requireCapability(user, "manage_disputes");
 
   const { id } = await params;
   const body = await req.json();

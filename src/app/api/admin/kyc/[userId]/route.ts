@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { requireUser, requireRole } from "@/lib/auth";
+import { requireUser, requireCapability } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { connectDB } from "@/lib/db";
 import { ValidationError, NotFoundError } from "@/lib/errors";
@@ -19,7 +19,7 @@ export const PATCH = withHandler(async (
   { params }: { params: Promise<{ userId: string }> }
 ) => {
   const adminUser = await requireUser();
-  requireRole(adminUser, "admin");
+  requireCapability(adminUser, "manage_kyc");
 
   const { userId } = await params;
   const body = await req.json().catch(() => ({}));

@@ -40,7 +40,9 @@
       "Bash(find \"c:/Users/corew/localpro-marketplace/src/app/\\(dashboard\\)/admin\" -type f)",
       "Bash(pnpm add -D @next/bundle-analyzer)",
       "Bash(npm run build)",
-      "Bash(ls -la /c/Users/corew/localpro-marketplace/src/app/\\\\\\(dashboard\\\\\\)/)"
+      "Bash(ls -la /c/Users/corew/localpro-marketplace/src/app/\\\\\\(dashboard\\\\\\)/)",
+      "Bash(ls -la /c/Users/corew/localpro-marketplace/src/app/\\\\\\(dashboard\\\\\\)/admin/)",
+      "Bash(ls /c/Users/corew/localpro-marketplace/src/app/\\\\\\(dashboard\\\\\\)/admin/support/)"
     ]
   }
 }

@@ -64,7 +64,14 @@ function AdminDashboardSkeleton() {
   );
 }
 
-async function AdminDashboardContent() {
+async function AdminDashboardContent({
+  capabilities,
+  isAdmin,
+}: {
+  capabilities: string[];
+  isAdmin: boolean;
+}) {
+  const can = (cap: string) => isAdmin || capabilities.includes(cap);
   const stats = await getAdminStats();
 
   const chartData = Object.entries(stats.jobsByStatus).map(([status, count]) => ({
@@ -72,12 +79,39 @@ async function AdminDashboardContent() {
     count,
   }));
 
+  const kpis = [
+    can("view_revenue") && (
+      <KpiCard key="gmv" title="Total GMV" value={formatCurrency(stats.totalGMV)} subtitle="Gross marketplace volume"
+        icon={<CircleDollarSign className="h-6 w-6" />}
+      />
+    ),
+    can("view_revenue") && (
+      <KpiCard key="commission" title="Commission" value={formatCurrency(stats.totalCommission)} subtitle="Platform revenue"
+        icon={<BarChart3 className="h-6 w-6" />}
+      />
+    ),
+    can("view_revenue") && (
+      <KpiCard key="escrow" title="Escrow Balance" value={formatCurrency(stats.escrowBalance)} subtitle="Currently locked"
+        icon={<Lock className="h-6 w-6" />}
+      />
+    ),
+    can("manage_disputes") && (
+      <KpiCard key="disputes" title="Open Disputes" value={stats.openDisputes} subtitle={`${stats.activeJobs} active jobs`}
+        icon={<AlertTriangle className="h-6 w-6" />}
+      />
+    ),
+  ].filter(Boolean);
+
+  const showBanners =
+    (can("manage_jobs") && stats.pendingJobs > 0) ||
+    (can("manage_disputes") && stats.openDisputes > 0);
+
   return (
     <>
       {/* Attention banners */}
-      {(stats.pendingJobs > 0 || stats.openDisputes > 0) && (
+      {showBanners && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {stats.pendingJobs > 0 && (
+          {can("manage_jobs") && stats.pendingJobs > 0 && (
             <Link href="/admin/jobs" className="group bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-center justify-between hover:bg-amber-100 transition-colors">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-lg bg-amber-200 flex items-center justify-center flex-shrink-0">
@@ -91,7 +125,7 @@ async function AdminDashboardContent() {
               <span className="text-amber-600 text-sm font-medium group-hover:underline">Review →</span>
             </Link>
           )}
-          {stats.openDisputes > 0 && (
+          {can("manage_disputes") && stats.openDisputes > 0 && (
             <Link href="/admin/disputes" className="group bg-red-50 border border-red-200 rounded-xl p-4 flex items-center justify-between hover:bg-red-100 transition-colors">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-lg bg-red-200 flex items-center justify-center flex-shrink-0">
@@ -108,41 +142,36 @@ async function AdminDashboardContent() {
         </div>
       )}
 
-      {/* KPI Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <KpiCard title="Total GMV" value={formatCurrency(stats.totalGMV)} subtitle="Gross marketplace volume"
-          icon={<CircleDollarSign className="h-6 w-6" />}
-        />
-        <KpiCard title="Commission" value={formatCurrency(stats.totalCommission)} subtitle="Platform revenue"
-          icon={<BarChart3 className="h-6 w-6" />}
-        />
-        <KpiCard title="Escrow Balance" value={formatCurrency(stats.escrowBalance)} subtitle="Currently locked"
-          icon={<Lock className="h-6 w-6" />}
-        />
-        <KpiCard title="Open Disputes" value={stats.openDisputes} subtitle={`${stats.activeJobs} active jobs`}
-          icon={<AlertTriangle className="h-6 w-6" />}
-        />
-      </div>
-
-      {/* Chart + quick stats side by side */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-2 bg-white rounded-xl border border-slate-200 shadow-card p-6">
-          <h3 className="font-semibold text-slate-900 mb-4">Jobs by Status</h3>
-          <AdminJobsChart data={chartData} />
+      {/* KPI Grid — only rendered if at least one card is visible */}
+      {kpis.length > 0 && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {kpis}
         </div>
-        <div className="space-y-4">
-          <Link href="/admin/users" className="block bg-white rounded-xl border border-slate-200 shadow-card p-5 hover:border-primary/30 hover:shadow-card-hover transition-all">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-violet-100 flex items-center justify-center">
-                <Users className="h-5 w-5 text-violet-600" />
+      )}
+
+      {/* Chart + quick stats */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {can("manage_jobs") && (
+          <div className="lg:col-span-2 bg-white rounded-xl border border-slate-200 shadow-card p-6">
+            <h3 className="font-semibold text-slate-900 mb-4">Jobs by Status</h3>
+            <AdminJobsChart data={chartData} />
+          </div>
+        )}
+        <div className={`space-y-4 ${!can("manage_jobs") ? "lg:col-span-3 grid grid-cols-1 sm:grid-cols-3 gap-4 !space-y-0" : ""}`}>
+          {can("manage_users") && (
+            <Link href="/admin/users" className="block bg-white rounded-xl border border-slate-200 shadow-card p-5 hover:border-primary/30 hover:shadow-card-hover transition-all">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-violet-100 flex items-center justify-center">
+                  <Users className="h-5 w-5 text-violet-600" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-slate-900">{stats.totalUsers}</p>
+                  <p className="text-xs text-slate-500">Total users</p>
+                </div>
               </div>
-              <div>
-                <p className="text-2xl font-bold text-slate-900">{stats.totalUsers}</p>
-                <p className="text-xs text-slate-500">Total users</p>
-              </div>
-            </div>
-          </Link>
-          <Link href="/admin/jobs" className="block bg-white rounded-xl border border-slate-200 shadow-card p-5 hover:border-primary/30 hover:shadow-card-hover transition-all">
+            </Link>
+          )}
+          <div className="bg-white rounded-xl border border-slate-200 shadow-card p-5">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
                 <BarChart3 className="h-5 w-5 text-blue-600" />
@@ -152,7 +181,7 @@ async function AdminDashboardContent() {
                 <p className="text-xs text-slate-500">Active jobs</p>
               </div>
             </div>
-          </Link>
+          </div>
           <div className="bg-white rounded-xl border border-slate-200 shadow-card p-5">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-green-100 flex items-center justify-center">
@@ -172,7 +201,10 @@ async function AdminDashboardContent() {
 
 export default async function AdminDashboardPage() {
   const user = await getCurrentUser();
-  if (!user || user.role !== "admin") return null;
+  if (!user || (user.role !== "admin" && user.role !== "staff")) return null;
+
+  const capabilities = user.capabilities ?? [];
+  const isAdmin = user.role === "admin";
 
   return (
     <div className="space-y-6">
@@ -191,7 +223,7 @@ export default async function AdminDashboardPage() {
         <p className="text-slate-500 text-sm mt-0.5">Platform overview and key metrics.</p>
       </div>
       <Suspense fallback={<AdminDashboardSkeleton />}>
-        <AdminDashboardContent />
+        <AdminDashboardContent capabilities={capabilities} isAdmin={isAdmin} />
       </Suspense>
     </div>
   );

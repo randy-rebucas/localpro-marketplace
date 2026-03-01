@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireUser, requireRole } from "@/lib/auth";
+import { requireUser, requireCapability } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { connectDB } from "@/lib/db";
 import User from "@/models/User";
@@ -7,7 +7,7 @@ import User from "@/models/User";
 /** GET /api/admin/kyc — list all providers with pending/submitted KYC */
 export const GET = withHandler(async () => {
   const user = await requireUser();
-  requireRole(user, "admin");
+  requireCapability(user, "manage_kyc");
 
   await connectDB();
 
