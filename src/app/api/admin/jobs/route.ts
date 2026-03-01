@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jobService } from "@/services";
-import { requireUser, requireRole } from "@/lib/auth";
+import { requireUser, requireCapability } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 
 export const GET = withHandler(async (req: NextRequest) => {
   const user = await requireUser();
-  requireRole(user, "admin");
+  requireCapability(user, "manage_jobs");
 
   const { searchParams } = new URL(req.url);
   const result = await jobService.listJobs(user, {

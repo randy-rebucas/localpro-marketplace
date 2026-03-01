@@ -52,6 +52,9 @@ export class AuthService {
     const existing = await userRepository.findByEmail(input.email);
     if (existing) throw new ConflictError("An account with this email already exists");
 
+    // Staff accounts cannot be self-registered — only admins can create them
+    if (input.role === "staff") throw new ForbiddenError("Staff accounts must be created by an admin.");
+
     // Providers start in pending_approval state; clients and admins are auto-approved
     const approvalStatus = input.role === "provider" ? "pending_approval" : "approved";
 
@@ -93,7 +96,10 @@ export class AuthService {
     const isValid = await (user as { comparePassword: (p: string) => Promise<boolean> }).comparePassword(input.password);
     if (!isValid) throw new UnauthorizedError("Invalid email or password");
 
-    const accessToken = signAccessToken(user._id.toString(), user.role as UserRole);
+    const capabilities = user.role === "staff"
+      ? ((user as { capabilities?: string[] }).capabilities ?? [])
+      : undefined;
+    const accessToken = signAccessToken(user._id.toString(), user.role as UserRole, capabilities);
     const refreshToken = signRefreshToken(user._id.toString());
 
     return {
@@ -124,7 +130,11 @@ export class AuthService {
       throw new ForbiddenError("Account suspended");
     }
 
-    const accessToken = signAccessToken(user._id!.toString(), (user as { role: UserRole }).role);
+    const role = (user as { role: UserRole }).role;
+    const capabilities = role === "staff"
+      ? ((user as { capabilities?: string[] }).capabilities ?? [])
+      : undefined;
+    const accessToken = signAccessToken(user._id!.toString(), role, capabilities);
     const refreshToken = signRefreshToken(user._id!.toString());
     return { accessToken, refreshToken };
   }

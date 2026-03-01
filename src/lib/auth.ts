@@ -1,6 +1,7 @@
 import jwt from "jsonwebtoken";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import type { StaffCapability, UserRole } from "@/types";
 
 const ACCESS_SECRET = process.env.JWT_SECRET as string;
 const REFRESH_SECRET = process.env.JWT_REFRESH_SECRET as string;
@@ -9,15 +10,29 @@ if (!ACCESS_SECRET || !REFRESH_SECRET) {
   throw new Error("JWT secrets must be defined in environment variables");
 }
 
+export const STAFF_CAPABILITIES: StaffCapability[] = [
+  "manage_jobs",
+  "manage_kyc",
+  "manage_disputes",
+  "manage_users",
+  "view_revenue",
+  "manage_payouts",
+  "manage_categories",
+  "manage_support",
+];
+
 export interface TokenPayload {
   userId: string;
-  role: "client" | "provider" | "admin";
+  role: UserRole;
+  capabilities?: string[];
   iat?: number;
   exp?: number;
 }
 
-export function signAccessToken(userId: string, role: "client" | "provider" | "admin"): string {
-  return jwt.sign({ userId, role }, ACCESS_SECRET, { expiresIn: "15m" });
+export function signAccessToken(userId: string, role: UserRole, capabilities?: string[]): string {
+  const payload: Record<string, unknown> = { userId, role };
+  if (capabilities?.length) payload.capabilities = capabilities;
+  return jwt.sign(payload, ACCESS_SECRET, { expiresIn: "15m" });
 }
 
 export function signRefreshToken(userId: string): string {
@@ -78,7 +93,6 @@ export async function getCurrentUser(): Promise<TokenPayload | null> {
 
 // ─── Route-level auth guards ───────────────────────────────────────────────────
 import { UnauthorizedError, ForbiddenError } from "@/lib/errors";
-import type { UserRole } from "@/types";
 
 /** Throws UnauthorizedError if no valid session. */
 export async function requireUser(): Promise<TokenPayload> {
@@ -90,4 +104,14 @@ export async function requireUser(): Promise<TokenPayload> {
 /** Throws ForbiddenError if user's role is not in the allowed list. */
 export function requireRole(user: TokenPayload, ...roles: UserRole[]): void {
   if (!roles.includes(user.role)) throw new ForbiddenError();
+}
+
+/**
+ * Throws ForbiddenError unless the user is an admin OR has the given capability.
+ * Use this on routes that staff members may access based on their assigned capabilities.
+ */
+export function requireCapability(user: TokenPayload, capability: StaffCapability): void {
+  if (user.role === "admin") return;
+  if (user.capabilities?.includes(capability)) return;
+  throw new ForbiddenError();
 }

@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { supportBus } from "@/lib/events";
-import { requireUser, requireRole } from "@/lib/auth";
+import { requireUser, requireCapability } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 /** GET /api/admin/support/stream — SSE stream for admin support inbox */
 export const GET = withHandler(async (req: NextRequest) => {
   const user = await requireUser();
-  requireRole(user, "admin");
+  requireCapability(user, "manage_support");
   const encoder = new TextEncoder();
   const eventKey = "support:admin";
 

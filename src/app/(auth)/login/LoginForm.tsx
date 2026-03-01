@@ -51,7 +51,8 @@ export default function LoginForm() {
       setUser(data.user);
       toast.success(`Welcome back, ${data.user.name}!`);
 
-      const destination = from ?? `/${data.user.role}/dashboard`;
+      const dashboardRole = data.user.role === "staff" ? "admin" : data.user.role;
+      const destination = from ?? `/${dashboardRole}/dashboard`;
       router.push(destination);
     } catch {
       toast.error("Something went wrong. Please try again.");

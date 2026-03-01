@@ -48,7 +48,7 @@ type PopulatedPayout = Omit<IPayout, "providerId"> & {
 
 export default async function AdminPayoutsPage() {
   const user = await getCurrentUser();
-  if (!user || user.role !== "admin") return null;
+  if (!user || (user.role !== "admin" && user.role !== "staff")) return null;
 
   const [allPayouts, releaseJobs] = await Promise.all([
     payoutService.listAllPayouts() as Promise<unknown>,

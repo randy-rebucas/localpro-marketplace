@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { supportService } from "@/services/support.service";
-import { requireUser, requireRole } from "@/lib/auth";
+import { requireUser, requireCapability } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { ValidationError } from "@/lib/errors";
 
@@ -15,7 +15,7 @@ export const GET = withHandler(async (
   { params }: { params: Promise<{ userId: string }> }
 ) => {
   const user = await requireUser();
-  requireRole(user, "admin");
+  requireCapability(user, "manage_support");
   const { userId } = await params;
   const result = await supportService.getThreadForAdmin(userId);
   return NextResponse.json(result);
@@ -27,7 +27,7 @@ export const POST = withHandler(async (
   { params }: { params: Promise<{ userId: string }> }
 ) => {
   const admin = await requireUser();
-  requireRole(admin, "admin");
+  requireCapability(admin, "manage_support");
   const { userId } = await params;
 
   const body = await req.json();

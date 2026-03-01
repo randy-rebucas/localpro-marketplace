@@ -68,7 +68,7 @@ function DisputeCard({ dispute }: { dispute: ActiveDispute }) {
 
 export default async function AdminDisputesPage() {
   const user = await getCurrentUser();
-  if (!user || user.role !== "admin") return null;
+  if (!user || (user.role !== "admin" && user.role !== "staff")) return null;
 
   const disputes = await disputeRepository.findActiveWithRefs();
 

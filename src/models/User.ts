@@ -52,7 +52,7 @@ const UserSchema = new Schema<UserDocument>(
     },
     role: {
       type: String,
-      enum: ["client", "provider", "admin"],
+      enum: ["client", "provider", "admin", "staff"],
       required: true,
     },
     isVerified: {
@@ -84,6 +84,7 @@ const UserSchema = new Schema<UserDocument>(
     ],
     kycRejectionReason: { type: String, default: null },
     addresses: { type: [AddressSubSchema], default: [] },
+    capabilities: { type: [String], default: [] },
     facebookId: { type: String, default: null, index: true, sparse: true },
     oauthProvider: { type: String, enum: ["facebook", null], default: null },
     phone: { type: String, default: null, sparse: true },

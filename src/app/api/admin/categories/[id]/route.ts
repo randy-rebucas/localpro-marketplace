@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withHandler } from "@/lib/utils";
-import { requireUser, requireRole } from "@/lib/auth";
+import { requireUser, requireCapability } from "@/lib/auth";
 import { connectDB } from "@/lib/db";
 import Category from "@/models/Category";
 
@@ -9,7 +9,7 @@ type Ctx = { params: Promise<{ id: string }> };
 // PATCH /api/admin/categories/[id]
 export const PATCH = withHandler(async (req: NextRequest, ctx: Ctx) => {
   const user = await requireUser();
-  requireRole(user, "admin");
+  requireCapability(user, "manage_categories");
   await connectDB();
 
   const { id } = await ctx.params;
@@ -36,7 +36,7 @@ export const PATCH = withHandler(async (req: NextRequest, ctx: Ctx) => {
 // DELETE /api/admin/categories/[id]
 export const DELETE = withHandler(async (_req: NextRequest, ctx: Ctx) => {
   const user = await requireUser();
-  requireRole(user, "admin");
+  requireCapability(user, "manage_categories");
   await connectDB();
 
   const { id } = await ctx.params;

@@ -2,7 +2,17 @@ import type { Types } from "mongoose";
 
 // ─── User ─────────────────────────────────────────────────────────────────────
 
-export type UserRole = "client" | "provider" | "admin";
+export type UserRole = "client" | "provider" | "admin" | "staff";
+
+export type StaffCapability =
+  | "manage_jobs"
+  | "manage_kyc"
+  | "manage_disputes"
+  | "manage_users"
+  | "view_revenue"
+  | "manage_payouts"
+  | "manage_categories"
+  | "manage_support";
 
 export interface IAddress {
   _id: string;
@@ -36,6 +46,7 @@ export interface IUser {
   kycDocuments?: Array<{ type: string; url: string; uploadedAt: Date }>;
   kycRejectionReason?: string;
   addresses?: IAddress[];
+  capabilities?: StaffCapability[];
   createdAt: Date;
   updatedAt: Date;
 }

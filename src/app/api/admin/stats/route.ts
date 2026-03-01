@@ -5,7 +5,7 @@ import { withHandler } from "@/lib/utils";
 
 export const GET = withHandler(async () => {
   const user = await requireUser();
-  requireRole(user, "admin");
+  requireRole(user, "admin", "staff");
 
   const stats = await adminService.getStats();
   return NextResponse.json(stats);
