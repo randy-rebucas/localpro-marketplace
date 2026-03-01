@@ -71,8 +71,8 @@ export default function PartialReleaseButton({ jobId, budget }: Props) {
                   <span className="font-semibold text-green-700">₱{parsed.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-500">Platform commission (10%)</span>
-                  <span className="text-slate-700">−₱{(Math.round(parsed * 0.1 * 100) / 100).toLocaleString()}</span>
+                  <span className="text-slate-500">Platform commission (20%)</span>
+                  <span className="text-slate-700">−₱{(Math.round(parsed * 0.2 * 100) / 100).toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between border-t border-slate-200 pt-1">
                   <span className="text-slate-500">Provider receives</span>

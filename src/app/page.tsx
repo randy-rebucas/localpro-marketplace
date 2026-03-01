@@ -50,7 +50,7 @@ async function TopProvidersSection() {
     ProviderProfile.find({ availabilityStatus: "available" })
       .sort({ avgRating: -1, completedJobCount: -1 })
       .limit(6)
-      .populate("userId", "name isVerified")
+      .populate("userId", "name isVerified avatar")
       .lean(),
     ProviderProfile.countDocuments({ availabilityStatus: "available" }),
     Job.findOne({ status: { $in: ["completed", "in_progress", "accepted"] } })
@@ -102,7 +102,7 @@ async function TopProvidersSection() {
         {topProviders.map((p) => {
           const profile = p as unknown as {
             _id: string;
-            userId: { _id: string; name: string; isVerified: boolean };
+            userId: { _id: string; name: string; isVerified: boolean; avatar?: string | null };
             bio: string;
             avgRating: number;
             completedJobCount: number;
@@ -123,8 +123,20 @@ async function TopProvidersSection() {
               className="bg-white rounded-2xl border border-slate-200 shadow-card hover:shadow-card-hover hover:-translate-y-0.5 transition-all p-5 flex flex-col gap-3"
             >
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center flex-shrink-0 border border-primary/15">
-                  <span className="text-sm font-bold text-primary">{initials}</span>
+                <div className="w-12 h-12 rounded-full flex-shrink-0 overflow-hidden border border-primary/15">
+                  {profile.userId?.avatar ? (
+                    <Image
+                      src={profile.userId.avatar}
+                      alt={profile.userId.name ?? "Provider"}
+                      width={48}
+                      height={48}
+                      className="h-12 w-12 object-cover"
+                    />
+                  ) : (
+                    <div className="h-full w-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
+                      <span className="text-sm font-bold text-primary">{initials}</span>
+                    </div>
+                  )}
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1">
@@ -219,6 +231,37 @@ function TopProvidersSkeleton() {
   );
 }
 
+async function StatsStrip() {
+  await connectDB();
+  const completedCount = await Job.countDocuments({ status: "completed" });
+  const displayCount =
+    completedCount >= 10000
+      ? `${Math.floor(completedCount / 1000)}K+`
+      : completedCount >= 1000
+      ? `${(completedCount / 1000).toFixed(1).replace(".0", "")}K+`
+      : completedCount > 0
+      ? `${completedCount}+`
+      : "500+";
+
+  return (
+    <section className="border-y border-slate-100 bg-slate-50/70 py-8 px-4">
+      <div className="max-w-3xl mx-auto grid grid-cols-3 gap-6 text-center">
+        {[
+          { icon: <TrendingUp className="h-5 w-5 text-primary mx-auto mb-1" />, value: displayCount, label: "Jobs completed" },
+          { icon: <Users      className="h-5 w-5 text-brand mx-auto mb-1" />,   value: "500+",       label: "Verified providers" },
+          { icon: <Star       className="h-5 w-5 text-amber-400 fill-amber-400 mx-auto mb-1" />, value: "4.8", label: "Average rating" },
+        ].map((s) => (
+          <div key={s.label}>
+            {s.icon}
+            <p className="text-2xl font-extrabold text-slate-900">{s.value}</p>
+            <p className="text-xs text-slate-500 mt-0.5">{s.label}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default async function RootPage() {
@@ -302,21 +345,9 @@ export default async function RootPage() {
       </section>
 
       {/* ── Stats strip ── */}
-      <section className="border-y border-slate-100 bg-slate-50/70 py-8 px-4">
-        <div className="max-w-3xl mx-auto grid grid-cols-3 gap-6 text-center">
-          {[
-            { icon: <TrendingUp className="h-5 w-5 text-primary mx-auto mb-1" />, value: "10,000+", label: "Jobs completed" },
-            { icon: <Users      className="h-5 w-5 text-brand mx-auto mb-1" />,   value: "500+",    label: "Verified providers" },
-            { icon: <Star       className="h-5 w-5 text-amber-400 fill-amber-400 mx-auto mb-1" />, value: "4.8", label: "Average rating" },
-          ].map((s) => (
-            <div key={s.label}>
-              {s.icon}
-              <p className="text-2xl font-extrabold text-slate-900">{s.value}</p>
-              <p className="text-xs text-slate-500 mt-0.5">{s.label}</p>
-            </div>
-          ))}
-        </div>
-      </section>
+      <Suspense fallback={<div className="h-24 border-y border-slate-100 bg-slate-50/70 animate-pulse" />}>
+        <StatsStrip />
+      </Suspense>
 
       {/* ── Categories — deferred ── */}
       <Suspense fallback={<CategoriesSkeleton />}>
@@ -377,6 +408,107 @@ export default async function RootPage() {
                 <p className="text-xs text-slate-500 leading-relaxed">{f.desc}</p>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Provider Tiers ── */}
+      <section className="bg-white py-20 px-4">
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-4">
+            <span className="inline-flex items-center gap-2 text-xs font-semibold text-primary bg-primary/8 border border-primary/20 rounded-full px-4 py-1.5 mb-5">
+              🏆 Provider Reward Tiers
+            </span>
+            <h2 className="text-3xl font-bold text-slate-900 mb-3">Grow your business with LocalPro</h2>
+            <p className="text-slate-500 text-sm max-w-md mx-auto">The more jobs you complete, the more perks you unlock — lower fees, higher visibility, and exclusive opportunities.</p>
+          </div>
+
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-12">
+            {/* Bronze */}
+            <div className="relative rounded-2xl border border-orange-200 bg-orange-50/50 p-5 flex flex-col gap-3">
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">🥉</span>
+                <div>
+                  <p className="text-xs font-semibold text-orange-600 uppercase tracking-wide">Bronze</p>
+                  <p className="text-sm font-bold text-slate-800">Starter</p>
+                </div>
+              </div>
+              <ul className="space-y-1.5 text-xs text-slate-600 flex-1">
+                <li className="flex items-start gap-1.5"><CheckCircle className="h-3.5 w-3.5 text-orange-400 mt-0.5 shrink-0" />Listed in search results</li>
+                <li className="flex items-start gap-1.5"><CheckCircle className="h-3.5 w-3.5 text-orange-400 mt-0.5 shrink-0" />Quote on any job</li>
+                <li className="flex items-start gap-1.5"><CheckCircle className="h-3.5 w-3.5 text-orange-400 mt-0.5 shrink-0" />Earnings dashboard</li>
+                <li className="flex items-start gap-1.5"><CheckCircle className="h-3.5 w-3.5 text-orange-400 mt-0.5 shrink-0" />Standard support</li>
+              </ul>
+              <p className="text-[10px] text-slate-400 mt-auto pt-2 border-t border-orange-100">Starting tier</p>
+            </div>
+
+            {/* Silver */}
+            <div className="relative rounded-2xl border border-slate-300 bg-slate-50 p-5 flex flex-col gap-3">
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">🥈</span>
+                <div>
+                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Silver</p>
+                  <p className="text-sm font-bold text-slate-800">Verified</p>
+                </div>
+              </div>
+              <ul className="space-y-1.5 text-xs text-slate-600 flex-1">
+                <li className="flex items-start gap-1.5"><CheckCircle className="h-3.5 w-3.5 text-slate-400 mt-0.5 shrink-0" />&ldquo;Verified Provider&rdquo; badge</li>
+                <li className="flex items-start gap-1.5"><CheckCircle className="h-3.5 w-3.5 text-slate-400 mt-0.5 shrink-0" />Priority listing in search</li>
+                <li className="flex items-start gap-1.5"><CheckCircle className="h-3.5 w-3.5 text-slate-400 mt-0.5 shrink-0" />Early job alerts</li>
+                <li className="flex items-start gap-1.5"><CheckCircle className="h-3.5 w-3.5 text-slate-400 mt-0.5 shrink-0" />Faster payouts (2 days)</li>
+              </ul>
+              <p className="text-[10px] text-slate-400 mt-auto pt-2 border-t border-slate-200">10+ jobs · 4.0 ★</p>
+            </div>
+
+            {/* Gold */}
+            <div className="relative rounded-2xl border border-amber-300 bg-amber-50 p-5 flex flex-col gap-3 shadow-[0_0_0_3px_rgba(251,191,36,0.15)]">
+              <div className="absolute -top-3 right-4">
+                <span className="inline-block text-[10px] font-bold bg-amber-400 text-white px-2.5 py-0.5 rounded-full uppercase tracking-wide shadow-sm">Popular</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">🥇</span>
+                <div>
+                  <p className="text-xs font-semibold text-amber-600 uppercase tracking-wide">Gold</p>
+                  <p className="text-sm font-bold text-slate-800">Top Rated</p>
+                </div>
+              </div>
+              <ul className="space-y-1.5 text-xs text-slate-600 flex-1">
+                <li className="flex items-start gap-1.5"><CheckCircle className="h-3.5 w-3.5 text-amber-500 mt-0.5 shrink-0" />&ldquo;Top Rated&rdquo; badge + boosted ranking</li>
+                <li className="flex items-start gap-1.5"><CheckCircle className="h-3.5 w-3.5 text-amber-500 mt-0.5 shrink-0" />Featured on homepage &amp; categories</li>
+                <li className="flex items-start gap-1.5"><CheckCircle className="h-3.5 w-3.5 text-amber-500 mt-0.5 shrink-0" />Reduced commission <span className="line-through text-slate-400">20%</span> → <strong className="text-amber-700">16%</strong></li>
+                <li className="flex items-start gap-1.5"><CheckCircle className="h-3.5 w-3.5 text-amber-500 mt-0.5 shrink-0" />AI-powered tools unlocked</li>
+                <li className="flex items-start gap-1.5"><CheckCircle className="h-3.5 w-3.5 text-amber-500 mt-0.5 shrink-0" />B2B &amp; bulk job access</li>
+              </ul>
+              <p className="text-[10px] text-slate-400 mt-auto pt-2 border-t border-amber-200">30+ jobs · 4.5 ★ · 85% completion</p>
+            </div>
+
+            {/* Elite */}
+            <div className="relative rounded-2xl border border-violet-300 bg-gradient-to-b from-violet-50 to-white p-5 flex flex-col gap-3 shadow-[0_0_0_3px_rgba(139,92,246,0.12)]">
+              <div className="absolute -top-3 right-4">
+                <span className="inline-block text-[10px] font-bold bg-violet-500 text-white px-2.5 py-0.5 rounded-full uppercase tracking-wide shadow-sm">Elite</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">💎</span>
+                <div>
+                  <p className="text-xs font-semibold text-violet-600 uppercase tracking-wide">Elite Pro</p>
+                  <p className="text-sm font-bold text-slate-800">Premium</p>
+                </div>
+              </div>
+              <ul className="space-y-1.5 text-xs text-slate-600 flex-1">
+                <li className="flex items-start gap-1.5"><CheckCircle className="h-3.5 w-3.5 text-violet-500 mt-0.5 shrink-0" />&ldquo;Elite Pro&rdquo; profile highlight card</li>
+                <li className="flex items-start gap-1.5"><CheckCircle className="h-3.5 w-3.5 text-violet-500 mt-0.5 shrink-0" />Lowest commission at <strong className="text-violet-700">6%</strong></li>
+                <li className="flex items-start gap-1.5"><CheckCircle className="h-3.5 w-3.5 text-violet-500 mt-0.5 shrink-0" />Instant payout option</li>
+                <li className="flex items-start gap-1.5"><CheckCircle className="h-3.5 w-3.5 text-violet-500 mt-0.5 shrink-0" />Premium client access (hotels, firms)</li>
+                <li className="flex items-start gap-1.5"><CheckCircle className="h-3.5 w-3.5 text-violet-500 mt-0.5 shrink-0" />Advanced analytics dashboard</li>
+              </ul>
+              <p className="text-[10px] text-slate-400 mt-auto pt-2 border-t border-violet-100">75+ jobs · 4.8 ★ · verified track record</p>
+            </div>
+          </div>
+
+          <div className="mt-8 text-center">
+            <Link href="/register?role=provider" className="inline-flex items-center gap-2 btn-primary text-sm px-6 py-2.5 rounded-xl shadow-sm">
+              Start as a provider — it&apos;s free <ArrowRight className="h-4 w-4" />
+            </Link>
           </div>
         </div>
       </section>

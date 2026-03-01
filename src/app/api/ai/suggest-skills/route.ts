@@ -3,6 +3,9 @@ import OpenAI from "openai";
 import { requireUser, requireRole } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { ValidationError } from "@/lib/errors";
+import { connectDB } from "@/lib/db";
+import ProviderProfile from "@/models/ProviderProfile";
+import { getProviderTier } from "@/lib/tier";
 
 function getClient(): OpenAI | null {
   if (!process.env.OPENAI_API_KEY) return null;
@@ -15,6 +18,24 @@ export const POST = withHandler(async (req: NextRequest) => {
   requireRole(user, "provider");
 
   const { bio, category, existingSkills } = await req.json();
+
+  // Tier gate: Gold+ only
+  await connectDB();
+  const pProfile = await ProviderProfile.findOne({ userId: user.userId })
+    .select("completedJobCount avgRating completionRate").lean();
+  const skillTier = getProviderTier(
+    (pProfile as { completedJobCount?: number } | null)?.completedJobCount ?? 0,
+    (pProfile as { avgRating?: number } | null)?.avgRating ?? 0,
+    (pProfile as { completionRate?: number } | null)?.completionRate ?? 0
+  );
+  if (!skillTier.hasAIAccess) {
+    return NextResponse.json({
+      error: `AI features require Gold tier or above. You're currently ${skillTier.label}. ${skillTier.nextMsg}.`,
+      upgradeRequired: true,
+      currentTier: skillTier.tier,
+      requiredTier: "gold",
+    }, { status: 403 });
+  }
 
   const client = getClient();
   if (!client) {

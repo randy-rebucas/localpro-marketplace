@@ -18,6 +18,8 @@ import {
   ArrowUpDown,
   ChevronDown,
   ChevronUp,
+  ChevronLeft,
+  ChevronRight,
   RefreshCw,
   Sparkles,
 } from "lucide-react";
@@ -33,6 +35,8 @@ function useDebounce<T>(value: T, delay = 300): T {
   }, [value, delay]);
   return debounced;
 }
+
+const PAGE_SIZE = 12;
 
 type SortKey = "newest" | "oldest" | "budget_desc" | "budget_asc";
 const SORT_OPTIONS: { value: SortKey; label: string }[] = [
@@ -68,6 +72,9 @@ export default function MarketplaceClient({
   const [quotedJobIds, setQuotedJobIds] = useState<Set<string>>(new Set(initialQuotedJobIds));
   const [categories] = useState<string[]>(initialCategories);
   const [isGeneratingQuoteMsg, setIsGeneratingQuoteMsg] = useState(false);
+  const [minBudget, setMinBudget] = useState("");
+  const [maxBudget, setMaxBudget] = useState("");
+  const [page, setPage] = useState(1);
   const searchRef = useRef<HTMLInputElement>(null);
 
   const debouncedSearch = useDebounce(search);
@@ -103,6 +110,11 @@ export default function MarketplaceClient({
       );
     }
 
+    const min = minBudget !== "" ? Number(minBudget) : null;
+    const max = maxBudget !== "" ? Number(maxBudget) : null;
+    if (min !== null && !isNaN(min)) list = list.filter((j) => j.budget >= min);
+    if (max !== null && !isNaN(max)) list = list.filter((j) => j.budget <= max);
+
     list.sort((a, b) => {
       if (sort === "newest")      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
       if (sort === "oldest")      return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
@@ -112,13 +124,22 @@ export default function MarketplaceClient({
     });
 
     return list;
-  }, [jobs, debouncedSearch, sort]);
+  }, [jobs, debouncedSearch, sort, minBudget, maxBudget]);
 
-  const hasFilters = category !== "All" || search.trim() !== "";
+  // Reset to page 1 whenever filters change
+  useEffect(() => { setPage(1); }, [debouncedSearch, category, sort, minBudget, maxBudget]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  const hasFilters = category !== "All" || search.trim() !== "" || minBudget !== "" || maxBudget !== "";
 
   function clearFilters() {
     setCategory("All");
     setSearch("");
+    setMinBudget("");
+    setMaxBudget("");
+    setPage(1);
     searchRef.current?.focus();
   }
 
@@ -179,7 +200,18 @@ export default function MarketplaceClient({
         }),
       });
       const data = await res.json();
-      if (!res.ok) { toast.error(data.error ?? "Failed to generate message"); return; }
+      if (!res.ok) {
+        if (data.upgradeRequired) {
+          toast(data.error ?? "AI features require Gold tier.", {
+            icon: "🥇",
+            style: { background: "#fffbeb", color: "#92400e", border: "1px solid #fde68a" },
+            duration: 5000,
+          });
+        } else {
+          toast.error(data.error ?? "Failed to generate message");
+        }
+        return;
+      }
       setQuoteForm((f) => ({
         ...f,
         message: data.message ?? f.message,
@@ -266,6 +298,28 @@ export default function MarketplaceClient({
           )}
         </div>
 
+        {/* Budget range */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-xs text-slate-400 flex-shrink-0">Budget (₱)</span>
+          <input
+            type="number"
+            min="0"
+            value={minBudget}
+            onChange={(e) => setMinBudget(e.target.value)}
+            placeholder="Min"
+            className="input text-sm w-24 tabular-nums"
+          />
+          <span className="text-xs text-slate-400">–</span>
+          <input
+            type="number"
+            min="0"
+            value={maxBudget}
+            onChange={(e) => setMaxBudget(e.target.value)}
+            placeholder="Max"
+            className="input text-sm w-24 tabular-nums"
+          />
+        </div>
+
         {/* Category pills */}
         <div className="flex gap-2 flex-wrap items-center">
           <SlidersHorizontal className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
@@ -293,8 +347,9 @@ export default function MarketplaceClient({
           ) : (
             <>
               Showing{" "}
+              <span className="font-semibold text-slate-600">{(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)}</span>
+              {" "}of{" "}
               <span className="font-semibold text-slate-600">{filtered.length}</span>
-              {jobs.length !== filtered.length && <> of <span className="font-semibold text-slate-600">{jobs.length}</span></>}
               {" "}open job{filtered.length !== 1 ? "s" : ""}
               {category !== "All" && <> in <span className="font-medium text-slate-600">{category}</span></>}
               {debouncedSearch && <> matching <span className="font-medium text-slate-600">&ldquo;{debouncedSearch}&rdquo;</span></>}
@@ -325,7 +380,7 @@ export default function MarketplaceClient({
         </div>
       ) : (
         <div className="grid sm:grid-cols-2 gap-4">
-          {filtered.map((job) => {
+          {paginated.map((job) => {
             const id = job._id.toString();
             const quoted = quotedJobIds.has(id);
             const expanded = expandedId === id;
@@ -411,6 +466,29 @@ export default function MarketplaceClient({
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Pagination */}
+      {!isLoading && totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2 pt-2">
+          <button
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={page === 1}
+            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          >
+            <ChevronLeft className="h-3.5 w-3.5" /> Prev
+          </button>
+          <span className="text-xs text-slate-500 tabular-nums">
+            Page <span className="font-semibold text-slate-700">{page}</span> of <span className="font-semibold text-slate-700">{totalPages}</span>
+          </span>
+          <button
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            disabled={page === totalPages}
+            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          >
+            Next <ChevronRight className="h-3.5 w-3.5" />
+          </button>
         </div>
       )}
 

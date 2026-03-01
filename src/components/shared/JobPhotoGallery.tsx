@@ -51,12 +51,19 @@ function ImageLightbox({
         </button>
       )}
 
-      <img
-        src={images[idx]}
-        alt={`Photo ${idx + 1}`}
+      <div
+        className="relative rounded-xl overflow-hidden shadow-2xl"
+        style={{ width: "min(90vw, 1200px)", height: "min(85vh, 900px)" }}
         onClick={(e) => e.stopPropagation()}
-        className="max-h-[85vh] max-w-[90vw] rounded-xl object-contain shadow-2xl"
-      />
+      >
+        <Image
+          src={images[idx]}
+          alt={`Photo ${idx + 1}`}
+          fill
+          sizes="90vw"
+          className="object-contain"
+        />
+      </div>
 
       {images.length > 1 && (
         <button

@@ -11,10 +11,11 @@ import Button from "@/components/ui/Button";
 import { useAuthStore } from "@/stores/authStore";
 import SkillsInput from "@/components/shared/SkillsInput";
 import KycUpload from "@/components/shared/KycUpload";
-import { Star, Camera, BadgeCheck, AlertCircle, MapPin, Trash2, Plus, LocateFixed, Loader2, Sparkles } from "lucide-react";
+import { Star, Camera, BadgeCheck, AlertCircle, MapPin, Trash2, Plus, LocateFixed, Loader2, Sparkles, Lock } from "lucide-react";
 import PageGuide from "@/components/shared/PageGuide";
 import { Skeleton } from "@/components/ui/Spinner";
 import { apiFetch } from "@/lib/fetchClient";
+import { getProviderTier } from "@/lib/tier";
 
 // Lazy-load ScheduleEditor — it’s large and only needed below the fold
 const ScheduleEditor = dynamic(
@@ -37,6 +38,7 @@ type ProfileData = Partial<
     | "schedule"
     | "avgRating"
     | "completedJobCount"
+    | "completionRate"
     | "serviceAreas"
   >
 >;
@@ -688,12 +690,18 @@ export default function ProviderProfilePage() {
                     onClick={generateBio}
                     disabled={generatingBio}
                     className="inline-flex items-center gap-1 text-[11px] font-medium text-primary hover:text-primary/80 disabled:opacity-50 transition-colors"
-                    title="Generate bio with AI based on your skills, experience and service areas"
+                    title={!getProviderTier(profile.completedJobCount ?? 0, profile.avgRating ?? 0, profile.completionRate ?? 0).hasAIAccess ? `Requires Gold tier – ${getProviderTier(profile.completedJobCount ?? 0, profile.avgRating ?? 0, profile.completionRate ?? 0).nextMsg}` : "Generate bio with AI based on your skills, experience and service areas"}
                   >
                     {generatingBio
                       ? <Loader2 className="h-3 w-3 animate-spin" />
-                      : <Sparkles className="h-3 w-3" />}
-                    {generatingBio ? "Generating…" : "Generate with AI"}
+                      : getProviderTier(profile.completedJobCount ?? 0, profile.avgRating ?? 0, profile.completionRate ?? 0).hasAIAccess
+                        ? <Sparkles className="h-3 w-3" />
+                        : <Lock className="h-3 w-3" />}
+                    {generatingBio
+                      ? "Generating…"
+                      : getProviderTier(profile.completedJobCount ?? 0, profile.avgRating ?? 0, profile.completionRate ?? 0).hasAIAccess
+                        ? "Generate with AI"
+                        : "Generate with AI · 🥇 Gold"}
                   </button>
                   <span className={`text-xs tabular-nums ${
                     bio.length >= 900 ? "text-red-400" : bio.length >= 50 ? "text-green-500" : "text-slate-400"
@@ -726,12 +734,18 @@ export default function ProviderProfilePage() {
                     onClick={suggestSkills}
                     disabled={suggestingSkills}
                     className="inline-flex items-center gap-1 text-[11px] font-medium text-primary hover:text-primary/80 disabled:opacity-50 transition-colors"
-                    title="Suggest skills using AI based on your bio"
+                    title={!getProviderTier(profile.completedJobCount ?? 0, profile.avgRating ?? 0, profile.completionRate ?? 0).hasAIAccess ? `Requires Gold tier – ${getProviderTier(profile.completedJobCount ?? 0, profile.avgRating ?? 0, profile.completionRate ?? 0).nextMsg}` : "Suggest skills using AI based on your bio"}
                   >
                     {suggestingSkills
                       ? <Loader2 className="h-3 w-3 animate-spin" />
-                      : <Sparkles className="h-3 w-3" />}
-                    {suggestingSkills ? "Suggesting…" : "Suggest with AI"}
+                      : getProviderTier(profile.completedJobCount ?? 0, profile.avgRating ?? 0, profile.completionRate ?? 0).hasAIAccess
+                        ? <Sparkles className="h-3 w-3" />
+                        : <Lock className="h-3 w-3" />}
+                    {suggestingSkills
+                      ? "Suggesting…"
+                      : getProviderTier(profile.completedJobCount ?? 0, profile.avgRating ?? 0, profile.completionRate ?? 0).hasAIAccess
+                        ? "Suggest with AI"
+                        : "Suggest with AI · 🥇 Gold"}
                   </button>
                 </div>
               </div>

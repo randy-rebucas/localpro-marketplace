@@ -11,8 +11,9 @@ import KpiCard from "@/components/ui/KpiCard";
 import { JobStatusBadge } from "@/components/ui/Badge";
 import { formatCurrency, formatRelativeTime } from "@/lib/utils";
 import { calculateCommission } from "@/lib/commission";
+import { getProviderTier } from "@/lib/tier";
 import Link from "next/link";
-import { CircleDollarSign, Briefcase, Star, Store, TrendingUp, Trophy, Flame, ShieldCheck, Zap } from "lucide-react";
+import { CircleDollarSign, Briefcase, Star, Store, TrendingUp, Trophy, Flame, ShieldCheck, Zap, TriangleAlert } from "lucide-react";
 import PageGuide from "@/components/shared/PageGuide";
 
 export const metadata: Metadata = { title: "Dashboard" };
@@ -54,15 +55,7 @@ async function getProviderStats(providerId: string) {
   };
 }
 
-function getPerformanceTier(jobs: number, rating: number, rate: number) {
-  if (jobs >= 25 && rating >= 4.5 && rate >= 90)
-    return { label: "Top Pro", emoji: "🏆", color: "amber",   next: null,          nextMsg: "",                                 progress: 100 };
-  if (jobs >= 10 && rating >= 4.0 && rate >= 85)
-    return { label: "Expert",  emoji: "💼", color: "blue",    next: "Top Pro",      nextMsg: "Complete 25 jobs, 4.5★, 90% rate",  progress: Math.min(99, Math.round((jobs / 25) * 100)) };
-  if (jobs >= 3)
-    return { label: "Rising Star", emoji: "⭐", color: "green", next: "Expert",   nextMsg: "Complete 10 jobs, 4.0★, 85% rate",  progress: Math.min(99, Math.round((jobs / 10) * 100)) };
-  return   { label: "Newcomer", emoji: "🌱", color: "slate",   next: "Rising Star", nextMsg: "Complete your first 3 jobs",         progress: Math.min(99, Math.round((jobs / 3) * 100)) };
-}
+
 
 function ProviderDashboardSkeleton() {
   return (
@@ -98,8 +91,23 @@ async function ProviderDashboardContent({ userId }: { userId: string }) {
   const { activeJobs, totalEarnings, avgRating, reviewCount, recentJobs, fundedAmounts, firstName, completionRate, completedJobCount, streak, avgResponseTimeHours } =
     await getProviderStats(userId);
 
-  const tier = getPerformanceTier(completedJobCount, avgRating, completionRate);
-  const isTopPro = tier.label === "Top Pro";
+  const tier = getProviderTier(completedJobCount, avgRating, completionRate);
+  const isTopPro = tier.hasAIAccess;
+
+  const showPerfWarning =
+    (avgRating > 0 && avgRating < 3.5) ||
+    (completedJobCount > 0 && completionRate < 70);
+  const perfWarningMsg =
+    avgRating > 0 && avgRating < 3.5
+      ? `Your rating is ${avgRating.toFixed(1)}★ — aim for 3.5★+ to avoid account restrictions.`
+      : `Your completion rate is ${completionRate}% — maintain 70%+ to stay in good standing.`;
+
+  const responseRatePct =
+    avgResponseTimeHours <= 0 ? 0
+    : avgResponseTimeHours < 1 ? 99
+    : avgResponseTimeHours < 4 ? 95
+    : avgResponseTimeHours < 24 ? 85
+    : 70;
 
   return (
     <div className="space-y-6">
@@ -109,7 +117,7 @@ async function ProviderDashboardContent({ userId }: { userId: string }) {
             <h2 className="text-2xl font-bold text-slate-900">Welcome back, {firstName}!</h2>
             {isTopPro && (
               <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-200">
-                <Trophy className="h-3 w-3" /> Top Pro
+                <Trophy className="h-3 w-3" /> {tier.label}
               </span>
             )}
             {streak >= 3 && (
@@ -129,6 +137,19 @@ async function ProviderDashboardContent({ userId }: { userId: string }) {
           Browse Jobs
         </Link>
       </div>
+
+      {/* Performance warning */}
+      {showPerfWarning && (
+        <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3.5">
+          <TriangleAlert className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
+          <div>
+            <p className="text-sm font-medium text-amber-800">Performance needs attention</p>
+            <p className="text-xs text-amber-700 mt-0.5">
+              {perfWarningMsg} Focus on delivering quality work and communicating proactively with clients.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Performance tier card */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-card px-6 py-5">
@@ -194,7 +215,11 @@ async function ProviderDashboardContent({ userId }: { userId: string }) {
           value={avgResponseTimeHours > 0
             ? (avgResponseTimeHours < 1 ? `${Math.round(avgResponseTimeHours * 60)}m` : `${avgResponseTimeHours.toFixed(1)}h`)
             : "—"}
-          subtitle={avgResponseTimeHours > 0 && avgResponseTimeHours <= 2 ? "⚡ Fast Responder" : "Time to first update"}
+          subtitle={
+            avgResponseTimeHours > 0
+              ? (avgResponseTimeHours <= 2 ? `⚡ Fast Responder · ~${responseRatePct}% rate` : `~${responseRatePct}% response rate`)
+              : "Time to first update"
+          }
           icon={<Zap className="h-6 w-6" />}
         />
       </div>

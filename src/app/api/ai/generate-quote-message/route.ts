@@ -3,6 +3,9 @@ import OpenAI from "openai";
 import { requireUser, requireRole } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { ValidationError } from "@/lib/errors";
+import { connectDB } from "@/lib/db";
+import ProviderProfile from "@/models/ProviderProfile";
+import { getProviderTier } from "@/lib/tier";
 
 function getClient(): OpenAI | null {
   if (!process.env.OPENAI_API_KEY) return null;
@@ -15,6 +18,24 @@ export const POST = withHandler(async (req: NextRequest) => {
   requireRole(user, "provider");
 
   const { jobTitle, jobDescription, jobBudget, category } = await req.json();
+
+  // Tier gate: Gold+ only
+  await connectDB();
+  const qProfile = await ProviderProfile.findOne({ userId: user.userId })
+    .select("completedJobCount avgRating completionRate").lean();
+  const quoteTier = getProviderTier(
+    (qProfile as { completedJobCount?: number } | null)?.completedJobCount ?? 0,
+    (qProfile as { avgRating?: number } | null)?.avgRating ?? 0,
+    (qProfile as { completionRate?: number } | null)?.completionRate ?? 0
+  );
+  if (!quoteTier.hasAIAccess) {
+    return NextResponse.json({
+      error: `AI features require Gold tier or above. You're currently ${quoteTier.label}. ${quoteTier.nextMsg}.`,
+      upgradeRequired: true,
+      currentTier: quoteTier.tier,
+      requiredTier: "gold",
+    }, { status: 403 });
+  }
 
   if (!jobTitle || typeof jobTitle !== "string" || jobTitle.trim().length < 3) {
     throw new ValidationError("A job title is required to generate a quote message.");

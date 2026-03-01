@@ -8,6 +8,8 @@ import { disputeRepository } from "@/repositories/dispute.repository";
 import { providerProfileRepository } from "@/repositories/providerProfile.repository";
 import { JobStatusBadge, EscrowBadge, QuoteStatusBadge } from "@/components/ui/Badge";
 import { formatCurrency, formatDate, formatRelativeTime } from "@/lib/utils";
+import { calculateCommission } from "@/lib/commission";
+import Image from "next/image";
 import dynamic from "next/dynamic";
 import RealtimeRefresher from "@/components/shared/RealtimeRefresher";
 import ProviderInfoButton from "@/components/shared/ProviderInfoButtonLazy";
@@ -129,10 +131,22 @@ async function QuotesSection({ jobId, jobStatus }: { jobId: string; jobStatus: s
         </div>
         <div className="px-6 py-4 flex items-start justify-between gap-4">
           <div className="flex gap-3 flex-1">
-            <div className="flex-shrink-0 w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center">
-              <span className="text-xs font-bold text-primary">
-                {accepted.providerId.name.split(" ").filter(Boolean).map((w) => w[0]).join("").slice(0, 2).toUpperCase()}
-              </span>
+            <div className="flex-shrink-0 w-9 h-9 rounded-full overflow-hidden border border-slate-200">
+              {accepted.providerId.avatar ? (
+                <Image
+                  src={accepted.providerId.avatar}
+                  alt={accepted.providerId.name}
+                  width={36}
+                  height={36}
+                  className="h-9 w-9 object-cover"
+                />
+              ) : (
+                <div className="h-full w-full bg-primary/10 flex items-center justify-center">
+                  <span className="text-xs font-bold text-primary">
+                    {accepted.providerId.name.split(" ").filter(Boolean).map((w) => w[0]).join("").slice(0, 2).toUpperCase()}
+                  </span>
+                </div>
+              )}
             </div>
             <div className="flex-1">
               <div className="flex flex-wrap items-center gap-2">
@@ -186,8 +200,20 @@ async function QuotesSection({ jobId, jobStatus }: { jobId: string; jobStatus: s
               <li key={q._id.toString()} className="px-6 py-4">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex gap-3 flex-1">
-                    <div className="flex-shrink-0 w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center">
-                      <span className="text-xs font-bold text-primary">{providerInitials}</span>
+                    <div className="flex-shrink-0 w-9 h-9 rounded-full overflow-hidden border border-slate-200">
+                      {q.providerId.avatar ? (
+                        <Image
+                          src={q.providerId.avatar}
+                          alt={q.providerId.name}
+                          width={36}
+                          height={36}
+                          className="h-9 w-9 object-cover"
+                        />
+                      ) : (
+                        <div className="h-full w-full bg-primary/10 flex items-center justify-center">
+                          <span className="text-xs font-bold text-primary">{providerInitials}</span>
+                        </div>
+                      )}
                     </div>
                     <div className="flex-1">
                       <div className="flex flex-wrap items-center gap-2">
@@ -217,7 +243,15 @@ async function QuotesSection({ jobId, jobStatus }: { jobId: string; jobStatus: s
                     </div>
                   </div>
                   <div className="flex flex-col items-end gap-2 flex-shrink-0">
-                    <p className="text-lg font-bold text-slate-900">{formatCurrency(q.proposedAmount)}</p>
+                    <div className="text-right">
+                      <p className="text-lg font-bold text-slate-900">{formatCurrency(q.proposedAmount)}</p>
+                      <p className="text-[11px] text-slate-400 mt-0.5">
+                        Provider gets{" "}
+                        <span className="font-medium text-slate-600">
+                          {formatCurrency(calculateCommission(q.proposedAmount).netAmount)}
+                        </span>
+                      </p>
+                    </div>
                     <QuoteStatusBadge status={q.status} />
                     {q.status === "pending" && (
                       <QuoteAcceptButton

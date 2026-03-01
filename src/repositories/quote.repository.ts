@@ -42,13 +42,13 @@ export class QuoteRepository extends BaseRepository<QuoteDocument> {
     return Quote.find({ status: "pending", createdAt: { $lt: cutoffDate } }).lean() as unknown as QuoteDocument[];
   }
 
-  /** Quotes for a job with name/email/isVerified populated, sorted newest first. */
+  /** Quotes for a job with name/email/isVerified/avatar populated, sorted newest first. */
   async findForJobWithProvider(jobId: string): Promise<(QuoteDocument & {
-    providerId: { _id: string; name: string; email: string; isVerified: boolean };
+    providerId: { _id: string; name: string; email: string; isVerified: boolean; avatar?: string | null };
   })[]> {
     await this.connect();
     return Quote.find({ jobId })
-      .populate("providerId", "name email isVerified")
+      .populate("providerId", "name email isVerified avatar")
       .sort({ createdAt: -1 })
       .lean() as never;
   }

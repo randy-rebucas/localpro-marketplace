@@ -3,6 +3,9 @@ import OpenAI from "openai";
 import { requireUser } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { ValidationError } from "@/lib/errors";
+import { connectDB } from "@/lib/db";
+import ProviderProfile from "@/models/ProviderProfile";
+import { getProviderTier } from "@/lib/tier";
 
 function getClient(): OpenAI | null {
   if (!process.env.OPENAI_API_KEY) return null;
@@ -11,9 +14,29 @@ function getClient(): OpenAI | null {
 
 /** POST /api/ai/suggest-replies */
 export const POST = withHandler(async (req: NextRequest) => {
-  await requireUser();
+  const user = await requireUser();
 
   const { lastMessages, role, jobTitle } = await req.json();
+
+  // Tier gate: Gold+ for providers only (clients bypass)
+  if (user.role === "provider") {
+    await connectDB();
+    const rProfile = await ProviderProfile.findOne({ userId: user.userId })
+      .select("completedJobCount avgRating completionRate").lean();
+    const replyTier = getProviderTier(
+      (rProfile as { completedJobCount?: number } | null)?.completedJobCount ?? 0,
+      (rProfile as { avgRating?: number } | null)?.avgRating ?? 0,
+      (rProfile as { completionRate?: number } | null)?.completionRate ?? 0
+    );
+    if (!replyTier.hasAIAccess) {
+      return NextResponse.json({
+        error: `AI features require Gold tier or above. You're currently ${replyTier.label}. ${replyTier.nextMsg}.`,
+        upgradeRequired: true,
+        currentTier: replyTier.tier,
+        requiredTier: "gold",
+      }, { status: 403 });
+    }
+  }
 
   if (!Array.isArray(lastMessages) || lastMessages.length === 0) {
     throw new ValidationError("At least one message is required.");

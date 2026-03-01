@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
+import Image from "next/image";
 import Modal from "@/components/ui/Modal";
 import { formatCurrency } from "@/lib/utils";
-import { Star, Briefcase, Clock, CheckCircle, XCircle, User, Calendar, Heart, Sparkles } from "lucide-react";
+import { Star, Briefcase, Clock, CheckCircle, XCircle, User, Calendar, Heart, Sparkles, Timer } from "lucide-react";
 import toast from "react-hot-toast";
 import { useAuthStore } from "@/stores/authStore";
 import { apiFetch } from "@/lib/fetchClient";
@@ -15,7 +16,7 @@ const DirectJobModal = dynamic(() => import("@/components/client/DirectJobModal"
 interface WorkSlot { enabled: boolean; from: string; to: string; }
 
 interface ProviderProfile {
-  userId: { name: string; email: string; isVerified: boolean };
+  userId: { name: string; email: string; isVerified: boolean; avatar?: string | null };
   bio?: string;
   skills?: string[];
   yearsExperience?: number;
@@ -177,8 +178,20 @@ export default function ProviderInfoButton({
             <>
               {/* Header */}
               <div className="flex items-start gap-4">
-                <div className="h-12 w-12 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-lg flex-shrink-0">
-                  {profile.userId.name.charAt(0).toUpperCase()}
+                <div className="h-12 w-12 rounded-full flex-shrink-0 overflow-hidden border border-slate-200">
+                  {profile.userId.avatar ? (
+                    <Image
+                      src={profile.userId.avatar}
+                      alt={profile.userId.name}
+                      width={48}
+                      height={48}
+                      className="h-12 w-12 object-cover"
+                    />
+                  ) : (
+                    <div className="h-full w-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-lg">
+                      {profile.userId.name.charAt(0).toUpperCase()}
+                    </div>
+                  )}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
@@ -232,8 +245,8 @@ export default function ProviderInfoButton({
                 </div>
               </div>
 
-              {/* Streak + response time badges */}
-              {((profile.streak ?? 0) > 0 || (profile.avgResponseTimeHours != null && profile.avgResponseTimeHours > 0)) && (
+              {/* Streak + response time + on-time badges */}
+              {((profile.streak ?? 0) >= 3 || (profile.avgResponseTimeHours != null && profile.avgResponseTimeHours > 0) || (profile.breakdown && profile.breakdown.count >= 3)) && (
                 <div className="flex flex-wrap gap-2">
                   {(profile.streak ?? 0) >= 3 && (
                     <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
@@ -246,6 +259,12 @@ export default function ProviderInfoButton({
                       Responds in ~{profile.avgResponseTimeHours < 1
                         ? `${Math.round(profile.avgResponseTimeHours * 60)}m`
                         : `${profile.avgResponseTimeHours.toFixed(1)}h`}
+                    </span>
+                  )}
+                  {profile.breakdown && profile.breakdown.count >= 3 && (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                      <Timer className="h-3 w-3" />
+                      {Math.round((profile.breakdown.punctuality / 5) * 100)}% on-time
                     </span>
                   )}
                 </div>

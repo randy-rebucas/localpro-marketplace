@@ -5,6 +5,7 @@ import { connectDB } from "@/lib/db";
 import ProviderProfile from "@/models/ProviderProfile";
 import User from "@/models/User";
 import OpenAI from "openai";
+import { getProviderTier } from "@/lib/tier";
 
 function getClient(): OpenAI | null {
   if (!process.env.OPENAI_API_KEY) return null;
@@ -22,6 +23,21 @@ export const POST = withHandler(async () => {
     ProviderProfile.findOne({ userId: user.userId }).lean(),
     User.findById(user.userId).select("addresses name").lean(),
   ]);
+
+  // Tier gate: Gold+ only
+  const profileTier = getProviderTier(
+    (profile as { completedJobCount?: number } | null)?.completedJobCount ?? 0,
+    (profile as { avgRating?: number } | null)?.avgRating ?? 0,
+    (profile as { completionRate?: number } | null)?.completionRate ?? 0
+  );
+  if (!profileTier.hasAIAccess) {
+    return NextResponse.json({
+      error: `AI features require Gold tier or above. You're currently ${profileTier.label}. ${profileTier.nextMsg}.`,
+      upgradeRequired: true,
+      currentTier: profileTier.tier,
+      requiredTier: "gold",
+    }, { status: 403 });
+  }
 
   const skills: string[]   = profile?.skills ?? [];
   const years: number      = profile?.yearsExperience ?? 0;

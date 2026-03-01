@@ -67,7 +67,7 @@ async function EarningsContent({ userId }: { userId: string }) {
             <div>
               <p className="text-xs text-slate-500">Commission Paid</p>
               <p className="text-2xl font-bold text-red-500 mt-1">-{formatCurrency(totalCommission)}</p>
-              <p className="text-xs text-slate-400 mt-0.5">10% platform fee</p>
+              <p className="text-xs text-slate-400 mt-0.5">20% platform fee</p>
             </div>
             <div className="p-2.5 bg-red-50 rounded-xl text-red-400">
               <TrendingDown className="h-5 w-5" />
@@ -182,7 +182,7 @@ export default async function EarningsPage() {
         pageKey="provider-earnings"
         title="How Earnings works"
         steps={[
-          { icon: "💵", title: "Gross vs net", description: "Gross is the full job amount. A 10% platform commission is deducted, leaving your net payout." },
+          { icon: "💵", title: "Gross vs net", description: "Gross is the full job amount. A 20% platform commission is deducted, leaving your net payout." },
           { icon: "📈", title: "Available balance", description: "Your available balance is net earnings minus any already-requested payouts." },
           { icon: "🏦", title: "Request a payout", description: "Click 'Request Payout' to withdraw your available balance to your bank account." },
           { icon: "📄", title: "Export history", description: "Download your full earnings history as a CSV for tax reporting or personal records." },
