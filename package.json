@@ -9,6 +9,7 @@
     "lint": "next lint",
     "db:reset": "node --env-file=.env.local scripts/db-reset.mjs",
     "db:seed": "node --env-file=.env.local scripts/db-reset.mjs --seed-only",
+    "db:seed:no-admin": "node --env-file=.env.local scripts/db-reset.mjs --seed-only --no-admin",
     "db:seed-categories": "node --env-file=.env.local scripts/seed-categories.mjs",
     "db:seed-categories:wipe": "node --env-file=.env.local scripts/seed-categories.mjs --wipe"
   },

@@ -4,6 +4,17 @@ import type { Types } from "mongoose";
 
 export type UserRole = "client" | "provider" | "admin";
 
+export interface IAddress {
+  _id: string;
+  /** Short label, e.g. "Home", "Office" */
+  label: string;
+  /** Full address string */
+  address: string;
+  isDefault: boolean;
+  /** Resolved lat/lng — enables proximity filtering */
+  coordinates?: { lat: number; lng: number };
+}
+
 // ─── Upload ───────────────────────────────────────────────────────────────────
 
 export type UploadFolder = "jobs/before" | "jobs/after" | "avatars" | "kyc" | "misc";
@@ -24,6 +35,7 @@ export interface IUser {
   kycStatus?: "none" | "pending" | "approved" | "rejected";
   kycDocuments?: Array<{ type: string; url: string; uploadedAt: Date }>;
   kycRejectionReason?: string;
+  addresses?: IAddress[];
   createdAt: Date;
   updatedAt: Date;
 }

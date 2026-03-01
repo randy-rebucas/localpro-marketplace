@@ -97,16 +97,81 @@ const DEFAULT_CATEGORIES = [
 ];
 
 const SKILL_SEEDS = [
-  "Plumbing","Electrical","Carpentry","Painting","Welding","Masonry","Tiling",
-  "Roofing","HVAC","Air Conditioning Repair","Refrigerator Repair",
-  "Washing Machine Repair","TV Repair","Appliance Repair","Computer Repair",
-  "Phone Repair","Landscaping","Lawn Care","Tree Trimming","Pest Control",
-  "Cleaning","Deep Cleaning","Window Cleaning","Laundry","Ironing","Cooking",
-  "Catering","Babysitting","Elderly Care","Pet Care","Dog Walking","Tutoring",
-  "Photography","Videography","Graphic Design","Web Design","Data Entry",
-  "Accounting","Driving","Delivery","Moving","Hauling","Auto Repair",
-  "Motorcycle Repair","Car Wash","Security","Event Planning","Tailoring",
-  "Shoe Repair",
+  // Plumbing
+  "Plumbing", "Pipe Installation", "Leak Repair", "Drain Cleaning",
+  "Water Heater Installation", "Toilet Repair", "Faucet Repair",
+  "Sewer Line Repair", "Water Pressure Fix",
+  // Electrical
+  "Electrical", "Wiring Installation", "Circuit Breaker Repair", "Outlet Installation",
+  "Lighting Installation", "Electrical Troubleshooting", "Panel Upgrade",
+  "Generator Installation", "CCTV Installation", "Solar Panel Installation",
+  // Cleaning
+  "Cleaning", "Deep Cleaning", "Window Cleaning", "Carpet Cleaning", "Upholstery Cleaning",
+  "Post-Construction Cleaning", "Office Cleaning", "Laundry", "Ironing",
+  "Housekeeping", "Disinfection & Sanitation",
+  // Landscaping
+  "Landscaping", "Lawn Care", "Tree Trimming", "Garden Design",
+  "Irrigation Installation", "Soil & Fertilization", "Pest Control", "Pressure Washing",
+  // Carpentry
+  "Carpentry", "Furniture Making", "Cabinet Installation", "Door & Window Framing",
+  "Deck Building", "Wood Repair", "Flooring Installation", "Hardwood Flooring", "Laminate Flooring",
+  // Painting
+  "Painting", "Interior Painting", "Exterior Painting", "Wallpaper Installation",
+  "Epoxy Floor Coating", "Surface Preparation", "Texture Painting",
+  // Roofing
+  "Roofing", "Roof Installation", "Roof Repair", "Waterproofing",
+  "Roof Inspection", "Gutters & Drainage", "Metal Roofing",
+  // HVAC
+  "HVAC", "Air Conditioning Repair", "Air Conditioning Installation",
+  "Refrigerator Repair", "Ventilation System Repair", "Duct Cleaning", "Heating System Repair",
+  // Moving
+  "Moving", "Packing & Unpacking", "Furniture Assembly", "Hauling", "Storage Solutions",
+  // Handyman
+  "Handyman", "General Repairs", "Appliance Installation", "TV Mounting",
+  "Shelving & Storage", "Door Lock Installation", "Caulking & Sealing",
+  // Masonry & Tiling
+  "Masonry", "Tiling", "Tile Setting", "Brickwork", "Concrete Work",
+  "Stone Masonry", "Plastering", "Rebar & Steelwork",
+  // Welding & Fabrication
+  "Welding", "Metal Fabrication", "Sheet Metal Work", "Steel Cutting",
+  "Gate & Fence Fabrication", "Structural Welding",
+  // Automotive & Mechanics
+  "Auto Repair", "Car Diagnosis & Troubleshooting", "Oil Change & Maintenance",
+  "Brake Repair", "Tire Change & Rotation", "Engine Repair", "Motorcycle Repair",
+  "Diesel Mechanic", "Car Wash & Detailing", "Auto Electrical", "Air Conditioning (Auto)",
+  // Mechanical & Industrial
+  "Machinist", "CNC Operation", "Millwright", "Industrial Equipment Repair",
+  "Hydraulic System Repair", "Conveyor System Maintenance", "Elevator Maintenance", "Boiler Operation",
+  // IT & Technology
+  "Computer Repair", "Laptop Repair", "Network Setup", "Wi-Fi Installation",
+  "IT Support", "Data Recovery", "Software Troubleshooting", "CCTV & Security Systems",
+  "Smart Home Installation", "Web Design", "Graphic Design", "Data Entry",
+  // Electronics & Telecom
+  "Phone Repair", "TV Repair", "Appliance Repair", "Electronics Repair",
+  "Telecommunications Installation", "Fiber Optic Installation",
+  // Food & Culinary
+  "Cooking", "Catering", "Baking & Pastry", "Butchering",
+  "Food Preparation", "Bartending", "Personal Chef",
+  // Tailoring & Fashion
+  "Tailoring", "Dressmaking", "Clothing Alterations", "Embroidery",
+  "Shoe Repair", "Bag & Leather Repair",
+  // Transportation & Logistics
+  "Driving", "Delivery", "Courier Service", "Freight & Trucking",
+  "Crane Operation", "Forklift Operation", "Motorbike Delivery",
+  // Health & Medical
+  "First Aid & Emergency Response", "Blood Pressure Monitoring", "Elderly Care",
+  "Disability Assistance", "Home Nursing", "Medical Equipment Operation", "Pharmacy Assistance",
+  // Safety & Security
+  "Security Guard", "Fire Safety", "Security System Installation", "Alarm System Setup",
+  // Beauty & Personal Care
+  "Haircut & Styling", "Hair Coloring", "Barbering", "Makeup Artist", "Bridal Makeup",
+  "Nail Art & Manicure", "Pedicure", "Massage Therapy", "Swedish Massage", "Shiatsu Massage",
+  "Facial Treatment", "Waxing", "Eyelash Extension", "Eyebrow Threading", "Tattoo",
+  // Pet Care & Grooming
+  "Pet Grooming", "Dog Walking", "Pet Bathing", "Pet Sitting", "Veterinary Assistance",
+  // General
+  "Babysitting", "Tutoring", "Photography", "Videography",
+  "Event Planning", "Accounting", "Bookkeeping",
 ];
 
 // ─── Minimal schemas (avoid importing TS source) ──────────────────────────────

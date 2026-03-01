@@ -57,6 +57,7 @@ export const GET = withHandler(async () => {
     isVerified: user.isVerified,
     isSuspended: user.isSuspended,
     avatar: user.avatar ?? null,
+    addresses: user.addresses ?? [],
     createdAt: user.createdAt,
   });
 });

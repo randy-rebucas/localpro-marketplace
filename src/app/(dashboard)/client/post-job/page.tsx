@@ -66,23 +66,63 @@ export default function PostJobPage() {
     setIsGeolocating(true);
     try {
       const position = await new Promise<GeolocationPosition>((resolve, reject) =>
-        navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 10000, maximumAge: 60000 })
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 15000,
+          maximumAge: 0,
+        })
       );
-      const { latitude: lat, longitude: lng } = position.coords;
+      const { latitude: lat, longitude: lng, accuracy } = position.coords;
       setCoords({ lat, lng });
-      // Reverse geocode using Google Maps if available, else fall back to coords string
-      if (typeof window !== "undefined" && window.google?.maps) {
-        const geocoder = new window.google.maps.Geocoder();
-        const result = await geocoder.geocode({ location: { lat, lng } });
-        if (result.results[0]) {
-          update("location", result.results[0].formatted_address);
-        } else {
-          update("location", `${lat.toFixed(5)}, ${lng.toFixed(5)}`);
+      const isPrecise = accuracy <= 300;
+
+      let resolved = "";
+
+      if (isPrecise) {
+        if (typeof window !== "undefined" && window.google?.maps) {
+          const geocoder = new window.google.maps.Geocoder();
+          const { results } = await geocoder.geocode({ location: { lat, lng } });
+          if (results && results.length > 0) {
+            const PREFERRED = [
+              "street_address", "premise", "subpremise",
+              "route", "neighborhood", "sublocality_level_1",
+              "sublocality", "locality",
+            ];
+            let best = results[0];
+            for (const type of PREFERRED) {
+              const match = results.find((r) => r.types.includes(type));
+              if (match) { best = match; break; }
+            }
+            resolved = best.formatted_address;
+          }
         }
+        if (!resolved) {
+          try {
+            const r = await fetch(
+              `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=jsonv2&addressdetails=1&zoom=18`,
+              { headers: { "Accept-Language": "en", "User-Agent": "LocalPro/1.0" } }
+            );
+            if (r.ok) resolved = (await r.json()).display_name ?? "";
+          } catch { /* ignore */ }
+        }
+        update("location", resolved || `${lat.toFixed(6)}, ${lng.toFixed(6)}`);
+        toast.success("Location detected!");
       } else {
-        update("location", `${lat.toFixed(5)}, ${lng.toFixed(5)}`);
+        // Coarse desktop/IP fix — use IP geolocation for a correct city name
+        try {
+          const r = await fetch("https://ipapi.co/json/");
+          if (r.ok) {
+            const d = await r.json();
+            const parts = [d.city, d.region, d.country_name].filter(Boolean);
+            resolved = parts.join(", ");
+          }
+        } catch { /* ignore */ }
+        update("location", resolved || `${lat.toFixed(4)}, ${lng.toFixed(4)}`);
+        toast("Approximate area detected — please refine your exact address.", {
+          icon: "⚠️",
+          duration: 5000,
+        });
       }
-      toast.success("Location detected!");
     } catch (e: unknown) {
       const err = e as { code?: number };
       if (err.code === 1) toast.error("Location access denied. Enable it in your browser settings.");

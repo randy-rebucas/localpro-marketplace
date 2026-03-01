@@ -13,6 +13,20 @@ export interface UserDocument extends Omit<IUser, "_id">, Document {
   otpExpiry?: Date;
 }
 
+const AddressSubSchema = new Schema(
+  {
+    label:     { type: String, required: true, trim: true, maxlength: 50 },
+    address:   { type: String, required: true, trim: true, maxlength: 200 },
+    isDefault: { type: Boolean, default: false },
+    coordinates: {
+      lat: { type: Number, default: null },
+      lng: { type: Number, default: null },
+      _id: false,
+    },
+  },
+  { _id: true }
+);
+
 const UserSchema = new Schema<UserDocument>(
   {
     name: {
@@ -69,6 +83,7 @@ const UserSchema = new Schema<UserDocument>(
       },
     ],
     kycRejectionReason: { type: String, default: null },
+    addresses: { type: [AddressSubSchema], default: [] },
     facebookId: { type: String, default: null, index: true, sparse: true },
     oauthProvider: { type: String, enum: ["facebook", null], default: null },
     phone: { type: String, default: null, sparse: true },

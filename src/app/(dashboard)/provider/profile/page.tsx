@@ -4,14 +4,14 @@ import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import Image from "next/image";
 import dynamic from "next/dynamic";
-import type { IProviderProfile, AvailabilityStatus, WeeklySchedule } from "@/types";
+import type { IAddress, IProviderProfile, AvailabilityStatus, WeeklySchedule } from "@/types";
 import { DEFAULT_SCHEDULE } from "@/types";
 import Card, { CardBody, CardFooter, CardHeader } from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import { useAuthStore } from "@/stores/authStore";
 import SkillsInput from "@/components/shared/SkillsInput";
 import KycUpload from "@/components/shared/KycUpload";
-import { Star, Camera } from "lucide-react";
+import { Star, Camera, BadgeCheck, AlertCircle, MapPin, Trash2, Plus, LocateFixed, Loader2 } from "lucide-react";
 import PageGuide from "@/components/shared/PageGuide";
 import { Skeleton } from "@/components/ui/Spinner";
 import { apiFetch } from "@/lib/fetchClient";
@@ -21,7 +21,11 @@ const ScheduleEditor = dynamic(
   () => import("@/components/shared/ScheduleEditor"),
   { loading: () => <Skeleton className="h-64 rounded-xl" />, ssr: false }
 );
-
+// Lazy-load StructuredAddressInput (depends on Google Maps / Nominatim)
+const StructuredAddressInput = dynamic(
+  () => import("@/components/shared/StructuredAddressInput"),
+  { ssr: false }
+);
 type ProfileData = Partial<
   Pick<
     IProviderProfile,
@@ -85,6 +89,15 @@ export default function ProviderProfilePage() {
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
+  // Saved addresses
+  const [addresses, setAddresses] = useState<IAddress[]>([]);
+  const [addingAddress, setAddingAddress] = useState(false);
+  const [newLabel, setNewLabel] = useState("Home");
+  const [newAddressText, setNewAddressText] = useState("");
+  const [newAddressCoords, setNewAddressCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [savingAddress, setSavingAddress] = useState(false);
+  const [detectingLocation, setDetectingLocation] = useState(false);
+
   // Form state
   const [bio, setBio] = useState("");
   const [skills, setSkills] = useState<string[]>([]);
@@ -108,6 +121,11 @@ export default function ProviderProfilePage() {
       .catch(() => toast.error("Failed to load profile"))
       .finally(() => setLoading(false));
   }, []);
+
+  // Seed addresses from auth store (populated by DashboardShell before render)
+  useEffect(() => {
+    setAddresses(user?.addresses ?? []);
+  }, [user?.addresses]);
 
   async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -179,6 +197,134 @@ export default function ProviderProfilePage() {
     saveProfile();
   }
 
+  async function detectCurrentLocation() {
+    if (!("geolocation" in navigator)) {
+      toast.error("Geolocation is not supported by your browser");
+      return;
+    }
+    setDetectingLocation(true);
+    try {
+      const position = await new Promise<GeolocationPosition>((resolve, reject) =>
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 15000,
+          maximumAge: 0,
+        })
+      );
+      const { latitude: lat, longitude: lng, accuracy } = position.coords;
+      // accuracy in metres — desktop IP-based positioning is typically 1000–100 000 m
+      const isPrecise = accuracy <= 300;
+
+      let resolved = "";
+
+      if (isPrecise) {
+        // ── Precise GPS fix: reverse-geocode to street level ──────────────────
+        if (typeof window !== "undefined" && window.google?.maps) {
+          const geocoder = new window.google.maps.Geocoder();
+          const { results } = await geocoder.geocode({ location: { lat, lng } });
+          if (results && results.length > 0) {
+            const PREFERRED = [
+              "street_address", "premise", "subpremise",
+              "route", "neighborhood", "sublocality_level_1",
+              "sublocality", "locality",
+            ];
+            let best = results[0];
+            for (const type of PREFERRED) {
+              const match = results.find((r) => r.types.includes(type));
+              if (match) { best = match; break; }
+            }
+            resolved = best.formatted_address;
+          }
+        }
+        if (!resolved) {
+          try {
+            const r = await fetch(
+              `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=jsonv2&addressdetails=1&zoom=18`,
+              { headers: { "Accept-Language": "en", "User-Agent": "LocalPro/1.0" } }
+            );
+            if (r.ok) resolved = (await r.json()).display_name ?? "";
+          } catch { /* ignore */ }
+        }
+        setNewAddressText(resolved || `${lat.toFixed(6)}, ${lng.toFixed(6)}`);
+        setNewAddressCoords({ lat, lng }); // precise — store for radius queries
+        toast.success("Location detected!");
+      } else {
+        // ── Coarse fix (desktop/IP): use IP geolocation for a correct city ──────
+        try {
+          const r = await fetch("https://ipapi.co/json/");
+          if (r.ok) {
+            const d = await r.json();
+            const parts = [d.city, d.region, d.country_name].filter(Boolean);
+            resolved = parts.join(", ");
+          }
+        } catch { /* ignore */ }
+        setNewAddressText(resolved || `${lat.toFixed(4)}, ${lng.toFixed(4)}`);
+        setNewAddressCoords(null); // too imprecise to store
+        toast("Approximate area detected — please refine your exact address.", {
+          icon: "⚠️",
+          duration: 5000,
+        });
+      }
+    } catch (e: unknown) {
+      const err = e as { code?: number };
+      if (err.code === 1)
+        toast.error("Location access denied. Enable it in your browser settings.");
+      else
+        toast.error("Could not detect your location. Try typing it manually.");
+    } finally {
+      setDetectingLocation(false);
+    }
+  }
+
+  async function handleAddAddress() {
+    const trimmedAddress = newAddressText.trim();
+    if (!trimmedAddress) return;
+    setSavingAddress(true);
+    try {
+      const res = await apiFetch("/api/auth/me/addresses", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          label:       newLabel.trim() || "Home",
+          address:     trimmedAddress,
+          coordinates: newAddressCoords ?? undefined,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) { toast.error(data.error ?? "Failed to add address"); return; }
+      setAddresses(data);
+      if (user) setUser({ ...user, addresses: data });
+      setNewAddressText("");
+      setNewAddressCoords(null);
+      setNewLabel("Home");
+      setAddingAddress(false);
+      toast.success("Address saved!");
+    } finally {
+      setSavingAddress(false);
+    }
+  }
+
+  async function handleDeleteAddress(id: string) {
+    const res = await apiFetch(`/api/auth/me/addresses/${id}`, { method: "DELETE" });
+    const data = await res.json();
+    if (!res.ok) { toast.error(data.error ?? "Failed to remove address"); return; }
+    setAddresses(data);
+    if (user) setUser({ ...user, addresses: data });
+    toast.success("Address removed");
+  }
+
+  async function handleSetDefault(id: string) {
+    const res = await apiFetch(`/api/auth/me/addresses/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ isDefault: true }),
+    });
+    const data = await res.json();
+    if (!res.ok) { toast.error(data.error ?? "Failed to update"); return; }
+    setAddresses(data);
+    if (user) setUser({ ...user, addresses: data });
+  }
+
   if (loading) {
     return (
       <div className="max-w-2xl space-y-6 animate-pulse">
@@ -229,8 +375,19 @@ export default function ProviderProfilePage() {
 
   const cfg = AVAILABILITY_CONFIG[availability];
 
+  // Profile completeness (0–100)
+  const completenessItems = [
+    !!avatar,
+    bio.trim().length >= 50,
+    skills.length > 0,
+    yearsExperience > 0,
+    !!hourlyRate,
+  ];
+  const completeness = Math.round((completenessItems.filter(Boolean).length / completenessItems.length) * 100);
+  const completenessColor = completeness === 100 ? "bg-green-500" : completeness >= 60 ? "bg-primary" : "bg-amber-400";
+
   return (
-    <div className="max-w-2xl space-y-6">
+    <div className="space-y-6">
       <PageGuide
         pageKey="provider-profile"
         title="How My Profile works"
@@ -242,11 +399,24 @@ export default function ProviderProfilePage() {
         ]}
       />
       {/* Page heading */}
-      <div>
-        <h2 className="text-2xl font-bold text-slate-900">My Profile</h2>
-        <p className="text-sm text-slate-500 mt-0.5">
-          Clients see this information when you submit a quote.
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-bold text-slate-900">My Profile</h2>
+          <p className="text-sm text-slate-500 mt-0.5">
+            Clients see this when you submit a quote.
+          </p>
+        </div>
+        <div className="flex-shrink-0 text-right">
+          <div className="flex items-center gap-2 justify-end mb-1">
+            {completeness === 100
+              ? <BadgeCheck className="h-4 w-4 text-green-500" />
+              : <AlertCircle className="h-4 w-4 text-amber-400" />}
+            <span className="text-xs font-medium text-slate-600">{completeness}% complete</span>
+          </div>
+          <div className="w-32 h-1.5 rounded-full bg-slate-100 overflow-hidden">
+            <div className={`h-full rounded-full transition-all ${completenessColor}`} style={{ width: `${completeness}%` }} />
+          </div>
+        </div>
       </div>
 
       {/* Hidden file input */}
@@ -258,95 +428,107 @@ export default function ProviderProfilePage() {
         onChange={handleAvatarChange}
       />
 
-      {/* Profile header card */}
-      <Card>
-        <CardBody className="flex items-center gap-5">
-          {/* Avatar */}
-          <div className="relative flex-shrink-0">
-            <button
-              type="button"
-              onClick={() => !uploadingAvatar && avatarInputRef.current?.click()}
-              className="relative h-16 w-16 rounded-full group focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-              disabled={uploadingAvatar}
-              title="Change profile picture"
-            >
-              {avatar ? (
-                <Image
-                  src={avatar}
-                  alt={user?.name || "Profile picture"}
-                  width={64}
-                  height={64}
-                  className="h-16 w-16 rounded-full object-cover"
-                />
-              ) : (
-                <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
-                  <span className="text-xl font-bold text-primary">{initials}</span>
+      {/* 2-column layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-6 items-start">
+
+        {/* ── Left column ─────────────────────────────────────────── */}
+        <div className="space-y-5">
+          {/* Profile card */}
+          <Card>
+            <CardBody className="flex flex-col items-center text-center gap-4 pt-6 pb-5">
+              {/* Avatar */}
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => !uploadingAvatar && avatarInputRef.current?.click()}
+                  className="relative h-24 w-24 rounded-full group focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                  disabled={uploadingAvatar}
+                  title="Change profile picture"
+                >
+                  {avatar ? (
+                    <Image
+                      src={avatar}
+                      alt={user?.name || "Profile picture"}
+                      width={96}
+                      height={96}
+                      className="h-24 w-24 rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="h-24 w-24 rounded-full bg-primary/10 flex items-center justify-center">
+                      <span className="text-3xl font-bold text-primary">{initials}</span>
+                    </div>
+                  )}
+                  <span className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    {uploadingAvatar ? (
+                      <div className="h-5 w-5 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                    ) : (
+                      <Camera className="h-5 w-5 text-white" />
+                    )}
+                  </span>
+                </button>
+                <span className={`absolute bottom-1 right-1 h-3.5 w-3.5 rounded-full border-2 border-white ${cfg.dot} pointer-events-none`} />
+              </div>
+
+              {/* Name + status */}
+              <div className="w-full">
+                <p className="font-semibold text-slate-900 text-base truncate">{user?.name ?? "—"}</p>
+                <p className="text-sm text-slate-400 truncate">{user?.email ?? ""}</p>
+                <div className="mt-2 flex justify-center">
+                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium border ${cfg.active}`}>
+                    <span className={`h-1.5 w-1.5 rounded-full ${cfg.dot}`} />
+                    {cfg.label}
+                  </span>
                 </div>
-              )}
-              <span className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                {uploadingAvatar ? (
-                  <div className="h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
-                ) : (
-                  <Camera className="h-5 w-5 text-white" />
-                )}
-              </span>
-            </button>
-            <span
-              className={`absolute bottom-0.5 right-0.5 h-3.5 w-3.5 rounded-full border-2 border-white ${cfg.dot} pointer-events-none`}
-            />
-          </div>
+              </div>
 
-          {/* Name + status */}
-          <div className="flex-1 min-w-0">
-            <p className="font-semibold text-slate-900 truncate">{user?.name ?? "—"}</p>
-            <p className="text-sm text-slate-500 truncate">{user?.email ?? ""}</p>
-            <span
-              className={`inline-flex items-center gap-1.5 mt-1.5 px-2 py-0.5 rounded-full text-xs font-medium border ${cfg.active}`}
-            >
-              <span className={`h-1.5 w-1.5 rounded-full ${cfg.dot}`} />
-              {cfg.label}
-            </span>
-          </div>
+              {/* Stats */}
+              <div className="w-full grid grid-cols-2 divide-x divide-slate-100 border-t border-slate-100 pt-4">
+                <div className="text-center px-2">
+                  <p className="text-2xl font-bold text-slate-900 leading-none">{profile.completedJobCount ?? 0}</p>
+                  <p className="text-xs text-slate-500 mt-1">Jobs done</p>
+                </div>
+                <div className="text-center px-2">
+                  {profile.avgRating && profile.avgRating > 0 ? (
+                    <>
+                      <p className="text-2xl font-bold text-slate-900 leading-none">{profile.avgRating.toFixed(1)}</p>
+                      <div className="mt-1 flex justify-center"><StarRating value={profile.avgRating} /></div>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-2xl font-bold text-slate-300 leading-none">—</p>
+                      <p className="text-xs text-slate-400 mt-1">No ratings yet</p>
+                    </>
+                  )}
+                </div>
+              </div>
+            </CardBody>
+          </Card>
 
-          {/* Stats */}
-          <div className="hidden sm:flex items-center divide-x divide-slate-100">
-            <div className="pr-5 text-center">
-              <p className="text-2xl font-bold text-slate-900">
-                {profile.completedJobCount ?? 0}
-              </p>
-              <p className="text-xs text-slate-500 mt-0.5">Jobs done</p>
-            </div>
-            <div className="pl-5 text-center">
-              {profile.avgRating && profile.avgRating > 0 ? (
-                <>
-                  <p className="text-2xl font-bold text-slate-900">
-                    {profile.avgRating.toFixed(1)}
-                  </p>
-                  <StarRating value={profile.avgRating} />
-                </>
-              ) : (
-                <>
-                  <p className="text-2xl font-bold text-slate-300">—</p>
-                  <p className="text-xs text-slate-400 mt-0.5">No ratings</p>
-                </>
-              )}
-            </div>
-          </div>
-        </CardBody>
-      </Card>
+          {/* KYC */}
+          <KycUpload />
+        </div>
 
-      {/* Edit form */}
+        {/* ── Right column ───────────────────────────────────────── */}
+        <div className="space-y-6">
+
+          {/* Edit form */}
       <form onSubmit={handleSubmit}>
         <Card>
           <CardHeader>
-            <h3 className="text-sm font-semibold text-slate-700">Profile details</h3>
+            <div>
+              <h3 className="text-sm font-semibold text-slate-700">Profile details</h3>
+              <p className="text-xs text-slate-400 mt-0.5">A complete profile gets significantly more quotes accepted.</p>
+            </div>
           </CardHeader>
           <CardBody className="space-y-5">
             {/* Bio */}
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                Bio
-              </label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-sm font-medium text-slate-700">Bio</label>
+                <span className={`text-xs tabular-nums ${
+                  bio.length >= 900 ? "text-red-400" : bio.length >= 50 ? "text-green-500" : "text-slate-400"
+                }`}>{bio.length}/1000</span>
+              </div>
               <textarea
                 value={bio}
                 onChange={(e) => setBio(e.target.value)}
@@ -355,18 +537,23 @@ export default function ProviderProfilePage() {
                 placeholder="Tell clients about your experience, specialties, and working style…"
                 className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary resize-none"
               />
-              <p className="text-xs text-slate-400 mt-1 text-right">{bio.length}/1000</p>
+              {bio.trim().length < 50 && bio.length > 0 && (
+                <p className="text-xs text-amber-500 mt-1">Add at least 50 characters for a stronger profile.</p>
+              )}
             </div>
 
             {/* Skills */}
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                Skills
-              </label>
-              <SkillsInput
-                value={skills}
-                onChange={setSkills}
-              />
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-sm font-medium text-slate-700">Skills</label>
+                {skills.length > 0 && (
+                  <span className="text-xs text-slate-400">{skills.length} skill{skills.length !== 1 ? "s" : ""} added</span>
+                )}
+              </div>
+              <SkillsInput value={skills} onChange={setSkills} />
+              {skills.length === 0 && (
+                <p className="text-xs text-slate-400 mt-1.5">Add skills so clients can find you when filtering by service type.</p>
+              )}
             </div>
 
             {/* Years of experience + hourly rate */}
@@ -383,16 +570,15 @@ export default function ProviderProfilePage() {
                   onChange={(e) => setYearsExperience(Number(e.target.value))}
                   className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
                 />
+                <p className="text-xs text-slate-400 mt-1">How long you&apos;ve been working professionally.</p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                  Hourly rate (₱){" "}
-                  <span className="text-slate-400 font-normal">optional</span>
-                </label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-sm font-medium text-slate-700">Hourly rate (₱)</label>
+                  <span className="text-xs text-slate-400">optional</span>
+                </div>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400">
-                    ₱
-                  </span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400">₱</span>
                   <input
                     type="number"
                     min={0}
@@ -402,14 +588,16 @@ export default function ProviderProfilePage() {
                     className="w-full rounded-lg border border-slate-200 pl-7 pr-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
                   />
                 </div>
+                <p className="text-xs text-slate-400 mt-1">Shown as a guide to clients on your profile.</p>
               </div>
             </div>
 
             {/* Availability */}
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                Availability
-              </label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-medium text-slate-700">Availability status</label>
+                <span className={`text-xs font-medium px-2 py-0.5 rounded-full border ${cfg.active}`}>{cfg.label}</span>
+              </div>
               <div className="flex gap-2">
                 {(["available", "busy", "unavailable"] as AvailabilityStatus[]).map(
                   (status) => {
@@ -420,21 +608,20 @@ export default function ProviderProfilePage() {
                         key={status}
                         type="button"
                         onClick={() => setAvailability(status)}
-                        className={`flex-1 flex items-center justify-center gap-2 rounded-lg border py-2.5 text-sm font-medium transition-colors ${
+                        className={`flex-1 flex items-center justify-center gap-2 rounded-lg border py-2.5 text-sm font-medium transition-all ${
                           isActive
-                            ? c.active
-                            : "border-slate-200 text-slate-500 hover:bg-slate-50"
+                            ? `${c.active} shadow-sm`
+                            : "border-slate-200 text-slate-500 hover:bg-slate-50 hover:border-slate-300"
                         }`}
                       >
-                        <span
-                          className={`h-2 w-2 rounded-full ${isActive ? c.dot : "bg-slate-300"}`}
-                        />
+                        <span className={`h-2 w-2 rounded-full ${isActive ? c.dot : "bg-slate-300"}`} />
                         {c.label}
                       </button>
                     );
                   }
                 )}
               </div>
+              <p className="text-xs text-slate-400 mt-1.5">Controls whether new clients can see you as available for hire.</p>
             </div>
           </CardBody>
           <CardFooter className="flex justify-end">
@@ -445,12 +632,146 @@ export default function ProviderProfilePage() {
         </Card>
       </form>
 
+      {/* Addresses */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between w-full">
+            <div>
+              <h3 className="text-sm font-semibold text-slate-700">Saved addresses</h3>
+              <p className="text-xs text-slate-400 mt-0.5">Quick-fill your location when posting or quoting jobs.</p>
+            </div>
+            <span className="text-xs text-slate-400">{addresses.length}/10</span>
+          </div>
+        </CardHeader>
+        <CardBody className="space-y-3">
+
+          {/* Address list */}
+          {addresses.length === 0 && !addingAddress && (
+            <p className="text-sm text-slate-400 text-center py-4">
+              No saved addresses yet. Add one below.
+            </p>
+          )}
+          {addresses.map((addr) => (
+            <div
+              key={addr._id}
+              className={`flex items-start gap-3 rounded-lg border px-3 py-2.5 ${
+                addr.isDefault
+                  ? "border-primary/40 bg-primary/5"
+                  : "border-slate-200 bg-white"
+              }`}
+            >
+              <MapPin className={`mt-0.5 h-4 w-4 flex-shrink-0 ${addr.isDefault ? "text-primary" : "text-slate-400"}`} />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="text-xs font-semibold text-slate-700">{addr.label}</span>
+                  {addr.isDefault && (
+                    <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                      Default
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-slate-500 mt-0.5 truncate">{addr.address}</p>
+              </div>
+              <div className="flex items-center gap-1 flex-shrink-0">
+                {!addr.isDefault && (
+                  <button
+                    type="button"
+                    onClick={() => handleSetDefault(addr._id)}
+                    className="text-[11px] font-medium text-slate-500 hover:text-primary transition-colors px-1.5 py-0.5 rounded"
+                    title="Set as default"
+                  >
+                    Set default
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => handleDeleteAddress(addr._id)}
+                  className="p-1 text-slate-400 hover:text-red-500 transition-colors rounded"
+                  title="Remove address"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            </div>
+          ))}
+
+          {/* Add address form */}
+          {addingAddress ? (
+            <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-3 space-y-2.5">
+              <div className="grid grid-cols-[120px_1fr] gap-2">
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 mb-1">Label</label>
+                  <input
+                    value={newLabel}
+                    onChange={(e) => setNewLabel(e.target.value)}
+                    placeholder="Home"
+                    maxLength={50}
+                    className="w-full rounded-md border border-slate-200 px-2.5 py-1.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                  />
+                </div>
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-medium text-slate-600">Street &amp; postal code</label>
+                    <button
+                      type="button"
+                      onClick={detectCurrentLocation}
+                      disabled={detectingLocation}
+                      className="inline-flex items-center gap-1 text-[11px] font-medium text-primary hover:text-primary/80 disabled:opacity-50 transition-colors"
+                      title="Detect my current location"
+                    >
+                      {detectingLocation
+                        ? <Loader2 className="h-3 w-3 animate-spin" />
+                        : <LocateFixed className="h-3 w-3" />}
+                      {detectingLocation ? "Detecting…" : "Use my location"}
+                    </button>
+                  </div>
+                  <StructuredAddressInput
+                    confirmedAddress={newAddressText}
+                    onSelect={(val, coords) => {
+                      setNewAddressText(val);
+                      setNewAddressCoords(coords ?? null);
+                    }}
+                  />
+                </div>
+              </div>
+              <div className="flex items-center gap-2 justify-end">
+                <button
+                  type="button"
+                  onClick={() => { setAddingAddress(false); setNewAddressText(""); setNewAddressCoords(null); setNewLabel("Home"); }}
+                  className="text-xs text-slate-500 hover:text-slate-700 px-2 py-1 rounded"
+                >
+                  Cancel
+                </button>
+                <Button
+                  type="button"
+                  size="sm"
+                  isLoading={savingAddress}
+                  onClick={handleAddAddress}
+                  disabled={!newAddressText.trim()}
+                >
+                  Save address
+                </Button>
+              </div>
+            </div>
+          ) : addresses.length < 10 ? (
+            <button
+              type="button"
+              onClick={() => setAddingAddress(true)}
+              className="w-full flex items-center justify-center gap-2 rounded-lg border border-dashed border-slate-300 py-2.5 text-sm text-slate-500 hover:text-primary hover:border-primary/50 transition-colors"
+            >
+              <Plus className="h-4 w-4" />
+              Add address
+            </button>
+          ) : null}
+        </CardBody>
+      </Card>
+
       {/* Schedule */}
       <Card>
         <CardHeader>
           <div>
             <h3 className="text-sm font-semibold text-slate-700">Weekly schedule</h3>
-            <p className="text-xs text-slate-400 mt-0.5">Set the days and hours you’re available to take jobs.</p>
+            <p className="text-xs text-slate-400 mt-0.5">Set the days and hours you&apos;re available to take jobs.</p>
           </div>
         </CardHeader>
         <CardBody className="p-0">
@@ -463,8 +784,8 @@ export default function ProviderProfilePage() {
         </CardFooter>
       </Card>
 
-      {/* KYC Verification */}
-      <KycUpload />
+        </div>{/* end right column */}
+      </div>{/* end 2-column grid */}
     </div>
   );
 }
