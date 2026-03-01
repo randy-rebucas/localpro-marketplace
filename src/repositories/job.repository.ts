@@ -239,6 +239,32 @@ export class JobRepository extends BaseRepository<JobDocument> {
       .lean() as never;
   }
 
+  /**
+   * Patch a job's status + one photo field using the native driver to bypass
+   * Mongoose schema casting (allows storing arbitrary string arrays).
+   */
+  async updateStatusAndPhoto(
+    id: string,
+    status: string,
+    photoField: "beforePhoto" | "afterPhoto",
+    photos: string[]
+  ): Promise<void> {
+    await this.connect();
+    await Job.collection.updateOne(
+      { _id: new Types.ObjectId(id) },
+      { $set: { status, [photoField]: photos } }
+    );
+  }
+
+  /** Count jobs for a provider filtered by an array of statuses. */
+  async countByProvider(providerId: string, statuses: string[]): Promise<number> {
+    await this.connect();
+    return Job.countDocuments({
+      providerId: new Types.ObjectId(providerId),
+      status: { $in: statuses },
+    });
+  }
+
   /** Count jobs posted by a client on or after the given date (for daily cap enforcement). */
   async countByClientSince(clientId: string, since: Date): Promise<number> {
     await this.connect();

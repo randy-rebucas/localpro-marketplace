@@ -2,9 +2,8 @@ import {
   jobRepository,
   transactionRepository,
   activityRepository,
+  providerProfileRepository,
 } from "@/repositories";
-import Job from "@/models/Job";
-import ProviderProfile from "@/models/ProviderProfile";
 import { canTransition, canTransitionEscrow } from "@/lib/jobLifecycle";
 import { pushStatusUpdateMany } from "@/lib/events";
 import { calculateCommission } from "@/lib/commission";
@@ -39,13 +38,10 @@ export class EscrowService {
     const check = canTransition(job as unknown as IJob, "in_progress");
     if (!check.allowed) throw new UnprocessableError(check.reason!);
 
-    // Use the native driver to fully bypass Mongoose schema casting.
+    // Use native-driver path in repository to bypass Mongoose schema casting.
     // Replace (not merge) beforePhoto so client-uploaded job-creation photos
     // don't block the provider from uploading their own start-of-work photos.
-    await Job.collection.updateOne(
-      { _id: jobDoc._id },
-      { $set: { status: "in_progress", beforePhoto: photos } }
-    );
+    await jobRepository.updateStatusAndPhoto(jobDoc._id.toString(), "in_progress", "beforePhoto", photos);
 
     await activityRepository.log({
       userId: user.userId,
@@ -77,13 +73,10 @@ export class EscrowService {
     const check = canTransition(job as unknown as IJob, "completed");
     if (!check.allowed) throw new UnprocessableError(check.reason!);
 
-    // Use the native driver to fully bypass Mongoose schema casting
+    // Use native-driver path in repository to bypass Mongoose schema casting
     const existing = Array.isArray(job.afterPhoto) ? job.afterPhoto : [];
     const merged = [...existing, ...photos].slice(0, 3);
-    await Job.collection.updateOne(
-      { _id: jobDoc._id },
-      { $set: { status: "completed", afterPhoto: merged } }
-    );
+    await jobRepository.updateStatusAndPhoto(jobDoc._id.toString(), "completed", "afterPhoto", merged);
 
     await activityRepository.log({
       userId: user.userId,
@@ -133,14 +126,11 @@ export class EscrowService {
     if (job.providerId) {
       const providerId = job.providerId.toString();
       const [completedCount, totalCount] = await Promise.all([
-        Job.countDocuments({ providerId, status: "completed" }),
-        Job.countDocuments({ providerId, status: { $in: ["completed", "cancelled", "refunded"] } }),
+        jobRepository.countByProvider(providerId, ["completed"]),
+        jobRepository.countByProvider(providerId, ["completed", "cancelled", "refunded"]),
       ]);
       const completionRate = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 100;
-      await ProviderProfile.updateOne(
-        { userId: job.providerId.toString() },
-        { $set: { completedJobCount: completedCount, completionRate } }
-      );
+      await providerProfileRepository.updateCompletionStats(providerId, completedCount, completionRate);
     }
 
     await transactionRepository.setPending(job._id!.toString(), "completed");

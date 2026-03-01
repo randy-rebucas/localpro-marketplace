@@ -1,8 +1,5 @@
 import { payoutRepository } from "@/repositories/payout.repository";
-import { transactionRepository } from "@/repositories";
-import { activityRepository } from "@/repositories";
-import { connectDB } from "@/lib/db";
-import Transaction from "@/models/Transaction";
+import { transactionRepository, activityRepository } from "@/repositories";
 import {
   NotFoundError,
   ForbiddenError,
@@ -14,19 +11,8 @@ import type { PayoutStatus } from "@/types";
 export class PayoutService {
   /** Returns available payout balance for a provider. */
   async getAvailableBalance(providerId: string): Promise<number> {
-    await connectDB();
-
-    // Total net from all completed transactions
-    const netResult = await Transaction.aggregate([
-      {
-        $match: {
-          payeeId: new (require("mongoose").Types.ObjectId)(providerId),
-          status: "completed",
-        },
-      },
-      { $group: { _id: null, total: { $sum: "$netAmount" } } },
-    ]);
-    const totalNet: number = netResult[0]?.total ?? 0;
+    // Total net from all completed transactions (uses existing repository aggregate)
+    const { net: totalNet } = await transactionRepository.sumCompletedByPayee(providerId);
 
     // Already requested/paid out
     const paidOut = await payoutRepository.sumPaidOut(providerId);

@@ -38,7 +38,8 @@
       "Bash(pnpm list tailwind-merge)",
       "Bash(pnpm add tailwind-merge)",
       "Bash(find \"c:/Users/corew/localpro-marketplace/src/app/\\(dashboard\\)/admin\" -type f)",
-      "Bash(pnpm add -D @next/bundle-analyzer)"
+      "Bash(pnpm add -D @next/bundle-analyzer)",
+      "Bash(npm run build)"
     ]
   }
 }

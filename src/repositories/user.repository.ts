@@ -7,6 +7,12 @@ export class UserRepository extends BaseRepository<UserDocument> {
     super(User);
   }
 
+  /** Returns a full Mongoose document with the password field for mutation workflows. */
+  async getDocByIdWithPassword(userId: string): Promise<UserDocument | null> {
+    await this.connect();
+    return User.findById(userId).select("+password");
+  }
+
   /** Includes password field for auth comparison. */
   async findByEmailWithPassword(email: string): Promise<UserDocument | null> {
     await this.connect();
@@ -107,6 +113,22 @@ export class UserRepository extends BaseRepository<UserDocument> {
       password: hashedPassword,
       $unset: { resetPasswordToken: 1, resetPasswordTokenExpiry: 1 },
     });
+  }
+
+  /** Returns the first admin user (_id only). Used as a default receiverId for support messages. */
+  async findAdmin(): Promise<{ _id: { toString(): string } } | null> {
+    await this.connect();
+    return User.findOne({ role: "admin" }).select("_id").lean() as never;
+  }
+
+  /** Batch fetch users by an array of IDs. Returns name, email, role fields. */
+  async findByIds(
+    ids: string[]
+  ): Promise<{ _id: { toString(): string }; name: string; email: string; role: string }[]> {
+    await this.connect();
+    return User.find({ _id: { $in: ids } })
+      .select("name email role")
+      .lean() as never;
   }
 
   /** Providers filtered by kycStatus for the admin KYC review queue. */

@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { connectDB } from "@/lib/db";
-import User from "@/models/User";
+import { userRepository } from "@/repositories";
 import { requireUser } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
-import { ValidationError } from "@/lib/errors";
+import { ValidationError, NotFoundError } from "@/lib/errors";
 
 const UpdateMeSchema = z.object({
   name: z.string().min(2).max(100).optional(),
@@ -19,9 +18,8 @@ export const PUT = withHandler(async (req: NextRequest) => {
   const parsed = UpdateMeSchema.safeParse(body);
   if (!parsed.success) throw new ValidationError(parsed.error.errors[0].message);
 
-  await connectDB();
-  const user = await User.findById(tokenUser.userId).select("+password");
-  if (!user) throw new ValidationError("User not found");
+  const user = await userRepository.getDocByIdWithPassword(tokenUser.userId);
+  if (!user) throw new NotFoundError("User");
 
   if (parsed.data.name) user.name = parsed.data.name;
   if (parsed.data.avatar !== undefined) user.avatar = parsed.data.avatar;
@@ -48,9 +46,8 @@ export const PUT = withHandler(async (req: NextRequest) => {
 export const GET = withHandler(async () => {
   const tokenUser = await requireUser();
 
-  await connectDB();
-  const user = await User.findById(tokenUser.userId);
-  if (!user) throw new ValidationError("User not found");
+  const user = await userRepository.findById(tokenUser.userId);
+  if (!user) throw new NotFoundError("User");
 
   return NextResponse.json({
     _id: user._id,

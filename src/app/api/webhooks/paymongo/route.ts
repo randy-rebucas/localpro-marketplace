@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyWebhookSignature } from "@/lib/paymongo";
 import { paymentService } from "@/services";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 /**
  * POST /api/webhooks/paymongo
@@ -15,6 +16,13 @@ import { paymentService } from "@/services";
  *   checkout_session.payment.expired → mark payment failed, notify client
  */
 export async function POST(req: NextRequest) {
+  // Rate-limit: 60 webhook deliveries per minute per source IP
+  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+  const rl = checkRateLimit(`webhook:${ip}`, { windowMs: 60_000, max: 60 });
+  if (!rl.ok) {
+    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+  }
+
   const rawBody = await req.text();
   const signature = req.headers.get("Paymongo-Signature") ?? "";
 

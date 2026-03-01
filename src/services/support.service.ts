@@ -1,12 +1,9 @@
-import { messageRepository } from "@/repositories";
-import { connectDB } from "@/lib/db";
-import User from "@/models/User";
+import { messageRepository, userRepository, notificationRepository } from "@/repositories";
 import {
   pushSupportToAdmin,
   pushSupportToUser,
   pushNotification,
 } from "@/lib/events";
-import { notificationRepository } from "@/repositories";
 import { NotFoundError } from "@/lib/errors";
 import type { TokenPayload } from "@/lib/auth";
 
@@ -22,11 +19,10 @@ export class SupportService {
 
   /** Send a message from a user to the support team. */
   async sendUserMessage(user: TokenPayload, body: string) {
-    await connectDB();
     // Find any admin to store as receiverId (required by schema).
     // Fall back to the sender's own ID so the message is still stored even on
     // fresh installs before an admin account has been created.
-    const admin = await User.findOne({ role: "admin" }).select("_id").lean() as { _id: { toString(): string } } | null;
+    const admin = await userRepository.findAdmin();
     const receiverId = admin ? admin._id.toString() : user.userId;
 
     const message = await messageRepository.create({
@@ -52,7 +48,7 @@ export class SupportService {
 
   /** Return a specific user's support thread. Admin opens it → mark user messages as read. */
   async getThreadForAdmin(targetUserId: string) {
-    const user = await User.findById(targetUserId).select("name email role").lean();
+    const user = await userRepository.findById(targetUserId);
     if (!user) throw new NotFoundError("User");
 
     const messages = await messageRepository.findSupportThread(targetUserId);
@@ -62,7 +58,7 @@ export class SupportService {
 
   /** Admin sends a reply to a user's support thread. */
   async adminReply(admin: TokenPayload, targetUserId: string, body: string) {
-    const targetUser = await User.findById(targetUserId).select("_id name").lean() as { _id: { toString(): string }; name: string } | null;
+    const targetUser = await userRepository.findById(targetUserId);
     if (!targetUser) throw new NotFoundError("User");
 
     const message = await messageRepository.create({
@@ -97,11 +93,8 @@ export class SupportService {
 
     if (summaries.length === 0) return [];
 
-    await connectDB();
     const userIds = summaries.map((s) => s.userId);
-    const users = await User.find({ _id: { $in: userIds } })
-      .select("name email role")
-      .lean() as { _id: { toString(): string }; name: string; email: string; role: string }[];
+    const users = await userRepository.findByIds(userIds);
 
     const userMap = new Map(users.map((u) => [u._id.toString(), u]));
 

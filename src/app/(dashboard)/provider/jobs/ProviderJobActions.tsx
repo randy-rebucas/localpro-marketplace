@@ -242,7 +242,7 @@ export default function ProviderJobActions({ jobId, status, escrowStatus, before
   // ── Render ──────────────────────────────────────────────────────────────────
 
   // Waiting for escrow
-  if (status !== "completed" && escrowStatus !== "funded") {
+  if (status !== "completed" && status !== "disputed" && escrowStatus !== "funded") {
     return <p className="text-xs text-amber-600">⚠ Waiting for client to fund escrow.</p>;
   }
 

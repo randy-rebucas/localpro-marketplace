@@ -44,6 +44,19 @@ export class ProviderProfileRepository extends BaseRepository<ProviderProfileDoc
     );
   }
 
+  /** Update completion stats after escrow release. */
+  async updateCompletionStats(
+    userId: string,
+    completedJobCount: number,
+    completionRate: number
+  ): Promise<void> {
+    await this.connect();
+    await ProviderProfile.updateOne(
+      { userId },
+      { $set: { completedJobCount, completionRate } }
+    );
+  }
+
   /** Batch fetch rating/completedJobCount for a list of provider user IDs. */
   async findStatsByUserIds(
     userIds: string[]

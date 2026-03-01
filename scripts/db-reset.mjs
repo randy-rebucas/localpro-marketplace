@@ -23,7 +23,7 @@ const SEED_ONLY  = args.includes("--seed-only");
 const NO_ADMIN   = args.includes("--no-admin");
 
 // ─── Config ───────────────────────────────────────────────────────────────────
-const MONGODB_URI = process.env.ATLAS_MONGODB_URI_MONGODB_URI;
+const MONGODB_URI = process.env.MONGODB_URI;
 if (!MONGODB_URI) {
   console.error("❌  MONGODB_URI is not set. Run with: node --env-file=.env.local scripts/db-reset.mjs");
   process.exit(1);
