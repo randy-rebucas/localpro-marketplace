@@ -10,6 +10,7 @@ import { formatCurrency } from "@/lib/utils";
 import AdminJobsChart from "./AdminJobsChart";
 import Link from "next/link";
 import { CircleDollarSign, BarChart3, Lock, AlertTriangle, ClipboardCheck, Users, ShieldAlert } from "lucide-react";
+import PageGuide from "@/components/shared/PageGuide";
 import type { JobStatus } from "@/types";
 
 export const metadata: Metadata = { title: "Admin Dashboard" };
@@ -175,6 +176,16 @@ export default async function AdminDashboardPage() {
 
   return (
     <div className="space-y-6">
+      <PageGuide
+        pageKey="admin-dashboard"
+        title="How the Admin Dashboard works"
+        steps={[
+          { icon: "📊", title: "Platform KPIs", description: "Monitor real-time GMV, commission earned, escrow balance, and total active users at a glance." },
+          { icon: "⚠️", title: "Action alerts", description: "Pending validations and open disputes are highlighted at the top — address these first." },
+          { icon: "📈", title: "Job pipeline", description: "The chart shows job volume by status so you can spot bottlenecks in the marketplace." },
+          { icon: "🔗", title: "Quick navigation", description: "Jump to Users, Jobs, Disputes, Revenue, Payouts, or KYC directly from this overview." },
+        ]}
+      />
       <div>
         <h2 className="text-2xl font-bold text-slate-900">Admin Dashboard</h2>
         <p className="text-slate-500 text-sm mt-0.5">Platform overview and key metrics.</p>

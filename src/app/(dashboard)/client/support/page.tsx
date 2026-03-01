@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import { useAuthStore } from "@/stores/authStore";
 import { Headphones } from "lucide-react";
+import PageGuide from "@/components/shared/PageGuide";
 
 const ChatWindow = dynamic(() => import("@/components/chat/ChatWindow"), {
   ssr: false,
@@ -17,7 +18,17 @@ export default function ClientSupportPage() {
   if (!user) return null;
 
   return (
-    <div className="flex flex-col h-[calc(100vh-8rem)]">
+    <div className="flex flex-col gap-4 h-[calc(100vh-8rem)]">
+      <PageGuide
+        pageKey="client-support"
+        title="How Support works"
+        steps={[
+          { icon: "🎧", title: "Chat with support", description: "Send a message below and our support team will get back to you as soon as possible." },
+          { icon: "⏱️", title: "Response times", description: "We typically respond within a few hours during business hours (Mon–Sat, 8am–6pm)." },
+          { icon: "🔍", title: "Report issues", description: "Having trouble with a job or payment? Describe the problem clearly and include relevant job IDs." },
+          { icon: "📋", title: "Disputes handled here", description: "For payment disputes, our team can escalate and involve both parties to reach a fair resolution." },
+        ]}
+      />
       <ChatWindow
         fetchUrl="/api/support"
         postUrl="/api/support"

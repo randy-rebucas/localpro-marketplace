@@ -3,6 +3,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { payoutService } from "@/services/payout.service";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { Wallet, Clock, CheckCircle2, XCircle, ArrowLeft, Loader2 } from "lucide-react";
+import PageGuide from "@/components/shared/PageGuide";
 import type { IPayout, PayoutStatus } from "@/types";
 import Link from "next/link";
 import RequestPayoutModal from "@/components/payment/RequestPayoutModal";
@@ -41,6 +42,16 @@ export default async function ProviderPayoutsPage() {
 
   return (
     <div className="space-y-6">
+      <PageGuide
+        pageKey="provider-payouts"
+        title="How Payouts works"
+        steps={[
+          { icon: "💳", title: "Check your balance", description: "Your available balance in the Earnings page must be positive before requesting a payout." },
+          { icon: "🏦", title: "Submit bank details", description: "Enter your bank name, account number, and account name when requesting a payout." },
+          { icon: "⏳", title: "Processing time", description: "Payouts are reviewed by our admin team and typically processed within 1–3 business days." },
+          { icon: "📋", title: "Track status", description: "Each payout request moves through: Pending → Processing → Completed (or Rejected with a reason)." },
+        ]}
+      />
       {/* Header */}
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>

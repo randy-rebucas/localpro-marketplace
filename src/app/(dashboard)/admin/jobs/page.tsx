@@ -4,6 +4,7 @@ import { jobRepository } from "@/repositories/job.repository";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import AdminJobActions from "./AdminJobActions";
 import RealtimeRefresher from "@/components/shared/RealtimeRefresher";
+import PageGuide from "@/components/shared/PageGuide";
 import { MapPin, Calendar, User, ChevronRight } from "lucide-react";
 import Link from "next/link";
 
@@ -36,6 +37,16 @@ export default async function AdminJobsPage() {
 
   return (
     <div className="space-y-6">
+      <PageGuide
+        pageKey="admin-jobs"
+        title="How Job Validation works"
+        steps={[
+          { icon: "📋", title: "Review pending jobs", description: "Clients submit jobs that require admin review before becoming visible to providers in the marketplace." },
+          { icon: "🚨", title: "Check risk score", description: "Each job has an automated risk score (Low/Med/High). High-risk jobs need closer scrutiny." },
+          { icon: "✅", title: "Approve to publish", description: "Approving makes the job live and notifies eligible providers. Review all details before approving." },
+          { icon: "❌", title: "Reject with reason", description: "Rejecting sends the client a notification with your reason so they can correct and resubmit." },
+        ]}
+      />
       <RealtimeRefresher entity="job" />
       <div>
         <h2 className="text-2xl font-bold text-slate-900">Job Validation</h2>

@@ -7,6 +7,7 @@ import { connectDB } from "@/lib/db";
 import Category from "@/models/Category";
 import MarketplaceClient from "./MarketplaceClient";
 import type { IJob } from "@/types";
+import PageGuide from "@/components/shared/PageGuide";
 
 export const metadata: Metadata = { title: "Marketplace" };
 
@@ -68,8 +69,20 @@ export default async function MarketplacePage() {
   if (!user) return null;
 
   return (
-    <Suspense fallback={<MarketplaceSkeleton />}>
-      <MarketplaceContent userId={user.userId} />
-    </Suspense>
+    <div className="space-y-6">
+      <PageGuide
+        pageKey="provider-marketplace"
+        title="How the Marketplace works"
+        steps={[
+          { icon: "🔍", title: "Browse open jobs", description: "See all jobs posted by clients in your service area that are waiting for quotes." },
+          { icon: "🤖", title: "AI ranking", description: "Toggle 'AI Rank' to sort jobs by relevance to your skills and profile using smart matching." },
+          { icon: "🏷️", title: "Filter & search", description: "Filter by service category or search by keyword to find the jobs best suited to your expertise." },
+          { icon: "💬", title: "Submit a quote", description: "Click any job to see full details, then send a competitive quote to win the job." },
+        ]}
+      />
+      <Suspense fallback={<MarketplaceSkeleton />}>
+        <MarketplaceContent userId={user.userId} />
+      </Suspense>
+    </div>
   );
 }

@@ -12,6 +12,7 @@ import { useAuthStore } from "@/stores/authStore";
 import SkillsInput from "@/components/shared/SkillsInput";
 import KycUpload from "@/components/shared/KycUpload";
 import { Star, Camera } from "lucide-react";
+import PageGuide from "@/components/shared/PageGuide";
 import { Skeleton } from "@/components/ui/Spinner";
 import { apiFetch } from "@/lib/fetchClient";
 
@@ -230,6 +231,16 @@ export default function ProviderProfilePage() {
 
   return (
     <div className="max-w-2xl space-y-6">
+      <PageGuide
+        pageKey="provider-profile"
+        title="How My Profile works"
+        steps={[
+          { icon: "🪪", title: "Complete your profile", description: "A complete profile with a photo, bio, and skills wins significantly more jobs than an incomplete one." },
+          { icon: "🛠️", title: "Add your skills", description: "List the specific services you offer so clients can find you through category filters." },
+          { icon: "🛡️", title: "Upload KYC docs", description: "Submit a government-issued ID to earn the Verified badge — clients trust verified providers more." },
+          { icon: "🕐", title: "Set availability", description: "Mark your weekly schedule so clients know when you're available to take on work." },
+        ]}
+      />
       {/* Page heading */}
       <div>
         <h2 className="text-2xl font-bold text-slate-900">My Profile</h2>

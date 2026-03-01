@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import Button from "@/components/ui/Button";
 import { formatCurrency } from "@/lib/utils";
+import PageGuide from "@/components/shared/PageGuide";
 import { Skeleton } from "@/components/ui/Spinner";
 import { apiFetch } from "@/lib/fetchClient";
 
@@ -304,6 +305,16 @@ export default function ClientFavoritesPage() {
 
   return (
     <div className="space-y-6">
+      <PageGuide
+        pageKey="client-favorites"
+        title="How Favorite Providers works"
+        steps={[
+          { icon: "❤️", title: "Save providers", description: "Heart any provider on the marketplace to save them here for quick access later." },
+          { icon: "📨", title: "Direct job invite", description: "Post a job directly to a saved provider — no need to wait for them to find your listing." },
+          { icon: "⭐", title: "Compare at a glance", description: "See each provider's rating, completed job count, and skills side by side." },
+          { icon: "🔍", title: "Search & filter", description: "Use the search bar to quickly find a saved provider by name or skill." },
+        ]}
+      />
       <div>
         <h2 className="text-2xl font-bold text-slate-900">Favorite Providers</h2>
         <p className="text-slate-500 text-sm mt-0.5">

@@ -3,6 +3,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { userRepository } from "@/repositories/user.repository";
 import AdminKycActions from "./AdminKycActions";
 import { ShieldCheck, ShieldX, Clock, ExternalLink } from "lucide-react";
+import PageGuide from "@/components/shared/PageGuide";
 
 export const metadata: Metadata = { title: "KYC Review" };
 
@@ -93,6 +94,16 @@ export default async function AdminKycPage() {
 
   return (
     <div className="space-y-6">
+      <PageGuide
+        pageKey="admin-kyc"
+        title="How KYC Review works"
+        steps={[
+          { icon: "📄", title: "Review documents", description: "Providers upload a government-issued ID to prove their identity. Click the document link to view it." },
+          { icon: "✅", title: "Approve for Verified badge", description: "Approving grants the provider a Verified badge on their profile, building client trust." },
+          { icon: "❌", title: "Reject with reason", description: "If the document is unclear or invalid, reject and include a reason so the provider can resubmit." },
+          { icon: "🔁", title: "Resubmission queue", description: "Rejected providers can upload new documents — they'll reappear here for a second review." },
+        ]}
+      />
       <div>
         <h2 className="text-2xl font-bold text-slate-900">KYC Review</h2>
         <p className="text-slate-500 text-sm mt-0.5">

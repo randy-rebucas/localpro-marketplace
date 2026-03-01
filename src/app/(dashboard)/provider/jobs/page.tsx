@@ -6,6 +6,7 @@ import { paymentRepository } from "@/repositories/payment.repository";
 import Link from "next/link";
 import RealtimeRefresher from "@/components/shared/RealtimeRefresher";
 import ProviderJobsList from "./ProviderJobsList";
+import PageGuide from "@/components/shared/PageGuide";
 import type { IJob } from "@/types";
 
 export const metadata: Metadata = { title: "My Jobs" };
@@ -66,6 +67,16 @@ export default async function ProviderJobsPage() {
 
   return (
     <div className="space-y-6">
+      <PageGuide
+        pageKey="provider-jobs"
+        title="How My Jobs works"
+        steps={[
+          { icon: "📋", title: "All assigned jobs", description: "See every job that's been assigned to you — from accepted quotes through to completion." },
+          { icon: "📸", title: "Upload before photos", description: "When starting a job, upload before photos to document the initial state of the work area." },
+          { icon: "✅", title: "Mark as complete", description: "Once the work is done, upload after photos and mark the job complete to trigger escrow release." },
+          { icon: "💰", title: "Track payments", description: "See the funded escrow amount for each job so you know exactly what you'll be paid." },
+        ]}
+      />
       <RealtimeRefresher entity="job" />
       <div>
         <h2 className="text-2xl font-bold text-slate-900">Active Jobs</h2>

@@ -5,6 +5,7 @@ import { DisputeStatusBadge } from "@/components/ui/Badge";
 import { formatDate, formatCurrency } from "@/lib/utils";
 import DisputeActions from "./DisputeActions";
 import RealtimeRefresher from "@/components/shared/RealtimeRefresher";
+import PageGuide from "@/components/shared/PageGuide";
 import { PhotoStrip } from "@/components/shared/JobPhotoGallery";
 import { AlertOctagon, Search, Lock } from "lucide-react";
 
@@ -73,6 +74,16 @@ export default async function AdminDisputesPage() {
 
   return (
     <div className="space-y-6">
+      <PageGuide
+        pageKey="admin-disputes"
+        title="How Dispute Resolution works"
+        steps={[
+          { icon: "📝", title: "Review the dispute", description: "Read the client's complaint and the provider's side. View uploaded evidence photos from both parties." },
+          { icon: "🔒", title: "Escrow is held", description: "Payment remains in escrow during the dispute — neither party can access it until you decide." },
+          { icon: "⚖️", title: "Make a decision", description: "Release payment to the provider if work was completed, or refund the client if the dispute is valid." },
+          { icon: "📋", title: "All decisions are logged", description: "Every dispute resolution is recorded in the activity log for audit and accountability purposes." },
+        ]}
+      />
       <RealtimeRefresher entity="dispute" />
       <div>
         <h2 className="text-2xl font-bold text-slate-900">Dispute Panel</h2>

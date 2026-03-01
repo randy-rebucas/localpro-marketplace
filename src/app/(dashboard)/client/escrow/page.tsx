@@ -8,6 +8,7 @@ import { formatCurrency } from "@/lib/utils";
 import { CheckCircle } from "lucide-react";
 import { Suspense } from "react";
 import EscrowTabs from "./EscrowTabs";
+import PageGuide from "@/components/shared/PageGuide";
 
 export const metadata: Metadata = { title: "Escrow" };
 
@@ -124,6 +125,16 @@ export default async function EscrowPage({ searchParams }: EscrowPageProps) {
 
   return (
     <div className="space-y-6">
+      <PageGuide
+        pageKey="client-escrow"
+        title="How Escrow works"
+        steps={[
+          { icon: "🔒", title: "Payment protection", description: "Escrow holds your payment safely until the job is completed to your satisfaction — you're always protected." },
+          { icon: "💳", title: "Fund after accepting", description: "Once you accept a provider's quote, fund escrow via PayMongo to officially start the job." },
+          { icon: "✅", title: "Release when satisfied", description: "After the provider marks the job done and you're happy with the result, release payment from escrow." },
+          { icon: "⚖️", title: "Raise a dispute", description: "If there's an issue, raise a dispute and our team will mediate. Funds remain held during review." },
+        ]}
+      />
       {/* Header streams immediately — no data dependency */}
       <div>
         <h2 className="text-2xl font-bold text-slate-900">Escrow</h2>

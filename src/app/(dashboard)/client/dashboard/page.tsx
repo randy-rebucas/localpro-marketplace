@@ -11,6 +11,7 @@ import { formatCurrency, formatRelativeTime } from "@/lib/utils";
 import Link from "next/link";
 import { Briefcase, Lock, CircleDollarSign, ShieldCheck } from "lucide-react";
 import { Suspense } from "react";
+import PageGuide from "@/components/shared/PageGuide";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
@@ -161,6 +162,16 @@ export default async function ClientDashboardPage() {
 
   return (
     <div className="space-y-6">
+      <PageGuide
+        pageKey="client-dashboard"
+        title="How your Client Dashboard works"
+        steps={[
+          { icon: "📋", title: "Post a Job", description: "Click '+ Post a Job' to describe your service need, set a budget, and schedule a date." },
+          { icon: "💬", title: "Review Quotes", description: "Providers will send you quotes. Open each job to compare quotes and accept the best one." },
+          { icon: "🔒", title: "Fund Escrow", description: "After accepting a quote, fund escrow to secure your payment. Your money is held safely until the job is done." },
+          { icon: "✅", title: "Release Payment", description: "Once the provider completes the job and you're satisfied, release payment from escrow." },
+        ]}
+      />
       {/* Header streams immediately — no data dependency */}
       <div className="flex items-center justify-between">
         <div className="h-14" /> {/* placeholder height while greeting loads */}

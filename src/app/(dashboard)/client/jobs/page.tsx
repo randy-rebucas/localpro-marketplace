@@ -9,6 +9,7 @@ import type { IJob } from "@/types";
 import { Suspense } from "react";
 import RealtimeRefresher from "@/components/shared/RealtimeRefresher";
 import ClientJobsList from "./ClientJobsList";
+import PageGuide from "@/components/shared/PageGuide";
 
 export const metadata: Metadata = { title: "My Jobs" };
 
@@ -58,6 +59,16 @@ export default async function ClientJobsPage() {
 
   return (
     <div className="space-y-6">
+      <PageGuide
+        pageKey="client-jobs"
+        title="How My Jobs works"
+        steps={[
+          { icon: "📂", title: "See all your jobs", description: "All jobs you've posted are listed here — open, assigned, in progress, and completed." },
+          { icon: "👆", title: "Click to manage", description: "Click any job to view quotes from providers, accept the best one, and take action." },
+          { icon: "🤝", title: "Accept a quote", description: "Accepting a quote locks in your provider. Fund escrow to officially start the job." },
+          { icon: "📡", title: "Live updates", description: "Job statuses update in real time when providers take action — no need to refresh." },
+        ]}
+      />
       <RealtimeRefresher entity="job" />
       {/* Header streams immediately — no data dependency */}
       <div className="flex items-center justify-between">

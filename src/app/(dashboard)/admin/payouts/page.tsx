@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import type { IPayout, IUser, PayoutStatus } from "@/types";
 import PayoutActions from "./PayoutActions";
+import PageGuide from "@/components/shared/PageGuide";
 import AdminEscrowReleaseCard from "./AdminEscrowReleaseCard";
 
 export const metadata: Metadata = { title: "Manage Payouts" };
@@ -64,6 +65,16 @@ export default async function AdminPayoutsPage() {
 
   return (
     <div className="space-y-8">
+      <PageGuide
+        pageKey="admin-payouts"
+        title="How Payouts & Payments works"
+        steps={[
+          { icon: "📥", title: "Review requests", description: "Providers submit payout requests with their bank details. Pending requests need your attention first." },
+          { icon: "🔍", title: "Verify details", description: "Check the provider's available balance and confirm bank account details before approving." },
+          { icon: "▶️", title: "Approve & process", description: "Mark as Processing when you initiate the bank transfer, then Complete once funds are sent." },
+          { icon: "❌", title: "Reject if needed", description: "Reject with a clear reason (e.g. invalid bank details) so the provider can resubmit correctly." },
+        ]}
+      />
       {/* ── Page Header ── */}
       <div>
         <h2 className="text-2xl font-bold text-slate-900">Payouts & Payments</h2>

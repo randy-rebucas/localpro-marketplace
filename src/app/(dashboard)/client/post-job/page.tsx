@@ -18,6 +18,7 @@ const LocationAutocomplete = dynamic(
 import { formatCurrency } from "@/lib/utils";
 import type { ICategory } from "@/types";
 import { apiFetch } from "@/lib/fetchClient";
+import PageGuide from "@/components/shared/PageGuide";
 
 interface FormData {
   title: string;
@@ -223,6 +224,16 @@ export default function PostJobPage() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
+      <PageGuide
+        pageKey="client-post-job"
+        title="How to post a job"
+        steps={[
+          { icon: "🔧", title: "Service details", description: "Choose a service category, describe what you need done, and enter your location." },
+          { icon: "💰", title: "Budget & schedule", description: "Set your budget and preferred date. Providers will use this to send you accurate quotes." },
+          { icon: "📸", title: "Upload photos", description: "Add photos to help providers better understand the scope of work (optional but recommended)." },
+          { icon: "🚀", title: "Submit & wait", description: "Once submitted, eligible providers in your area will be notified and start sending quotes." },
+        ]}
+      />
       <div>
         <h2 className="text-2xl font-bold text-slate-900">Post a Job</h2>
         <p className="text-slate-500 text-sm mt-0.5">Fill in the details below to find the right professional.</p>

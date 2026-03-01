@@ -13,6 +13,7 @@ import { formatCurrency, formatRelativeTime } from "@/lib/utils";
 import { calculateCommission } from "@/lib/commission";
 import Link from "next/link";
 import { CircleDollarSign, Briefcase, Star, Store, TrendingUp, Trophy, Flame, ShieldCheck, Zap } from "lucide-react";
+import PageGuide from "@/components/shared/PageGuide";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
@@ -267,8 +268,20 @@ export default async function ProviderDashboardPage() {
   if (!user) return null;
 
   return (
-    <Suspense fallback={<ProviderDashboardSkeleton />}>
-      <ProviderDashboardContent userId={user.userId} />
-    </Suspense>
+    <div className="space-y-6">
+      <PageGuide
+        pageKey="provider-dashboard"
+        title="How your Provider Dashboard works"
+        steps={[
+          { icon: "📊", title: "Track performance", description: "See your active jobs, total earnings, average rating, and completion rate at a glance." },
+          { icon: "🏆", title: "Earn your tier", description: "Complete jobs and earn 5-star reviews to rise through Rising → Expert → Top Pro tiers." },
+          { icon: "🔥", title: "Keep your streak", description: "A 5-star streak shows consecutive top-rated jobs — it boosts client confidence in your profile." },
+          { icon: "⚡", title: "Quick actions", description: "Jump to the Marketplace to find new jobs, or My Jobs to manage your active assignments." },
+        ]}
+      />
+      <Suspense fallback={<ProviderDashboardSkeleton />}>
+        <ProviderDashboardContent userId={user.userId} />
+      </Suspense>
+    </div>
   );
 }

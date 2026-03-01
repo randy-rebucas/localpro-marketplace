@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { transactionRepository } from "@/repositories/transaction.repository";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { CircleDollarSign, TrendingDown, Wallet, ArrowUpRight } from "lucide-react";
+import PageGuide from "@/components/shared/PageGuide";
 import { payoutService } from "@/services/payout.service";
 import RequestPayoutModal from "@/components/payment/RequestPayoutModal";
 import ExportEarningsButton from "@/components/payment/ExportEarningsButton";
@@ -177,6 +178,16 @@ export default async function EarningsPage() {
 
   return (
     <div className="space-y-6">
+      <PageGuide
+        pageKey="provider-earnings"
+        title="How Earnings works"
+        steps={[
+          { icon: "💵", title: "Gross vs net", description: "Gross is the full job amount. A 10% platform commission is deducted, leaving your net payout." },
+          { icon: "📈", title: "Available balance", description: "Your available balance is net earnings minus any already-requested payouts." },
+          { icon: "🏦", title: "Request a payout", description: "Click 'Request Payout' to withdraw your available balance to your bank account." },
+          { icon: "📄", title: "Export history", description: "Download your full earnings history as a CSV for tax reporting or personal records." },
+        ]}
+      />
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h2 className="text-2xl font-bold text-slate-900">Earnings</h2>

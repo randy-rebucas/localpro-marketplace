@@ -7,6 +7,7 @@ import Button from "@/components/ui/Button";
 import { apiFetch } from "@/lib/fetchClient";
 import { formatDate, formatCurrency } from "@/lib/utils";
 import type { IJob, IReview } from "@/types";
+import PageGuide from "@/components/shared/PageGuide";
 
 const Modal = dynamic(() => import("@/components/ui/Modal"), { ssr: false });
 
@@ -116,6 +117,16 @@ export default function ClientReviewsPage() {
 
   return (
     <div className="space-y-6">
+      <PageGuide
+        pageKey="client-reviews"
+        title="How Reviews works"
+        steps={[
+          { icon: "📋", title: "Eligible jobs", description: "Jobs appear here once escrow has been released — meaning the job is fully complete." },
+          { icon: "⭐", title: "Rate 4 categories", description: "Score the provider on Quality of Work, Professionalism, Punctuality, and Communication." },
+          { icon: "💬", title: "Write a comment", description: "Add an optional comment to give more context to your rating." },
+          { icon: "🤝", title: "Help the community", description: "Your reviews help other clients choose reliable providers and reward great work." },
+        ]}
+      />
       <div>
         <h2 className="text-2xl font-bold text-slate-900">Reviews</h2>
         <p className="text-slate-500 text-sm mt-0.5">Rate providers for completed jobs.</p>

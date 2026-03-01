@@ -8,6 +8,7 @@ import Button from "@/components/ui/Button";
 import { useAuthStore } from "@/stores/authStore";
 import { formatDate } from "@/lib/utils";
 import { ShieldCheck, CalendarDays, Camera } from "lucide-react";
+import PageGuide from "@/components/shared/PageGuide";
 import { apiFetch } from "@/lib/fetchClient";
 
 interface MeData {
@@ -145,6 +146,16 @@ export default function ClientProfilePage() {
 
   return (
     <div className="max-w-2xl space-y-6">
+      <PageGuide
+        pageKey="client-profile"
+        title="How My Profile works"
+        steps={[
+          { icon: "👤", title: "Update your info", description: "Keep your name and profile photo up to date so providers know who they're working with." },
+          { icon: "🔑", title: "Change password", description: "Update your password anytime in the Security section. You'll need your current password to confirm." },
+          { icon: "🛡️", title: "Upload KYC docs", description: "Verify your identity by uploading a valid government ID. This builds trust with providers." },
+          { icon: "📅", title: "Account history", description: "See your account creation date and verification status at a glance." },
+        ]}
+      />
       <div>
         <h2 className="text-2xl font-bold text-slate-900">My Profile</h2>
         <p className="text-sm text-slate-500 mt-0.5">Manage your account details and password.</p>

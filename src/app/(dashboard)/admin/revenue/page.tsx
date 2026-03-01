@@ -7,6 +7,7 @@ import KpiCard from "@/components/ui/KpiCard";
 import { formatCurrency } from "@/lib/utils";
 import dynamic from "next/dynamic";
 import { CircleDollarSign, TrendingUp, Users, Briefcase } from "lucide-react";
+import PageGuide from "@/components/shared/PageGuide";
 
 // Lazy-load Recharts bundle (~300 KB) — code-split so it's not in the initial JS bundle
 const RevenueLineChart = dynamic(
@@ -71,6 +72,16 @@ export default async function AdminRevenuePage() {
 
   return (
     <div className="space-y-6">
+      <PageGuide
+        pageKey="admin-revenue"
+        title="How the Revenue Dashboard works"
+        steps={[
+          { icon: "💰", title: "GMV & commission", description: "Gross Merchandise Value is total job amounts processed. Commission is the 10% platform fee collected." },
+          { icon: "📈", title: "Monthly trends", description: "The line chart shows GMV and commission growth month-over-month to track platform health." },
+          { icon: "🏆", title: "Top providers", description: "See which providers are generating the most revenue on the platform." },
+          { icon: "📊", title: "Job volume", description: "The bar chart shows completed job counts per month — a leading indicator of marketplace activity." },
+        ]}
+      />
       <div>
         <h2 className="text-2xl font-bold text-slate-900">Revenue Dashboard</h2>
         <p className="text-slate-500 text-sm mt-0.5">Platform financials and growth metrics.</p>
