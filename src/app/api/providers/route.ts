@@ -2,13 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { connectDB } from "@/lib/db";
-import ProviderProfile from "@/models/ProviderProfile";
+import User from "@/models/User";
 import { favoriteProviderRepository } from "@/repositories/favoriteProvider.repository";
+import type { PipelineStage } from "mongoose";
 
 /**
  * GET /api/providers
- * Lists all approved, non-suspended providers with public profile data.
- * Clients get a `isFavorite` flag on each result.
+ * Returns all approved, non-suspended provider accounts with their profile data.
+ * Providers without a ProviderProfile document are included with empty profile fields.
+ * Clients receive an `isFavorite` flag on each result.
  */
 export const GET = withHandler(async (req: NextRequest) => {
   const user = await requireUser();
@@ -18,47 +20,66 @@ export const GET = withHandler(async (req: NextRequest) => {
   const search = searchParams.get("search")?.trim() ?? "";
   const availability = searchParams.get("availability") ?? "";
 
-  const profileMatch: Record<string, unknown> = {};
-  if (availability) profileMatch.availabilityStatus = availability;
+  type ProviderRow = {
+    userId: { _id: { toString(): string }; name?: string };
+    bio?: string;
+    skills?: string[];
+    availabilityStatus?: string;
+  };
 
-  // Filter suspended and unapproved users at the database level via aggregation
-  const providers = await ProviderProfile.aggregate([
-    { $match: profileMatch },
-    {
-      $lookup: {
-        from: "users",
-        localField: "userId",
-        foreignField: "_id",
-        as: "userId",
-      },
-    },
-    { $unwind: "$userId" },
+  // Start from users so providers without a ProviderProfile are still included.
+  const pipeline: PipelineStage[] = [
     {
       $match: {
-        "userId.isSuspended": { $ne: true },
-        "userId.approvalStatus": "approved",
+        role: "provider",
+        isSuspended: { $ne: true },
+        approvalStatus: "approved",
       },
     },
     {
-      $project: {
-        "userId.password": 0,
-        "userId.__v": 0,
-        "userId.verificationToken": 0,
-        "userId.verificationTokenExpiry": 0,
-        "userId.resetPasswordToken": 0,
-        "userId.resetPasswordTokenExpiry": 0,
-        "userId.otpCode": 0,
-        "userId.otpExpiry": 0,
+      $lookup: {
+        from: "providerprofiles",
+        localField: "_id",
+        foreignField: "userId",
+        as: "profileArr",
       },
     },
-  ]);
+    {
+      $addFields: { profileDoc: { $arrayElemAt: ["$profileArr", 0] } },
+    },
+    {
+      // Reshape to the same interface the frontend expects
+      $project: {
+        userId: {
+          _id: "$_id",
+          name: "$name",
+          email: "$email",
+          isVerified: "$isVerified",
+        },
+        bio:               { $ifNull: ["$profileDoc.bio", ""] },
+        skills:            { $ifNull: ["$profileDoc.skills", []] },
+        yearsExperience:   { $ifNull: ["$profileDoc.yearsExperience", 0] },
+        hourlyRate:        { $ifNull: ["$profileDoc.hourlyRate", null] },
+        avgRating:         { $ifNull: ["$profileDoc.avgRating", 0] },
+        completedJobCount: { $ifNull: ["$profileDoc.completedJobCount", 0] },
+        availabilityStatus: {
+          $ifNull: ["$profileDoc.availabilityStatus", "available"],
+        },
+      },
+    },
+  ];
+
+  // Availability filter applied post-project where the field is correctly named
+  if (availability) {
+    pipeline.push({ $match: { availabilityStatus: availability } });
+  }
+
+  let providers = (await User.aggregate(pipeline)) as ProviderRow[];
 
   // In-memory text search across name, bio, skills
-  type ProviderRow = { userId: { _id: { toString(): string }; name?: string }; bio?: string; skills?: string[] };
-  let filtered = providers as ProviderRow[];
   if (search) {
     const q = search.toLowerCase();
-    filtered = filtered.filter(
+    providers = providers.filter(
       (p) =>
         p.userId?.name?.toLowerCase().includes(q) ||
         p.bio?.toLowerCase().includes(q) ||
@@ -72,7 +93,7 @@ export const GET = withHandler(async (req: NextRequest) => {
       ? new Set(await favoriteProviderRepository.getFavoriteProviderIds(user.userId))
       : new Set<string>();
 
-  const results = filtered.map((p) => ({
+  const results = providers.map((p) => ({
     ...p,
     isFavorite: favoriteIds.has(p.userId._id.toString()),
   }));

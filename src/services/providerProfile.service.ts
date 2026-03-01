@@ -21,8 +21,26 @@ export interface UpdateProfileInput {
 export class ProviderProfileService {
   async getProfile(userId: string) {
     const profile = await providerProfileRepository.findByUserIdPopulated(userId);
-    if (!profile) throw new NotFoundError("Provider profile");
-    return profile;
+    if (profile) return profile;
+
+    // Provider exists but hasn't filled in their profile yet.
+    // Return minimal user data so the modal renders instead of erroring.
+    const user = await userRepository.findById(userId) as unknown as {
+      name: string; email: string; isVerified?: boolean;
+    } | null;
+    if (!user) throw new NotFoundError("Provider");
+
+    return {
+      userId: { name: user.name, email: user.email, isVerified: user.isVerified ?? false },
+      bio: "",
+      skills: [] as string[],
+      yearsExperience: 0,
+      hourlyRate: null as number | null,
+      avgRating: 0,
+      completedJobCount: 0,
+      availabilityStatus: "available" as const,
+      schedule: undefined,
+    };
   }
 
   async upsertProfile(user: TokenPayload, input: UpdateProfileInput) {

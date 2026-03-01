@@ -61,7 +61,7 @@ export default function AdminSupportThreadPage({
   if (!admin) return null;
 
   return (
-    <div className="flex flex-col h-[calc(100vh-4rem)]">
+    <div className="flex flex-col h-[calc(100vh-8rem)]">
       <ChatWindow
         fetchUrl={`/api/admin/support/${userId}`}
         postUrl={`/api/admin/support/${userId}`}

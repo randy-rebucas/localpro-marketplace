@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import dynamic from "next/dynamic";
 import toast from "react-hot-toast";
 import {
@@ -231,9 +231,15 @@ export default function ClientFavoritesPage() {
     }
   }, [search, availability]);
 
+  // Keep a stable ref so the tab-switch effect always calls the latest version
+  // without re-firing on every search/availability keystroke.
+  const fetchProvidersRef = useRef(fetchProviders);
+  useEffect(() => { fetchProvidersRef.current = fetchProviders; }, [fetchProviders]);
+
+  // Auto-fetch only when the user first opens the Discover tab.
   useEffect(() => {
-    if (tab === "discover") fetchProviders();
-  }, [tab, fetchProviders]);
+    if (tab === "discover") fetchProvidersRef.current();
+  }, [tab]);
 
   async function removeFavorite(providerId: string) {
     setRemovingId(providerId);
@@ -351,18 +357,19 @@ export default function ClientFavoritesPage() {
       {tab === "discover" && (
         <>
           {/* Filters */}
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <div className="relative flex-1 min-w-[200px]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
               <input
-                className="input w-full pl-9"
+                className="input w-full pl-9 h-9"
                 placeholder="Search by name, skill, or bio…"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && fetchProviders()}
               />
             </div>
             <select
-              className="input"
+              className="input h-9 w-auto"
               value={availability}
               onChange={(e) => setAvailability(e.target.value)}
             >
@@ -370,7 +377,7 @@ export default function ClientFavoritesPage() {
               <option value="available">Available</option>
               <option value="busy">Busy</option>
             </select>
-            <Button size="sm" variant="outline" onClick={fetchProviders}>
+            <Button size="sm" variant="outline" onClick={fetchProviders} className="h-9 px-4">
               Search
             </Button>
           </div>

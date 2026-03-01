@@ -15,7 +15,7 @@ export class ProviderProfileRepository extends BaseRepository<ProviderProfileDoc
   async findByUserIdPopulated(userId: string): Promise<ProviderProfileDocument | null> {
     await this.connect();
     return ProviderProfile.findOne({ userId })
-      .populate("userId", "name email")
+      .populate("userId", "name email isVerified")
       .lean() as unknown as ProviderProfileDocument | null;
   }
 

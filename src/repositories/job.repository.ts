@@ -262,6 +262,24 @@ export class JobRepository extends BaseRepository<JobDocument> {
     return result?.total ?? 0;
   }
 
+  /** Completed jobs with funded escrow awaiting admin payment release (all, no date filter). */
+  async findAwaitingPaymentRelease(): Promise<Array<{
+    _id: { toString(): string };
+    title: string;
+    category: string;
+    budget: number;
+    updatedAt: Date;
+    clientId: { name: string; email: string };
+    providerId: { _id: { toString(): string }; name: string; email: string } | null;
+  }>> {
+    await this.connect();
+    return Job.find({ status: "completed", escrowStatus: "funded" })
+      .sort({ updatedAt: -1 })
+      .populate("clientId", "name email")
+      .populate("providerId", "name email")
+      .lean() as never;
+  }
+
   /** Jobs awaiting admin validation, newest first, with client info populated. */
   async findPendingValidation(): Promise<Array<{
     _id: unknown; title: string; description: string; category: string;

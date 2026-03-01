@@ -4,7 +4,8 @@ import { jobRepository } from "@/repositories/job.repository";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import AdminJobActions from "./AdminJobActions";
 import RealtimeRefresher from "@/components/shared/RealtimeRefresher";
-import { MapPin, Calendar, User } from "lucide-react";
+import { MapPin, Calendar, User, ChevronRight } from "lucide-react";
+import Link from "next/link";
 
 export const metadata: Metadata = { title: "Manage Jobs" };
 
@@ -58,7 +59,12 @@ export default async function AdminJobsPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start gap-3">
                       <div>
-                        <h3 className="font-semibold text-slate-900">{job.title}</h3>
+                        <Link
+                          href={`/admin/jobs/${String(job._id)}`}
+                          className="font-semibold text-slate-900 hover:text-primary transition-colors"
+                        >
+                          {job.title}
+                        </Link>
                         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5 text-xs text-slate-400">
                           <span className="inline-block bg-slate-100 text-slate-600 rounded px-2 py-0.5 font-medium">{job.category}</span>
                           <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{job.location}</span>
@@ -79,7 +85,18 @@ export default async function AdminJobsPage() {
                   {job.description}
                 </div>
 
-                <AdminJobActions jobId={String(job._id)} riskScore={job.riskScore} />
+                {/* Quick actions + link to full detail */}
+                <div className="flex items-center gap-3">
+                  <div className="flex-1">
+                    <AdminJobActions jobId={String(job._id)} riskScore={job.riskScore} />
+                  </div>
+                  <Link
+                    href={`/admin/jobs/${String(job._id)}`}
+                    className="flex items-center gap-1 text-xs text-slate-400 hover:text-primary transition-colors whitespace-nowrap"
+                  >
+                    Full details <ChevronRight className="h-3.5 w-3.5" />
+                  </Link>
+                </div>
               </div>
             </div>
           ))}
