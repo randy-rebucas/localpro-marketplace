@@ -29,7 +29,7 @@ export class PaymentService {
    *
    * Falls back to immediate simulation if PAYMONGO_SECRET_KEY is not set.
    */
-  async initiateEscrowPayment(user: TokenPayload, jobId: string) {
+  async initiateEscrowPayment(user: TokenPayload, jobId: string, overrideAmount?: number) {
     const jobDoc = await jobRepository.getDocById(jobId);
     if (!jobDoc) throw new NotFoundError("Job");
 
@@ -39,17 +39,19 @@ export class PaymentService {
     const check = canTransitionEscrow(job, "funded");
     if (!check.allowed) throw new UnprocessableError(check.reason!);
 
+    const amount = overrideAmount ?? job.budget;
+
     // ── Development fallback (no PayMongo key set) ─────────────────────────
     if (!process.env.PAYMONGO_SECRET_KEY) {
       job.escrowStatus = "funded";
       await jobDoc.save();
 
-      const { commission, netAmount } = calculateCommission(job.budget);
+      const { commission, netAmount } = calculateCommission(amount);
       await transactionRepository.create({
         jobId: job._id,
         payerId: user.userId,
         payeeId: job.providerId,
-        amount: job.budget,
+        amount,
         commission,
         netAmount,
         status: "pending",
@@ -59,7 +61,7 @@ export class PaymentService {
         userId: user.userId,
         eventType: "escrow_funded",
         jobId: job._id!.toString(),
-        metadata: { amount: job.budget, simulated: true },
+        metadata: { amount, simulated: true },
       });
 
       // Notify parties via notification service
@@ -68,7 +70,7 @@ export class PaymentService {
         userId: user.userId,
         type: "payment_confirmed",
         title: "Payment confirmed (simulation)",
-        message: `Escrow of ₱${job.budget.toLocaleString()} has been funded (dev mode).`,
+        message: `Escrow of ₱${amount.toLocaleString()} has been funded (dev mode).`,
         data: { jobId: job._id!.toString() },
       });
       if (job.providerId) {
@@ -94,7 +96,7 @@ export class PaymentService {
     const jobTitle = (job as { title?: string }).title ?? "Service";
 
     const session = await createCheckoutSession({
-      amountPHP: job.budget,
+      amountPHP: amount,
       description: `Escrow for: ${jobTitle}`,
       lineItemName: jobTitle,
       successUrl: `${APP_URL}/client/escrow?jobId=${jobId}&payment=success`,
@@ -110,10 +112,10 @@ export class PaymentService {
       jobId: job._id,
       clientId: user.userId,
       providerId: job.providerId,
-      paymentIntentId: session.id, // store session id as reference
-      clientKey: session.checkoutUrl, // store checkout url in clientKey field
-      amount: job.budget,
-      amountInCentavos: Math.round(job.budget * 100),
+      paymentIntentId: session.id,
+      clientKey: session.checkoutUrl,
+      amount,
+      amountInCentavos: Math.round(amount * 100),
       currency: "PHP",
       status: "awaiting_payment",
     });
@@ -123,7 +125,7 @@ export class PaymentService {
       checkoutSessionId: session.id,
       checkoutUrl: session.checkoutUrl,
       referenceNumber: session.referenceNumber,
-      amountPHP: job.budget,
+      amountPHP: amount,
     };
   }
 

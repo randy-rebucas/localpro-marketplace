@@ -8,7 +8,8 @@ import AdminJobActions from "../AdminJobActions";
 import AdminEscrowOverride from "@/components/shared/AdminEscrowOverride";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, ClipboardList, ShieldAlert, Gavel } from "lucide-react";
+import { ArrowLeft, ClipboardList, ShieldAlert, Gavel, ImageIcon } from "lucide-react";
+import JobPhotoGallery from "@/components/shared/JobPhotoGallery";
 import type { IJob, IQuote } from "@/types";
 
 const validationSteps = [
@@ -55,6 +56,8 @@ export default async function AdminJobDetailPage({
   const j = jobRaw as unknown as IJob & {
     clientId: { name: string; email: string };
     providerId?: { name: string; email: string };
+    beforePhoto?: string[];
+    afterPhoto?: string[];
   };
 
   const typedQuotes = quotes as unknown as (IQuote & {
@@ -167,6 +170,19 @@ export default async function AdminJobDetailPage({
           </div>
         </div>
       </div>
+
+      {/* ── Photo Attachments ── */}
+      {((j.beforePhoto?.length ?? 0) > 0 || (j.afterPhoto?.length ?? 0) > 0) && (
+        <div className="bg-white rounded-xl border border-slate-200 shadow-card overflow-hidden">
+          <div className="px-6 py-3 border-b border-slate-100 bg-slate-50 flex items-center gap-2">
+            <ImageIcon className="h-4 w-4 text-slate-400" />
+            <p className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Photo Attachments</p>
+          </div>
+          <div className="p-6">
+            <JobPhotoGallery beforePhoto={j.beforePhoto} afterPhoto={j.afterPhoto} />
+          </div>
+        </div>
+      )}
 
       {/* ── STEP 2: Risk Assessment ── */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-card overflow-hidden">

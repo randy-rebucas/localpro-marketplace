@@ -1,5 +1,6 @@
 import Payment from "@/models/Payment";
 import type { PaymentDocument } from "@/models/Payment";
+import { Types } from "mongoose";
 import { BaseRepository } from "./base.repository";
 
 export class PaymentRepository extends BaseRepository<PaymentDocument> {
@@ -65,6 +66,19 @@ export class PaymentRepository extends BaseRepository<PaymentDocument> {
       { status: "refunded", refundId },
       { new: true }
     ).lean() as unknown as PaymentDocument | null;
+  }
+
+  /** Batch fetch: returns a jobId → amount map for all paid payments in the given job ID list. */
+  async findAmountsByJobIds(jobIds: string[]): Promise<Map<string, number>> {
+    if (jobIds.length === 0) return new Map();
+    await this.connect();
+    const rows = await Payment.find(
+      { jobId: { $in: jobIds.map((id) => new Types.ObjectId(id)) }, status: "paid" },
+      { jobId: 1, amount: 1 }
+    ).lean() as Array<{ jobId: { toString(): string }; amount: number }>;
+    const map = new Map<string, number>();
+    for (const r of rows) map.set(r.jobId.toString(), r.amount);
+    return map;
   }
 }
 

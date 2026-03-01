@@ -20,8 +20,19 @@ export interface UpdateProfileInput {
 
 export class ProviderProfileService {
   async getProfile(userId: string) {
-    const profile = await providerProfileRepository.findByUserIdPopulated(userId);
-    if (profile) return profile;
+    const [profile, ratingStats] = await Promise.all([
+      providerProfileRepository.findByUserIdPopulated(userId),
+      reviewRepository.getProviderRatingSummary(userId),
+    ]);
+
+    if (profile) {
+      // Overlay cached stats with live aggregation so the modal always reflects
+      // the true rating even if recalculateStats was never called for this provider.
+      const liveProfile = profile as unknown as Record<string, unknown>;
+      liveProfile.avgRating = Math.round(ratingStats.avgRating * 10) / 10;
+      liveProfile.completedJobCount = ratingStats.count;
+      return profile;
+    }
 
     // Provider exists but hasn't filled in their profile yet.
     // Return minimal user data so the modal renders instead of erroring.
@@ -36,8 +47,8 @@ export class ProviderProfileService {
       skills: [] as string[],
       yearsExperience: 0,
       hourlyRate: null as number | null,
-      avgRating: 0,
-      completedJobCount: 0,
+      avgRating: Math.round(ratingStats.avgRating * 10) / 10,
+      completedJobCount: ratingStats.count,
       availabilityStatus: "available" as const,
       schedule: undefined,
     };

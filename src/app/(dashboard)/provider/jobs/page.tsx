@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { getCurrentUser } from "@/lib/auth";
 import { jobRepository } from "@/repositories/job.repository";
+import { paymentRepository } from "@/repositories/payment.repository";
 import Link from "next/link";
 import RealtimeRefresher from "@/components/shared/RealtimeRefresher";
 import ProviderJobsList from "./ProviderJobsList";
@@ -36,6 +37,12 @@ async function ProviderJobsContent({ userId }: { userId: string }) {
     if (!Array.isArray(j.afterPhoto))  j.afterPhoto  = j.afterPhoto  ? [j.afterPhoto  as unknown as string] : [];
   }
 
+  // Fetch paid payment amounts keyed by jobId
+  const jobIds = serialized.map((j) => j._id.toString());
+  const paymentAmounts = await paymentRepository.findAmountsByJobIds(jobIds);
+  const fundedMap: Record<string, number> = {};
+  for (const [k, v] of paymentAmounts) fundedMap[k] = v;
+
   if (jobs.length === 0) {
     return (
       <div className="bg-white rounded-xl border border-slate-200 p-12 text-center text-slate-400 text-sm">
@@ -48,7 +55,7 @@ async function ProviderJobsContent({ userId }: { userId: string }) {
   return (
     <>
       <p className="text-slate-500 text-sm">{jobs.length} job{jobs.length !== 1 ? "s" : ""} assigned to you</p>
-      <ProviderJobsList jobs={serialized} />
+      <ProviderJobsList jobs={serialized} fundedAmounts={fundedMap} />
     </>
   );
 }

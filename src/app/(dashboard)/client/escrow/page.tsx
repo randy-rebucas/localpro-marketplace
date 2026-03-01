@@ -3,21 +3,17 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { jobRepository } from "@/repositories/job.repository";
 import { paymentService } from "@/services";
-import { paymentRepository } from "@/repositories";
-import { EscrowBadge } from "@/components/ui/Badge";
-import { formatCurrency, formatDate } from "@/lib/utils";
-import Link from "next/link";
-import { CheckCircle, Zap, Clock, CircleCheck } from "lucide-react";
+import { paymentRepository, transactionRepository } from "@/repositories";
+import { formatCurrency } from "@/lib/utils";
+import { CheckCircle } from "lucide-react";
 import { Suspense } from "react";
-import ProviderInfoButton from "@/components/shared/ProviderInfoButtonLazy";
+import EscrowTabs from "./EscrowTabs";
 
 export const metadata: Metadata = { title: "Escrow" };
 
 interface EscrowPageProps {
   searchParams: Promise<Record<string, string | undefined>>;
 }
-
-type EscrowJob = Awaited<ReturnType<typeof jobRepository.findEscrowJobsForClient>>[number];
 
 // ─── Skeletons ────────────────────────────────────────────────────────────────
 
@@ -27,48 +23,6 @@ function EscrowSkeleton() {
       {[...Array(3)].map((_, i) => (
         <div key={i} className="bg-white rounded-xl border border-slate-200 h-28" />
       ))}
-    </div>
-  );
-}
-
-// ─── Card ─────────────────────────────────────────────────────────────────────
-
-function EscrowCard({ j }: { j: EscrowJob }) {
-  return (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-card p-5">
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex-1 min-w-0">
-          <Link href={`/client/jobs/${j._id}`} className="font-semibold text-slate-900 hover:text-primary text-sm">
-            {j.title}
-          </Link>
-          <p className="text-xs text-slate-400 mt-1">
-            Provider: <span className="font-medium text-slate-600">{j.providerId?.name ?? "—"}</span>
-            {" · "}Scheduled {formatDate(j.scheduleDate)}
-          </p>
-          {j.providerId?._id && (
-            <div className="mt-1.5">
-              <ProviderInfoButton
-                providerId={j.providerId._id.toString()}
-                providerName={j.providerId.name}
-              />
-            </div>
-          )}
-        </div>
-        <div className="flex flex-col items-end gap-2 flex-shrink-0">
-          <p className="text-lg font-bold text-slate-900">{formatCurrency(j.budget)}</p>
-          <EscrowBadge status={j.escrowStatus} />
-          {j.status === "assigned" && j.escrowStatus === "not_funded" && (
-            <Link href={`/client/jobs/${j._id}`} className="btn-primary text-xs py-1.5 px-3">
-              Fund Escrow →
-            </Link>
-          )}
-          {j.status === "completed" && j.escrowStatus === "funded" && (
-            <Link href={`/client/jobs/${j._id}`} className="text-xs py-1.5 px-3 rounded-lg bg-green-600 hover:bg-green-700 text-white font-medium transition-colors">
-              Release Payment →
-            </Link>
-          )}
-        </div>
-      </div>
     </div>
   );
 }
@@ -107,14 +61,23 @@ async function EscrowContent({
 
   const [jobs, totalLocked] = await Promise.all([
     jobRepository.findEscrowJobsForClient(userId),
-    jobRepository.sumFundedEscrowForClient(userId),
+    transactionRepository.sumPendingByPayer(userId),
   ]);
+
+  // Fetch actual paid amounts from Payment records, keyed by jobId
+  const jobIds = jobs.map((j) => j._id.toString());
+  const fundedAmounts = await paymentRepository.findAmountsByJobIds(jobIds);
 
   const needsAction = jobs.filter(
     (j) => (j.status === "assigned" && j.escrowStatus === "not_funded") || (j.status === "completed" && j.escrowStatus === "funded")
   );
-  const inProgress = jobs.filter((j) => j.escrowStatus === "funded" && j.status !== "completed");
+  const inProgress = jobs.filter((j) => j.escrowStatus === "funded" && j.status !== "completed" && j.status !== "disputed");
+  const disputed = jobs.filter((j) => j.status === "disputed");
   const done = jobs.filter((j) => j.escrowStatus === "released");
+
+  // Serialize jobs for the client component
+  const serialize = (arr: typeof jobs) =>
+    JSON.parse(JSON.stringify(arr)) as Parameters<typeof EscrowTabs>[0]["needsAction"];
 
   return (
     <>
@@ -141,42 +104,13 @@ async function EscrowContent({
           No jobs requiring escrow action.
         </div>
       ) : (
-        <div className="space-y-6">
-          {needsAction.length > 0 && (
-            <div>
-              <div className="flex items-center gap-2 mb-3">
-                <Zap className="h-4 w-4 text-amber-500" />
-                <h3 className="text-sm font-semibold text-slate-700">Needs Your Action</h3>
-                <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">{needsAction.length}</span>
-              </div>
-              <div className="space-y-3">
-                {needsAction.map((j) => <EscrowCard key={j._id.toString()} j={j} />)}
-              </div>
-            </div>
-          )}
-          {inProgress.length > 0 && (
-            <div>
-              <div className="flex items-center gap-2 mb-3">
-                <Clock className="h-4 w-4 text-blue-500" />
-                <h3 className="text-sm font-semibold text-slate-700">In Progress</h3>
-              </div>
-              <div className="space-y-3">
-                {inProgress.map((j) => <EscrowCard key={j._id.toString()} j={j} />)}
-              </div>
-            </div>
-          )}
-          {done.length > 0 && (
-            <div>
-              <div className="flex items-center gap-2 mb-3">
-                <CircleCheck className="h-4 w-4 text-green-500" />
-                <h3 className="text-sm font-semibold text-slate-700">Completed</h3>
-              </div>
-              <div className="space-y-3">
-                {done.map((j) => <EscrowCard key={j._id.toString()} j={j} />)}
-              </div>
-            </div>
-          )}
-        </div>
+        <EscrowTabs
+          needsAction={serialize(needsAction)}
+          inProgress={serialize(inProgress)}
+          disputed={serialize(disputed)}
+          done={serialize(done)}
+          fundedAmounts={Object.fromEntries(fundedAmounts)}
+        />
       )}
     </>
   );

@@ -3,6 +3,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { jobRepository } from "@/repositories/job.repository";
 import { quoteRepository } from "@/repositories/quote.repository";
+import { paymentRepository } from "@/repositories/payment.repository";
 import Link from "next/link";
 import type { IJob } from "@/types";
 import { Suspense } from "react";
@@ -24,7 +25,10 @@ function JobsSkeleton() {
 async function JobsData({ userId }: { userId: string }) {
   const jobs = await jobRepository.findAllForClient(userId);
   const jobIds = jobs.map((j) => j._id);
-  const quoteCounts = await quoteRepository.countPendingByJobIds(jobIds);
+  const [quoteCounts, fundedMap] = await Promise.all([
+    quoteRepository.countPendingByJobIds(jobIds),
+    paymentRepository.findAmountsByJobIds(jobIds.map(String)),
+  ]);
   const quoteCountMap = new Map(quoteCounts.map((q) => [String(q._id), q.count]));
 
   // Serialize for client component (ObjectIds → strings, Dates → ISO strings)
@@ -32,6 +36,7 @@ async function JobsData({ userId }: { userId: string }) {
     providerId?: { _id: string; name: string; email: string; isVerified: boolean };
   })[];
   const quoteCountObj = Object.fromEntries(quoteCountMap);
+  const fundedAmounts = Object.fromEntries(fundedMap);
 
   if (jobsForClient.length === 0) {
     return (
@@ -44,7 +49,7 @@ async function JobsData({ userId }: { userId: string }) {
     );
   }
 
-  return <ClientJobsList jobs={jobsForClient} quoteCountMap={quoteCountObj} />;
+  return <ClientJobsList jobs={jobsForClient} quoteCountMap={quoteCountObj} fundedAmounts={fundedAmounts} />;
 }
 
 export default async function ClientJobsPage() {

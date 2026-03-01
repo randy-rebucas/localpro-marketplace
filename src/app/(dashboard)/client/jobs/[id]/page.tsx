@@ -3,6 +3,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { redirect, notFound } from "next/navigation";
 import { jobRepository } from "@/repositories/job.repository";
 import { quoteRepository } from "@/repositories/quote.repository";
+import { paymentRepository } from "@/repositories/payment.repository";
 import { disputeRepository } from "@/repositories/dispute.repository";
 import { providerProfileRepository } from "@/repositories/providerProfile.repository";
 import { JobStatusBadge, EscrowBadge, QuoteStatusBadge } from "@/components/ui/Badge";
@@ -254,6 +255,23 @@ export default async function JobDetailPage({
   const job = await jobRepository.findByClientAndId(user.userId, id);
   if (!job) notFound();
 
+  // Fetch accepted quote amount for pre-filling the escrow amount
+  let acceptedQuoteAmount: number | undefined;
+  if (job.status === "assigned" && job.escrowStatus === "not_funded") {
+    const quotes = await quoteRepository.findForJob(id);
+    const accepted = (quotes as Array<{ status: string; proposedAmount: number }>).find(
+      (q) => q.status === "accepted"
+    );
+    acceptedQuoteAmount = accepted?.proposedAmount;
+  }
+
+  // Fetch actual funded amount for the release payment modal
+  let fundedAmount: number | undefined;
+  if (job.escrowStatus === "funded") {
+    const fundedMap = await paymentRepository.findAmountsByJobIds([id]);
+    fundedAmount = fundedMap.get(id);
+  }
+
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       <RealtimeRefresher entity="job" id={id} />
@@ -325,7 +343,7 @@ export default async function JobDetailPage({
 
       {/* Action buttons */}
       <div className="flex flex-wrap items-center gap-4">
-        <JobActionButtons jobId={job._id.toString()} status={job.status} escrowStatus={job.escrowStatus} budget={job.budget} />
+        <JobActionButtons jobId={job._id.toString()} status={job.status} escrowStatus={job.escrowStatus} budget={job.budget} acceptedAmount={acceptedQuoteAmount} fundedAmount={fundedAmount} />
         {job.status === "completed" && job.escrowStatus === "funded" && (
           <PartialReleaseButton jobId={job._id.toString()} budget={job.budget} />
         )}

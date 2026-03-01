@@ -92,6 +92,41 @@ export class TransactionRepository extends BaseRepository<TransactionDocument> {
     ]);
     return result?.total ?? 0;
   }
+
+  /** Sum of amounts for all pending (funded-but-not-released) transactions by a client. */
+  async sumPendingByPayer(payerId: string): Promise<number> {
+    await this.connect();
+    const [result] = await Transaction.aggregate<{ total: number }>([
+      { $match: { payerId: new Types.ObjectId(payerId), status: "pending" } },
+      { $group: { _id: null, total: { $sum: "$amount" } } },
+    ]);
+    return result?.total ?? 0;
+  }
+
+  /** Per-job funded amounts for all pending transactions by a client. Returns a jobId→amount map. */
+  async findPendingByPayer(payerId: string): Promise<Map<string, number>> {
+    await this.connect();
+    const rows = await Transaction.find(
+      { payerId: new Types.ObjectId(payerId), status: "pending" },
+      { jobId: 1, amount: 1 }
+    ).lean() as Array<{ jobId: { toString(): string }; amount: number }>;
+    const map = new Map<string, number>();
+    for (const r of rows) map.set(r.jobId.toString(), r.amount);
+    return map;
+  }
+
+  /** Per-job funded amounts for all pending transactions where the provider is the payee.
+   *  Returns a jobId → { gross, net } map. */
+  async findFundedByPayee(payeeId: string): Promise<Map<string, { gross: number; net: number }>> {
+    await this.connect();
+    const rows = await Transaction.find(
+      { payeeId: new Types.ObjectId(payeeId), status: "pending" },
+      { jobId: 1, amount: 1, netAmount: 1 }
+    ).lean() as Array<{ jobId: { toString(): string }; amount: number; netAmount: number }>;
+    const map = new Map<string, { gross: number; net: number }>();
+    for (const r of rows) map.set(r.jobId.toString(), { gross: r.amount, net: r.netAmount });
+    return map;
+  }
 }
 
 export const transactionRepository = new TransactionRepository();

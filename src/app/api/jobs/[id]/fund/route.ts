@@ -19,13 +19,24 @@ import { withHandler } from "@/lib/utils";
  *   — escrow is funded immediately in MongoDB.
  */
 export const PATCH = withHandler(async (
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) => {
   const user = await requireUser();
   requireRole(user, "client");
 
   const { id } = await params;
-  const result = await escrowService.fundEscrow(user, id);
+
+  let overrideAmount: number | undefined;
+  try {
+    const body = await req.json();
+    if (body?.amount && typeof body.amount === "number" && body.amount > 0) {
+      overrideAmount = body.amount;
+    }
+  } catch {
+    // no body — use job budget
+  }
+
+  const result = await escrowService.fundEscrow(user, id, overrideAmount);
   return NextResponse.json(result);
 });

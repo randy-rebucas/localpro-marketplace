@@ -5,6 +5,7 @@ import { DisputeStatusBadge } from "@/components/ui/Badge";
 import { formatDate, formatCurrency } from "@/lib/utils";
 import DisputeActions from "./DisputeActions";
 import RealtimeRefresher from "@/components/shared/RealtimeRefresher";
+import { PhotoStrip } from "@/components/shared/JobPhotoGallery";
 import { AlertOctagon, Search, Lock } from "lucide-react";
 
 export const metadata: Metadata = { title: "Disputes" };
@@ -43,6 +44,13 @@ function DisputeCard({ dispute }: { dispute: ActiveDispute }) {
           <p className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-1">Dispute Reason</p>
           {dispute.reason}
         </div>
+
+        {dispute.evidence && dispute.evidence.length > 0 && (
+          <div className="bg-slate-50 rounded-lg p-3 mb-4">
+            <p className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-2">Evidence</p>
+            <PhotoStrip urls={dispute.evidence} label="" />
+          </div>
+        )}
 
         <DisputeActions
           disputeId={String(dispute._id)}

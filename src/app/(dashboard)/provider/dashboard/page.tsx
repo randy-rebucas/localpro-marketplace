@@ -3,14 +3,16 @@ import { Suspense } from "react";
 import { getCurrentUser } from "@/lib/auth";
 import { jobRepository } from "@/repositories/job.repository";
 import { transactionRepository } from "@/repositories/transaction.repository";
+import { paymentRepository } from "@/repositories/payment.repository";
 import { reviewRepository } from "@/repositories/review.repository";
 import { userRepository } from "@/repositories/user.repository";
 import { providerProfileRepository } from "@/repositories/providerProfile.repository";
 import KpiCard from "@/components/ui/KpiCard";
 import { JobStatusBadge } from "@/components/ui/Badge";
 import { formatCurrency, formatRelativeTime } from "@/lib/utils";
+import { calculateCommission } from "@/lib/commission";
 import Link from "next/link";
-import { CircleDollarSign, Briefcase, Star, Store, TrendingUp, Trophy, Flame } from "lucide-react";
+import { CircleDollarSign, Briefcase, Star, Store, TrendingUp, Trophy, Flame, ShieldCheck } from "lucide-react";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
@@ -25,6 +27,11 @@ async function getProviderStats(providerId: string) {
     providerProfileRepository.findByUserId(providerId) as Promise<{ completionRate?: number; completedJobCount?: number } | null>,
   ]);
 
+  const jobIds = recentJobs.map((j) => String(j._id));
+  const fundedMap = jobIds.length > 0 ? await paymentRepository.findAmountsByJobIds(jobIds) : new Map<string, number>();
+  const fundedAmounts: Record<string, number> = {};
+  for (const [k, v] of fundedMap) fundedAmounts[k] = v;
+
   const firstName = userDoc?.name?.split(" ")[0] ?? "there";
   const completionRate = profileDoc?.completionRate ?? 100;
   const completedJobCount = profileDoc?.completedJobCount ?? 0;
@@ -35,6 +42,7 @@ async function getProviderStats(providerId: string) {
     avgRating: ratingSummary.avgRating,
     reviewCount: ratingSummary.count,
     recentJobs,
+    fundedAmounts,
     firstName,
     completionRate,
     completedJobCount,
@@ -82,7 +90,7 @@ function ProviderDashboardSkeleton() {
 }
 
 async function ProviderDashboardContent({ userId }: { userId: string }) {
-  const { activeJobs, totalEarnings, avgRating, reviewCount, recentJobs, firstName, completionRate, completedJobCount } =
+  const { activeJobs, totalEarnings, avgRating, reviewCount, recentJobs, fundedAmounts, firstName, completionRate, completedJobCount } =
     await getProviderStats(userId);
 
   const tier = getPerformanceTier(completedJobCount, avgRating, completionRate);
@@ -185,26 +193,46 @@ async function ProviderDashboardContent({ userId }: { userId: string }) {
           </div>
         ) : (
           <ul className="divide-y divide-slate-100">
-            {recentJobs.map((job) => (
-              <li key={String(job._id)} className="px-6 py-3.5 flex items-center justify-between gap-4 hover:bg-slate-50 transition-colors">
-                <div className="min-w-0 flex items-center gap-3">
-                  <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                    <Briefcase className="h-4 w-4 text-primary" />
+            {recentJobs.map((job) => {
+              const fundedGross = fundedAmounts[String(job._id)];
+              const fundedNet = fundedGross !== undefined ? calculateCommission(fundedGross).netAmount : undefined;
+              return (
+              <li key={String(job._id)} className="px-6 py-3.5 hover:bg-slate-50 transition-colors">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="min-w-0 flex items-center gap-3">
+                    <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <Briefcase className="h-4 w-4 text-primary" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-slate-900 truncate">{job.title}</p>
+                      <p className="text-xs text-slate-400 mt-0.5">
+                        <span className="inline-block bg-slate-100 text-slate-600 rounded px-1.5 py-0.5 mr-1.5">{job.category}</span>
+                        {formatRelativeTime(job.createdAt)}
+                      </p>
+                    </div>
                   </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-slate-900 truncate">{job.title}</p>
-                    <p className="text-xs text-slate-400 mt-0.5">
-                      <span className="inline-block bg-slate-100 text-slate-600 rounded px-1.5 py-0.5 mr-1.5">{job.category}</span>
-                      {formatRelativeTime(job.createdAt)}
-                    </p>
+                  <div className="flex items-center gap-3 flex-shrink-0">
+                    <div className="text-right">
+                      <p className="text-xs text-slate-400">Budget</p>
+                      <p className="text-sm font-semibold text-slate-800">{formatCurrency(job.budget)}</p>
+                    </div>
+                    <JobStatusBadge status={job.status} />
                   </div>
                 </div>
-                <div className="flex items-center gap-3 flex-shrink-0">
-                  <span className="text-sm font-semibold text-slate-800">{formatCurrency(job.budget)}</span>
-                  <JobStatusBadge status={job.status} />
-                </div>
+                {fundedGross !== undefined && fundedNet !== undefined && (
+                  <div className="mt-2 flex items-center gap-2 rounded-lg bg-emerald-50 border border-emerald-100 px-3 py-2">
+                    <ShieldCheck className="h-3.5 w-3.5 text-emerald-500 flex-shrink-0" />
+                    <span className="text-xs text-slate-600">
+                      Funded: <span className="font-semibold text-slate-800">{formatCurrency(fundedGross)}</span>
+                    </span>
+                    <span className="text-xs text-emerald-700 font-medium">
+                      · You receive: {formatCurrency(fundedNet)}
+                    </span>
+                  </div>
+                )}
               </li>
-            ))}
+              );
+            })}
           </ul>
         )}
       </div>

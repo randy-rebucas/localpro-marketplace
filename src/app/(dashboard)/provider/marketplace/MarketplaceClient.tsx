@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import type { IJob } from "@/types";
 import { apiFetch } from "@/lib/fetchClient";
+import { PhotoStrip } from "@/components/shared/JobPhotoGallery";
 
 function useDebounce<T>(value: T, delay = 300): T {
   const [debounced, setDebounced] = useState(value);
@@ -352,6 +353,12 @@ export default function MarketplaceClient({
                       </button>
                     )}
                   </div>
+
+                  {job.beforePhoto && job.beforePhoto.length > 0 && (
+                    <div>
+                      <PhotoStrip urls={job.beforePhoto} label="Attachments" />
+                    </div>
+                  )}
                 </div>
 
                 {/* Footer */}
@@ -380,13 +387,18 @@ export default function MarketplaceClient({
       <Modal isOpen={quoteModal.open} onClose={() => setQuoteModal({ open: false, job: null })} title="Submit a Quote">
         <div className="space-y-4">
           {/* Job summary */}
-          <div className="bg-slate-50 rounded-lg px-4 py-3 space-y-0.5">
+          <div className="bg-slate-50 rounded-lg px-4 py-3 space-y-1.5">
             <p className="text-xs text-slate-500">Job</p>
             <p className="text-sm font-semibold text-slate-900">{quoteModal.job?.title}</p>
             <p className="text-xs text-slate-500">
               Client budget:{" "}
               <span className="font-medium text-slate-700">{formatCurrency(quoteModal.job?.budget ?? 0)}</span>
             </p>
+            {quoteModal.job?.beforePhoto && quoteModal.job.beforePhoto.length > 0 && (
+              <div className="pt-1">
+                <PhotoStrip urls={quoteModal.job.beforePhoto} label="Attachments" />
+              </div>
+            )}
           </div>
 
           <div>

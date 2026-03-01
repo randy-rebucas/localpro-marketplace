@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import Button from "@/components/ui/Button";
@@ -8,7 +8,7 @@ import { apiFetch } from "@/lib/fetchClient";
 import Modal from "@/components/ui/Modal";
 import { calculateCommission } from "@/lib/commission";
 import { formatCurrency } from "@/lib/utils";
-import { ShieldCheck } from "lucide-react";
+import { ShieldCheck, Info } from "lucide-react";
 import type { JobStatus, EscrowStatus } from "@/types";
 
 interface Props {
@@ -16,21 +16,45 @@ interface Props {
   status: JobStatus;
   escrowStatus: EscrowStatus;
   budget: number;
+  acceptedAmount?: number;
+  fundedAmount?: number;
 }
 
-export default function JobActionButtons({ jobId, status, escrowStatus, budget }: Props) {
+export default function JobActionButtons({ jobId, status, escrowStatus, budget, acceptedAmount, fundedAmount }: Props) {
   const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
   const [showFundModal, setShowFundModal] = useState(false);
   const [showReleaseModal, setShowReleaseModal] = useState(false);
+  const [amountInput, setAmountInput] = useState<string>(
+    String(acceptedAmount ?? budget)
+  );
 
-  const breakdown = calculateCommission(budget);
+  const parsedAmount = useMemo(() => {
+    const v = parseFloat(amountInput);
+    return isNaN(v) || v <= 0 ? 0 : v;
+  }, [amountInput]);
+
+  const breakdown = useMemo(() => calculateCommission(parsedAmount || budget), [parsedAmount, budget]);
+  const releaseBreakdown = useMemo(() => calculateCommission(fundedAmount ?? budget), [fundedAmount, budget]);
+
+  function openFundModal() {
+    setAmountInput(String(acceptedAmount ?? budget));
+    setShowFundModal(true);
+  }
 
   async function fundEscrow() {
+    if (parsedAmount <= 0) {
+      toast.error("Please enter a valid amount");
+      return;
+    }
     setLoading("fund");
     setShowFundModal(false);
     try {
-      const res = await apiFetch(`/api/jobs/${jobId}/fund`, { method: "PATCH" });
+      const res = await apiFetch(`/api/jobs/${jobId}/fund`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount: parsedAmount }),
+      });
       const data = await res.json();
       if (!res.ok) {
         toast.error(data.error ?? "Failed to fund escrow");
@@ -72,7 +96,7 @@ export default function JobActionButtons({ jobId, status, escrowStatus, budget }
         {status === "assigned" && escrowStatus === "not_funded" && (
           <Button
             isLoading={loading === "fund"}
-            onClick={() => setShowFundModal(true)}
+            onClick={openFundModal}
           >
             Fund Escrow
           </Button>
@@ -98,9 +122,12 @@ export default function JobActionButtons({ jobId, status, escrowStatus, budget }
         <div className="p-6 space-y-4">
           <div className="flex items-center gap-2.5 rounded-lg bg-blue-50 border border-blue-200 px-4 py-3">
             <ShieldCheck className="h-5 w-5 text-blue-600 flex-shrink-0" />
-            <p className="text-sm font-medium text-blue-800">
-              This will release <span className="font-bold">{formatCurrency(breakdown.netAmount)}</span> to the provider. This action cannot be undone.
-            </p>
+            <div className="text-sm font-medium text-blue-800">
+              <p>This will release <span className="font-bold">{formatCurrency(releaseBreakdown.netAmount)}</span> to the provider. This action cannot be undone.</p>
+              {fundedAmount !== undefined && fundedAmount !== budget && (
+                <p className="text-xs font-normal text-blue-600 mt-1">Based on funded amount of {formatCurrency(fundedAmount)} (budget: {formatCurrency(budget)})</p>
+              )}
+            </div>
           </div>
           <p className="text-sm text-slate-600">
             Only confirm if you are satisfied with the completed work. Once released, funds cannot be recovered.
@@ -140,14 +167,47 @@ export default function JobActionButtons({ jobId, status, escrowStatus, budget }
               Payment Secured by LocalPro — funds are held in escrow and only released when you approve.
             </p>
           </div>
-          <p className="text-sm text-slate-600">
-            The amount will be held securely and released to the provider only after you confirm the work is complete.
-          </p>
+
+          {/* Amount input */}
+          <div>
+            <label className="label block mb-1">
+              Escrow Amount
+              {acceptedAmount !== undefined && acceptedAmount !== budget && (
+                <span className="ml-2 text-xs font-normal text-slate-400">
+                  (quoted: {formatCurrency(acceptedAmount)})
+                </span>
+              )}
+            </label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-medium">₱</span>
+              <input
+                type="number"
+                min="1"
+                step="1"
+                className="input w-full pl-7"
+                value={amountInput}
+                onChange={(e) => setAmountInput(e.target.value)}
+              />
+            </div>
+            {acceptedAmount !== undefined && parsedAmount !== acceptedAmount && parsedAmount > 0 && (
+              <div className="mt-1.5 flex items-center gap-1 text-xs text-amber-600">
+                <Info className="h-3 w-3 flex-shrink-0" />
+                Differs from quoted amount ({formatCurrency(acceptedAmount)})
+                <button
+                  type="button"
+                  className="ml-1 underline hover:no-underline"
+                  onClick={() => setAmountInput(String(acceptedAmount))}
+                >
+                  Reset
+                </button>
+              </div>
+            )}
+          </div>
 
           {/* Breakdown */}
           <div className="rounded-lg border border-slate-200 overflow-hidden text-sm">
             <div className="flex justify-between px-4 py-2.5 bg-slate-50">
-              <span className="text-slate-500">Job budget</span>
+              <span className="text-slate-500">Escrow amount</span>
               <span className="font-semibold text-slate-900">{formatCurrency(breakdown.gross)}</span>
             </div>
             <div className="flex justify-between px-4 py-2.5 border-t border-slate-100">
@@ -177,6 +237,7 @@ export default function JobActionButtons({ jobId, status, escrowStatus, budget }
               className="flex-1"
               isLoading={loading === "fund"}
               onClick={fundEscrow}
+              disabled={parsedAmount <= 0}
             >
               Confirm &amp; Fund
             </Button>

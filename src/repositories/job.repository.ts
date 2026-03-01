@@ -152,7 +152,7 @@ export class JobRepository extends BaseRepository<JobDocument> {
     await this.connect();
     return Job.find({
       clientId: new Types.ObjectId(clientId),
-      status: { $in: ["assigned", "in_progress", "completed"] },
+      status: { $in: ["assigned", "in_progress", "completed", "disputed"] },
     })
       .select("title category budget status escrowStatus providerId createdAt scheduleDate partialReleaseAmount")
       .populate("providerId", "name email isVerified")
@@ -187,15 +187,17 @@ export class JobRepository extends BaseRepository<JobDocument> {
   /** Jobs for the provider calendar — schedule-relevant fields only, sorted by scheduleDate. */
   async findCalendarJobsForProvider(providerId: string): Promise<Array<{
     _id: unknown; title: string; category: string; scheduleDate: Date;
-    status: JobStatus; budget: number; location: string;
+    status: JobStatus; escrowStatus: string; budget: number; location: string;
+    clientId: { _id: unknown; name: string } | null;
   }>> {
     await this.connect();
     return Job.find({
       providerId: new Types.ObjectId(providerId),
-      status: { $in: ["assigned", "in_progress", "completed"] },
+      status: { $in: ["assigned", "in_progress", "completed", "disputed"] },
       scheduleDate: { $exists: true },
     })
-      .select("title category scheduleDate status budget location")
+      .select("title category scheduleDate status escrowStatus budget location clientId")
+      .populate("clientId", "name")
       .sort({ scheduleDate: 1 })
       .lean() as never;
   }
@@ -205,7 +207,7 @@ export class JobRepository extends BaseRepository<JobDocument> {
     await this.connect();
     return Job.find({
       providerId: new Types.ObjectId(providerId),
-      status: { $in: ["assigned", "in_progress", "completed"] },
+      status: { $in: ["assigned", "in_progress", "completed", "disputed"] },
     })
       .populate("clientId", "name")
       .sort({ createdAt: -1 })

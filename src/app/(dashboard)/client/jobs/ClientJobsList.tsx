@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { JobStatusBadge, EscrowBadge } from "@/components/ui/Badge";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import { MapPin, Calendar, MessageSquare } from "lucide-react";
+import { MapPin, Calendar, MessageSquare, ShieldCheck } from "lucide-react";
 import type { IJob, JobStatus } from "@/types";
 import ProviderInfoButton from "@/components/shared/ProviderInfoButtonLazy";
 
@@ -13,6 +13,7 @@ type JobWithProvider = IJob & { providerId?: { _id: string; name: string; email:
 interface ClientJobsListProps {
   jobs: JobWithProvider[];
   quoteCountMap: Record<string, number>;
+  fundedAmounts?: Record<string, number>;
 }
 
 const TABS: { label: string; value: JobStatus | "all" }[] = [
@@ -27,7 +28,7 @@ const TABS: { label: string; value: JobStatus | "all" }[] = [
   { label: "Refunded",  value: "refunded" },
 ];
 
-export default function ClientJobsList({ jobs, quoteCountMap }: ClientJobsListProps) {
+export default function ClientJobsList({ jobs, quoteCountMap, fundedAmounts = {} }: ClientJobsListProps) {
   const [activeTab, setActiveTab] = useState<JobStatus | "all">("all");
 
   const filtered = activeTab === "all" ? jobs : jobs.filter((j) => j.status === activeTab);
@@ -71,6 +72,7 @@ export default function ClientJobsList({ jobs, quoteCountMap }: ClientJobsListPr
         <div className="space-y-3">
           {filtered.map((j) => {
             const pendingQuotes = quoteCountMap[j._id.toString()] ?? 0;
+            const fundedAmount = fundedAmounts[j._id.toString()];
             return (
               <div
                 key={j._id.toString()}
@@ -111,11 +113,25 @@ export default function ClientJobsList({ jobs, quoteCountMap }: ClientJobsListPr
                     </div>
                   </div>
                   <div className="flex flex-col items-end gap-2 flex-shrink-0">
-                    <span className="text-xl font-bold text-slate-900">{formatCurrency(j.budget)}</span>
+                    <div className="text-right">
+                      <p className="text-xs text-slate-400">Budget</p>
+                      <p className="text-xl font-bold text-slate-900">{formatCurrency(j.budget)}</p>
+                    </div>
                     <JobStatusBadge status={j.status} />
                     <EscrowBadge status={j.escrowStatus} />
                   </div>
                 </div>
+                {fundedAmount !== undefined && (
+                  <div className="mt-3 flex items-center gap-2 rounded-lg bg-amber-50 border border-amber-100 px-4 py-2.5">
+                    <ShieldCheck className="h-4 w-4 text-amber-500 flex-shrink-0" />
+                    <span className="text-sm text-slate-600">
+                      Funded: <span className="font-semibold text-slate-800">{formatCurrency(fundedAmount)}</span>
+                    </span>
+                    {fundedAmount !== j.budget && (
+                      <span className="text-xs text-slate-400 line-through ml-1">{formatCurrency(j.budget)} budget</span>
+                    )}
+                  </div>
+                )}
               </div>
             );
           })}

@@ -46,6 +46,7 @@ export class DisputeRepository extends BaseRepository<DisputeDocument> {
   /** Active disputes (open + investigating) with jobId title/budget/escrowStatus and raisedBy name/email/role. */
   async findActiveWithRefs(): Promise<Array<{
     _id: unknown; reason: string; status: DisputeStatus; createdAt: Date;
+    evidence: string[];
     jobId: { _id: unknown; title: string; budget: number; escrowStatus: string } | null;
     raisedBy: { name: string; email: string; role: string };
   }>> {

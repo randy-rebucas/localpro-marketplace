@@ -3,10 +3,11 @@
 import { useRef, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
-import { UploadCloud, X, Plus, ChevronLeft, ChevronRight } from "lucide-react";
+import { UploadCloud, X, Plus } from "lucide-react";
 import Image from "next/image";
 import Button from "@/components/ui/Button";
 import Modal from "@/components/ui/Modal";
+import { PhotoStrip } from "@/components/shared/JobPhotoGallery";
 import type { JobStatus, EscrowStatus, UploadFolder } from "@/types";
 import { apiFetch } from "@/lib/fetchClient";
 
@@ -20,97 +21,6 @@ interface Props {
 
 const MAX_BYTES = 8 * 1024 * 1024; // 8 MB
 const MAX_PHOTOS = 3;
-
-// ─── Image lightbox ──────────────────────────────────────────────────────────
-
-function ImageLightbox({
-  images, startIndex, onClose,
-}: { images: string[]; startIndex: number; onClose: () => void }) {
-  const [idx, setIdx] = useState(startIndex);
-
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "ArrowRight") setIdx((i) => (i + 1) % images.length);
-      if (e.key === "ArrowLeft")  setIdx((i) => (i - 1 + images.length) % images.length);
-      if (e.key === "Escape") onClose();
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [images.length, onClose]);
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90" onClick={onClose}>
-      {/* Close */}
-      <button
-        onClick={onClose}
-        className="absolute right-4 top-4 rounded-full bg-white/10 p-2 text-white hover:bg-white/20 transition-colors"
-      >
-        <X className="h-5 w-5" />
-      </button>
-
-      {/* Prev */}
-      {images.length > 1 && (
-        <button
-          onClick={(e) => { e.stopPropagation(); setIdx((i) => (i - 1 + images.length) % images.length); }}
-          className="absolute left-4 rounded-full bg-white/10 p-2 text-white hover:bg-white/20 transition-colors"
-        >
-          <ChevronLeft className="h-6 w-6" />
-        </button>
-      )}
-
-      {/* Image */}
-      <img
-        src={images[idx]}
-        alt={`Photo ${idx + 1}`}
-        onClick={(e) => e.stopPropagation()}
-        className="max-h-[85vh] max-w-[90vw] rounded-xl object-contain shadow-2xl"
-      />
-
-      {/* Next */}
-      {images.length > 1 && (
-        <button
-          onClick={(e) => { e.stopPropagation(); setIdx((i) => (i + 1) % images.length); }}
-          className="absolute right-4 rounded-full bg-white/10 p-2 text-white hover:bg-white/20 transition-colors"
-        >
-          <ChevronRight className="h-6 w-6" />
-        </button>
-      )}
-
-      {/* Counter */}
-      {images.length > 1 && (
-        <p className="absolute bottom-4 text-xs text-white/60">
-          {idx + 1} / {images.length}
-        </p>
-      )}
-    </div>
-  );
-}
-
-// ─── Thumbnail strip ──────────────────────────────────────────────────────────
-
-function PhotoStrip({ urls, label }: { urls: string[]; label: string }) {
-  const [lightbox, setLightbox] = useState<number | null>(null);
-  return (
-    <div className="flex flex-col gap-1">
-      <span className="text-xs text-slate-400">{label}</span>
-      <div className="flex gap-1">
-        {urls.map((url, i) => (
-          <button
-            key={i}
-            type="button"
-            onClick={() => setLightbox(i)}
-            className="overflow-hidden rounded-lg border border-slate-200 hover:ring-2 hover:ring-primary/50 transition-all focus:outline-none focus:ring-2 focus:ring-primary"
-          >
-            <Image src={url} alt={`${label} ${i + 1}`} width={48} height={48} className="h-12 w-12 object-cover" />
-          </button>
-        ))}
-      </div>
-      {lightbox !== null && (
-        <ImageLightbox images={urls} startIndex={lightbox} onClose={() => setLightbox(null)} />
-      )}
-    </div>
-  );
-}
 
 // ─── Upload helper ────────────────────────────────────────────────────────────
 

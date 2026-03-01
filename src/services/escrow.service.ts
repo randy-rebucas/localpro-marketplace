@@ -18,9 +18,9 @@ import type { IJob } from "@/types";
 
 export class EscrowService {
   /** Initiates escrow funding via PayMongo (or simulates if key not set). */
-  async fundEscrow(user: TokenPayload, jobId: string) {
+  async fundEscrow(user: TokenPayload, jobId: string, overrideAmount?: number) {
     const { paymentService } = await import("@/services/payment.service");
-    return paymentService.initiateEscrowPayment(user, jobId);
+    return paymentService.initiateEscrowPayment(user, jobId, overrideAmount);
   }
 
   async startJob(user: TokenPayload, jobId: string, photos: string[]) {
