@@ -497,7 +497,7 @@ export default function ClientProfilePage() {
           )}
           {addresses.map((addr) => (
             <div
-              key={addr._id}
+              key={String(addr._id)}
               className={`flex items-start gap-3 rounded-lg border px-3 py-2.5 ${
                 addr.isDefault
                   ? "border-primary/40 bg-primary/5"

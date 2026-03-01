@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import Image from "next/image";
 import dynamic from "next/dynamic";
-import type { IAddress, IProviderProfile, AvailabilityStatus, WeeklySchedule } from "@/types";
+import type { IAddress, IServiceArea, IProviderProfile, AvailabilityStatus, WeeklySchedule } from "@/types";
 import { DEFAULT_SCHEDULE } from "@/types";
 import Card, { CardBody, CardFooter, CardHeader } from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
@@ -37,6 +37,7 @@ type ProfileData = Partial<
     | "schedule"
     | "avgRating"
     | "completedJobCount"
+    | "serviceAreas"
   >
 >;
 
@@ -98,6 +99,15 @@ export default function ProviderProfilePage() {
   const [savingAddress, setSavingAddress] = useState(false);
   const [detectingLocation, setDetectingLocation] = useState(false);
 
+  // Service areas
+  const [serviceAreas, setServiceAreas] = useState<IServiceArea[]>([]);
+  const [addingArea, setAddingArea] = useState(false);
+  const [newAreaLabel, setNewAreaLabel] = useState("");
+  const [newAreaText, setNewAreaText] = useState("");
+  const [newAreaCoords, setNewAreaCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [savingArea, setSavingArea] = useState(false);
+  const [detectingArea, setDetectingArea] = useState(false);
+
   // Form state
   const [bio, setBio] = useState("");
   const [skills, setSkills] = useState<string[]>([]);
@@ -117,6 +127,7 @@ export default function ProviderProfilePage() {
         setHourlyRate(data?.hourlyRate?.toString() ?? "");
         setAvailability(data?.availabilityStatus ?? "available");
         setSchedule(data?.schedule ?? DEFAULT_SCHEDULE);
+        setServiceAreas(data?.serviceAreas ?? []);
       })
       .catch(() => toast.error("Failed to load profile"))
       .finally(() => setLoading(false));
@@ -325,6 +336,109 @@ export default function ProviderProfilePage() {
     if (user) setUser({ ...user, addresses: data });
   }
 
+  async function detectServiceAreaLocation() {
+    if (!("geolocation" in navigator)) {
+      toast.error("Geolocation is not supported by your browser");
+      return;
+    }
+    setDetectingArea(true);
+    try {
+      const position = await new Promise<GeolocationPosition>((resolve, reject) =>
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 15000,
+          maximumAge: 0,
+        })
+      );
+      const { latitude: lat, longitude: lng, accuracy } = position.coords;
+      const isPrecise = accuracy <= 300;
+      let resolved = "";
+
+      if (isPrecise) {
+        if (typeof window !== "undefined" && window.google?.maps) {
+          const geocoder = new window.google.maps.Geocoder();
+          const { results } = await geocoder.geocode({ location: { lat, lng } });
+          if (results && results.length > 0) {
+            const PREFERRED = [
+              "sublocality_level_1", "locality", "neighborhood",
+              "administrative_area_level_2", "administrative_area_level_1",
+            ];
+            let best = results[0];
+            for (const type of PREFERRED) {
+              const match = results.find((r) => r.types.includes(type));
+              if (match) { best = match; break; }
+            }
+            resolved = best.formatted_address;
+          }
+        }
+        if (!resolved) {
+          try {
+            const r = await fetch(
+              `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=jsonv2&addressdetails=1&zoom=12`,
+              { headers: { "Accept-Language": "en", "User-Agent": "LocalPro/1.0" } }
+            );
+            if (r.ok) resolved = (await r.json()).display_name ?? "";
+          } catch { /* ignore */ }
+        }
+        setNewAreaText(resolved || `${lat.toFixed(6)}, ${lng.toFixed(6)}`);
+        setNewAreaCoords({ lat, lng });
+        toast.success("Location detected!");
+      } else {
+        try {
+          const r = await fetch("https://ipapi.co/json/");
+          if (r.ok) {
+            const d = await r.json();
+            resolved = [d.city, d.region, d.country_name].filter(Boolean).join(", ");
+          }
+        } catch { /* ignore */ }
+        setNewAreaText(resolved || `${lat.toFixed(4)}, ${lng.toFixed(4)}`);
+        setNewAreaCoords(null);
+        toast("Approximate area detected — please refine if needed.", { icon: "⚠️", duration: 5000 });
+      }
+    } catch (e: unknown) {
+      const err = e as { code?: number };
+      if (err.code === 1) toast.error("Location access denied. Enable it in your browser settings.");
+      else toast.error("Could not detect your location. Try typing it manually.");
+    } finally {
+      setDetectingArea(false);
+    }
+  }
+
+  async function handleAddServiceArea() {
+    const trimmed = newAreaText.trim();
+    if (!trimmed) return;
+    setSavingArea(true);
+    try {
+      const res = await apiFetch("/api/providers/profile/service-areas", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          label:       newAreaLabel.trim() || trimmed,
+          address:     trimmed,
+          coordinates: newAreaCoords ?? undefined,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) { toast.error(data.error ?? "Failed to add service area"); return; }
+      setServiceAreas(data);
+      setNewAreaText("");
+      setNewAreaCoords(null);
+      setNewAreaLabel("");
+      setAddingArea(false);
+      toast.success("Service area saved!");
+    } finally {
+      setSavingArea(false);
+    }
+  }
+
+  async function handleDeleteServiceArea(id: string) {
+    const res = await apiFetch(`/api/providers/profile/service-areas/${id}`, { method: "DELETE" });
+    const data = await res.json();
+    if (!res.ok) { toast.error(data.error ?? "Failed to remove service area"); return; }
+    setServiceAreas(data);
+    toast.success("Service area removed");
+  }
+
   if (loading) {
     return (
       <div className="max-w-2xl space-y-6 animate-pulse">
@@ -392,10 +506,12 @@ export default function ProviderProfilePage() {
         pageKey="provider-profile"
         title="How My Profile works"
         steps={[
-          { icon: "🪪", title: "Complete your profile", description: "A complete profile with a photo, bio, and skills wins significantly more jobs than an incomplete one." },
-          { icon: "🛠️", title: "Add your skills", description: "List the specific services you offer so clients can find you through category filters." },
-          { icon: "🛡️", title: "Upload KYC docs", description: "Submit a government-issued ID to earn the Verified badge — clients trust verified providers more." },
-          { icon: "🕐", title: "Set availability", description: "Mark your weekly schedule so clients know when you're available to take on work." },
+          { icon: "🪪", title: "Complete your profile", description: "Add a photo, bio (50+ chars), years of experience, and hourly rate to hit 100% completeness. Clients see this before accepting your quote." },
+          { icon: "🛠️", title: "Add your skills", description: "List every service you offer. Clients filter by skill, so the more accurate your list, the more relevant jobs you'll see." },
+          { icon: "📍", title: "Save your home address", description: "Save a default address under Saved Addresses. It auto-fills the location field when you submit quotes, saving you time on every job." },
+          { icon: "🗺️", title: "Set your service areas", description: "Add the cities or neighborhoods you're willing to travel to. This lets the platform match you with jobs near you and shows clients where you operate." },
+          { icon: "🛡️", title: "Upload KYC docs", description: "Submit a government-issued ID to earn the Verified badge. Clients trust verified providers and are more likely to accept their quotes." },
+          { icon: "🕐", title: "Set your schedule", description: "Mark the days and hours you're available. Clients can see your availability before sending a job, reducing mismatched bookings." },
         ]}
       />
       {/* Page heading */}
@@ -653,7 +769,7 @@ export default function ProviderProfilePage() {
           )}
           {addresses.map((addr) => (
             <div
-              key={addr._id}
+              key={String(addr._id)}
               className={`flex items-start gap-3 rounded-lg border px-3 py-2.5 ${
                 addr.isDefault
                   ? "border-primary/40 bg-primary/5"
@@ -761,6 +877,117 @@ export default function ProviderProfilePage() {
             >
               <Plus className="h-4 w-4" />
               Add address
+            </button>
+          ) : null}
+        </CardBody>
+      </Card>
+
+      {/* Service areas */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between w-full">
+            <div>
+              <h3 className="text-sm font-semibold text-slate-700">Service areas</h3>
+              <p className="text-xs text-slate-400 mt-0.5">Areas where you&apos;re available to take on jobs.</p>
+            </div>
+            <span className="text-xs text-slate-400">{serviceAreas.length}/10</span>
+          </div>
+        </CardHeader>
+        <CardBody className="space-y-3">
+
+          {serviceAreas.length === 0 && !addingArea && (
+            <p className="text-sm text-slate-400 text-center py-4">
+              No service areas yet. Add the locations you cover.
+            </p>
+          )}
+          {serviceAreas.map((area) => (
+            <div
+              key={String(area._id)}
+              className="flex items-start gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2.5"
+            >
+              <MapPin className="mt-0.5 h-4 w-4 flex-shrink-0 text-slate-400" />
+              <div className="flex-1 min-w-0">
+                <span className="text-xs font-semibold text-slate-700">{area.label}</span>
+                {area.label !== area.address && (
+                  <p className="text-xs text-slate-500 mt-0.5 truncate">{area.address}</p>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => handleDeleteServiceArea(area._id)}
+                className="p-1 text-slate-400 hover:text-red-500 transition-colors rounded flex-shrink-0"
+                title="Remove service area"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          ))}
+
+          {addingArea ? (
+            <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-3 space-y-2.5">
+              <div className="grid grid-cols-[140px_1fr] gap-2">
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 mb-1">Label</label>
+                  <input
+                    value={newAreaLabel}
+                    onChange={(e) => setNewAreaLabel(e.target.value)}
+                    placeholder="e.g. Makati CBD"
+                    maxLength={80}
+                    className="w-full rounded-md border border-slate-200 px-2.5 py-1.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                  />
+                </div>
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-medium text-slate-600">Area / city</label>
+                    <button
+                      type="button"
+                      onClick={detectServiceAreaLocation}
+                      disabled={detectingArea}
+                      className="inline-flex items-center gap-1 text-[11px] font-medium text-primary hover:text-primary/80 disabled:opacity-50 transition-colors"
+                      title="Detect my current location"
+                    >
+                      {detectingArea
+                        ? <Loader2 className="h-3 w-3 animate-spin" />
+                        : <LocateFixed className="h-3 w-3" />}
+                      {detectingArea ? "Detecting…" : "Use my location"}
+                    </button>
+                  </div>
+                  <StructuredAddressInput
+                    confirmedAddress={newAreaText}
+                    onSelect={(val, coords) => {
+                      setNewAreaText(val);
+                      setNewAreaCoords(coords ?? null);
+                    }}
+                  />
+                </div>
+              </div>
+              <div className="flex items-center gap-2 justify-end">
+                <button
+                  type="button"
+                  onClick={() => { setAddingArea(false); setNewAreaText(""); setNewAreaCoords(null); setNewAreaLabel(""); }}
+                  className="text-xs text-slate-500 hover:text-slate-700 px-2 py-1 rounded"
+                >
+                  Cancel
+                </button>
+                <Button
+                  type="button"
+                  size="sm"
+                  isLoading={savingArea}
+                  onClick={handleAddServiceArea}
+                  disabled={!newAreaText.trim()}
+                >
+                  Save area
+                </Button>
+              </div>
+            </div>
+          ) : serviceAreas.length < 10 ? (
+            <button
+              type="button"
+              onClick={() => setAddingArea(true)}
+              className="w-full flex items-center justify-center gap-2 rounded-lg border border-dashed border-slate-300 py-2.5 text-sm text-slate-500 hover:text-primary hover:border-primary/50 transition-colors"
+            >
+              <Plus className="h-4 w-4" />
+              Add service area
             </button>
           ) : null}
         </CardBody>

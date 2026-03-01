@@ -300,6 +300,13 @@ export interface PortfolioItem {
   imageUrl?: string;
 }
 
+export interface IServiceArea {
+  _id: string;
+  label: string;
+  address: string;
+  coordinates?: { lat: number; lng: number };
+}
+
 export interface IProviderProfile {
   _id: Types.ObjectId | string;
   userId: Types.ObjectId | string | IUser;
@@ -308,6 +315,7 @@ export interface IProviderProfile {
   yearsExperience: number;
   hourlyRate?: number;
   portfolioItems: PortfolioItem[];
+  serviceAreas: IServiceArea[];
   availabilityStatus: AvailabilityStatus;
   schedule: WeeklySchedule;
   /** Recomputed on each review submission */

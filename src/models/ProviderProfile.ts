@@ -15,6 +15,19 @@ const PortfolioItemSchema = new Schema(
   { _id: false }
 );
 
+const ServiceAreaSubSchema = new Schema(
+  {
+    label:   { type: String, required: true, trim: true, maxlength: 80 },
+    address: { type: String, required: true, trim: true, maxlength: 200 },
+    coordinates: {
+      lat: { type: Number, default: null },
+      lng: { type: Number, default: null },
+      _id: false,
+    },
+  },
+  { _id: true }
+);
+
 const ProviderProfileSchema = new Schema<ProviderProfileDocument>(
   {
     userId: {
@@ -56,6 +69,7 @@ const ProviderProfileSchema = new Schema<ProviderProfileDocument>(
     completedJobCount: { type: Number, default: 0, min: 0 },
     completionRate: { type: Number, default: 0, min: 0, max: 100 },
     avgResponseTimeHours: { type: Number, default: 0, min: 0 },
+    serviceAreas: { type: [ServiceAreaSubSchema], default: [] },
   },
   { timestamps: true }
 );
