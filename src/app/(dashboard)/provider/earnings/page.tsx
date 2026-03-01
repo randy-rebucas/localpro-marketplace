@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { getCurrentUser } from "@/lib/auth";
 import { transactionRepository } from "@/repositories/transaction.repository";
 import { formatCurrency, formatDate } from "@/lib/utils";
@@ -11,14 +12,33 @@ import Link from "next/link";
 export const metadata: Metadata = { title: "Earnings" };
 
 
-export default async function EarningsPage() {
-  const user = await getCurrentUser();
-  if (!user) return null;
+function EarningsSkeleton() {
+  return (
+    <div className="space-y-6 animate-pulse">
+      {/* Summary cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {[...Array(4)].map((_, i) => (
+          <div key={i} className="h-28 bg-white rounded-xl border border-slate-200" />
+        ))}
+      </div>
+      {/* Breakdown bar */}
+      <div className="h-20 bg-white rounded-xl border border-slate-200" />
+      {/* Transaction table */}
+      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+        <div className="h-14 border-b border-slate-100" />
+        {[...Array(5)].map((_, i) => (
+          <div key={i} className="h-14 border-b border-slate-50" />
+        ))}
+      </div>
+    </div>
+  );
+}
 
+async function EarningsContent({ userId }: { userId: string }) {
   const [transactions, totals, availableBalance] = await Promise.all([
-    transactionRepository.findByPayeeWithJob(user.userId),
-    transactionRepository.sumCompletedByPayee(user.userId),
-    payoutService.getAvailableBalance(user.userId),
+    transactionRepository.findByPayeeWithJob(userId),
+    transactionRepository.sumCompletedByPayee(userId),
+    payoutService.getAvailableBalance(userId),
   ]);
 
   const { gross: totalGross, commission: totalCommission, net: totalNet } = totals;
@@ -26,24 +46,7 @@ export default async function EarningsPage() {
   const netPct = 100 - commissionPct;
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <h2 className="text-2xl font-bold text-slate-900">Earnings</h2>
-          <p className="text-slate-500 text-sm mt-0.5">Commission breakdown and payment history.</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <Link
-            href="/provider/payouts"
-            className="text-sm text-slate-500 hover:text-slate-700 underline underline-offset-2 transition-colors"
-          >
-            View payout history
-          </Link>
-          <ExportEarningsButton />
-          <RequestPayoutModal availableBalance={availableBalance} />
-        </div>
-      </div>
-
+    <>
       {/* Summary cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white rounded-xl border border-slate-200 shadow-card p-5">
@@ -117,6 +120,11 @@ export default async function EarningsPage() {
         </div>
       )}
 
+      {/* Payout button */}
+      <div className="flex justify-end">
+        <RequestPayoutModal availableBalance={availableBalance} />
+      </div>
+
       {/* Transaction table */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-card overflow-hidden">
         <div className="px-6 py-4 border-b border-slate-100">
@@ -159,6 +167,34 @@ export default async function EarningsPage() {
           </div>
         )}
       </div>
+    </>
+  );
+}
+
+export default async function EarningsPage() {
+  const user = await getCurrentUser();
+  if (!user) return null;
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h2 className="text-2xl font-bold text-slate-900">Earnings</h2>
+          <p className="text-slate-500 text-sm mt-0.5">Commission breakdown and payment history.</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <Link
+            href="/provider/payouts"
+            className="text-sm text-slate-500 hover:text-slate-700 underline underline-offset-2 transition-colors"
+          >
+            View payout history
+          </Link>
+          <ExportEarningsButton />
+        </div>
+      </div>
+      <Suspense fallback={<EarningsSkeleton />}>
+        <EarningsContent userId={user.userId} />
+      </Suspense>
     </div>
   );
 }

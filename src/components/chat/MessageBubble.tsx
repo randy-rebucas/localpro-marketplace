@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import { cn } from "@/lib/utils";
 import { CheckCheck, Check } from "lucide-react";
 
@@ -12,7 +13,7 @@ interface MessageBubbleProps {
   readAt?: string | null;
 }
 
-export default function MessageBubble({
+const MessageBubble = memo(function MessageBubble({
   body,
   senderName,
   createdAt,
@@ -49,4 +50,6 @@ export default function MessageBubble({
       </div>
     </div>
   );
-}
+});
+
+export default MessageBubble;

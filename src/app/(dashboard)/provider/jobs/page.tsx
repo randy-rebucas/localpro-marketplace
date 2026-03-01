@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { getCurrentUser } from "@/lib/auth";
 import { jobRepository } from "@/repositories/job.repository";
 import Link from "next/link";
@@ -9,11 +10,19 @@ import type { IJob } from "@/types";
 export const metadata: Metadata = { title: "My Jobs" };
 
 
-export default async function ProviderJobsPage() {
-  const user = await getCurrentUser();
-  if (!user) return null;
+function JobsListSkeleton() {
+  return (
+    <div className="space-y-3 animate-pulse">
+      <div className="h-4 w-40 bg-slate-200 rounded" />
+      {[...Array(4)].map((_, i) => (
+        <div key={i} className="bg-white rounded-xl border border-slate-200 h-32" />
+      ))}
+    </div>
+  );
+}
 
-  const jobs = await jobRepository.findActiveJobsForProvider(user.userId);
+async function ProviderJobsContent({ userId }: { userId: string }) {
+  const jobs = await jobRepository.findActiveJobsForProvider(userId);
 
   const serialized = JSON.parse(JSON.stringify(jobs)) as (IJob & {
     clientId: { name: string };
@@ -27,22 +36,36 @@ export default async function ProviderJobsPage() {
     if (!Array.isArray(j.afterPhoto))  j.afterPhoto  = j.afterPhoto  ? [j.afterPhoto  as unknown as string] : [];
   }
 
+  if (jobs.length === 0) {
+    return (
+      <div className="bg-white rounded-xl border border-slate-200 p-12 text-center text-slate-400 text-sm">
+        No active jobs.{" "}
+        <Link href="/provider/marketplace" className="text-primary hover:underline">Browse the marketplace.</Link>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <p className="text-slate-500 text-sm">{jobs.length} job{jobs.length !== 1 ? "s" : ""} assigned to you</p>
+      <ProviderJobsList jobs={serialized} />
+    </>
+  );
+}
+
+export default async function ProviderJobsPage() {
+  const user = await getCurrentUser();
+  if (!user) return null;
+
   return (
     <div className="space-y-6">
       <RealtimeRefresher entity="job" />
       <div>
         <h2 className="text-2xl font-bold text-slate-900">Active Jobs</h2>
-        <p className="text-slate-500 text-sm mt-0.5">{jobs.length} job{jobs.length !== 1 ? "s" : ""} assigned to you</p>
       </div>
-
-      {jobs.length === 0 ? (
-        <div className="bg-white rounded-xl border border-slate-200 p-12 text-center text-slate-400 text-sm">
-          No active jobs.{" "}
-          <Link href="/provider/marketplace" className="text-primary hover:underline">Browse the marketplace.</Link>
-        </div>
-      ) : (
-        <ProviderJobsList jobs={serialized} />
-      )}
+      <Suspense fallback={<JobsListSkeleton />}>
+        <ProviderJobsContent userId={user.userId} />
+      </Suspense>
     </div>
   );
 }

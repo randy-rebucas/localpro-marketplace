@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { getCurrentUser } from "@/lib/auth";
 import { jobRepository } from "@/repositories/job.repository";
 import { transactionRepository } from "@/repositories/transaction.repository";
@@ -50,12 +51,39 @@ function getPerformanceTier(jobs: number, rating: number, rate: number) {
   return   { label: "Newcomer", emoji: "🌱", color: "slate",   next: "Rising Star", nextMsg: "Complete your first 3 jobs",         progress: Math.min(99, Math.round((jobs / 3) * 100)) };
 }
 
-export default async function ProviderDashboardPage() {
-  const user = await getCurrentUser();
-  if (!user) return null;
+function ProviderDashboardSkeleton() {
+  return (
+    <div className="space-y-6 animate-pulse">
+      {/* Header row */}
+      <div className="flex items-center justify-between">
+        <div className="space-y-2">
+          <div className="h-7 w-56 bg-slate-200 rounded-lg" />
+          <div className="h-4 w-40 bg-slate-100 rounded" />
+        </div>
+        <div className="h-9 w-28 bg-slate-200 rounded-lg" />
+      </div>
+      {/* Tier card */}
+      <div className="h-20 bg-white rounded-xl border border-slate-200" />
+      {/* KPI grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {[...Array(4)].map((_, i) => (
+          <div key={i} className="h-28 bg-white rounded-xl border border-slate-200" />
+        ))}
+      </div>
+      {/* Recent jobs */}
+      <div className="bg-white rounded-xl border border-slate-200">
+        <div className="px-6 py-4 border-b border-slate-100 h-14" />
+        {[...Array(4)].map((_, i) => (
+          <div key={i} className="px-6 py-4 border-b border-slate-50 h-16" />
+        ))}
+      </div>
+    </div>
+  );
+}
 
+async function ProviderDashboardContent({ userId }: { userId: string }) {
   const { activeJobs, totalEarnings, avgRating, reviewCount, recentJobs, firstName, completionRate, completedJobCount } =
-    await getProviderStats(user.userId);
+    await getProviderStats(userId);
 
   const tier = getPerformanceTier(completedJobCount, avgRating, completionRate);
   const isTopPro = tier.label === "Top Pro";
@@ -181,5 +209,16 @@ export default async function ProviderDashboardPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default async function ProviderDashboardPage() {
+  const user = await getCurrentUser();
+  if (!user) return null;
+
+  return (
+    <Suspense fallback={<ProviderDashboardSkeleton />}>
+      <ProviderDashboardContent userId={user.userId} />
+    </Suspense>
   );
 }

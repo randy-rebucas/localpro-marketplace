@@ -350,7 +350,7 @@ export default function ProviderJobActions({ jobId, status, escrowStatus, before
           description="Upload up to 3 before photos of the work area. This protects both you and the client."
           label="Start Job"
           uploading={uploading}
-          slotsRemaining={Math.max(0, MAX_PHOTOS - (beforePhoto?.length ?? 0))}
+          slotsRemaining={MAX_PHOTOS}
           onSubmit={startJob}
         />
       </>

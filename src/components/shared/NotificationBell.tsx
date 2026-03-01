@@ -12,9 +12,14 @@ import type { INotification } from "@/types";
 
 export default function NotificationBell() {
   const router = useRouter();
-  const { user } = useAuthStore();
-  const { notifications, unreadCount, hydrate, connectSSE, disconnectSSE, markRead, markAllRead } =
-    useNotificationStore();
+  const user = useAuthStore((s) => s.user);
+  const notifications = useNotificationStore((s) => s.notifications);
+  const unreadCount = useNotificationStore((s) => s.unreadCount);
+  const hydrate = useNotificationStore((s) => s.hydrate);
+  const connectSSE = useNotificationStore((s) => s.connectSSE);
+  const disconnectSSE = useNotificationStore((s) => s.disconnectSSE);
+  const markRead = useNotificationStore((s) => s.markRead);
+  const markAllRead = useNotificationStore((s) => s.markAllRead);
   const [open, setOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
 

@@ -1,4 +1,10 @@
 import type { NextConfig } from "next";
+import BundleAnalyzer from "@next/bundle-analyzer";
+
+const withBundleAnalyzer = BundleAnalyzer({
+  enabled: process.env.ANALYZE === "true",
+  openAnalyzer: false,
+});
 
 const securityHeaders = [
   { key: "X-DNS-Prefetch-Control", value: "on" },
@@ -27,9 +33,11 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   poweredByHeader: false,
 
-  // Tree-shake icon and chart libraries — removes unused exports from the bundle
   experimental: {
+    // Tree-shake icon and chart libraries — removes unused exports from the bundle
     optimizePackageImports: ["lucide-react", "recharts"],
+    // NOTE: PPR (cacheComponents) conflicts with `export const dynamic = "force-dynamic"` on SSE routes.
+    // Streaming via <Suspense> already provides the main performance benefit without enabling this flag.
   },
 
   async headers() {
@@ -56,4 +64,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withBundleAnalyzer(nextConfig);

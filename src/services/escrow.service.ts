@@ -39,12 +39,12 @@ export class EscrowService {
     const check = canTransition(job as unknown as IJob, "in_progress");
     if (!check.allowed) throw new UnprocessableError(check.reason!);
 
-    // Use the native driver to fully bypass Mongoose schema casting
-    const existing = Array.isArray(job.beforePhoto) ? job.beforePhoto : [];
-    const merged = [...existing, ...photos].slice(0, 3);
+    // Use the native driver to fully bypass Mongoose schema casting.
+    // Replace (not merge) beforePhoto so client-uploaded job-creation photos
+    // don't block the provider from uploading their own start-of-work photos.
     await Job.collection.updateOne(
       { _id: jobDoc._id },
-      { $set: { status: "in_progress", beforePhoto: merged } }
+      { $set: { status: "in_progress", beforePhoto: photos } }
     );
 
     await activityRepository.log({

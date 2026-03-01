@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { getCurrentUser } from "@/lib/auth";
 import { jobRepository } from "@/repositories/job.repository";
 import { transactionRepository } from "@/repositories/transaction.repository";
@@ -38,10 +39,31 @@ async function getAdminStats() {
   };
 }
 
-export default async function AdminDashboardPage() {
-  const user = await getCurrentUser();
-  if (!user || user.role !== "admin") return null;
+function AdminDashboardSkeleton() {
+  return (
+    <div className="space-y-4 animate-pulse">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="h-20 bg-amber-50 rounded-xl border border-amber-100" />
+        <div className="h-20 bg-red-50 rounded-xl border border-red-100" />
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {[...Array(4)].map((_, i) => (
+          <div key={i} className="h-28 bg-white rounded-xl border border-slate-200" />
+        ))}
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="lg:col-span-2 h-72 bg-white rounded-xl border border-slate-200" />
+        <div className="space-y-4">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="h-20 bg-white rounded-xl border border-slate-200" />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
 
+async function AdminDashboardContent() {
   const stats = await getAdminStats();
 
   const chartData = Object.entries(stats.jobsByStatus).map(([status, count]) => ({
@@ -50,12 +72,7 @@ export default async function AdminDashboardPage() {
   }));
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold text-slate-900">Admin Dashboard</h2>
-        <p className="text-slate-500 text-sm mt-0.5">Platform overview and key metrics.</p>
-      </div>
-
+    <>
       {/* Attention banners */}
       {(stats.pendingJobs > 0 || stats.openDisputes > 0) && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -148,6 +165,23 @@ export default async function AdminDashboardPage() {
           </div>
         </div>
       </div>
+    </>
+  );
+}
+
+export default async function AdminDashboardPage() {
+  const user = await getCurrentUser();
+  if (!user || user.role !== "admin") return null;
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-2xl font-bold text-slate-900">Admin Dashboard</h2>
+        <p className="text-slate-500 text-sm mt-0.5">Platform overview and key metrics.</p>
+      </div>
+      <Suspense fallback={<AdminDashboardSkeleton />}>
+        <AdminDashboardContent />
+      </Suspense>
     </div>
   );
 }
