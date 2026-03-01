@@ -11,7 +11,7 @@ import Button from "@/components/ui/Button";
 import { useAuthStore } from "@/stores/authStore";
 import SkillsInput from "@/components/shared/SkillsInput";
 import KycUpload from "@/components/shared/KycUpload";
-import { Star, Camera, BadgeCheck, AlertCircle, MapPin, Trash2, Plus, LocateFixed, Loader2 } from "lucide-react";
+import { Star, Camera, BadgeCheck, AlertCircle, MapPin, Trash2, Plus, LocateFixed, Loader2, Sparkles } from "lucide-react";
 import PageGuide from "@/components/shared/PageGuide";
 import { Skeleton } from "@/components/ui/Spinner";
 import { apiFetch } from "@/lib/fetchClient";
@@ -84,6 +84,7 @@ export default function ProviderProfilePage() {
   const [profile, setProfile] = useState<ProfileData>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [generatingBio, setGeneratingBio] = useState(false);
 
   // Avatar — seeded directly from store (DashboardShell resolves fetchMe before rendering)
   const [avatar, setAvatar] = useState<string | null>(user?.avatar ?? null);
@@ -206,6 +207,19 @@ export default function ProviderProfilePage() {
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     saveProfile();
+  }
+
+  async function generateBio() {
+    setGeneratingBio(true);
+    try {
+      const res = await apiFetch("/api/providers/profile/generate-bio", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) { toast.error(data.error ?? "Failed to generate bio"); return; }
+      setBio(data.bio);
+      toast.success("Bio generated! Review and save when ready.");
+    } finally {
+      setGeneratingBio(false);
+    }
   }
 
   async function detectCurrentLocation() {
@@ -641,9 +655,23 @@ export default function ProviderProfilePage() {
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label className="block text-sm font-medium text-slate-700">Bio</label>
-                <span className={`text-xs tabular-nums ${
-                  bio.length >= 900 ? "text-red-400" : bio.length >= 50 ? "text-green-500" : "text-slate-400"
-                }`}>{bio.length}/1000</span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={generateBio}
+                    disabled={generatingBio}
+                    className="inline-flex items-center gap-1 text-[11px] font-medium text-primary hover:text-primary/80 disabled:opacity-50 transition-colors"
+                    title="Generate bio with AI based on your skills, experience and service areas"
+                  >
+                    {generatingBio
+                      ? <Loader2 className="h-3 w-3 animate-spin" />
+                      : <Sparkles className="h-3 w-3" />}
+                    {generatingBio ? "Generating…" : "Generate with AI"}
+                  </button>
+                  <span className={`text-xs tabular-nums ${
+                    bio.length >= 900 ? "text-red-400" : bio.length >= 50 ? "text-green-500" : "text-slate-400"
+                  }`}>{bio.length}/1000</span>
+                </div>
               </div>
               <textarea
                 value={bio}
