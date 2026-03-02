@@ -104,10 +104,12 @@ export default function ClientJobChatPage({
         <ChatWindow
           fetchUrl={`/api/messages/${jobId}`}
           postUrl={`/api/messages/${jobId}`}
+          attachUrl={`/api/messages/${jobId}/attachment`}
           streamUrl={`/api/messages/stream/${jobId}`}
           currentUserId={String(user._id)}
           currentUserRole="client"
           jobTitle={jobMeta?.title}
+          jobStatus={jobMeta?.status}
         />
       </div>
     </div>

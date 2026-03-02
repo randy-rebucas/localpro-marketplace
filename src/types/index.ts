@@ -329,6 +329,12 @@ export interface IMessage {
   senderId: Types.ObjectId | string | IUser;
   receiverId: Types.ObjectId | string | IUser;
   body: string;
+  /** 'text' = regular, 'file' = attachment, 'system' = auto-generated note */
+  type?: "text" | "file" | "system";
+  fileUrl?: string;
+  fileName?: string;
+  fileMime?: string;
+  fileSize?: number;
   readAt?: Date | null;
   createdAt: Date;
 }

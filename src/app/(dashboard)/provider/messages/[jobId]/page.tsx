@@ -21,6 +21,7 @@ export default function ProviderJobChatPage({
   const user = useAuthStore((s) => s.user);
   const initialized = useAuthStore((s) => s.initialized);
   const [jobTitle, setJobTitle] = useState<string | null>(null);
+  const [jobMeta, setJobMeta] = useState<{ status?: string } | null>(null);
 
   useEffect(() => {
     if (initialized && !user) router.replace("/login");
@@ -30,7 +31,12 @@ export default function ProviderJobChatPage({
     if (!user) return;
     apiFetch(`/api/jobs/${jobId}`)
       .then((r) => r.ok ? r.json() : null)
-      .then((data) => { if (data?.title) setJobTitle(data.title); })
+      .then((data) => {
+        if (data?.title) {
+          setJobTitle(data.title);
+          setJobMeta({ status: data.status });
+        }
+      })
       .catch(() => {});
   }, [jobId, user]);
 
@@ -50,10 +56,12 @@ export default function ProviderJobChatPage({
         <ChatWindow
           fetchUrl={`/api/messages/${jobId}`}
           postUrl={`/api/messages/${jobId}`}
+          attachUrl={`/api/messages/${jobId}/attachment`}
           streamUrl={`/api/messages/stream/${jobId}`}
           currentUserId={String(user._id)}
           currentUserRole="provider"
           jobTitle={jobTitle ?? undefined}
+          jobStatus={jobMeta?.status}
         />
       </div>
     </div>

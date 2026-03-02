@@ -3,8 +3,11 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import MessageBubble from "./MessageBubble";
 import MessageInput from "./MessageInput";
+import ChatChecklist from "./ChatChecklist";
+import ChatScopePanel from "./ChatScopePanel";
 import { PageLoader } from "@/components/ui/Spinner";
 import { apiFetch } from "@/lib/fetchClient";
+import toast from "react-hot-toast";
 
 interface RawMessage {
   _id: string;
@@ -12,6 +15,11 @@ interface RawMessage {
   createdAt: string;
   senderId: { _id: string; name: string; role: string } | string;
   readAt?: string | null;
+  type?: string;
+  fileUrl?: string;
+  fileName?: string;
+  fileMime?: string;
+  fileSize?: number;
 }
 
 interface ChatWindowProps {
@@ -19,6 +27,8 @@ interface ChatWindowProps {
   fetchUrl: string;
   /** URL to POST a new message `{ body }` */
   postUrl: string;
+  /** Base URL for file attachments, e.g. `/api/messages/<threadId>/attachment` */
+  attachUrl?: string;
   /** SSE URL for real-time updates (optional) */
   streamUrl?: string;
   /** The current user's ID — used to decide which side a bubble appears on */
@@ -34,11 +44,14 @@ interface ChatWindowProps {
   currentUserRole?: string;
   /** Job title — used to give context to AI reply suggestions */
   jobTitle?: string;
+  /** Current job status — shows pre-job checklist when "assigned" */
+  jobStatus?: string;
 }
 
 export default function ChatWindow({
   fetchUrl,
   postUrl,
+  attachUrl,
   streamUrl,
   currentUserId,
   header,
@@ -47,6 +60,7 @@ export default function ChatWindow({
   streamTransform,
   currentUserRole,
   jobTitle,
+  jobStatus,
 }: ChatWindowProps) {
   const [messages, setMessages] = useState<RawMessage[]>([]);
   const [loading, setLoading] = useState(true);
@@ -127,6 +141,24 @@ export default function ChatWindow({
     setTimeout(() => scrollToBottom(), 50);
   }, [postUrl]);
 
+  const handleAttach = useCallback(async (file: File) => {
+    if (!attachUrl) return;
+    const formData = new FormData();
+    formData.append("file", file);
+    const res = await apiFetch(attachUrl, { method: "POST", body: formData });
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({})) as { error?: string };
+      throw new Error(errData.error ?? "Upload failed");
+    }
+    const msg = await res.json() as RawMessage;
+    setMessages((prev) => {
+      if (prev.some((m) => m._id === msg._id)) return prev;
+      return [...prev, msg];
+    });
+    toast.success("File sent!");
+    setTimeout(() => scrollToBottom(), 50);
+  }, [attachUrl]);
+
   const getSenderId = (msg: RawMessage) =>
     typeof msg.senderId === "string" ? msg.senderId : msg.senderId._id;
 
@@ -141,6 +173,13 @@ export default function ChatWindow({
       {header && (
         <div className="flex-shrink-0 border-b border-slate-200 bg-white px-4 py-3">
           {header}
+        </div>
+      )}
+
+      {/* Pre-job checklist — only shown when job is assigned (pre-work) */}
+      {jobStatus === "assigned" && currentUserRole && (
+        <div className="flex-shrink-0 bg-white border-b border-slate-200">
+          <ChatChecklist role={currentUserRole as "client" | "provider"} />
         </div>
       )}
 
@@ -170,6 +209,11 @@ export default function ChatWindow({
               createdAt={msg.createdAt}
               isMine={isMine}
               readAt={msg.readAt}
+              type={msg.type}
+              fileUrl={msg.fileUrl}
+              fileName={msg.fileName}
+              fileMime={msg.fileMime}
+              fileSize={msg.fileSize}
             />
           );
         })}
@@ -177,8 +221,16 @@ export default function ChatWindow({
         <div ref={bottomRef} />
       </div>
 
+      {/* AI scope summary panel */}
+      {!loading && messages.length > 1 && (
+        <div className="flex-shrink-0 bg-white border-t border-slate-200 pt-2 pb-1">
+          <ChatScopePanel messages={messages} jobTitle={jobTitle} />
+        </div>
+      )}
+
       <MessageInput
         onSend={handleSend}
+        onAttach={attachUrl ? handleAttach : undefined}
         aiSuggestData={currentUserRole ? {
           lastMessages: messages.slice(-5).map((m) => ({
             body: m.body,
