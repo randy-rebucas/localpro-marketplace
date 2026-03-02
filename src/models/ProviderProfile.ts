@@ -39,6 +39,7 @@ const ProviderProfileSchema = new Schema<ProviderProfileDocument>(
     },
     bio: { type: String, default: "", trim: true, maxlength: 1000 },
     skills: [{ type: String, trim: true }],
+    workExperiences: [{ type: String, trim: true }],
     yearsExperience: { type: Number, default: 0, min: 0 },
     hourlyRate: { type: Number, default: null, min: 0 },
     portfolioItems: [PortfolioItemSchema],

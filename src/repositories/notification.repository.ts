@@ -34,6 +34,16 @@ export class NotificationRepository extends BaseRepository<NotificationDocument>
     return this.count({ userId, readAt: null } as never);
   }
 
+  /**
+   * Returns true if a notification of `type` was already sent to `userId`
+   * at or after `since`. Used to throttle repeat reminders.
+   */
+  async wasRecentlySent(userId: string, type: string, since: Date): Promise<boolean> {
+    await this.connect();
+    const found = await Notification.findOne({ userId, type, createdAt: { $gte: since } }).lean();
+    return !!found;
+  }
+
   /** Delete read notifications older than `before`. Returns the count removed. */
   async pruneRead(before: Date): Promise<number> {
     await this.connect();

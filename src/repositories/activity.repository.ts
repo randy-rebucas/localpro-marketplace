@@ -82,6 +82,25 @@ export class ActivityRepository extends BaseRepository<ActivityLogDocument> {
     return logs as unknown as ActivityLogEntry[];
   }
 
+  /** Paginated activity for a specific user — used in the admin user detail page. */
+  async findByUser(
+    userId: string,
+    opts: { page?: number; limit?: number } = {}
+  ): Promise<{ logs: ActivityLogEntry[]; total: number }> {
+    await this.connect();
+    const { page = 1, limit = 20 } = opts;
+    const [logs, total] = await Promise.all([
+      ActivityLog.find({ userId })
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .populate("jobId", "title status")
+        .lean(),
+      ActivityLog.countDocuments({ userId }),
+    ]);
+    return { logs: logs as unknown as ActivityLogEntry[], total };
+  }
+
   /** Count events today, this week, and all-time (for stats strip). */
   async countRecent(): Promise<{ today: number; week: number; total: number }> {
     await this.connect();

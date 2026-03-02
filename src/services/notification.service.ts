@@ -20,6 +20,7 @@ const EMAIL_ALWAYS: Set<NotificationType> = new Set([
   "job_expired",
   "escrow_auto_released",
   "quote_expired",
+  "reminder_profile_incomplete",
 ]);
 
 export interface PushNotificationInput {

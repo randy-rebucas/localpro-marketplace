@@ -70,6 +70,26 @@ function baseTemplate(title: string, bodyHtml: string, ctaUrl?: string, ctaLabel
 </html>`;
 }
 
+/**
+ * Marketing / admin-message email template.
+ * Use this for direct messages sent by admins to users — not transactional events.
+ */
+export function baseMarketingTemplate(subject: string, recipientName: string, bodyText: string): string {
+  const paragraphs = bodyText
+    .split("\n")
+    .filter(Boolean)
+    .map((line) => `<p style="color:#334155;font-size:15px;line-height:1.7;margin:0 0 12px">${line}</p>`)
+    .join("");
+
+  return baseTemplate(
+    subject,
+    `<p style="color:#334155;font-size:15px;line-height:1.6;margin:0 0 16px">
+      Hi <strong>${recipientName}</strong>,
+    </p>
+    ${paragraphs}`,
+  );
+}
+
 // ─── Per-event templates ──────────────────────────────────────────────────────
 
 export interface EmailContext {
@@ -118,6 +138,7 @@ function buildEmailBody(ctx: EmailContext): { subject: string; html: string } {
     dispute_resolved: { label: "Go to dashboard", url: `${APP_URL}` },
     review_received: { label: "View your profile", url: `${APP_URL}/provider/dashboard` },
     new_message: { label: "Reply now", url: jobUrl ? `${APP_URL}/client/jobs/${ctx.data!.jobId}` : `${APP_URL}` },
+    reminder_profile_incomplete: { label: "Complete my profile", url: `${APP_URL}` },
   };
 
   const cta = ctaMap[ctx.type];

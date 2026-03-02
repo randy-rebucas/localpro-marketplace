@@ -47,6 +47,8 @@ export interface IUser {
   kycRejectionReason?: string;
   addresses?: IAddress[];
   capabilities?: StaffCapability[];
+  dateOfBirth?: Date | string | null;
+  gender?: "male" | "female" | "other" | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -294,9 +296,11 @@ export type NotificationType =
   | "reminder_leave_review"
   | "reminder_stale_dispute"
   | "reminder_pending_validation"
+  | "reminder_profile_incomplete"
   | "payout_requested"
   | "payout_status_update"
-  | "job_direct_invite";
+  | "job_direct_invite"
+  | "admin_message";
 
 export interface INotification {
   _id: Types.ObjectId | string;
@@ -374,6 +378,7 @@ export interface IProviderProfile {
   userId: Types.ObjectId | string | IUser;
   bio: string;
   skills: string[];
+  workExperiences?: string[];
   yearsExperience: number;
   hourlyRate?: number;
   portfolioItems: PortfolioItem[];

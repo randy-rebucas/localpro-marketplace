@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jwtVerify } from "jose";
 
+if (!process.env.JWT_SECRET) throw new Error("JWT_SECRET environment variable is not set");
 const ACCESS_SECRET = new TextEncoder().encode(process.env.JWT_SECRET);
 
 interface TokenPayload {
@@ -76,9 +77,10 @@ export async function proxy(req: NextRequest) {
 
   // Try silent refresh if refresh token exists
   if (refreshToken) {
-    // Always call localhost directly — using req.url would route through ngrok
-    // (or any external base URL) causing "fetch failed" in middleware.
-    const internalBase = process.env.NEXT_INTERNAL_URL ?? "http://localhost:3000";
+    // Resolve the internal base URL for token refresh.
+    // Priority: explicit NEXT_INTERNAL_URL → Vercel deployment URL → localhost (dev only).
+    const vercelUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null;
+    const internalBase = process.env.NEXT_INTERNAL_URL ?? vercelUrl ?? "http://localhost:3000";
     const refreshUrl = new URL("/api/auth/refresh", internalBase);
     const refreshRes = await fetch(refreshUrl.toString(), {
       method: "POST",

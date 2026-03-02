@@ -11,12 +11,14 @@ export interface UserDocument extends Omit<IUser, "_id">, Document {
   resetPasswordTokenExpiry?: Date;
   otpCode?: string;
   otpExpiry?: Date;
+  isDeleted?: boolean;
+  deletedAt?: Date | null;
 }
 
 const AddressSubSchema = new Schema(
   {
     label:     { type: String, required: true, trim: true, maxlength: 50 },
-    address:   { type: String, required: true, trim: true, maxlength: 200 },
+    address:   { type: String, required: true, trim: true, maxlength: 500 },
     isDefault: { type: Boolean, default: false },
     coordinates: {
       lat: { type: Number, default: null },
@@ -88,12 +90,17 @@ const UserSchema = new Schema<UserDocument>(
     facebookId: { type: String, default: null, index: true, sparse: true },
     oauthProvider: { type: String, enum: ["facebook", null], default: null },
     phone: { type: String, default: null, sparse: true },
+    dateOfBirth: { type: Date, default: null },
+    gender: { type: String, enum: ["male", "female", "other", null], default: null },
     otpCode: { type: String, select: false, default: null },
     otpExpiry: { type: Date, select: false, default: null },
     verificationToken: { type: String, select: false },
     verificationTokenExpiry: { type: Date, select: false },
     resetPasswordToken: { type: String, select: false },
     resetPasswordTokenExpiry: { type: Date, select: false },
+    // Soft delete
+    isDeleted: { type: Boolean, default: false, index: true },
+    deletedAt: { type: Date, default: null },
   },
   {
     timestamps: true,

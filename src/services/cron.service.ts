@@ -1,4 +1,4 @@
-import { jobRepository, quoteRepository, transactionRepository, activityRepository, reviewRepository, disputeRepository, notificationRepository } from "@/repositories";
+import { jobRepository, quoteRepository, transactionRepository, activityRepository, reviewRepository, disputeRepository, notificationRepository, userRepository } from "@/repositories";
 import { payoutRepository } from "@/repositories/payout.repository";
 import { providerProfileRepository } from "@/repositories/providerProfile.repository";
 import { notificationService } from "@/services/notification.service";
@@ -495,6 +495,71 @@ export class CronService {
     }
 
     return { disputed };
+  }
+
+  /**
+   * Sends profile-completion nudges to users who:
+   *  - Registered more than 3 days ago
+   *  - Are missing phone, avatar, or email verification
+   *  - Haven't already received this reminder in the last 7 days
+   *
+   * Also emails (via EMAIL_ALWAYS) so users don't miss it.
+   * Run weekly (e.g. every Monday at 10 AM).
+   */
+  async sendProfileCompletionReminders(): Promise<{ notified: number }> {
+    const cutoff  = daysAgo(3);   // only nudge after 3 days of inactivity
+    const throttle = daysAgo(7);  // don't repeat within 7 days
+
+    const users = await userRepository.findIncompleteProfiles(cutoff);
+
+    let notified = 0;
+    for (const u of users) {
+      type U = typeof u & {
+        _id:       { toString(): string };
+        role:      "client" | "provider";
+        name:      string;
+        phone?:    string | null;
+        avatar?:   string | null;
+        isVerified: boolean;
+        kycStatus?: string;
+        addresses?: unknown[];
+      };
+      const user = u as unknown as U;
+      const userId = user._id.toString();
+
+      // Throttle — skip if we sent this reminder recently
+      const alreadySent = await notificationRepository.wasRecentlySent(
+        userId,
+        "reminder_profile_incomplete",
+        throttle
+      );
+      if (alreadySent) continue;
+
+      // Build a personalised list of what's missing
+      const missing: string[] = [];
+      if (!user.isVerified)    missing.push("verify your email address");
+      if (!user.phone)         missing.push("add a phone number");
+      if (!user.avatar)        missing.push("upload a profile photo");
+      if (user.role === "client" && !(user.addresses?.length))
+        missing.push("save a default address");
+      if (user.role === "provider" && (!user.kycStatus || user.kycStatus === "none"))
+        missing.push("submit your KYC documents");
+
+      if (missing.length === 0) continue; // already complete (race condition guard)
+
+      const listText = missing.map((m, i) => `${i + 1}. ${m[0].toUpperCase()}${m.slice(1)}`).join(", ");
+
+      await notificationService.push({
+        userId,
+        type: "reminder_profile_incomplete",
+        title: "Your profile is incomplete",
+        message: `Hi ${user.name.split(" ")[0]}, a complete profile helps you get more from LocalPro. Still to do: ${listText}. It only takes a couple of minutes!`,
+      });
+
+      notified++;
+    }
+
+    return { notified };
   }
 
   /**

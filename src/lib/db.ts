@@ -52,6 +52,13 @@ export async function connectDB(): Promise<typeof mongoose> {
       connectTimeoutMS: 15_000,
       // Don't set socketTimeoutMS — let the driver/Atlas manage it;
       // a fixed socket timeout kills long-running aggregations
+      // Proactively retire idle pool connections before Atlas's network
+      // layer (~10-30 min) silently closes them, which would otherwise
+      // cause MongoNetworkError / 500s on the first request after idle.
+      maxIdleTimeMS: 270_000, // 4.5 min — safely under Atlas's idle cutoff
+      // Detect dead sockets quickly so the driver replaces them before
+      // a user request lands on a stale connection.
+      heartbeatFrequencyMS: 5_000,
     };
     cached.promise = mongoose.connect(MONGODB_URI, opts);
   }

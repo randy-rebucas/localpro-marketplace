@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import Image from "next/image";
 import dynamic from "next/dynamic";
@@ -9,7 +9,7 @@ import Card, { CardBody, CardFooter, CardHeader } from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import { useAuthStore } from "@/stores/authStore";
 import { formatDate } from "@/lib/utils";
-import { ShieldCheck, CalendarDays, Camera, MapPin, Trash2, Plus, LocateFixed, Loader2, User, KeyRound } from "lucide-react";
+import { ShieldCheck, CalendarDays, Camera, MapPin, Trash2, Plus, LocateFixed, Loader2, User, KeyRound, BadgeCheck, AlertCircle } from "lucide-react";
 import PageGuide from "@/components/shared/PageGuide";
 import KycUpload from "@/components/shared/KycUpload";
 import PhoneInput, { isValidPhoneNumber } from "@/components/shared/PhoneInput";
@@ -74,6 +74,8 @@ export default function ClientProfilePage() {
   const [newAddressCoords, setNewAddressCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [savingAddress, setSavingAddress] = useState(false);
   const [detectingLocation, setDetectingLocation] = useState(false);
+  const [deletingAddressId, setDeletingAddressId] = useState<string | null>(null);
+  const [settingDefaultId, setSettingDefaultId] = useState<string | null>(null);
 
   // Fetch job count independently — never blocks initial render
   useEffect(() => {
@@ -87,6 +89,15 @@ export default function ClientProfilePage() {
   useEffect(() => {
     setAddresses(user?.addresses ?? []);
   }, [user?.addresses]);
+
+  // Sync name + phone from auth store — useState seeds are stale if user resolves after mount.
+  useEffect(() => {
+    setName(user?.name ?? "");
+  }, [user?.name]);
+
+  useEffect(() => {
+    setPhone(user?.phone ?? "");
+  }, [user?.phone]);
 
   async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -283,28 +294,40 @@ export default function ClientProfilePage() {
   }
 
   async function handleDeleteAddress(id: string) {
-    const res = await apiFetch(`/api/auth/me/addresses/${id}`, { method: "DELETE" });
-    const data = await res.json();
-    if (!res.ok) { toast.error(data.error ?? "Failed to remove address"); return; }
-    setAddresses(data);
-    if (user) setUser({ ...user, addresses: data });
-    toast.success("Address removed");
+    if (deletingAddressId) return;
+    setDeletingAddressId(id);
+    try {
+      const res = await apiFetch(`/api/auth/me/addresses/${id}`, { method: "DELETE" });
+      const data = await res.json();
+      if (!res.ok) { toast.error(data.error ?? "Failed to remove address"); return; }
+      setAddresses(data);
+      if (user) setUser({ ...user, addresses: data });
+      toast.success("Address removed");
+    } finally {
+      setDeletingAddressId(null);
+    }
   }
 
   async function handleSetDefault(id: string) {
-    const res = await apiFetch(`/api/auth/me/addresses/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ isDefault: true }),
-    });
-    const data = await res.json();
-    if (!res.ok) { toast.error(data.error ?? "Failed to update"); return; }
-    setAddresses(data);
-    if (user) setUser({ ...user, addresses: data });
+    if (settingDefaultId) return;
+    setSettingDefaultId(id);
+    try {
+      const res = await apiFetch(`/api/auth/me/addresses/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isDefault: true }),
+      });
+      const data = await res.json();
+      if (!res.ok) { toast.error(data.error ?? "Failed to update"); return; }
+      setAddresses(data);
+      if (user) setUser({ ...user, addresses: data });
+    } finally {
+      setSettingDefaultId(null);
+    }
   }
 
-  // Password strength
-  const passwordStrength = (() => {
+  // ── Memoised derived values ────────────────────────────────────────────────
+  const passwordStrength = useMemo(() => {
     if (!newPassword) return null;
     let score = 0;
     if (newPassword.length >= 8) score++;
@@ -316,11 +339,29 @@ export default function ClientProfilePage() {
     if (score <= 2) return { label: "Fair", color: "bg-amber-400", width: "w-2/4" };
     if (score <= 3) return { label: "Good", color: "bg-yellow-400", width: "w-3/4" };
     return { label: "Strong", color: "bg-emerald-500", width: "w-full" };
-  })();
+  }, [newPassword]);
 
-  const initials = me?.name
-    ? me.name.split(" ").filter(Boolean).map((w) => w[0]).join("").slice(0, 2).toUpperCase()
-    : "?"; 
+  const initials = useMemo(
+    () => me?.name
+      ? me.name.split(" ").filter(Boolean).map((w) => w[0]).join("").slice(0, 2).toUpperCase()
+      : "?",
+    [me?.name]
+  );
+
+  // Profile completeness (0–100): Picture · KYC approved · Phone · Address
+  const { completeness, completenessColor } = useMemo(() => {
+    const items = [
+      !!(me?.avatar),
+      user?.kycStatus === "approved",
+      isValidPhoneNumber(user?.phone ?? ""),
+      addresses.length > 0,
+    ];
+    const pct = Math.round((items.filter(Boolean).length / items.length) * 100);
+    return {
+      completeness: pct,
+      completenessColor: pct === 100 ? "bg-green-500" : pct >= 60 ? "bg-primary" : "bg-amber-400",
+    };
+  }, [me?.avatar, user?.kycStatus, user?.phone, addresses]); 
 
   return (
     <div className="space-y-6">
@@ -338,6 +379,20 @@ export default function ClientProfilePage() {
         <div>
           <h2 className="text-2xl font-bold text-slate-900">My Profile</h2>
           <p className="text-sm text-slate-500 mt-1">Manage your account details, password, and saved addresses.</p>
+        </div>
+        <div className="flex-shrink-0 text-right">
+          <div className="flex items-center gap-2 justify-end mb-1">
+            {completeness === 100
+              ? <BadgeCheck className="h-4 w-4 text-green-500" />
+              : <AlertCircle className="h-4 w-4 text-amber-400" />}
+            <span className="text-xs font-medium text-slate-600">{completeness}% complete</span>
+          </div>
+          <div className="w-32 h-1.5 rounded-full bg-slate-100 overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all ${completenessColor}`}
+              style={{ width: `${completeness}%` }}
+            />
+          </div>
         </div>
       </div>
 
@@ -594,16 +649,18 @@ export default function ClientProfilePage() {
                   <button
                     type="button"
                     onClick={() => handleSetDefault(addr._id)}
-                    className="text-[11px] font-medium text-slate-500 hover:text-primary transition-colors px-1.5 py-0.5 rounded"
+                    disabled={!!settingDefaultId || !!deletingAddressId}
+                    className="text-[11px] font-medium text-slate-500 hover:text-primary disabled:opacity-40 transition-colors px-1.5 py-0.5 rounded"
                     title="Set as default"
                   >
-                    Set default
+                    {settingDefaultId === addr._id ? "Saving…" : "Set default"}
                   </button>
                 )}
                 <button
                   type="button"
                   onClick={() => handleDeleteAddress(addr._id)}
-                  className="p-1 text-slate-400 hover:text-red-500 transition-colors rounded"
+                  disabled={!!deletingAddressId || !!settingDefaultId}
+                  className="p-1 text-slate-400 hover:text-red-500 disabled:opacity-40 transition-colors rounded"
                   title="Remove address"
                 >
                   <Trash2 className="h-3.5 w-3.5" />

@@ -128,6 +128,11 @@ export function getNotificationLink(
       if (role === "admin") return "/admin/disputes";
       return null;
 
+    case "reminder_profile_incomplete":
+      if (role === "provider") return "/provider/profile";
+      if (role === "client")   return "/client/profile";
+      return null;
+
     default:
       return null;
   }

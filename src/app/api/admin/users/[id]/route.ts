@@ -1,14 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { adminService } from "@/services";
-import { requireUser, requireCapability } from "@/lib/auth";
+import { requireUser, requireCapability, requireRole, STAFF_CAPABILITIES } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
-import { ValidationError } from "@/lib/errors";
+import { ValidationError, ForbiddenError, NotFoundError } from "@/lib/errors";
+import User from "@/models/User";
+import { connectDB } from "@/lib/db";
 
 const UpdateUserSchema = z.object({
-  isVerified: z.boolean().optional(),
-  isSuspended: z.boolean().optional(),
+  isVerified:     z.boolean().optional(),
+  isSuspended:    z.boolean().optional(),
   approvalStatus: z.enum(["pending_approval", "approved", "rejected"]).optional(),
+  // Role / capability editor
+  role:           z.enum(["client", "provider", "admin", "staff"]).optional(),
+  capabilities:   z.array(z.string()).optional(),
 });
 
 export const GET = withHandler(async (
@@ -35,6 +40,34 @@ export const PATCH = withHandler(async (
   const parsed = UpdateUserSchema.safeParse(body);
   if (!parsed.success) throw new ValidationError(parsed.error.errors[0].message);
 
-  const target = await adminService.updateUser(user.userId, id, parsed.data);
-  return NextResponse.json(target);
+  const { role, capabilities, ...standardUpdates } = parsed.data;
+
+  // Role changes: only full admins may change a user's role
+  if (role !== undefined || capabilities !== undefined) {
+    requireRole(user, "admin");
+  }
+
+  // Validate capabilities are known
+  if (capabilities) {
+    const invalid = capabilities.filter((c) => !(STAFF_CAPABILITIES as readonly string[]).includes(c));
+    if (invalid.length) throw new ValidationError(`Unknown capabilities: ${invalid.join(", ")}`);
+  }
+
+  // Apply standard status updates through the service
+  let result = await adminService.updateUser(user.userId, id, standardUpdates);
+
+  // Apply role / capability updates directly
+  if (role !== undefined || capabilities !== undefined) {
+    await connectDB();
+    const roleUpdate: Record<string, unknown> = {};
+    if (role !== undefined)         roleUpdate.role = role;
+    if (capabilities !== undefined) roleUpdate.capabilities = capabilities;
+
+    const updated = await User.findByIdAndUpdate(id, { $set: roleUpdate }, { new: true }).lean();
+    if (!updated) throw new NotFoundError("User");
+    result = updated as never;
+  }
+
+  return NextResponse.json(result);
 });
+

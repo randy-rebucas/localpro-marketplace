@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import Image from "next/image";
 import dynamic from "next/dynamic";
@@ -106,6 +106,8 @@ export default function ProviderProfilePage() {
   const [newAddressCoords, setNewAddressCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [savingAddress, setSavingAddress] = useState(false);
   const [detectingLocation, setDetectingLocation] = useState(false);
+  const [deletingAddressId, setDeletingAddressId] = useState<string | null>(null);
+  const [settingDefaultId, setSettingDefaultId] = useState<string | null>(null);
 
   // Service areas
   const [serviceAreas, setServiceAreas] = useState<IServiceArea[]>([]);
@@ -145,6 +147,12 @@ export default function ProviderProfilePage() {
   useEffect(() => {
     setAddresses(user?.addresses ?? []);
   }, [user?.addresses]);
+
+  // Sync phone from auth store — mirrors the addresses pattern above.
+  // useState seed is "" if user resolves after mount, so keep in sync.
+  useEffect(() => {
+    setPhone(user?.phone ?? "");
+  }, [user?.phone]);
 
   async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -188,7 +196,7 @@ export default function ProviderProfilePage() {
     }
     setSaving(true);
     try {
-      const [res] = await Promise.all([
+      const [res, phoneRes] = await Promise.all([
         apiFetch("/api/providers/profile", {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
@@ -212,6 +220,11 @@ export default function ProviderProfilePage() {
       if (!res.ok) {
         const err = await res.json();
         toast.error(err.error ?? "Failed to save profile");
+        return;
+      }
+      if (!phoneRes.ok) {
+        const phErr = await phoneRes.json();
+        toast.error(phErr.error ?? "Failed to save phone number");
         return;
       }
 
@@ -253,9 +266,10 @@ export default function ProviderProfilePage() {
       });
       const data = await res.json();
       if (!res.ok) { toast.error(data.error ?? "Failed to get skill suggestions"); return; }
-      // Filter out skills already added
+      // Filter out skills already added (use a Set for O(1) lookups instead of O(n) per item)
+      const existingSet = new Set(skills.map((x) => x.toLowerCase()));
       const newSuggestions = (data.skills as string[]).filter(
-        (s) => !skills.map((x) => x.toLowerCase()).includes(s.toLowerCase())
+        (s) => !existingSet.has(s.toLowerCase())
       );
       if (newSuggestions.length === 0) {
         toast("All suggested skills are already added!", { icon: "✅" });
@@ -375,24 +389,36 @@ export default function ProviderProfilePage() {
   }
 
   async function handleDeleteAddress(id: string) {
-    const res = await apiFetch(`/api/auth/me/addresses/${id}`, { method: "DELETE" });
-    const data = await res.json();
-    if (!res.ok) { toast.error(data.error ?? "Failed to remove address"); return; }
-    setAddresses(data);
-    if (user) setUser({ ...user, addresses: data });
-    toast.success("Address removed");
+    if (deletingAddressId) return;
+    setDeletingAddressId(id);
+    try {
+      const res = await apiFetch(`/api/auth/me/addresses/${id}`, { method: "DELETE" });
+      const data = await res.json();
+      if (!res.ok) { toast.error(data.error ?? "Failed to remove address"); return; }
+      setAddresses(data);
+      if (user) setUser({ ...user, addresses: data });
+      toast.success("Address removed");
+    } finally {
+      setDeletingAddressId(null);
+    }
   }
 
   async function handleSetDefault(id: string) {
-    const res = await apiFetch(`/api/auth/me/addresses/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ isDefault: true }),
-    });
-    const data = await res.json();
-    if (!res.ok) { toast.error(data.error ?? "Failed to update"); return; }
-    setAddresses(data);
-    if (user) setUser({ ...user, addresses: data });
+    if (settingDefaultId) return;
+    setSettingDefaultId(id);
+    try {
+      const res = await apiFetch(`/api/auth/me/addresses/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isDefault: true }),
+      });
+      const data = await res.json();
+      if (!res.ok) { toast.error(data.error ?? "Failed to update"); return; }
+      setAddresses(data);
+      if (user) setUser({ ...user, addresses: data });
+    } finally {
+      setSettingDefaultId(null);
+    }
   }
 
   async function detectServiceAreaLocation() {
@@ -498,6 +524,29 @@ export default function ProviderProfilePage() {
     toast.success("Service area removed");
   }
 
+  // ── Memoised derived values ────────────────────────────────────────────────
+  // Compute once per dependency change instead of on every render
+  const tier = useMemo(
+    () => getProviderTier(profile.completedJobCount ?? 0, profile.avgRating ?? 0, profile.completionRate ?? 0),
+    [profile.completedJobCount, profile.avgRating, profile.completionRate]
+  );
+
+  const completeness = useMemo(() => {
+    const items = [
+      !!avatar,
+      user?.kycStatus === "approved",
+      isValidPhoneNumber(phone ?? ""),
+      bio.trim().length >= 50,
+      skills.length > 0,
+      yearsExperience > 0,
+      !!hourlyRate,
+      addresses.length > 0,
+      serviceAreas.length > 0,
+      Object.values(schedule).some((d) => d.enabled),
+    ];
+    return Math.round((items.filter(Boolean).length / items.length) * 100);
+  }, [avatar, user?.kycStatus, phone, bio, skills, yearsExperience, hourlyRate, addresses, serviceAreas, schedule]);
+
   if (loading) {
     return (
       <div className="max-w-2xl space-y-6 animate-pulse">
@@ -547,17 +596,6 @@ export default function ProviderProfilePage() {
     : "?";
 
   const cfg = AVAILABILITY_CONFIG[availability];
-
-  // Profile completeness (0–100)
-  const completenessItems = [
-    !!avatar,
-    bio.trim().length >= 50,
-    skills.length > 0,
-    yearsExperience > 0,
-    !!hourlyRate,
-    isValidPhoneNumber(phone ?? ""),
-  ];
-  const completeness = Math.round((completenessItems.filter(Boolean).length / completenessItems.length) * 100);
   const completenessColor = completeness === 100 ? "bg-green-500" : completeness >= 60 ? "bg-primary" : "bg-amber-400";
 
   return (
@@ -706,16 +744,16 @@ export default function ProviderProfilePage() {
                     onClick={generateBio}
                     disabled={generatingBio}
                     className="inline-flex items-center gap-1 text-[11px] font-medium text-primary hover:text-primary/80 disabled:opacity-50 transition-colors"
-                    title={!getProviderTier(profile.completedJobCount ?? 0, profile.avgRating ?? 0, profile.completionRate ?? 0).hasAIAccess ? `Requires Gold tier – ${getProviderTier(profile.completedJobCount ?? 0, profile.avgRating ?? 0, profile.completionRate ?? 0).nextMsg}` : "Generate bio with AI based on your skills, experience and service areas"}
+                    title={!tier.hasAIAccess ? `Requires Gold tier – ${tier.nextMsg}` : "Generate bio with AI based on your skills, experience and service areas"}
                   >
                     {generatingBio
                       ? <Loader2 className="h-3 w-3 animate-spin" />
-                      : getProviderTier(profile.completedJobCount ?? 0, profile.avgRating ?? 0, profile.completionRate ?? 0).hasAIAccess
+                      : tier.hasAIAccess
                         ? <Sparkles className="h-3 w-3" />
                         : <Lock className="h-3 w-3" />}
                     {generatingBio
                       ? "Generating…"
-                      : getProviderTier(profile.completedJobCount ?? 0, profile.avgRating ?? 0, profile.completionRate ?? 0).hasAIAccess
+                      : tier.hasAIAccess
                         ? "Generate with AI"
                         : "Generate with AI · 🥇 Gold"}
                   </button>
@@ -750,16 +788,16 @@ export default function ProviderProfilePage() {
                     onClick={suggestSkills}
                     disabled={suggestingSkills}
                     className="inline-flex items-center gap-1 text-[11px] font-medium text-primary hover:text-primary/80 disabled:opacity-50 transition-colors"
-                    title={!getProviderTier(profile.completedJobCount ?? 0, profile.avgRating ?? 0, profile.completionRate ?? 0).hasAIAccess ? `Requires Gold tier – ${getProviderTier(profile.completedJobCount ?? 0, profile.avgRating ?? 0, profile.completionRate ?? 0).nextMsg}` : "Suggest skills using AI based on your bio"}
+                    title={!tier.hasAIAccess ? `Requires Gold tier – ${tier.nextMsg}` : "Suggest skills using AI based on your bio"}
                   >
                     {suggestingSkills
                       ? <Loader2 className="h-3 w-3 animate-spin" />
-                      : getProviderTier(profile.completedJobCount ?? 0, profile.avgRating ?? 0, profile.completionRate ?? 0).hasAIAccess
+                      : tier.hasAIAccess
                         ? <Sparkles className="h-3 w-3" />
                         : <Lock className="h-3 w-3" />}
                     {suggestingSkills
                       ? "Suggesting…"
-                      : getProviderTier(profile.completedJobCount ?? 0, profile.avgRating ?? 0, profile.completionRate ?? 0).hasAIAccess
+                      : tier.hasAIAccess
                         ? "Suggest with AI"
                         : "Suggest with AI · 🥇 Gold"}
                   </button>
@@ -892,16 +930,18 @@ export default function ProviderProfilePage() {
                   <button
                     type="button"
                     onClick={() => handleSetDefault(addr._id)}
-                    className="text-[11px] font-medium text-slate-500 hover:text-primary transition-colors px-1.5 py-0.5 rounded"
+                    disabled={!!settingDefaultId || !!deletingAddressId}
+                    className="text-[11px] font-medium text-slate-500 hover:text-primary disabled:opacity-40 transition-colors px-1.5 py-0.5 rounded"
                     title="Set as default"
                   >
-                    Set default
+                    {settingDefaultId === addr._id ? "Saving…" : "Set default"}
                   </button>
                 )}
                 <button
                   type="button"
                   onClick={() => handleDeleteAddress(addr._id)}
-                  className="p-1 text-slate-400 hover:text-red-500 transition-colors rounded"
+                  disabled={!!deletingAddressId || !!settingDefaultId}
+                  className="p-1 text-slate-400 hover:text-red-500 disabled:opacity-40 transition-colors rounded"
                   title="Remove address"
                 >
                   <Trash2 className="h-3.5 w-3.5" />

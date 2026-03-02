@@ -24,6 +24,28 @@ export class UserRepository extends BaseRepository<UserDocument> {
     return User.findOne({ email }).lean() as unknown as UserDocument | null;
   }
 
+  /**
+   * Finds active client/provider users who registered before `registeredBefore`
+   * and have at least one incomplete profile field (phone, avatar, or email verification).
+   * Used by the profile-completion cron job.
+   */
+  async findIncompleteProfiles(registeredBefore: Date): Promise<UserDocument[]> {
+    await this.connect();
+    return User.find({
+      role: { $in: ["client", "provider"] },
+      isSuspended: false,
+      createdAt: { $lt: registeredBefore },
+      $or: [
+        { phone: null },
+        { phone: { $exists: false } },
+        { avatar: null },
+        { isVerified: false },
+      ],
+    })
+      .select("-password")
+      .lean() as unknown as UserDocument[];
+  }
+
   async findAll(filter: Record<string, unknown> = {}): Promise<UserDocument[]> {
     await this.connect();
     return User.find(filter)
@@ -38,14 +60,16 @@ export class UserRepository extends BaseRepository<UserDocument> {
     limit: number
   ): Promise<{ users: UserDocument[]; total: number }> {
     await this.connect();
+    // Always exclude soft-deleted users from paginated admin listing
+    const safeFilter = { isDeleted: { $ne: true }, ...filter };
     const [users, total] = await Promise.all([
-      User.find(filter)
+      User.find(safeFilter)
         .select("-password")
         .sort({ createdAt: -1 })
         .skip((page - 1) * limit)
         .limit(limit)
         .lean() as unknown as Promise<UserDocument[]>,
-      User.countDocuments(filter),
+      User.countDocuments(safeFilter),
     ]);
     return { users, total };
   }

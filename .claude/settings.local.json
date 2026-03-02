@@ -48,7 +48,10 @@
       "Bash(pnpm add marked)",
       "Bash(head -c 100000 \"c:\\\\Users\\\\corew\\\\localpro-marketplace\\\\src\\\\app\\\\\\(dashboard\\)\\\\provider\\\\profile\\\\page.tsx\")",
       "Bash(wc -l \"c:\\\\Users\\\\corew\\\\localpro-marketplace\\\\src\\\\app\\\\\\(dashboard\\)\\\\provider\\\\profile\\\\page.tsx\")",
-      "Bash(tail -c 50000 \"c:\\\\Users\\\\corew\\\\localpro-marketplace\\\\src\\\\app\\\\\\(dashboard\\)\\\\provider\\\\profile\\\\page.tsx\")"
+      "Bash(tail -c 50000 \"c:\\\\Users\\\\corew\\\\localpro-marketplace\\\\src\\\\app\\\\\\(dashboard\\)\\\\provider\\\\profile\\\\page.tsx\")",
+      "Bash(xargs ls -1)",
+      "Bash(grep -n \"export const\\\\|export async function\\\\|export function\" /c/Users/corew/localpro-marketplace/src/lib/*.ts)",
+      "Bash(xargs grep -l \"crypto\\\\|fs\\\\|path\")"
     ]
   }
 }
