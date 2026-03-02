@@ -420,11 +420,12 @@ export default async function JobDetailPage({
       {job.escrowStatus === "funded" && (
         <MilestonePanel
           jobId={job._id.toString()}
-          budget={job.budget}
+          budget={fundedAmount ?? job.budget}
           jobStatus={job.status}
           escrowStatus={job.escrowStatus}
           isClient
-          initialMilestones={job.milestones ?? []}
+          initialMilestones={(job.milestones ?? []).map(m => ({ ...m, _id: m._id?.toString?.() ?? m._id }))
+          }
         />
       )}
 

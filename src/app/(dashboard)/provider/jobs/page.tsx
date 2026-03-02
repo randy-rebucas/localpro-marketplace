@@ -15,12 +15,6 @@ export const metadata: Metadata = { title: "My Jobs" };
 function JobsListSkeleton() {
   return (
     <div className="space-y-4 animate-pulse">
-      {/* Tab bar */}
-      <div className="flex gap-1 bg-slate-100 p-1 rounded-xl w-fit">
-        {[48, 64, 72, 56].map((w, i) => (
-          <div key={i} className={`h-7 w-${w === 48 ? '12' : w === 64 ? '16' : w === 72 ? '18' : '14'} rounded-lg bg-slate-200`} />
-        ))}
-      </div>
       {/* Cards */}
       {[...Array(3)].map((_, i) => (
         <div key={i} className="bg-white rounded-xl border border-slate-200 p-5 space-y-3">
@@ -70,6 +64,14 @@ async function ProviderJobsContent({ userId }: { userId: string }) {
   const paymentAmounts = await paymentRepository.findAmountsByJobIds(jobIds);
   const fundedMap: Record<string, number> = {};
   for (const [k, v] of paymentAmounts) fundedMap[k] = v;
+
+  // Sort jobs by status: in_progress > assigned > completed > others
+  const statusOrder = { in_progress: 0, assigned: 1, completed: 2 };
+  serialized.sort((a, b) => {
+    const aOrder = statusOrder[a.status as keyof typeof statusOrder] ?? 99;
+    const bOrder = statusOrder[b.status as keyof typeof statusOrder] ?? 99;
+    return aOrder - bOrder;
+  });
 
   if (jobs.length === 0) {
     return (

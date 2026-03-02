@@ -2,7 +2,7 @@ import { type NextRequest } from "next/server";
 import { z } from "zod";
 import { connectDB } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
-import { jobRepository } from "@/repositories";
+import { jobRepository, paymentRepository } from "@/repositories";
 import { NotFoundError, ForbiddenError, UnprocessableError } from "@/lib/errors";
 import type { IJob, IMilestone } from "@/types";
 
@@ -75,14 +75,17 @@ export async function POST(req: NextRequest, { params }: Ctx) {
     throw new UnprocessableError("Milestones can only be added to active jobs");
   }
 
-  // Guard: total milestone amounts must not exceed the job budget
+  // Guard: total milestone amounts must not exceed the funded escrow amount
+  const fundedMap = await paymentRepository.findAmountsByJobIds([id]);
+  const fundedAmount = fundedMap.get(id) ?? job.budget;
+
   const existing = job.milestones ?? [];
   const totalCommitted = existing.reduce((sum, m) => sum + m.amount, 0);
   const newTotal = totalCommitted + parsed.data.amount;
 
-  if (newTotal > job.budget) {
+  if (newTotal > fundedAmount) {
     throw new UnprocessableError(
-      `Adding ₱${parsed.data.amount.toLocaleString()} would exceed the job budget of ₱${job.budget.toLocaleString()} (already committed: ₱${totalCommitted.toLocaleString()})`
+      `Adding ₱${parsed.data.amount.toLocaleString()} would exceed the funded escrow amount of ₱${fundedAmount.toLocaleString()} (already committed: ₱${totalCommitted.toLocaleString()})`
     );
   }
 

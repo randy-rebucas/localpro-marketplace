@@ -63,9 +63,12 @@ export const POST = withHandler(async (
 
   // Mark the milestone as released
   job.milestones[milestoneIndex] = {
-    ...milestone,
+    title: milestone.title,
+    amount: milestone.amount,
+    description: milestone.description ?? "",
     status: "released",
     releasedAt: new Date(),
+    _id: milestone._id,
   };
 
   // Check if all milestones are now released → close escrow
