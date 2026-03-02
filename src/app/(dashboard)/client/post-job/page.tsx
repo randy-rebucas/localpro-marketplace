@@ -1,12 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
 import dynamic from "next/dynamic";
 import Button from "@/components/ui/Button";
 import Card, { CardHeader, CardBody, CardFooter } from "@/components/ui/Card";
-import { Sparkles, LocateFixed, ImagePlus, X } from "lucide-react";
+import { Sparkles, LocateFixed, ImagePlus, X, Star, Bot } from "lucide-react";
 
 const LocationAutocomplete = dynamic(
   () => import("@/components/shared/LocationAutocomplete"),
@@ -35,6 +35,76 @@ const INITIAL: FormData = {
   budget: "", location: "", scheduleDate: "", specialInstructions: "",
 };
 
+// ─── Provider Recommendations ────────────────────────────────────────────────
+
+interface RecommendedProvider {
+  providerId: string;
+  name: string;
+  avatar?: string;
+  avgRating: number;
+  completedJobCount: number;
+  reason: string;
+}
+
+function ProviderRecommendations({ category, budget }: { category: string; budget: number }) {
+  const [providers, setProviders] = useState<RecommendedProvider[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!category || !budget) return;
+    setLoading(true);
+    apiFetch(`/api/ai/recommend-providers?category=${encodeURIComponent(category)}&budget=${budget}`)
+      .then((r) => r.json())
+      .then((data: { providers?: RecommendedProvider[] }) => { if (data.providers) setProviders(data.providers); })
+      .catch(() => { /* silently hide */ })
+      .finally(() => setLoading(false));
+  }, [category, budget]);
+
+  if (!category || !budget) return null;
+
+  return (
+    <div className="space-y-2.5">
+      <div className="flex items-center gap-2">
+        <Bot className="h-4 w-4 text-violet-600 flex-shrink-0" />
+        <p className="text-sm font-semibold text-slate-700">AI-Recommended Providers</p>
+      </div>
+      {loading ? (
+        <div className="space-y-2 animate-pulse">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="h-16 rounded-xl bg-slate-100 border border-slate-200" />
+          ))}
+        </div>
+      ) : providers.length === 0 ? null : (
+        <ul className="space-y-2">
+          {providers.map((p) => (
+            <li key={p.providerId} className="flex items-start gap-3 rounded-xl border border-slate-200 bg-white px-3.5 py-3 shadow-sm">
+              <div className="flex-shrink-0 w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">
+                {p.avatar ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={p.avatar} alt={p.name} className="w-full h-full rounded-full object-cover" />
+                ) : p.name.charAt(0).toUpperCase()}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-sm font-semibold text-slate-900 truncate">{p.name}</span>
+                  <span className="flex items-center gap-0.5 text-xs text-amber-600 font-medium">
+                    <Star className="h-3 w-3 fill-amber-400 stroke-amber-400" />
+                    {p.avgRating.toFixed(1)}
+                  </span>
+                  <span className="text-xs text-slate-400">{p.completedJobCount} jobs</span>
+                </div>
+                <p className="text-xs text-slate-500 mt-0.5 leading-snug">{p.reason}</p>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 const STEPS = ["Job Details", "Budget & Schedule", "Photos", "Review & Submit"];
 const STEP_SUBTITLES = [
   "Describe the work you need — AI can help generate a description.",
@@ -45,8 +115,12 @@ const STEP_SUBTITLES = [
 
 export default function PostJobPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [step, setStep] = useState(0);
-  const [form, setForm] = useState<FormData>(INITIAL);
+  const [form, setForm] = useState<FormData>(() => ({
+    ...INITIAL,
+    category: searchParams.get("category") ?? "",
+  }));
   const [errors, setErrors] = useState<Partial<FormData>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -63,9 +137,22 @@ export default function PostJobPage() {
   useEffect(() => {
     apiFetch("/api/categories")
       .then((r) => r.json())
-      .then((data: ICategory[]) => setCategories(data))
+      .then((data: ICategory[]) => {
+        setCategories(data);
+        // If a ?category= query param was provided, normalize it to the exact
+        // category name (case-insensitive) once options are available.
+        const qCategory = searchParams.get("category");
+        if (qCategory) {
+          const match = data.find(
+            (c) => c.name.toLowerCase() === qCategory.toLowerCase()
+          );
+          if (match) {
+            setForm((f) => ({ ...f, category: match.name }));
+          }
+        }
+      })
       .catch(() => { /* silently fall back to empty list */ });
-  }, []);
+  }, [searchParams]);
 
   async function detectLocation() {
     if (!("geolocation" in navigator)) {
@@ -619,6 +706,9 @@ export default function PostJobPage() {
               <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 text-xs text-amber-700 mt-4">
                 Your job will be reviewed by our admin team before being published to providers.
               </div>
+
+              {/* AI provider recommendations */}
+              <ProviderRecommendations category={form.category} budget={Number(form.budget)} />
             </div>
           )}
         </CardBody>

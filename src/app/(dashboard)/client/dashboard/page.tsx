@@ -9,6 +9,7 @@ import { loyaltyRepository } from "@/repositories/loyalty.repository";
 import KpiCard from "@/components/ui/KpiCard";
 import { JobStatusBadge } from "@/components/ui/Badge";
 import LoyaltyBadge from "@/components/shared/LoyaltyBadge";
+import MaintenanceReminder from "@/components/shared/MaintenanceReminder";
 import { formatCurrency, formatRelativeTime } from "@/lib/utils";
 import { getClientTier } from "@/lib/loyalty";
 import Link from "next/link";
@@ -260,6 +261,9 @@ export default async function ClientDashboardPage() {
       <Suspense fallback={<div className="h-14 rounded-xl bg-slate-50 border border-slate-200 animate-pulse" />}>
         <LoyaltyWidget userId={currentUser.userId} />
       </Suspense>
+
+      {/* Maintenance reminders — self-hides if nothing due */}
+      <MaintenanceReminder />
 
       {/* Recent jobs stream independently */}
       <Suspense fallback={<RecentJobsSkeleton />}>

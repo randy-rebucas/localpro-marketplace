@@ -389,6 +389,56 @@ export class JobRepository extends BaseRepository<JobDocument> {
       .select("title status budget category createdAt")
       .lean() as never;
   }
+
+  /**
+   * Returns the most recent completed job date per unique category for a client.
+   * Used to compute maintenance schedule reminders.
+   */
+  async findLastCompletedByCategory(
+    clientId: string
+  ): Promise<Array<{ category: string; completedAt: Date; budget: number }>> {
+    await this.connect();
+    const results = await Job.aggregate<{ category: string; completedAt: Date; budget: number }>([
+      {
+        $match: {
+          clientId: new Types.ObjectId(clientId),
+          status: "completed",
+        },
+      },
+      { $sort: { updatedAt: -1 } },
+      {
+        $group: {
+          _id: "$category",
+          completedAt: { $first: "$updatedAt" },
+          budget: { $first: "$budget" },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          category: "$_id",
+          completedAt: 1,
+          budget: 1,
+        },
+      },
+    ]);
+    return results;
+  }
+
+  /**
+   * Returns the last N completed jobs for a client, for AI recommendation context.
+   */
+  async findCompletedForClient(
+    clientId: string,
+    limit = 10
+  ): Promise<Array<{ category: string; budget: number }>> {
+    await this.connect();
+    return Job.find({ clientId: new Types.ObjectId(clientId), status: "completed" })
+      .sort({ updatedAt: -1 })
+      .limit(limit)
+      .select("category budget")
+      .lean() as never;
+  }
 }
 
 export const jobRepository = new JobRepository();

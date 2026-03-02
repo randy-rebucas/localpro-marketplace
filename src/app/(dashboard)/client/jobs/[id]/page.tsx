@@ -13,6 +13,7 @@ import Image from "next/image";
 import dynamic from "next/dynamic";
 import RealtimeRefresher from "@/components/shared/RealtimeRefresher";
 import ProviderInfoButton from "@/components/shared/ProviderInfoButtonLazy";
+import BundleSuggestion from "@/components/shared/BundleSuggestion";
 import Link from "next/link";
 import { Suspense } from "react";
 import { AlertCircle, ShieldCheck, Star, CheckCircle2, Clock, Search, ChevronLeft, Banknote, CalendarDays, User2 } from "lucide-react";
@@ -423,6 +424,11 @@ export default async function JobDetailPage({
       <Suspense fallback={<SectionSkeleton rows={2} />}>
         <QuotesSection jobId={id} jobStatus={job.status} />
       </Suspense>
+
+      {/* Bundle suggestions — show for active/completed jobs */}
+      {(["assigned", "in_progress", "completed"] as const).includes(job.status as never) && (
+        <BundleSuggestion category={job.category} />
+      )}
 
       {/* Sticky CTA bar — primary action always visible at bottom */}
       <StickyJobCTA
