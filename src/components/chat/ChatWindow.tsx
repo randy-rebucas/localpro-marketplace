@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, Fragment } from "react";
 import MessageBubble from "./MessageBubble";
 import MessageInput from "./MessageInput";
 import ChatChecklist from "./ChatChecklist";
@@ -46,6 +46,18 @@ interface ChatWindowProps {
   jobTitle?: string;
   /** Current job status — shows pre-job checklist when "assigned" */
   jobStatus?: string;
+}
+
+const SAME_GROUP_GAP_MS = 5 * 60 * 1000; // 5 minutes
+
+function formatDateSeparator(date: Date): string {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const yesterday = new Date(today.getTime() - 86_400_000);
+  const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  if (d.getTime() === today.getTime()) return "Today";
+  if (d.getTime() === yesterday.getTime()) return "Yesterday";
+  return date.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" });
 }
 
 export default function ChatWindow({
@@ -183,7 +195,7 @@ export default function ChatWindow({
         </div>
       )}
 
-      <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-3">
+      <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col">
         {loading && (
           <div className="flex items-center justify-center h-full">
             <PageLoader />
@@ -198,23 +210,54 @@ export default function ChatWindow({
           <p className="text-center text-sm text-slate-400 mt-8">{emptyMessage}</p>
         )}
 
-        {!loading && !error && messages.map((msg) => {
+        {!loading && !error && messages.map((msg, i) => {
           const isMine = getSenderId(msg) === currentUserId;
+          const isSystem = msg.type === "system";
+
+          const prev = i > 0 ? messages[i - 1] : null;
+          const next = i < messages.length - 1 ? messages[i + 1] : null;
+
+          const sameSenderPrev = !isSystem && prev && prev.type !== "system" &&
+            getSenderId(prev) === getSenderId(msg) &&
+            (new Date(msg.createdAt).getTime() - new Date(prev.createdAt).getTime()) < SAME_GROUP_GAP_MS;
+          const sameSenderNext = !isSystem && next && next.type !== "system" &&
+            getSenderId(next) === getSenderId(msg) &&
+            (new Date(next.createdAt).getTime() - new Date(msg.createdAt).getTime()) < SAME_GROUP_GAP_MS;
+
+          const isFirst = !sameSenderPrev;
+          const isLast  = !sameSenderNext;
+
+          const msgDate  = new Date(msg.createdAt);
+          const prevDate = prev ? new Date(prev.createdAt) : null;
+          const showSep  = !prevDate || msgDate.toDateString() !== prevDate.toDateString();
+
           return (
-            <MessageBubble
-              key={msg._id}
-              body={msg.body}
-              senderName={getSenderName(msg)}
-              senderRole={getSenderRole(msg)}
-              createdAt={msg.createdAt}
-              isMine={isMine}
-              readAt={msg.readAt}
-              type={msg.type}
-              fileUrl={msg.fileUrl}
-              fileName={msg.fileName}
-              fileMime={msg.fileMime}
-              fileSize={msg.fileSize}
-            />
+            <Fragment key={msg._id}>
+              {showSep && (
+                <div className="flex items-center gap-2 my-2">
+                  <div className="flex-1 h-px bg-slate-200" />
+                  <span className="text-[11px] text-slate-400 font-medium">
+                    {formatDateSeparator(msgDate)}
+                  </span>
+                  <div className="flex-1 h-px bg-slate-200" />
+                </div>
+              )}
+              <MessageBubble
+                body={msg.body}
+                senderName={getSenderName(msg)}
+                senderRole={getSenderRole(msg)}
+                createdAt={msg.createdAt}
+                isMine={isMine}
+                readAt={msg.readAt}
+                type={msg.type}
+                fileUrl={msg.fileUrl}
+                fileName={msg.fileName}
+                fileMime={msg.fileMime}
+                fileSize={msg.fileSize}
+                isFirst={isFirst}
+                isLast={isLast}
+              />
+            </Fragment>
           );
         })}
 

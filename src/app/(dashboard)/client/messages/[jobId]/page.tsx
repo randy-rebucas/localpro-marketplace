@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useAuthStore } from "@/stores/authStore";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/fetchClient";
+import { useThreadMeta } from "@/components/chat/MessagesContext";
 import { ChevronLeft, Briefcase, User2 } from "lucide-react";
 
 const ChatWindow = dynamic(() => import("@/components/chat/ChatWindow"), {
@@ -21,12 +22,6 @@ const ChatWindow = dynamic(() => import("@/components/chat/ChatWindow"), {
   ),
 });
 
-interface JobMeta {
-  title: string;
-  providerName?: string;
-  status?: string;
-}
-
 export default function ClientJobChatPage({
   params,
 }: {
@@ -36,7 +31,12 @@ export default function ClientJobChatPage({
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const initialized = useAuthStore((s) => s.initialized);
-  const [jobMeta, setJobMeta] = useState<JobMeta | null>(null);
+
+  // Title & status come instantly from context (loaded by layout)
+  const thread = useThreadMeta(jobId);
+
+  // Only fetch providerName — title/status already available from context
+  const [providerName, setProviderName] = useState<string | null>(null);
 
   useEffect(() => {
     if (initialized && !user) router.replace("/login");
@@ -47,13 +47,7 @@ export default function ClientJobChatPage({
     apiFetch(`/api/jobs/${jobId}`)
       .then((r) => r.ok ? r.json() : null)
       .then((data) => {
-        if (data?.title) {
-          setJobMeta({
-            title: data.title,
-            providerName: data.providerId?.name,
-            status: data.status,
-          });
-        }
+        if (data?.providerId?.name) setProviderName(data.providerId.name);
       })
       .catch(() => {});
   }, [jobId, user]);
@@ -72,29 +66,20 @@ export default function ClientJobChatPage({
             <ChevronLeft className="h-4 w-4" />
           </Link>
           <div className="flex-1 min-w-0">
-            {jobMeta ? (
-              <>
-                <p className="text-sm font-semibold text-slate-900 truncate flex items-center gap-1.5">
-                  <Briefcase className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
-                  {jobMeta.title}
-                </p>
-                {jobMeta.providerName && (
-                  <p className="text-xs text-slate-400 mt-0.5 flex items-center gap-1">
-                    <User2 className="h-3 w-3" />
-                    {jobMeta.providerName}
-                  </p>
-                )}
-              </>
-            ) : (
-              <div className="space-y-1.5 animate-pulse">
-                <div className="h-3.5 w-48 rounded bg-slate-100" />
-                <div className="h-3 w-28 rounded bg-slate-100" />
-              </div>
+            <p className="text-sm font-semibold text-slate-900 truncate flex items-center gap-1.5">
+              <Briefcase className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
+              {thread?.title ?? "Loading…"}
+            </p>
+            {providerName && (
+              <p className="text-xs text-slate-400 mt-0.5 flex items-center gap-1">
+                <User2 className="h-3 w-3" />
+                {providerName}
+              </p>
             )}
           </div>
-          {jobMeta?.status && (
+          {thread?.status && (
             <span className="flex-shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 capitalize">
-              {jobMeta.status.replace(/_/g, " ")}
+              {thread.status.replace(/_/g, " ")}
             </span>
           )}
         </div>
@@ -108,12 +93,11 @@ export default function ClientJobChatPage({
           streamUrl={`/api/messages/stream/${jobId}`}
           currentUserId={String(user._id)}
           currentUserRole="client"
-          jobTitle={jobMeta?.title}
-          jobStatus={jobMeta?.status}
+          jobTitle={thread?.title}
+          jobStatus={thread?.status}
         />
       </div>
     </div>
   );
 }
-
 

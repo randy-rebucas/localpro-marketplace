@@ -5,17 +5,7 @@ import Link from "next/link";
 import { MessageSquare, Briefcase } from "lucide-react";
 import { JobStatusBadge } from "@/components/ui/Badge";
 import { formatRelativeTime } from "@/lib/utils";
-import type { JobStatus } from "@/types";
-
-interface ThreadPreview {
-  jobId: string;
-  title: string;
-  status: JobStatus;
-  unreadCount: number;
-  lastBody: string | null;
-  lastSender: string | null;
-  lastAt: string | null;
-}
+import { MessagesProvider, type ThreadPreview } from "@/components/chat/MessagesContext";
 
 interface Props {
   threads: ThreadPreview[];
@@ -104,7 +94,9 @@ export default function ProviderMessagesShell({ threads, children }: Props) {
 
       {/* ── Right: chat panel ─────────────────────────────────────────────── */}
       <main className="flex-1 min-w-0 flex flex-col overflow-hidden">
-        {children}
+        <MessagesProvider threads={threads}>
+          {children}
+        </MessagesProvider>
       </main>
     </div>
   );

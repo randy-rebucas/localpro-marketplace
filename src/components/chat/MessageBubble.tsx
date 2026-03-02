@@ -1,9 +1,9 @@
 "use client";
 
-import { memo } from "react";
+import { memo, useState, useCallback, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
-import { CheckCheck, Check, FileText, Download } from "lucide-react";
-import Image from "next/image";
+import { CheckCheck, Check, FileText, Download, X, ZoomIn } from "lucide-react";
 
 interface MessageBubbleProps {
   body: string;
@@ -18,12 +18,78 @@ interface MessageBubbleProps {
   fileName?: string;
   fileMime?: string;
   fileSize?: number;
+  /** First message in a consecutive same-sender group */
+  isFirst?: boolean;
+  /** Last message in a consecutive same-sender group */
+  isLast?: boolean;
 }
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+/** Per-position bubble border-radius (iMessage / WhatsApp style) */
+function getBubbleRadius(isMine: boolean, isFirst: boolean, isLast: boolean): string {
+  if (isMine) {
+    if (isFirst && isLast) return "rounded-2xl rounded-br-sm";
+    if (isFirst)           return "rounded-tl-2xl rounded-tr-2xl rounded-br-xl rounded-bl-2xl";
+    if (isLast)            return "rounded-tl-2xl rounded-tr-xl rounded-br-sm rounded-bl-2xl";
+    return "rounded-l-2xl rounded-r-xl";
+  } else {
+    if (isFirst && isLast) return "rounded-2xl rounded-bl-sm";
+    if (isFirst)           return "rounded-tl-2xl rounded-tr-2xl rounded-br-2xl rounded-bl-xl";
+    if (isLast)            return "rounded-tl-xl rounded-tr-2xl rounded-br-2xl rounded-bl-sm";
+    return "rounded-r-2xl rounded-l-xl";
+  }
+}
+
+/** Avatar circle with the sender's initial */
+function SenderAvatar({ name, visible }: { name: string; visible: boolean }) {
+  const initial = name.charAt(0).toUpperCase();
+  return (
+    <div
+      className={cn(
+        "flex-shrink-0 h-7 w-7 rounded-full bg-slate-200 text-slate-600 text-xs font-semibold flex items-center justify-center self-end mb-0.5",
+        !visible && "invisible"
+      )}
+      aria-hidden={!visible}
+    >
+      {visible ? initial : null}
+    </div>
+  );
+}
+
+function ImageLightbox({ src, alt, onClose }: { src: string; alt: string; onClose: () => void }) {
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onClose]);
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <button
+        onClick={onClose}
+        className="absolute top-4 right-4 text-white bg-black/50 hover:bg-black/70 rounded-full p-2 transition-colors"
+        aria-label="Close"
+      >
+        <X className="h-5 w-5" />
+      </button>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={src}
+        alt={alt}
+        className="max-w-[90vw] max-h-[90vh] object-contain rounded-xl shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      />
+    </div>,
+    document.body
+  );
 }
 
 const MessageBubble = memo(function MessageBubble({
@@ -37,6 +103,8 @@ const MessageBubble = memo(function MessageBubble({
   fileName,
   fileMime,
   fileSize,
+  isFirst = true,
+  isLast = true,
 }: MessageBubbleProps) {
   const time = new Date(createdAt).toLocaleTimeString([], {
     hour: "2-digit",
@@ -44,79 +112,115 @@ const MessageBubble = memo(function MessageBubble({
   });
 
   const isImage = fileMime?.startsWith("image/") ?? false;
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const openLightbox = useCallback(() => setLightboxOpen(true), []);
+  const closeLightbox = useCallback(() => setLightboxOpen(false), []);
 
-  // ── System messages (auto-generated notes) ──────────────────────────────
+  const radius = getBubbleRadius(isMine, isFirst, isLast);
+
+  // ── System messages ──────────────────────────────────────────────────────
   if (type === "system") {
     return (
-      <div className="flex justify-center my-1">
+      <div className="flex justify-center my-1 msg-in">
         <span className="text-xs text-slate-400 bg-slate-100 px-3 py-1 rounded-full">{body}</span>
       </div>
     );
   }
 
   return (
-    <div className={cn("flex flex-col gap-0.5 max-w-[75%]", isMine ? "self-end items-end" : "self-start items-start")}>
+    <div
+      className={cn(
+        "flex items-end gap-1.5 msg-in",
+        isMine ? "flex-row-reverse self-end" : "flex-row self-start",
+        // more vertical space at the start of a new group
+        isFirst ? "mt-3" : "mt-0.5"
+      )}
+    >
+      {/* Avatar — only for other person's messages */}
       {!isMine && (
-        <span className="text-xs font-medium text-slate-500 px-1">{senderName}</span>
+        <SenderAvatar name={senderName} visible={isLast} />
       )}
 
-      {/* ── File attachment ── */}
-      {type === "file" && fileUrl ? (
-        <div className={cn(
-          "rounded-2xl overflow-hidden border",
-          isMine ? "border-primary/30 bg-primary/5" : "border-slate-200 bg-white shadow-sm"
-        )}>
-          {isImage ? (
-            <a href={fileUrl} target="_blank" rel="noopener noreferrer">
-              <Image
-                src={fileUrl}
-                alt={fileName ?? "Image"}
-                width={240}
-                height={180}
-                className="block max-w-[240px] object-cover rounded-xl"
-              />
-            </a>
-          ) : (
-            <a
-              href={fileUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={cn(
-                "flex items-center gap-2.5 px-4 py-3 group",
-                isMine ? "text-primary" : "text-slate-700"
-              )}
-            >
-              <FileText className="h-8 w-8 flex-shrink-0 text-slate-400 group-hover:text-primary transition-colors" />
-              <div className="min-w-0">
-                <p className="text-sm font-medium truncate max-w-[160px]">{fileName ?? body}</p>
-                {fileSize && (
-                  <p className="text-xs text-slate-400">{formatBytes(fileSize)}</p>
+      <div className={cn("flex flex-col gap-0.5 max-w-[72%]", isMine ? "items-end" : "items-start")}>
+        {/* Sender name — only first in group */}
+        {!isMine && isFirst && (
+          <span className="text-xs font-medium text-slate-500 px-1 ml-0.5">{senderName}</span>
+        )}
+
+        {/* ── File attachment ── */}
+        {type === "file" && fileUrl ? (
+          <div className={cn(
+            "overflow-hidden border",
+            radius,
+            isMine ? "border-primary/30 bg-primary/5" : "border-slate-200 bg-white shadow-sm"
+          )}>
+            {isImage ? (
+              <>
+                {lightboxOpen && (
+                  <ImageLightbox src={fileUrl} alt={fileName ?? "Image"} onClose={closeLightbox} />
                 )}
-              </div>
-              <Download className="h-4 w-4 ml-1 opacity-60 group-hover:opacity-100 transition-opacity" />
-            </a>
-          )}
-        </div>
-      ) : (
-        /* ── Regular text message ── */
-        <div
-          className={cn(
-            "rounded-2xl px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap break-words",
-            isMine
-              ? "bg-primary text-white rounded-br-sm"
-              : "bg-white border border-slate-200 text-slate-800 rounded-bl-sm shadow-sm"
-          )}
-        >
-          {body}
-        </div>
-      )}
+                <button type="button" onClick={openLightbox} className="block group relative text-left">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={fileUrl}
+                    alt={fileName ?? "Image"}
+                    className="block max-w-[280px] max-h-64 w-auto h-auto object-contain"
+                  />
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
+                    <ZoomIn className="opacity-0 group-hover:opacity-100 transition-opacity h-7 w-7 text-white drop-shadow" />
+                  </div>
+                  {fileName && (
+                    <p className={cn(
+                      "text-[10px] px-2 pb-1.5 pt-0.5 truncate max-w-[280px]",
+                      isMine ? "text-primary/60" : "text-slate-400"
+                    )}>{fileName}</p>
+                  )}
+                </button>
+              </>
+            ) : (
+              <a
+                href={fileUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={cn(
+                  "flex items-center gap-2.5 px-4 py-3 group",
+                  isMine ? "text-primary" : "text-slate-700"
+                )}
+              >
+                <FileText className="h-8 w-8 flex-shrink-0 text-slate-400 group-hover:text-primary transition-colors" />
+                <div className="min-w-0">
+                  <p className="text-sm font-medium truncate max-w-[160px]">{fileName ?? body}</p>
+                  {fileSize && <p className="text-xs text-slate-400">{formatBytes(fileSize)}</p>}
+                </div>
+                <Download className="h-4 w-4 ml-1 opacity-60 group-hover:opacity-100 transition-opacity" />
+              </a>
+            )}
+          </div>
+        ) : (
+          /* ── Regular text message ── */
+          <div
+            className={cn(
+              "px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap break-words",
+              radius,
+              isMine
+                ? "bg-primary text-white"
+                : "bg-white border border-slate-200 text-slate-800 shadow-sm"
+            )}
+          >
+            {body}
+          </div>
+        )}
 
-      <div className={cn("flex items-center gap-1 px-1", isMine ? "flex-row-reverse" : "flex-row")}>
-        <span className="text-[11px] text-slate-400">{time}</span>
-        {isMine && (
-          readAt
-            ? <CheckCheck className="h-3.5 w-3.5 text-primary" aria-label="Read" />
-            : <Check className="h-3.5 w-3.5 text-slate-400" aria-label="Sent" />
+        {/* Timestamp + read receipt — only on last in group */}
+        {isLast && (
+          <div className={cn("flex items-center gap-1 px-1", isMine ? "flex-row-reverse" : "flex-row")}>
+            <span className="text-[11px] text-slate-400">{time}</span>
+            {isMine && (
+              readAt
+                ? <CheckCheck className="h-3.5 w-3.5 text-primary" aria-label="Read" />
+                : <Check className="h-3.5 w-3.5 text-slate-400" aria-label="Sent" />
+            )}
+          </div>
         )}
       </div>
     </div>
