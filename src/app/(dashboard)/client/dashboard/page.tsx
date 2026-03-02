@@ -51,11 +51,24 @@ async function DashboardKpis({ userId }: { userId: string }) {
   ]);
   const firstName = (userDoc as { name?: string } | null)?.name?.split(" ")[0] ?? "there";
 
+  const now = new Date();
+  const dateLabel = now.toLocaleDateString("en-PH", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  });
+
   return (
     <>
-      <div>
-        <h2 className="text-2xl font-bold text-slate-900">Welcome back, {firstName}!</h2>
-        <p className="text-slate-500 text-sm mt-0.5">Here&apos;s what&apos;s happening with your jobs.</p>
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <p className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-1">{dateLabel}</p>
+          <h2 className="text-2xl font-bold text-slate-900">Welcome back, {firstName}!</h2>
+          <p className="text-slate-500 text-sm mt-1">Here&apos;s what&apos;s happening with your jobs today.</p>
+        </div>
+        <Link href="/client/post-job" className="btn-primary flex-shrink-0 mt-1">
+          + Post a Job
+        </Link>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <KpiCard
@@ -172,19 +185,20 @@ export default async function ClientDashboardPage() {
           { icon: "✅", title: "Release Payment", description: "Once the provider completes the job and you're satisfied, release payment from escrow." },
         ]}
       />
-      {/* Header streams immediately — no data dependency */}
-      <div className="flex items-center justify-between">
-        <div className="h-14" /> {/* placeholder height while greeting loads */}
-        <Link href="/client/post-job" className="btn-primary flex-shrink-0">
-          + Post a Job
-        </Link>
-      </div>
-
-      {/* KPIs + personalised greeting stream in together */}
+      {/* Greeting + KPIs stream in together */}
       <Suspense
         fallback={
           <>
-            <div className="h-14 animate-pulse bg-white/0" />
+            <div className="flex items-start justify-between gap-4 flex-wrap">
+              <div className="space-y-1.5 animate-pulse">
+                <div className="h-3 w-28 rounded bg-slate-100" />
+                <div className="h-7 w-64 rounded bg-slate-100" />
+                <div className="h-4 w-48 rounded bg-slate-100" />
+              </div>
+              <Link href="/client/post-job" className="btn-primary flex-shrink-0">
+                + Post a Job
+              </Link>
+            </div>
             <KpiSkeleton />
           </>
         }

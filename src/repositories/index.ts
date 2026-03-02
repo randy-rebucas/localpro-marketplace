@@ -12,3 +12,4 @@ export { paymentRepository } from "./payment.repository";
 export { skillRepository } from "./skill.repository";
 export { payoutRepository } from "./payout.repository";
 export { favoriteProviderRepository } from "./favoriteProvider.repository";
+export { announcementRepository } from "./announcement.repository";

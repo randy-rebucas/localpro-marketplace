@@ -29,6 +29,7 @@ import {
   ShieldCheck,
   UserCog,
   ScrollText,
+  Megaphone,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/authStore";
@@ -150,6 +151,7 @@ const navGroups: Partial<Record<UserRole, NavGroup[]>> = {
       heading: "Communication",
       items: [
         { label: "Support Inbox",  href: "/admin/support",        icon: <Headphones className="h-5 w-5" />, capability: "manage_support" },
+        { label: "Announcements",  href: "/admin/announcements",  icon: <Megaphone  className="h-5 w-5" />, capability: "__admin_only__" },
         { label: "Notifications",  href: "/admin/notifications",  icon: <Bell       className="h-5 w-5" />, capability: null },
       ],
     },

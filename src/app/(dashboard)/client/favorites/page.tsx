@@ -15,11 +15,10 @@ import {
   XCircle,
   Users,
   Sparkles,
+  Timer,
 } from "lucide-react";
 import Button from "@/components/ui/Button";
 import { formatCurrency } from "@/lib/utils";
-import PageGuide from "@/components/shared/PageGuide";
-import { Skeleton } from "@/components/ui/Spinner";
 import { apiFetch } from "@/lib/fetchClient";
 
 const DirectJobModal = dynamic(
@@ -67,6 +66,35 @@ const availabilityConfig = {
   unavailable: { label: "Unavailable", classes: "bg-slate-100 text-slate-500", icon: <XCircle className="h-3 w-3" /> },
 };
 
+function ProviderCardSkeleton() {
+  return (
+    <div className="bg-white rounded-xl border border-slate-200 shadow-card p-5 flex flex-col gap-4 animate-pulse">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-slate-100 flex-shrink-0" />
+          <div className="space-y-1.5">
+            <div className="h-3.5 w-28 rounded bg-slate-100" />
+            <div className="h-3 w-36 rounded bg-slate-100" />
+          </div>
+        </div>
+        <div className="h-5 w-20 rounded-full bg-slate-100" />
+      </div>
+      <div className="h-3 w-24 rounded bg-slate-100" />
+      <div className="space-y-1.5">
+        <div className="h-3 w-full rounded bg-slate-100" />
+        <div className="h-3 w-4/5 rounded bg-slate-100" />
+      </div>
+      <div className="flex gap-1.5">
+        {[40, 56, 48].map((w, i) => <div key={i} className={`h-5 w-${w === 40 ? '10' : w === 56 ? '14' : '12'} rounded-full bg-slate-100`} />)}
+      </div>
+      <div className="flex gap-2 pt-1 border-t border-slate-100">
+        <div className="h-8 flex-1 rounded-lg bg-slate-100" />
+        <div className="h-8 flex-1 rounded-lg bg-slate-100" />
+      </div>
+    </div>
+  );
+}
+
 function Stars({ rating }: { rating: number }) {
   return (
     <span className="flex items-center gap-0.5">
@@ -107,7 +135,7 @@ function ProviderCard({
   const cfg = availabilityConfig[avail];
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-card p-5 flex flex-col gap-4">
+    <div className="bg-white rounded-xl border border-slate-200 shadow-card hover:shadow-card-hover hover:border-primary/30 transition-all p-5 flex flex-col gap-4">
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-base flex-shrink-0">
@@ -167,6 +195,9 @@ function ProviderCard({
       <div className="flex items-center gap-3 text-xs text-slate-400">
         {profile?.completedJobCount !== undefined && (
           <span className="flex items-center gap-1"><Briefcase className="h-3.5 w-3.5" />{profile.completedJobCount} jobs</span>
+        )}
+        {profile?.yearsExperience !== undefined && profile.yearsExperience > 0 && (
+          <span className="flex items-center gap-1"><Timer className="h-3.5 w-3.5" />{profile.yearsExperience}yr exp</span>
         )}
         {profile?.hourlyRate && (
           <span>{formatCurrency(profile.hourlyRate)}/hr</span>
@@ -305,21 +336,11 @@ export default function ClientFavoritesPage() {
 
   return (
     <div className="space-y-6">
-      <PageGuide
-        pageKey="client-favorites"
-        title="How Favorite Providers works"
-        steps={[
-          { icon: "❤️", title: "Save providers", description: "Heart any provider on the marketplace to save them here for quick access later." },
-          { icon: "📨", title: "Direct job invite", description: "Post a job directly to a saved provider — no need to wait for them to find your listing." },
-          { icon: "⭐", title: "Compare at a glance", description: "See each provider's rating, completed job count, and skills side by side." },
-          { icon: "🔍", title: "Search & filter", description: "Use the search bar to quickly find a saved provider by name or skill." },
-        ]}
-      />
-      <div>
-        <h2 className="text-2xl font-bold text-slate-900">Favorite Providers</h2>
-        <p className="text-slate-500 text-sm mt-0.5">
-          Save providers you trust and post jobs directly to them.
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-bold text-slate-900">Favorite Providers</h2>
+          <p className="text-slate-500 text-sm mt-1">Save providers you trust and post jobs directly to them.</p>
+        </div>
       </div>
 
       {/* Tabs */}
@@ -355,15 +376,23 @@ export default function ClientFavoritesPage() {
         <>
           {loadingFavs ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-48 rounded-xl" />)}
+              {[...Array(3)].map((_, i) => <ProviderCardSkeleton key={i} />)}
             </div>
           ) : favorites.length === 0 ? (
-            <div className="bg-white rounded-xl border border-slate-200 p-12 text-center">
-              <Heart className="h-10 w-10 text-slate-300 mx-auto mb-3" />
-              <p className="text-slate-500 font-medium">No favorite providers yet</p>
-              <p className="text-slate-400 text-sm mt-1">
-                Switch to &ldquo;Discover Providers&rdquo; to find and save great providers.
-              </p>
+            <div className="bg-white rounded-xl border border-slate-200 p-12 flex flex-col items-center gap-3 text-center">
+              <div className="flex items-center justify-center h-12 w-12 rounded-full bg-slate-100">
+                <Heart className="h-6 w-6 text-slate-400" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-slate-700">No favorite providers yet</p>
+                <p className="text-xs text-slate-400 mt-1">Find and save providers you trust for quick access later.</p>
+              </div>
+              <button
+                onClick={() => setTab("discover")}
+                className="mt-1 text-xs font-medium text-primary hover:underline"
+              >
+                Browse Discover Providers →
+              </button>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -416,12 +445,17 @@ export default function ClientFavoritesPage() {
 
           {loadingBrowse ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-48 rounded-xl" />)}
+              {[...Array(6)].map((_, i) => <ProviderCardSkeleton key={i} />)}
             </div>
           ) : browse.length === 0 ? (
-            <div className="bg-white rounded-xl border border-slate-200 p-12 text-center">
-              <UserX className="h-10 w-10 text-slate-300 mx-auto mb-3" />
-              <p className="text-slate-500 font-medium">No providers found</p>
+            <div className="bg-white rounded-xl border border-slate-200 p-12 flex flex-col items-center gap-3 text-center">
+              <div className="flex items-center justify-center h-12 w-12 rounded-full bg-slate-100">
+                <UserX className="h-6 w-6 text-slate-400" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-slate-700">No providers found</p>
+                <p className="text-xs text-slate-400 mt-1">Try adjusting your search or availability filter.</p>
+              </div>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

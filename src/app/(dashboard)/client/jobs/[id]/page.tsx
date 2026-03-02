@@ -15,7 +15,7 @@ import RealtimeRefresher from "@/components/shared/RealtimeRefresher";
 import ProviderInfoButton from "@/components/shared/ProviderInfoButtonLazy";
 import Link from "next/link";
 import { Suspense } from "react";
-import { AlertCircle, ShieldCheck, Star, CheckCircle2, Clock, Search, ChevronLeft } from "lucide-react";
+import { AlertCircle, ShieldCheck, Star, CheckCircle2, Clock, Search, ChevronLeft, Banknote, CalendarDays, User2 } from "lucide-react";
 
 // Client-side interactive components — deferred, no ssr:false needed
 const JobActionButtons   = dynamic(() => import("./JobActionButtons"));
@@ -41,10 +41,23 @@ export async function generateMetadata({
 function SectionSkeleton({ rows = 3 }: { rows?: number }) {
   return (
     <div className="bg-white rounded-xl border border-slate-200 shadow-card animate-pulse">
-      <div className="px-6 py-4 border-b border-slate-100 h-14" />
-      <div className="px-6 py-4 space-y-3">
+      <div className="px-6 py-4 border-b border-slate-100">
+        <div className="h-4 w-28 rounded bg-slate-100" />
+      </div>
+      <div className="divide-y divide-slate-100">
         {[...Array(rows)].map((_, i) => (
-          <div key={i} className="h-10 bg-slate-100 rounded-lg" />
+          <div key={i} className="px-6 py-4 flex gap-3">
+            <div className="h-9 w-9 rounded-full bg-slate-100 flex-shrink-0" />
+            <div className="flex-1 space-y-2">
+              <div className="h-3.5 w-40 rounded bg-slate-100" />
+              <div className="h-3 w-24 rounded bg-slate-100" />
+              <div className="h-3 w-56 rounded bg-slate-100" />
+            </div>
+            <div className="flex flex-col items-end gap-1.5">
+              <div className="h-5 w-20 rounded bg-slate-100" />
+              <div className="h-4 w-14 rounded-full bg-slate-100" />
+            </div>
+          </div>
         ))}
       </div>
     </div>
@@ -162,6 +175,10 @@ async function QuotesSection({ jobId, jobStatus }: { jobId: string; jobStatus: s
                 </span>
               )}
               <p className="text-xs text-slate-500 mt-0.5">Timeline: {accepted.timeline}</p>
+              <ProviderInfoButton
+                providerId={accepted.providerId._id.toString()}
+                providerName={accepted.providerId.name}
+              />
               <p className="text-sm text-slate-700 mt-2">{accepted.message}</p>
             </div>
           </div>
@@ -183,8 +200,10 @@ async function QuotesSection({ jobId, jobStatus }: { jobId: string; jobStatus: s
         <h3 className="font-semibold text-slate-900">Quotes ({quotes.length})</h3>
       </div>
       {quotes.length === 0 ? (
-        <div className="px-6 py-8 text-center text-slate-400 text-sm">
-          No quotes yet. Providers will submit quotes once the job is approved.
+        <div className="px-6 py-10 flex flex-col items-center gap-2 text-center">
+          <Clock className="h-7 w-7 text-slate-200" />
+          <p className="text-sm font-medium text-slate-500">No quotes yet</p>
+          <p className="text-xs text-slate-400">Providers will submit quotes once the job is approved.</p>
         </div>
       ) : (
         <ul className="divide-y divide-slate-100">
@@ -239,6 +258,10 @@ async function QuotesSection({ jobId, jobStatus }: { jobId: string; jobStatus: s
                         </div>
                       )}
                       <p className="text-xs text-slate-500 mt-0.5">Timeline: {q.timeline}</p>
+                      <ProviderInfoButton
+                        providerId={q.providerId._id.toString()}
+                        providerName={q.providerId.name}
+                      />
                       <p className="text-sm text-slate-700 mt-2">{q.message}</p>
                     </div>
                   </div>
@@ -329,21 +352,21 @@ export default async function JobDetailPage({
         </div>
       )}
 
-      {/* Header — available from core job fetch */}
-      <div>
-        <h2 className="text-2xl font-bold text-slate-900">{job.title}</h2>
-        <p className="text-slate-400 text-sm mt-1">{job.category} · {job.location} · Posted {formatDate(job.createdAt)}</p>
-      </div>
-
-      {/* Status row */}
-      <div className="flex flex-wrap gap-3">
-        <JobStatusBadge status={job.status} />
-        <EscrowBadge status={job.escrowStatus} />
-        {job.riskScore > 0 && (
-          <span className={`badge ${job.riskScore > 60 ? "bg-red-100 text-red-700" : job.riskScore > 30 ? "bg-amber-100 text-amber-700" : "bg-green-100 text-green-700"}`}>
-            Risk: {job.riskScore}
-          </span>
-        )}
+      {/* Header + status row */}
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <h2 className="text-2xl font-bold text-slate-900 truncate">{job.title}</h2>
+          <p className="text-slate-400 text-sm mt-1">{job.category} · {job.location} · Posted {formatDate(job.createdAt)}</p>
+        </div>
+        <div className="flex flex-wrap justify-end gap-2 flex-shrink-0 pt-1">
+          <JobStatusBadge status={job.status} />
+          <EscrowBadge status={job.escrowStatus} />
+          {job.riskScore > 0 && (
+            <span className={`badge ${job.riskScore > 60 ? "bg-red-100 text-red-700" : job.riskScore > 30 ? "bg-amber-100 text-amber-700" : "bg-green-100 text-green-700"}`}>
+              Risk: {job.riskScore}
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Job details card */}
@@ -354,16 +377,22 @@ export default async function JobDetailPage({
         </div>
         <div className="grid grid-cols-2 gap-4 text-sm">
           <div>
-            <p className="text-xs text-slate-500">Budget</p>
+            <p className="flex items-center gap-1 text-xs text-slate-400 mb-0.5">
+              <Banknote className="h-3 w-3" />Budget
+            </p>
             <p className="font-semibold text-slate-900">{formatCurrency(job.budget)}</p>
           </div>
           <div>
-            <p className="text-xs text-slate-500">Schedule</p>
+            <p className="flex items-center gap-1 text-xs text-slate-400 mb-0.5">
+              <CalendarDays className="h-3 w-3" />Schedule
+            </p>
             <p className="font-semibold text-slate-900">{formatDate(job.scheduleDate)}</p>
           </div>
           {job.providerId && (
-            <div>
-              <p className="text-xs text-slate-500">Assigned Provider</p>
+            <div className="col-span-2">
+              <p className="flex items-center gap-1 text-xs text-slate-400 mb-0.5">
+                <User2 className="h-3 w-3" />Assigned Provider
+              </p>
               <p className="font-semibold text-slate-900">{job.providerId.name}</p>
               <div className="mt-1">
                 <ProviderInfoButton

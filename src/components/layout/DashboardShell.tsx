@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores/authStore";
 import Sidebar from "./Sidebar";
 import Header from "./Header";
+import AnnouncementBanner from "@/components/shared/AnnouncementBanner";
 import { PageLoader } from "@/components/ui/Spinner";
 import type { UserRole } from "@/types";
 
@@ -43,6 +44,7 @@ export default function DashboardShell({ children, role, capabilities, pageTitle
       <Sidebar role={role} capabilities={capabilities} />
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header title={pageTitle} />
+        <AnnouncementBanner />
         <main className="flex-1 overflow-y-auto p-6">{children}</main>
       </div>
     </div>

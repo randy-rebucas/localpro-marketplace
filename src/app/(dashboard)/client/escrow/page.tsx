@@ -5,7 +5,7 @@ import { jobRepository } from "@/repositories/job.repository";
 import { paymentService } from "@/services";
 import { paymentRepository, transactionRepository } from "@/repositories";
 import { formatCurrency } from "@/lib/utils";
-import { CheckCircle } from "lucide-react";
+import { CheckCircle, ShieldCheck } from "lucide-react";
 import { Suspense } from "react";
 import EscrowTabs from "./EscrowTabs";
 import PageGuide from "@/components/shared/PageGuide";
@@ -22,7 +22,21 @@ function EscrowSkeleton() {
   return (
     <div className="space-y-3 animate-pulse">
       {[...Array(3)].map((_, i) => (
-        <div key={i} className="bg-white rounded-xl border border-slate-200 h-28" />
+        <div key={i} className="bg-white rounded-xl border border-slate-200 p-5">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1 space-y-2.5">
+              <div className="h-4 w-2/3 rounded bg-slate-100" />
+              <div className="flex gap-2">
+                <div className="h-3 w-24 rounded bg-slate-100" />
+                <div className="h-3 w-32 rounded bg-slate-100" />
+              </div>
+            </div>
+            <div className="flex flex-col items-end gap-2">
+              <div className="h-6 w-20 rounded bg-slate-100" />
+              <div className="h-5 w-16 rounded-full bg-slate-100" />
+            </div>
+          </div>
+        </div>
       ))}
     </div>
   );
@@ -92,17 +106,26 @@ async function EscrowContent({
       )}
 
       {totalLocked > 0 && (
-        <div className="flex justify-end">
-          <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-2.5 text-right">
-            <p className="text-xs text-amber-600 font-medium">Total Locked</p>
-            <p className="text-xl font-bold text-amber-800">{formatCurrency(totalLocked)}</p>
+        <div className="flex items-center gap-3 rounded-xl bg-amber-50 border border-amber-200 px-5 py-3.5">
+          <div className="flex-1">
+            <p className="text-xs font-medium text-amber-600">Total in Escrow</p>
+            <p className="text-xl font-bold text-amber-800 leading-none mt-0.5">{formatCurrency(totalLocked)}</p>
+          </div>
+          <div className="text-xs text-amber-600 max-w-[200px] text-right leading-snug">
+            Funds are held securely until jobs are released
           </div>
         </div>
       )}
 
       {jobs.length === 0 ? (
-        <div className="bg-white rounded-xl border border-slate-200 p-12 text-center text-slate-400 text-sm">
-          No jobs requiring escrow action.
+        <div className="bg-white rounded-xl border border-slate-200 p-14 flex flex-col items-center gap-3 text-center">
+          <div className="flex items-center justify-center h-12 w-12 rounded-full bg-slate-100">
+            <ShieldCheck className="h-6 w-6 text-slate-400" />
+          </div>
+          <p className="text-sm font-semibold text-slate-700">No escrow jobs yet</p>
+          <p className="text-xs text-slate-400 max-w-xs">
+            Once you accept a provider&apos;s quote, fund escrow here to start the job.
+          </p>
         </div>
       ) : (
         <EscrowTabs
@@ -136,9 +159,11 @@ export default async function EscrowPage({ searchParams }: EscrowPageProps) {
         ]}
       />
       {/* Header streams immediately — no data dependency */}
-      <div>
-        <h2 className="text-2xl font-bold text-slate-900">Escrow</h2>
-        <p className="text-slate-500 text-sm mt-0.5">Manage escrow payments for your jobs.</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-bold text-slate-900">Escrow</h2>
+          <p className="text-slate-500 text-sm mt-1">Manage escrow payments for your jobs.</p>
+        </div>
       </div>
 
       {/* Payment check + jobs list stream in once both DB queries + optional poll resolve */}

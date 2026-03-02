@@ -78,22 +78,22 @@ export default function NotificationsPage() {
   return (
     <div className="max-w-2xl space-y-6">
       {/* Page header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2.5">
-            Notifications
+          <div className="flex items-center gap-2.5 mb-0.5">
+            <h2 className="text-2xl font-bold text-slate-900">Notifications</h2>
             {unreadCount > 0 && (
-              <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-red-100 text-red-600 text-xs font-bold">
-                {unreadCount} unread
+              <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-blue-100 text-blue-600 text-[11px] font-bold">
+                {unreadCount} new
               </span>
             )}
-          </h2>
+          </div>
           <p className="text-slate-500 text-sm mt-0.5">All your recent activity in one place.</p>
         </div>
         {unreadCount > 0 && (
           <button
             onClick={() => markAllRead()}
-            className="text-sm font-medium text-primary hover:underline"
+            className="flex-shrink-0 mt-1 h-8 px-3 rounded-lg border border-slate-200 text-xs font-medium text-slate-600 hover:border-primary hover:text-primary transition-colors"
           >
             Mark all read
           </button>
@@ -130,10 +130,14 @@ export default function NotificationsPage() {
                 <button
                   key={n._id?.toString() ?? String(n.createdAt)}
                   onClick={() => handleClick(n)}
-                  className={`w-full flex items-start gap-4 px-5 py-4 text-left transition-colors hover:bg-slate-50 ${
-                    isUnread ? "bg-blue-50/30" : ""
+                  className={`group w-full flex items-start gap-4 px-5 py-4 text-left transition-colors hover:bg-slate-50/80 relative ${
+                    isUnread ? "bg-blue-50/40" : ""
                   } ${link ? "cursor-pointer" : "cursor-default"}`}
                 >
+                  {/* Unread left accent */}
+                  {isUnread && (
+                    <span className="absolute left-0 top-3 bottom-3 w-0.5 rounded-full bg-blue-400" />
+                  )}
                   {/* Icon */}
                   <NotifIcon type={n.type} size="md" />
 
@@ -155,9 +159,9 @@ export default function NotificationsPage() {
                   {/* Right side: unread dot + chevron */}
                   <div className="flex items-center gap-1.5 flex-shrink-0 mt-1">
                     {isUnread && (
-                      <div className="h-2.5 w-2.5 rounded-full bg-blue-500" />
+                      <div className="h-2 w-2 rounded-full bg-blue-500" />
                     )}
-                    {link && <ChevronRight className="h-4 w-4 text-slate-300" />}
+                    {link && <ChevronRight className="h-4 w-4 text-slate-200 group-hover:text-slate-400 transition-colors" />}
                   </div>
                 </button>
               );

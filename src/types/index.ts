@@ -204,6 +204,24 @@ export interface PaginatedResponse<T> {
   totalPages: number;
 }
 
+// ─── Announcement ─────────────────────────────────────────────────────────────
+
+export type AnnouncementType = "info" | "warning" | "success" | "danger";
+export type AnnouncementTarget = "all" | "client" | "provider" | "admin" | "staff";
+
+export interface IAnnouncement {
+  _id: Types.ObjectId | string;
+  title: string;
+  message: string;
+  type: AnnouncementType;
+  targetRoles: AnnouncementTarget[];
+  isActive: boolean;
+  expiresAt?: Date | null;
+  createdBy: Types.ObjectId | string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 // ─── Admin Stats ──────────────────────────────────────────────────────────────
 
 export interface AdminStats {

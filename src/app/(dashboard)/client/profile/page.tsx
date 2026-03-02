@@ -9,7 +9,7 @@ import Card, { CardBody, CardFooter, CardHeader } from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import { useAuthStore } from "@/stores/authStore";
 import { formatDate } from "@/lib/utils";
-import { ShieldCheck, CalendarDays, Camera, MapPin, Trash2, Plus, LocateFixed, Loader2 } from "lucide-react";
+import { ShieldCheck, CalendarDays, Camera, MapPin, Trash2, Plus, LocateFixed, Loader2, User, KeyRound } from "lucide-react";
 import PageGuide from "@/components/shared/PageGuide";
 import KycUpload from "@/components/shared/KycUpload";
 import { apiFetch } from "@/lib/fetchClient";
@@ -287,6 +287,21 @@ export default function ClientProfilePage() {
     if (user) setUser({ ...user, addresses: data });
   }
 
+  // Password strength
+  const passwordStrength = (() => {
+    if (!newPassword) return null;
+    let score = 0;
+    if (newPassword.length >= 8) score++;
+    if (newPassword.length >= 12) score++;
+    if (/[A-Z]/.test(newPassword)) score++;
+    if (/[0-9]/.test(newPassword)) score++;
+    if (/[^A-Za-z0-9]/.test(newPassword)) score++;
+    if (score <= 1) return { label: "Weak", color: "bg-red-400", width: "w-1/4" };
+    if (score <= 2) return { label: "Fair", color: "bg-amber-400", width: "w-2/4" };
+    if (score <= 3) return { label: "Good", color: "bg-yellow-400", width: "w-3/4" };
+    return { label: "Strong", color: "bg-emerald-500", width: "w-full" };
+  })();
+
   const initials = me?.name
     ? me.name.split(" ").filter(Boolean).map((w) => w[0]).join("").slice(0, 2).toUpperCase()
     : "?"; 
@@ -303,9 +318,11 @@ export default function ClientProfilePage() {
           { icon: "📅", title: "Account history", description: "See your account creation date and verification status at a glance." },
         ]}
       />
-      <div>
-        <h2 className="text-2xl font-bold text-slate-900">My Profile</h2>
-        <p className="text-sm text-slate-500 mt-0.5">Manage your account details and password.</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-bold text-slate-900">My Profile</h2>
+          <p className="text-sm text-slate-500 mt-1">Manage your account details, password, and saved addresses.</p>
+        </div>
       </div>
 
       {/* Hidden file input */}
@@ -355,16 +372,19 @@ export default function ClientProfilePage() {
               </button>
 
               {/* Name + email + verified */}
-              <div className="w-full">
+              <div className="w-full space-y-0.5">
                 <p className="font-semibold text-slate-900 text-base truncate">{me?.name ?? "—"}</p>
                 <p className="text-sm text-slate-400 truncate">{me?.email ?? ""}</p>
-                {me?.isVerified && (
-                  <div className="mt-2 flex justify-center">
-                    <span className="inline-flex items-center gap-1 text-xs font-medium text-blue-600">
-                      <ShieldCheck className="h-3.5 w-3.5" /> Verified
+                <div className="flex items-center justify-center gap-2 mt-2 flex-wrap">
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[11px] font-semibold capitalize">
+                    {me?.role ?? "client"}
+                  </span>
+                  {me?.isVerified && (
+                    <span className="inline-flex items-center gap-1 text-[11px] font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
+                      <ShieldCheck className="h-3 w-3" /> Verified
                     </span>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
 
               {/* Stats */}
@@ -394,7 +414,10 @@ export default function ClientProfilePage() {
       <form onSubmit={saveName}>
         <Card>
           <CardHeader>
-            <h3 className="text-sm font-semibold text-slate-700">Account details</h3>
+            <div className="flex items-center gap-2">
+              <User className="h-4 w-4 text-slate-400" />
+              <h3 className="text-sm font-semibold text-slate-700">Account details</h3>
+            </div>
           </CardHeader>
           <CardBody className="space-y-4">
             <div>
@@ -429,7 +452,10 @@ export default function ClientProfilePage() {
       <form onSubmit={savePassword}>
         <Card>
           <CardHeader>
-            <h3 className="text-sm font-semibold text-slate-700">Change password</h3>
+            <div className="flex items-center gap-2">
+              <KeyRound className="h-4 w-4 text-slate-400" />
+              <h3 className="text-sm font-semibold text-slate-700">Change password</h3>
+            </div>
           </CardHeader>
           <CardBody className="space-y-4">
             <div>
@@ -452,6 +478,18 @@ export default function ClientProfilePage() {
                 placeholder="Min. 8 characters"
                 className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
               />
+              {passwordStrength && (
+                <div className="mt-2 space-y-1">
+                  <div className="h-1 w-full rounded-full bg-slate-100 overflow-hidden">
+                    <div className={`h-full rounded-full transition-all ${passwordStrength.color} ${passwordStrength.width}`} />
+                  </div>
+                  <p className={`text-[11px] font-medium ${
+                    passwordStrength.label === "Weak" ? "text-red-500" :
+                    passwordStrength.label === "Fair" ? "text-amber-500" :
+                    passwordStrength.label === "Good" ? "text-yellow-600" : "text-emerald-600"
+                  }`}>{passwordStrength.label}</p>
+                </div>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1.5">Confirm new password</label>
@@ -460,8 +498,15 @@ export default function ClientProfilePage() {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 autoComplete="new-password"
-                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                className={`w-full rounded-lg border px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary ${
+                  confirmPassword && confirmPassword !== newPassword
+                    ? "border-red-300 bg-red-50/30"
+                    : "border-slate-200"
+                }`}
               />
+              {confirmPassword && confirmPassword !== newPassword && (
+                <p className="text-[11px] text-red-500 mt-1">Passwords do not match</p>
+              )}
             </div>
           </CardBody>
           <CardFooter className="flex justify-end">
@@ -469,7 +514,7 @@ export default function ClientProfilePage() {
               type="submit"
               isLoading={savingPassword}
               size="md"
-              disabled={!currentPassword || !newPassword || !confirmPassword}
+              disabled={!currentPassword || !newPassword || !confirmPassword || confirmPassword !== newPassword}
             >
               Change password
             </Button>
@@ -481,11 +526,14 @@ export default function ClientProfilePage() {
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between w-full">
-            <div>
-              <h3 className="text-sm font-semibold text-slate-700">Saved addresses</h3>
-              <p className="text-xs text-slate-400 mt-0.5">Quick-fill your location when posting jobs.</p>
+            <div className="flex items-center gap-2">
+              <MapPin className="h-4 w-4 text-slate-400" />
+              <div>
+                <h3 className="text-sm font-semibold text-slate-700">Saved addresses</h3>
+                <p className="text-xs text-slate-400 mt-0.5">Quick-fill your location when posting jobs.</p>
+              </div>
             </div>
-            <span className="text-xs text-slate-400">{addresses.length}/10</span>
+            <span className="text-xs text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">{addresses.length}/10</span>
           </div>
         </CardHeader>
         <CardBody className="space-y-3">

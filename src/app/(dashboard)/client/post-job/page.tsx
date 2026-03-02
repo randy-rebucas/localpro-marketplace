@@ -36,6 +36,12 @@ const INITIAL: FormData = {
 };
 
 const STEPS = ["Job Details", "Budget & Schedule", "Photos", "Review & Submit"];
+const STEP_SUBTITLES = [
+  "Describe the work you need — AI can help generate a description.",
+  "Set your budget and preferred date so providers can send accurate quotes.",
+  "Add photos to give providers a clearer picture of the scope. (optional)",
+  "Double-check everything looks good before sending to providers.",
+];
 
 export default function PostJobPage() {
   const router = useRouter();
@@ -328,33 +334,49 @@ export default function PostJobPage() {
           { icon: "🚀", title: "Submit & wait", description: "Once submitted, eligible providers in your area will be notified and start sending quotes." },
         ]}
       />
-      <div>
-        <h2 className="text-2xl font-bold text-slate-900">Post a Job</h2>
-        <p className="text-slate-500 text-sm mt-0.5">Fill in the details below to find the right professional.</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-bold text-slate-900">Post a Job</h2>
+          <p className="text-slate-500 text-sm mt-1">{STEP_SUBTITLES[step]}</p>
+        </div>
+        <span className="flex-shrink-0 mt-1 text-xs font-semibold text-slate-400 bg-slate-100 px-2.5 py-1 rounded-full">
+          Step {step + 1} of {STEPS.length}
+        </span>
       </div>
 
       {/* Step progress */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-start gap-1">
         {STEPS.map((label, i) => (
-          <div key={i} className="flex items-center gap-2 flex-1">
-            <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 transition-colors ${
-              i < step ? "bg-green-500 text-white" : i === step ? "bg-primary text-white" : "bg-slate-200 text-slate-500"
-            }`}>
-              {i < step ? "✓" : i + 1}
+          <div key={i} className="flex flex-col items-center flex-1 gap-1.5">
+            <div className="flex items-center w-full">
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 transition-all ${
+                i < step
+                  ? "bg-green-500 text-white shadow-sm shadow-green-200"
+                  : i === step
+                  ? "bg-primary text-white shadow-sm shadow-primary/30 ring-4 ring-primary/10"
+                  : "bg-slate-100 text-slate-400"
+              }`}>
+                {i < step ? "✓" : i + 1}
+              </div>
+              {i < STEPS.length - 1 && (
+                <div className={`flex-1 h-0.5 mx-1 rounded-full transition-colors ${i < step ? "bg-green-400" : "bg-slate-200"}`} />
+              )}
             </div>
-            <span className={`text-xs font-medium hidden sm:block ${i === step ? "text-primary" : "text-slate-400"}`}>
+            <span className={`text-[10px] font-medium text-center leading-tight ${
+              i === step ? "text-primary" : i < step ? "text-green-600" : "text-slate-400"
+            }`}>
               {label}
             </span>
-            {i < STEPS.length - 1 && (
-              <div className={`flex-1 h-0.5 ${i < step ? "bg-green-400" : "bg-slate-200"}`} />
-            )}
           </div>
         ))}
       </div>
 
       <Card>
         <CardHeader>
-          <h3 className="font-semibold text-slate-900">{STEPS[step]}</h3>
+          <div className="flex items-center justify-between">
+            <h3 className="font-semibold text-slate-900">{STEPS[step]}</h3>
+            <span className="text-xs text-slate-400">{step + 1} / {STEPS.length}</span>
+          </div>
         </CardHeader>
 
         <CardBody className="space-y-4">
@@ -544,23 +566,36 @@ export default function PostJobPage() {
           )}
 
           {step === 3 && (
-            <div className="space-y-3">
-              <p className="text-sm text-slate-500">Please review your job details before submitting.</p>
-              {[
-                { label: "Title", value: form.title },
-                { label: "Category", value: form.category },
-                { label: "Description", value: form.description },
-                { label: "Budget", value: formatCurrency(Number(form.budget)) },
-                { label: "Location", value: form.location },
-                { label: "Preferred Date", value: new Date(form.scheduleDate).toLocaleString() },
-                ...(form.specialInstructions ? [{ label: "Special Instructions", value: form.specialInstructions }] : []),
-                ...(photoFiles.length > 0 ? [{ label: "Photos", value: `${photoFiles.length} photo${photoFiles.length !== 1 ? "s" : ""} attached` }] : []),
-              ].map(({ label, value }) => (
-                <div key={label} className="flex gap-3 text-sm">
-                  <span className="font-medium text-slate-600 w-28 flex-shrink-0">{label}:</span>
-                  <span className="text-slate-800 break-words">{value}</span>
-                </div>
-              ))}
+            <div className="space-y-4">
+              {/* Job info */}
+              <div className="rounded-xl bg-slate-50 border border-slate-200 divide-y divide-slate-200 overflow-hidden">
+                {[
+                  { label: "Title", value: form.title },
+                  { label: "Category", value: form.category },
+                  { label: "Description", value: form.description },
+                ].map(({ label, value }) => (
+                  <div key={label} className="flex gap-3 px-4 py-2.5 text-sm">
+                    <span className="text-slate-400 w-24 flex-shrink-0 text-xs font-semibold uppercase tracking-wide pt-0.5">{label}</span>
+                    <span className="text-slate-800 break-words flex-1">{value}</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Schedule info */}
+              <div className="rounded-xl bg-slate-50 border border-slate-200 divide-y divide-slate-200 overflow-hidden">
+                {[
+                  { label: "Budget", value: formatCurrency(Number(form.budget)) },
+                  { label: "Location", value: form.location },
+                  { label: "Date", value: new Date(form.scheduleDate).toLocaleString("en-PH", { dateStyle: "medium", timeStyle: "short" }) },
+                  ...(form.specialInstructions ? [{ label: "Instructions", value: form.specialInstructions }] : []),
+                  ...(photoFiles.length > 0 ? [{ label: "Photos", value: `${photoFiles.length} photo${photoFiles.length !== 1 ? "s" : ""} attached` }] : []),
+                ].map(({ label, value }) => (
+                  <div key={label} className="flex gap-3 px-4 py-2.5 text-sm">
+                    <span className="text-slate-400 w-24 flex-shrink-0 text-xs font-semibold uppercase tracking-wide pt-0.5">{label}</span>
+                    <span className="text-slate-800 break-words flex-1">{value}</span>
+                  </div>
+                ))}
+              </div>
 
               {/* Map preview */ }
               {coords && process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY && (

@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { JobStatusBadge, EscrowBadge } from "@/components/ui/Badge";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import { MapPin, Calendar, MessageSquare, ShieldCheck } from "lucide-react";
+import { MapPin, Calendar, MessageSquare, ShieldCheck, ChevronRight } from "lucide-react";
 import type { IJob, JobStatus } from "@/types";
 import ProviderInfoButton from "@/components/shared/ProviderInfoButtonLazy";
 
@@ -36,37 +36,49 @@ export default function ClientJobsList({ jobs, quoteCountMap, fundedAmounts = {}
   return (
     <div className="space-y-4">
       {/* Filter tabs */}
-      <div className="flex gap-1 bg-slate-100 p-1 rounded-xl w-fit">
-        {TABS.map((tab) => {
-          const count = tab.value === "all"
-            ? jobs.length
-            : jobs.filter((j) => j.status === tab.value).length;
-          if (count === 0 && tab.value !== "all") return null;
-          return (
-            <button
-              key={tab.value}
-              onClick={() => setActiveTab(tab.value)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                activeTab === tab.value
-                  ? "bg-white text-slate-900 shadow-sm"
-                  : "text-slate-500 hover:text-slate-700"
-              }`}
-            >
-              {tab.label}
-              <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] font-semibold ${
-                activeTab === tab.value ? "bg-primary/10 text-primary" : "bg-slate-200 text-slate-500"
-              }`}>
-                {count}
-              </span>
-            </button>
-          );
-        })}
+      <div className="overflow-x-auto pb-1 -mx-1 px-1">
+        <div className="flex gap-1 bg-slate-100 p-1 rounded-xl w-fit min-w-full sm:min-w-0">
+          {TABS.map((tab) => {
+            const count = tab.value === "all"
+              ? jobs.length
+              : jobs.filter((j) => j.status === tab.value).length;
+            if (count === 0 && tab.value !== "all") return null;
+            return (
+              <button
+                key={tab.value}
+                onClick={() => setActiveTab(tab.value)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${
+                  activeTab === tab.value
+                    ? "bg-white text-slate-900 shadow-sm"
+                    : "text-slate-500 hover:text-slate-700"
+                }`}
+              >
+                {tab.label}
+                <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] font-semibold ${
+                  activeTab === tab.value ? "bg-primary/10 text-primary" : "bg-slate-200 text-slate-500"
+                }`}>
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Job cards */}
       {filtered.length === 0 ? (
-        <div className="bg-white rounded-xl border border-slate-200 p-10 text-center text-slate-400 text-sm">
-          No {activeTab === "all" ? "" : activeTab.replace("_", " ")} jobs.
+        <div className="bg-white rounded-xl border border-slate-200 p-10 text-center">
+          <p className="text-slate-400 text-sm">
+            No {activeTab === "all" ? "" : activeTab.replace(/_/g, " ")} jobs.
+          </p>
+          {activeTab !== "all" && (
+            <button
+              onClick={() => setActiveTab("all")}
+              className="mt-3 text-xs text-primary hover:underline"
+            >
+              Show all jobs
+            </button>
+          )}
         </div>
       ) : (
         <div className="space-y-3">
@@ -76,7 +88,7 @@ export default function ClientJobsList({ jobs, quoteCountMap, fundedAmounts = {}
             return (
               <div
                 key={j._id.toString()}
-                className="relative block bg-white rounded-xl border border-slate-200 shadow-card hover:shadow-card-hover hover:border-primary/30 transition-all p-5"
+                className="relative block bg-white rounded-xl border border-slate-200 shadow-card hover:shadow-card-hover hover:border-primary/30 transition-all p-5 group"
               >
                 {/* Overlay link covers the whole card except interactive children */}
                 <Link href={`/client/jobs/${j._id}`} className="absolute inset-0 rounded-xl" aria-label={j.title} />
@@ -119,6 +131,7 @@ export default function ClientJobsList({ jobs, quoteCountMap, fundedAmounts = {}
                     </div>
                     <JobStatusBadge status={j.status} />
                     <EscrowBadge status={j.escrowStatus} />
+                    <ChevronRight className="h-4 w-4 text-slate-300 group-hover:text-primary transition-colors mt-auto" />
                   </div>
                 </div>
                 {fundedAmount !== undefined && (

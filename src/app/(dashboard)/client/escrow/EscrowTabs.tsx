@@ -4,7 +4,7 @@ import { useState } from "react";
 import { EscrowBadge } from "@/components/ui/Badge";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import Link from "next/link";
-import { ShieldCheck, AlertOctagon, Zap, Clock, CircleCheck } from "lucide-react";
+import { ShieldCheck, AlertOctagon, Zap, Clock, CircleCheck, Calendar, User, ChevronRight } from "lucide-react";
 import ProviderInfoButton from "@/components/shared/ProviderInfoButtonLazy";
 
 interface EscrowJobClient {
@@ -42,19 +42,29 @@ const COLOR = {
 };
 
 function EscrowCard({ j, fundedAmount }: { j: EscrowJobClient; fundedAmount?: number }) {
+  const needsFunding  = j.status === "assigned"  && j.escrowStatus === "not_funded";
+  const needsRelease  = j.status === "completed" && j.escrowStatus === "funded";
+
   return (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-card p-5 space-y-3">
+    <div className="relative bg-white rounded-xl border border-slate-200 shadow-card hover:shadow-card-hover hover:border-primary/30 transition-all p-5 space-y-3 group">
+      {/* Overlay link — whole card is navigable */}
+      <Link href={`/client/jobs/${j._id}`} className="absolute inset-0 rounded-xl" aria-label={j.title} />
+
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1 min-w-0">
-          <Link href={`/client/jobs/${j._id}`} className="font-semibold text-slate-900 hover:text-primary text-sm">
-            {j.title}
-          </Link>
-          <p className="text-xs text-slate-400 mt-1">
-            Provider: <span className="font-medium text-slate-600">{j.providerId?.name ?? "—"}</span>
-            {" · "}Scheduled {formatDate(new Date(j.scheduleDate))}
-          </p>
+          <p className="font-semibold text-slate-900 text-sm truncate">{j.title}</p>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-400 mt-1.5">
+            {j.providerId?.name && (
+              <span className="flex items-center gap-1">
+                <User className="h-3 w-3" />{j.providerId.name}
+              </span>
+            )}
+            <span className="flex items-center gap-1">
+              <Calendar className="h-3 w-3" />Scheduled {formatDate(new Date(j.scheduleDate))}
+            </span>
+          </div>
           {j.providerId?._id && (
-            <div className="mt-1.5">
+            <div className="mt-1.5 relative z-10">
               <ProviderInfoButton
                 providerId={j.providerId._id.toString()}
                 providerName={j.providerId.name}
@@ -68,16 +78,17 @@ function EscrowCard({ j, fundedAmount }: { j: EscrowJobClient; fundedAmount?: nu
             <p className="text-lg font-bold text-slate-900">{formatCurrency(j.budget)}</p>
           </div>
           <EscrowBadge status={j.escrowStatus as never} />
-          {j.status === "assigned" && j.escrowStatus === "not_funded" && (
-            <Link href={`/client/jobs/${j._id}`} className="btn-primary text-xs py-1.5 px-3">
+          {needsFunding && (
+            <Link href={`/client/jobs/${j._id}`} className="relative z-10 btn-primary text-xs py-1.5 px-3">
               Fund Escrow →
             </Link>
           )}
-          {j.status === "completed" && j.escrowStatus === "funded" && (
-            <Link href={`/client/jobs/${j._id}`} className="text-xs py-1.5 px-3 rounded-lg bg-green-600 hover:bg-green-700 text-white font-medium transition-colors">
+          {needsRelease && (
+            <Link href={`/client/jobs/${j._id}`} className="relative z-10 text-xs py-1.5 px-3 rounded-lg bg-green-600 hover:bg-green-700 text-white font-medium transition-colors">
               Release Payment →
             </Link>
           )}
+          <ChevronRight className="h-4 w-4 text-slate-200 group-hover:text-slate-400 transition-colors" />
         </div>
       </div>
 
@@ -149,8 +160,10 @@ export default function EscrowTabs({ needsAction, inProgress, disputed, done, fu
 
       {/* Cards */}
       {items.length === 0 ? (
-        <div className="bg-white rounded-xl border border-slate-200 p-10 text-center text-slate-400 text-sm">
-          No {TABS.find((t) => t.key === active)?.label.toLowerCase()} jobs.
+        <div className="bg-white rounded-xl border border-slate-200 p-10 flex flex-col items-center gap-2 text-center">
+          <ShieldCheck className="h-8 w-8 text-slate-200" />
+          <p className="text-sm font-medium text-slate-500">No {TABS.find((t) => t.key === active)?.label.toLowerCase()} jobs</p>
+          <p className="text-xs text-slate-400">Jobs in this category will appear here.</p>
         </div>
       ) : (
         <div className="space-y-3">
