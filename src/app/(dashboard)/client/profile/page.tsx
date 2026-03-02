@@ -12,7 +12,7 @@ import { formatDate } from "@/lib/utils";
 import { ShieldCheck, CalendarDays, Camera, MapPin, Trash2, Plus, LocateFixed, Loader2, User, KeyRound } from "lucide-react";
 import PageGuide from "@/components/shared/PageGuide";
 import KycUpload from "@/components/shared/KycUpload";
-import PhoneInput from "@/components/shared/PhoneInput";
+import PhoneInput, { isValidPhoneNumber } from "@/components/shared/PhoneInput";
 import { apiFetch } from "@/lib/fetchClient";
 
 // Lazy-load StructuredAddressInput (depends on Google Maps / Nominatim)
@@ -128,8 +128,12 @@ export default function ClientProfilePage() {
   async function saveName(e: React.FormEvent) {
     e.preventDefault();
     const trimmedName  = name.trim();
-    const trimmedPhone = phone.trim();
+    const trimmedPhone = phone; // E.164 — no whitespace to strip
     if (!trimmedName) return;
+    if (trimmedPhone && !isValidPhoneNumber(trimmedPhone)) {
+      toast.error("Please enter a valid phone number.");
+      return;
+    }
     const nameChanged  = trimmedName  !== me?.name;
     const phoneChanged = trimmedPhone !== (me?.phone ?? "");
     if (!nameChanged && !phoneChanged) return;
@@ -140,7 +144,7 @@ export default function ClientProfilePage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...(nameChanged  ? { name: trimmedName }  : {}),
-          ...(phoneChanged ? { phone: trimmedPhone || null } : {}),
+          ...(phoneChanged ? { phone: trimmedPhone || null } : {}), // already validated above
         }),
       });
       const data = await res.json();
@@ -462,7 +466,7 @@ export default function ClientProfilePage() {
             </div>
           </CardBody>
           <CardFooter className="flex justify-end">
-            <Button type="submit" isLoading={savingName} size="md" disabled={!name.trim() || (name === me?.name && phone.trim() === (me?.phone ?? ""))}>
+            <Button type="submit" isLoading={savingName} size="md" disabled={!name.trim() || (phone.length > 0 && !isValidPhoneNumber(phone)) || (name === me?.name && phone === (me?.phone ?? ""))}>  
               Save changes
             </Button>
           </CardFooter>

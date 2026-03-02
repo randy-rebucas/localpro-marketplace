@@ -10,7 +10,7 @@ import Card, { CardBody, CardFooter, CardHeader } from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import { useAuthStore } from "@/stores/authStore";
 import SkillsInput from "@/components/shared/SkillsInput";
-import PhoneInput from "@/components/shared/PhoneInput";
+import PhoneInput, { isValidPhoneNumber } from "@/components/shared/PhoneInput";
 import KycUpload from "@/components/shared/KycUpload";
 import { Star, Camera, BadgeCheck, AlertCircle, MapPin, Trash2, Plus, LocateFixed, Loader2, Sparkles, Lock } from "lucide-react";
 import { Skeleton } from "@/components/ui/Spinner";
@@ -182,6 +182,10 @@ export default function ProviderProfilePage() {
   }
 
   async function saveProfile() {
+    if (phone && !isValidPhoneNumber(phone)) {
+      toast.error("Please enter a valid phone number.");
+      return;
+    }
     setSaving(true);
     try {
       const [res] = await Promise.all([
@@ -201,7 +205,7 @@ export default function ProviderProfilePage() {
         apiFetch("/api/auth/me", {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ phone: phone.trim() || null }),
+          body: JSON.stringify({ phone: phone || null }),
         }),
       ]);
 
@@ -213,7 +217,7 @@ export default function ProviderProfilePage() {
 
       const updated = await res.json();
       setProfile(updated);
-      if (user) setUser({ ...user, phone: phone.trim() || null });
+      if (user) setUser({ ...user, phone: phone || null });
       toast.success("Profile saved!");
     } finally {
       setSaving(false);
@@ -551,7 +555,7 @@ export default function ProviderProfilePage() {
     skills.length > 0,
     yearsExperience > 0,
     !!hourlyRate,
-    !!phone.trim(),
+    isValidPhoneNumber(phone ?? ""),
   ];
   const completeness = Math.round((completenessItems.filter(Boolean).length / completenessItems.length) * 100);
   const completenessColor = completeness === 100 ? "bg-green-500" : completeness >= 60 ? "bg-primary" : "bg-amber-400";
