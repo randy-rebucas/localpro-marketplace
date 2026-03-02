@@ -392,6 +392,8 @@ export interface IProviderProfile {
   completionRate: number;
   /** Average hours from job assignment to first status update; recomputed on first progress update */
   avgResponseTimeHours: number;
+  /** Manually awarded by admin after vetting — shows LocalPro Certified badge */
+  isLocalProCertified?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }

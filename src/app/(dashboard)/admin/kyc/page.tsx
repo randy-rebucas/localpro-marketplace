@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { getCurrentUser } from "@/lib/auth";
 import { userRepository } from "@/repositories/user.repository";
+import { providerProfileRepository } from "@/repositories/providerProfile.repository";
 import AdminKycActions from "./AdminKycActions";
+import AdminCertifyButton from "./AdminCertifyButton";
 import { ShieldCheck, ShieldX, Clock, ExternalLink } from "lucide-react";
 import PageGuide from "@/components/shared/PageGuide";
 
@@ -41,8 +43,15 @@ export default async function AdminKycPage() {
   const typedPending = pending as unknown as ProviderWithKyc[];
   const typedReviewed = reviewed as unknown as ProviderWithKyc[];
 
+  // Fetch certification status for all listed providers
+  const allUserIds = [...typedPending, ...typedReviewed].map((p) => p._id.toString());
+  const certMap = allUserIds.length > 0
+    ? await providerProfileRepository.findCertificationByUserIds(allUserIds)
+    : new Map<string, boolean>();
+
   function ProviderRow({ p }: { p: ProviderWithKyc }) {
     const cfg = STATUS_CONFIG[p.kycStatus as keyof typeof STATUS_CONFIG];
+    const isLocalProCertified = certMap.get(p._id.toString()) ?? false;
     return (
       <div className="bg-white rounded-xl border border-slate-200 shadow-card overflow-hidden">
         <div className="px-5 py-4 flex items-start justify-between gap-4">
@@ -86,6 +95,19 @@ export default async function AdminKycPage() {
         {p.kycStatus === "pending" && (
           <div className="border-t border-slate-100 px-5 py-3 bg-slate-50">
             <AdminKycActions userId={p._id.toString()} />
+          </div>
+        )}
+
+        {/* Certification toggle — only for approved providers */}
+        {p.kycStatus === "approved" && (
+          <div className="border-t border-slate-100 px-5 py-3 bg-slate-50 flex items-center justify-between">
+            {isLocalProCertified && (
+              <span className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-full px-2.5 py-1">
+                🎖️ LocalPro Certified
+              </span>
+            )}
+            {!isLocalProCertified && <span />}
+            <AdminCertifyButton userId={p._id.toString()} isLocalProCertified={isLocalProCertified} />
           </div>
         )}
       </div>

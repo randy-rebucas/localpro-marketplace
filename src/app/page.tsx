@@ -110,6 +110,7 @@ async function TopProvidersSection() {
             avgResponseTimeHours: number;
             skills: string[];
             hourlyRate?: number;
+            isLocalProCertified?: boolean;
           };
           const initials = profile.userId?.name
             ?.split(" ").filter(Boolean).map((w: string) => w[0]).join("").slice(0, 2).toUpperCase() ?? "??";
@@ -161,8 +162,13 @@ async function TopProvidersSection() {
                 <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">{profile.bio}</p>
               )}
               {/* Smart tags */}
-              {(isTopRated || isFastResponder) && (
+              {(isTopRated || isFastResponder || profile.isLocalProCertified) && (
                 <div className="flex flex-wrap gap-1.5">
+                  {profile.isLocalProCertified && (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
+                      🎖️ LocalPro Certified
+                    </span>
+                  )}
                   {isTopRated && (
                     <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
                       ⭐ Top Rated

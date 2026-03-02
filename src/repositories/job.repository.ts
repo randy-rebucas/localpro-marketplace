@@ -160,6 +160,8 @@ export class JobRepository extends BaseRepository<JobDocument> {
     status: JobStatus;
     escrowStatus: EscrowStatus;
     riskScore: number;
+    beforePhoto?: string[];
+    afterPhoto?: string[];
     providerId?: { _id: { toString(): string }; name: string; email: string; isVerified: boolean } | null;
     milestones?: import("@/types").IMilestone[];
   } | null> {

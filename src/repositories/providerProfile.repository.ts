@@ -57,14 +57,31 @@ export class ProviderProfileRepository extends BaseRepository<ProviderProfileDoc
     );
   }
 
-  /** Batch fetch rating/completedJobCount for a list of provider user IDs. */
+  /** Batch fetch rating/completedJobCount/isLocalProCertified for a list of provider user IDs. */
   async findStatsByUserIds(
     userIds: string[]
-  ): Promise<{ userId: { toString(): string }; avgRating?: number; completedJobCount?: number }[]> {
+  ): Promise<{ userId: { toString(): string }; avgRating?: number; completedJobCount?: number; isLocalProCertified?: boolean }[]> {
     await this.connect();
     return ProviderProfile.find({ userId: { $in: userIds } })
-      .select("userId avgRating completedJobCount")
+      .select("userId avgRating completedJobCount isLocalProCertified")
       .lean() as never;
+  }
+
+  /** Grant or revoke the LocalPro Certified badge for a provider. */
+  async setCertification(userId: string, value: boolean): Promise<void> {
+    await this.connect();
+    await ProviderProfile.updateOne({ userId }, { $set: { isLocalProCertified: value } });
+  }
+
+  /** Return a map of userId → isLocalProCertified for the given user IDs. */
+  async findCertificationByUserIds(
+    userIds: string[]
+  ): Promise<Map<string, boolean>> {
+    await this.connect();
+    const docs = await ProviderProfile.find({ userId: { $in: userIds } })
+      .select("userId isLocalProCertified")
+      .lean() as Array<{ userId: { toString(): string }; isLocalProCertified?: boolean }>;
+    return new Map(docs.map((d) => [d.userId.toString(), d.isLocalProCertified ?? false]));
   }
 
   /**

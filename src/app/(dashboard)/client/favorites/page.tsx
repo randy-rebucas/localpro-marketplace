@@ -44,6 +44,7 @@ interface FavoriteEntry {
     availabilityStatus?: "available" | "busy" | "unavailable";
     avgResponseTimeHours?: number;
     completionRate?: number;
+    isLocalProCertified?: boolean;
   } | null;
   createdAt: string;
 }
@@ -57,6 +58,7 @@ interface ProviderResult {
   avgRating?: number;
   completedJobCount?: number;
   availabilityStatus?: "available" | "busy" | "unavailable";
+  isLocalProCertified?: boolean;
   isFavorite: boolean;
 }
 
@@ -142,10 +144,15 @@ function ProviderCard({
             {name.charAt(0).toUpperCase()}
           </div>
           <div>
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 flex-wrap">
               <p className="font-semibold text-slate-900">{name}</p>
               {isVerified && (
                 <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-medium">Verified</span>
+              )}
+              {profile?.isLocalProCertified && (
+                <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-700 border border-indigo-200">
+                  🎖️ LocalPro Certified
+                </span>
               )}
             </div>
             <p className="text-xs text-slate-400">{email}</p>
@@ -474,6 +481,7 @@ export default function ClientFavoritesPage() {
                     avgRating: p.avgRating,
                     completedJobCount: p.completedJobCount,
                     availabilityStatus: p.availabilityStatus,
+                    isLocalProCertified: p.isLocalProCertified,
                   }}
                   onFavoriteToggle={() => toggleFavoriteFromDiscover(p)}
                   onPostJob={(id, name) => setDirectJobTarget({ id, name })}

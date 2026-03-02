@@ -71,6 +71,7 @@ const ProviderProfileSchema = new Schema<ProviderProfileDocument>(
     completionRate: { type: Number, default: 0, min: 0, max: 100 },
     avgResponseTimeHours: { type: Number, default: 0, min: 0 },
     serviceAreas: { type: [ServiceAreaSubSchema], default: [] },
+    isLocalProCertified: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

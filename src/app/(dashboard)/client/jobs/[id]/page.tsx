@@ -25,6 +25,7 @@ const RaiseDisputeButton = dynamic(() => import("@/components/shared/RaiseDisput
 const PartialReleaseButton = dynamic(() => import("@/components/payment/PartialReleaseButton"));
 const MilestonePanel = dynamic(() => import("@/components/payment/MilestonePanel").then((m) => ({ default: m.MilestonePanel })));
 const StickyJobCTA = dynamic(() => import("./StickyJobCTA"));
+const JobPhotoGallery = dynamic(() => import("@/components/shared/JobPhotoGallery"));
 
 export async function generateMetadata({
   params,
@@ -169,6 +170,11 @@ async function QuotesSection({ jobId, jobStatus }: { jobId: string; jobStatus: s
                 {accepted.providerId.isVerified && (
                   <span className="badge bg-blue-100 text-blue-700 text-xs">Verified</span>
                 )}
+                {profile?.isLocalProCertified && (
+                  <span className="inline-flex items-center gap-1 text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-medium border border-indigo-200">
+                    🎖️ LocalPro Certified
+                  </span>
+                )}
               </div>
               {profile && (profile.avgRating ?? 0) > 0 && (
                 <span className="flex items-center gap-1 text-xs text-slate-500 mt-0.5">
@@ -242,6 +248,11 @@ async function QuotesSection({ jobId, jobStatus }: { jobId: string; jobStatus: s
                         {q.providerId.isVerified && (
                           <span className="badge bg-blue-100 text-blue-700 text-xs">Verified</span>
                         )}
+                        {profile?.isLocalProCertified && (
+                          <span className="inline-flex items-center gap-1 text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-medium border border-indigo-200">
+                            🎖️ LocalPro Certified
+                          </span>
+                        )}
                         {isTopRated && (
                           <span className="badge bg-amber-100 text-amber-700 text-xs">⭐ Top Rated</span>
                         )}
@@ -292,6 +303,83 @@ async function QuotesSection({ jobId, jobStatus }: { jobId: string; jobStatus: s
           })}
         </ul>
       )}
+    </div>
+  );
+}
+
+// ─── Job Progress Bar ───────────────────────────────────────────────────────
+
+const STATUS_STEPS = [
+  { key: "assigned",   label: "Provider Assigned",  pct: 20 },
+  { key: "funded",     label: "Escrow Funded",       pct: 40 },
+  { key: "in_progress",label: "Work in Progress",   pct: 65 },
+  { key: "completed",  label: "Work Completed",      pct: 100 },
+] as const;
+
+function JobProgressBar({ status, escrowStatus }: { status: string; escrowStatus: string }) {
+  if (![ "assigned", "in_progress", "completed"].includes(status)) return null;
+
+  // Derive effective progress pct
+  let pct = 20;
+  if (status === "in_progress") pct = 65;
+  else if (status === "completed")  pct = 100;
+  else if (escrowStatus === "funded") pct = 40;
+
+  const label = STATUS_STEPS.find((s) => s.pct === pct)?.label ?? "In Progress";
+
+  return (
+    <div className="bg-white rounded-xl border border-slate-200 shadow-card p-5">
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Job Progress</p>
+        <span className="text-xs font-bold text-primary">{pct}%</span>
+      </div>
+      <div className="h-2.5 w-full rounded-full bg-slate-100 overflow-hidden">
+        <div
+          className="h-full rounded-full bg-primary transition-all duration-500"
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      <p className="text-xs text-slate-500 mt-2">{label}</p>
+    </div>
+  );
+}
+
+// ─── Service Checklist ────────────────────────────────────────────────────────
+
+function JobServiceChecklist({ status, escrowStatus }: { status: string; escrowStatus: string }) {
+  if (![ "assigned", "in_progress", "completed", "disputed"].includes(status)) return null;
+
+  const steps = [
+    { label: "Provider assigned",  done: true },
+    { label: "Escrow funded",       done: escrowStatus !== "not_funded" },
+    { label: "Work started",        done: ["in_progress", "completed", "disputed"].includes(status) },
+    { label: "Work completed",      done: ["completed", "disputed"].includes(status) },
+    { label: "Payment released",    done: escrowStatus === "released" },
+  ];
+
+  return (
+    <div className="bg-white rounded-xl border border-slate-200 shadow-card p-5">
+      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-3">Service Checklist</p>
+      <ul className="space-y-2">
+        {steps.map((s) => (
+          <li key={s.label} className="flex items-center gap-2.5">
+            <span
+              className={`flex h-4.5 w-4.5 items-center justify-center rounded-full flex-shrink-0 ${
+                s.done ? "text-emerald-600" : "text-slate-300"
+              }`}
+            >
+              {s.done ? (
+                <CheckCircle2 className="h-4 w-4" />
+              ) : (
+                <Clock className="h-4 w-4" />
+              )}
+            </span>
+            <span className={`text-sm ${s.done ? "text-slate-800 font-medium" : "text-slate-400"}`}>
+              {s.label}
+            </span>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
@@ -406,6 +494,17 @@ export default async function JobDetailPage({
           )}
         </div>
       </div>
+
+      {/* Progress bar — visible for active/completed jobs */}
+      <JobProgressBar status={job.status} escrowStatus={job.escrowStatus} />
+
+      {/* Service checklist — milestone steps visible to client */}
+      <JobServiceChecklist status={job.status} escrowStatus={job.escrowStatus} />
+
+      {/* Before & after photos — visible when provider has uploaded them */}
+      {((job.beforePhoto && job.beforePhoto.length > 0) || (job.afterPhoto && job.afterPhoto.length > 0)) && (
+        <JobPhotoGallery beforePhoto={job.beforePhoto ?? []} afterPhoto={job.afterPhoto ?? []} />
+      )}
 
       {/* Action buttons */}
       <div className="flex flex-wrap items-center gap-4">

@@ -28,6 +28,7 @@ interface ProviderProfile {
   avgResponseTimeHours?: number;
   breakdown?: { quality: number; professionalism: number; punctuality: number; communication: number; count: number } | null;
   streak?: number;
+  isLocalProCertified?: boolean;
 }
 
 const statusColor: Record<string, string> = {
@@ -203,6 +204,11 @@ export default function ProviderInfoButton({
                     ) : (
                       <span className="inline-flex items-center gap-1 text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-medium">
                         <XCircle className="h-3 w-3" /> Unverified
+                      </span>
+                    )}
+                    {profile.isLocalProCertified && (
+                      <span className="inline-flex items-center gap-1 text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-medium border border-indigo-200">
+                        🎖️ LocalPro Certified
                       </span>
                     )}
                     {profile.availabilityStatus && (

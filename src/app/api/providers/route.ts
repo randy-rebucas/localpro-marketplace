@@ -67,6 +67,7 @@ export const GET = withHandler(async (req: NextRequest) => {
         availabilityStatus: {
           $ifNull: ["$profileDoc.availabilityStatus", "available"],
         },
+        isLocalProCertified: { $ifNull: ["$profileDoc.isLocalProCertified", false] },
       },
     },
   ];

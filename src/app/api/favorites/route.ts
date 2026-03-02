@@ -23,7 +23,7 @@ export const GET = withHandler(async (_req: NextRequest) => {
   );
 
   const profiles = await ProviderProfile.find({ userId: { $in: providerIds } })
-    .select("userId bio skills yearsExperience hourlyRate avgRating completedJobCount availabilityStatus avgResponseTimeHours completionRate")
+    .select("userId bio skills yearsExperience hourlyRate avgRating completedJobCount availabilityStatus avgResponseTimeHours completionRate isLocalProCertified")
     .lean();
 
   const profileMap = new Map(
