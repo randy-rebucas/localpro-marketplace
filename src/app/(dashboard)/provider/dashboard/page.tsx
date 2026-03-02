@@ -13,8 +13,7 @@ import { formatCurrency, formatRelativeTime } from "@/lib/utils";
 import { calculateCommission } from "@/lib/commission";
 import { getProviderTier } from "@/lib/tier";
 import Link from "next/link";
-import { CircleDollarSign, Briefcase, Star, Store, TrendingUp, Trophy, Flame, ShieldCheck, Zap, TriangleAlert } from "lucide-react";
-import PageGuide from "@/components/shared/PageGuide";
+import { CircleDollarSign, Briefcase, Star, Store, TrendingUp, Trophy, Flame, ShieldCheck, Zap, TriangleAlert, CalendarDays } from "lucide-react";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
@@ -61,7 +60,7 @@ function ProviderDashboardSkeleton() {
   return (
     <div className="space-y-6 animate-pulse">
       {/* Header row */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-start justify-between gap-4">
         <div className="space-y-2">
           <div className="h-7 w-56 bg-slate-200 rounded-lg" />
           <div className="h-4 w-40 bg-slate-100 rounded" />
@@ -71,16 +70,28 @@ function ProviderDashboardSkeleton() {
       {/* Tier card */}
       <div className="h-20 bg-white rounded-xl border border-slate-200" />
       {/* KPI grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {[...Array(4)].map((_, i) => (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        {[...Array(5)].map((_, i) => (
           <div key={i} className="h-28 bg-white rounded-xl border border-slate-200" />
         ))}
       </div>
       {/* Recent jobs */}
       <div className="bg-white rounded-xl border border-slate-200">
-        <div className="px-6 py-4 border-b border-slate-100 h-14" />
+        <div className="px-6 py-4 border-b border-slate-100">
+          <div className="h-4 w-32 bg-slate-100 rounded" />
+        </div>
         {[...Array(4)].map((_, i) => (
-          <div key={i} className="px-6 py-4 border-b border-slate-50 h-16" />
+          <div key={i} className="px-6 py-4 border-b border-slate-50 flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-slate-100 flex-shrink-0" />
+            <div className="flex-1 space-y-1.5">
+              <div className="h-3.5 w-48 rounded bg-slate-100" />
+              <div className="h-3 w-32 rounded bg-slate-100" />
+            </div>
+            <div className="flex items-center gap-3 flex-shrink-0">
+              <div className="h-8 w-16 rounded bg-slate-100" />
+              <div className="h-5 w-20 rounded-full bg-slate-100" />
+            </div>
+          </div>
         ))}
       </div>
     </div>
@@ -111,8 +122,12 @@ async function ProviderDashboardContent({ userId }: { userId: string }) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-start justify-between gap-4">
         <div>
+          <p className="text-xs font-medium text-slate-400 flex items-center gap-1 mb-1">
+            <CalendarDays className="h-3.5 w-3.5" />
+            {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
+          </p>
           <div className="flex items-center gap-2.5 flex-wrap">
             <h2 className="text-2xl font-bold text-slate-900">Welcome back, {firstName}!</h2>
             {isTopPro && (
@@ -131,9 +146,9 @@ async function ProviderDashboardContent({ userId }: { userId: string }) {
               </span>
             )}
           </div>
-          <p className="text-slate-500 text-sm mt-0.5">Here&apos;s your performance overview.</p>
+          <p className="text-slate-500 text-sm mt-1">Here&apos;s your performance overview.</p>
         </div>
-        <Link href="/provider/marketplace" className="btn-primary">
+        <Link href="/provider/marketplace" className="btn-primary flex-shrink-0 mt-1">
           Browse Jobs
         </Link>
       </div>
@@ -293,20 +308,8 @@ export default async function ProviderDashboardPage() {
   if (!user) return null;
 
   return (
-    <div className="space-y-6">
-      <PageGuide
-        pageKey="provider-dashboard"
-        title="How your Provider Dashboard works"
-        steps={[
-          { icon: "📊", title: "Track performance", description: "See your active jobs, total earnings, average rating, and completion rate at a glance." },
-          { icon: "🏆", title: "Earn your tier", description: "Complete jobs and earn 5-star reviews to rise through Rising → Expert → Top Pro tiers." },
-          { icon: "🔥", title: "Keep your streak", description: "A 5-star streak shows consecutive top-rated jobs — it boosts client confidence in your profile." },
-          { icon: "⚡", title: "Quick actions", description: "Jump to the Marketplace to find new jobs, or My Jobs to manage your active assignments." },
-        ]}
-      />
-      <Suspense fallback={<ProviderDashboardSkeleton />}>
-        <ProviderDashboardContent userId={user.userId} />
-      </Suspense>
-    </div>
+    <Suspense fallback={<ProviderDashboardSkeleton />}>
+      <ProviderDashboardContent userId={user.userId} />
+    </Suspense>
   );
 }

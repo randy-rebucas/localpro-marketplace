@@ -204,6 +204,24 @@ export interface PaginatedResponse<T> {
   totalPages: number;
 }
 
+// ─── Knowledge Base ───────────────────────────────────────────────────────────
+
+export type KnowledgeAudience = "client" | "provider" | "both";
+
+export interface IKnowledgeArticle {
+  _id: Types.ObjectId | string;
+  title: string;
+  excerpt: string;
+  content: string;
+  group: string;
+  audience: KnowledgeAudience;
+  order: number;
+  isPublished: boolean;
+  createdBy: Types.ObjectId | string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 // ─── Announcement ─────────────────────────────────────────────────────────────
 
 export type AnnouncementType = "info" | "warning" | "success" | "danger";

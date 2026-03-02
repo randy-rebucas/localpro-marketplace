@@ -6,8 +6,9 @@ import { formatCurrency, formatDate } from "@/lib/utils";
 import { calculateCommission } from "@/lib/commission";
 import ProviderJobActions from "./ProviderJobActions";
 import RaiseDisputeButton from "@/components/shared/RaiseDisputeButton";
-import { MapPin, Calendar, User, AlertTriangle, ShieldCheck } from "lucide-react";
+import { MapPin, Calendar, User, AlertTriangle, ShieldCheck, ChevronRight } from "lucide-react";
 import type { IJob, JobStatus, EscrowStatus } from "@/types";
+import Link from "next/link";
 
 type JobWithClient = IJob & {
   clientId: { name: string };
@@ -36,36 +37,40 @@ export default function ProviderJobsList({ jobs, fundedAmounts = {} }: Props) {
   return (
     <div className="space-y-4">
       {/* Filter tabs */}
-      <div className="flex gap-1 bg-slate-100 p-1 rounded-xl w-fit">
-        {TABS.map((tab) => {
-          const count = tab.value === "all"
-            ? jobs.length
-            : jobs.filter((j) => j.status === tab.value).length;
-          if (count === 0 && tab.value !== "all") return null;
-          return (
-            <button
-              key={tab.value}
-              onClick={() => setActiveTab(tab.value)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                activeTab === tab.value
-                  ? "bg-white text-slate-900 shadow-sm"
-                  : "text-slate-500 hover:text-slate-700"
-              }`}
-            >
-              {tab.label}
-              <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] font-semibold ${
-                activeTab === tab.value ? "bg-primary/10 text-primary" : "bg-slate-200 text-slate-500"
-              }`}>
-                {count}
-              </span>
-            </button>
-          );
-        })}
+      <div className="overflow-x-auto">
+        <div className="flex gap-1 bg-slate-100 p-1 rounded-xl w-fit">
+          {TABS.map((tab) => {
+            const count = tab.value === "all"
+              ? jobs.length
+              : jobs.filter((j) => j.status === tab.value).length;
+            if (count === 0 && tab.value !== "all") return null;
+            return (
+              <button
+                key={tab.value}
+                onClick={() => setActiveTab(tab.value)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${
+                  activeTab === tab.value
+                    ? "bg-white text-slate-900 shadow-sm"
+                    : "text-slate-500 hover:text-slate-700"
+                }`}
+              >
+                {tab.label}
+                <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] font-semibold ${
+                  activeTab === tab.value ? "bg-primary/10 text-primary" : "bg-slate-200 text-slate-500"
+                }`}>
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {filtered.length === 0 ? (
-        <div className="bg-white rounded-xl border border-slate-200 p-10 text-center text-slate-400 text-sm">
-          No {activeTab === "all" ? "" : activeTab.replace("_", " ")} jobs.
+        <div className="bg-white rounded-xl border border-slate-200 p-10 flex flex-col items-center gap-2 text-center">
+          <ShieldCheck className="h-7 w-7 text-slate-200" />
+          <p className="text-sm font-medium text-slate-500">No {activeTab === "all" ? "" : activeTab.replace(/_/g, " ")} jobs</p>
+          <p className="text-xs text-slate-400">Jobs in this category will appear here.</p>
         </div>
       ) : (
         <div className="space-y-4">
@@ -74,7 +79,7 @@ export default function ProviderJobsList({ jobs, fundedAmounts = {} }: Props) {
             const fundedGross = fundedAmounts[j._id.toString()];
             const fundedNet = fundedGross !== undefined ? calculateCommission(fundedGross).netAmount : undefined;
             return (
-              <div key={j._id.toString()} className="bg-white rounded-xl border border-slate-200 shadow-card overflow-hidden">
+              <div key={j._id.toString()} className="bg-white rounded-xl border border-slate-200 shadow-card hover:shadow-card-hover hover:border-primary/30 transition-all overflow-hidden group">
                 {/* Escrow warning strip */}
                 {escrowNotFunded && (
                   <div className="bg-amber-50 border-b border-amber-100 px-5 py-2 flex items-center gap-2">
@@ -86,7 +91,9 @@ export default function ProviderJobsList({ jobs, fundedAmounts = {} }: Props) {
                 <div className="p-5">
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 min-w-0 space-y-2">
-                      <h3 className="font-semibold text-slate-900">{j.title}</h3>
+                      <Link href={`/provider/jobs/${j._id.toString()}`} className="block">
+                        <h3 className="font-semibold text-slate-900 hover:text-primary transition-colors">{j.title}</h3>
+                      </Link>
                       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-400">
                         <span className="inline-block bg-slate-100 text-slate-600 rounded px-2 py-0.5 font-medium">{j.category}</span>
                         <span className="flex items-center gap-1"><User className="h-3 w-3" />Client: {j.clientId.name}</span>
@@ -102,6 +109,9 @@ export default function ProviderJobsList({ jobs, fundedAmounts = {} }: Props) {
                       </div>
                       <JobStatusBadge status={j.status} />
                       <EscrowBadge status={j.escrowStatus as EscrowStatus} />
+                      <Link href={`/provider/jobs/${j._id.toString()}`} aria-label="View details">
+                        <ChevronRight className="h-4 w-4 text-slate-200 group-hover:text-slate-400 transition-colors mt-1" />
+                      </Link>
                     </div>
                   </div>
 

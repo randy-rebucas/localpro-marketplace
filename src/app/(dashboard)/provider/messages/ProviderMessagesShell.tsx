@@ -2,7 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { MessageSquare } from "lucide-react";
+import { MessageSquare, Briefcase } from "lucide-react";
 import { JobStatusBadge } from "@/components/ui/Badge";
 import { formatRelativeTime } from "@/lib/utils";
 import type { JobStatus } from "@/types";
@@ -32,12 +32,18 @@ export default function ProviderMessagesShell({ threads, children }: Props) {
       <aside className="w-72 shrink-0 flex flex-col border-r border-slate-200 overflow-hidden">
         <div className="px-4 py-3.5 border-b border-slate-200 bg-slate-50 shrink-0">
           <h2 className="text-sm font-semibold text-slate-800">Messages</h2>
+          {threads.length > 0 && (
+            <p className="text-[11px] text-slate-400 mt-0.5">{threads.length} conversation{threads.length !== 1 ? "s" : ""}</p>
+          )}
         </div>
 
         {threads.length === 0 ? (
-          <div className="flex-1 flex flex-col items-center justify-center gap-2 text-slate-400 px-6 text-center">
-            <MessageSquare className="h-8 w-8 opacity-30" />
-            <p className="text-xs">No conversations yet. Accept a job to start messaging with clients.</p>
+          <div className="flex-1 flex flex-col items-center justify-center gap-2 px-6 py-10 text-center">
+            <div className="flex items-center justify-center h-10 w-10 rounded-full bg-slate-100">
+              <MessageSquare className="h-5 w-5 text-slate-400" />
+            </div>
+            <p className="text-xs font-medium text-slate-500">No conversations yet</p>
+            <p className="text-xs text-slate-400">Accept a job to start messaging with clients.</p>
           </div>
         ) : (
           <ul className="flex-1 overflow-y-auto divide-y divide-slate-100">
@@ -60,7 +66,7 @@ export default function ProviderMessagesShell({ threads, children }: Props) {
                     <div className={`mt-0.5 flex-shrink-0 h-9 w-9 rounded-full flex items-center justify-center ${
                       isActive ? "bg-primary/15" : "bg-slate-100"
                     }`}>
-                      <MessageSquare className={`h-4 w-4 ${isActive ? "text-primary" : "text-slate-400"}`} />
+                      <Briefcase className={`h-4 w-4 ${isActive ? "text-primary" : "text-slate-400"}`} />
                     </div>
 
                     <div className="flex-1 min-w-0">
@@ -68,11 +74,16 @@ export default function ProviderMessagesShell({ threads, children }: Props) {
                         <p className={`text-sm truncate font-medium ${isActive ? "text-primary" : "text-slate-800"}`}>
                           {t.title}
                         </p>
-                        {t.unreadCount > 0 && (
-                          <span className="inline-flex items-center justify-center min-w-[18px] px-1 rounded-full bg-primary text-white text-[10px] font-bold shrink-0">
-                            {t.unreadCount}
-                          </span>
-                        )}
+                        <div className="flex items-center gap-1 shrink-0">
+                          {t.lastAt && (
+                            <p className="text-[10px] text-slate-400">{formatRelativeTime(new Date(t.lastAt))}</p>
+                          )}
+                          {t.unreadCount > 0 && (
+                            <span className="inline-flex items-center justify-center min-w-[18px] px-1 rounded-full bg-primary text-white text-[10px] font-bold">
+                              {t.unreadCount}
+                            </span>
+                          )}
+                        </div>
                       </div>
                       <div className="flex items-center gap-1.5 mb-1">
                         <JobStatusBadge status={t.status} />
@@ -81,9 +92,6 @@ export default function ProviderMessagesShell({ threads, children }: Props) {
                         <p className="text-xs text-slate-500 truncate">{previewText}</p>
                       ) : (
                         <p className="text-xs text-slate-400 italic">No messages yet</p>
-                      )}
-                      {t.lastAt && (
-                        <p className="text-[10px] text-slate-400 mt-0.5">{formatRelativeTime(new Date(t.lastAt))}</p>
                       )}
                     </div>
                   </Link>

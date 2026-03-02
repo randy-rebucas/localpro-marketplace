@@ -12,7 +12,6 @@ import { useAuthStore } from "@/stores/authStore";
 import SkillsInput from "@/components/shared/SkillsInput";
 import KycUpload from "@/components/shared/KycUpload";
 import { Star, Camera, BadgeCheck, AlertCircle, MapPin, Trash2, Plus, LocateFixed, Loader2, Sparkles, Lock } from "lucide-react";
-import PageGuide from "@/components/shared/PageGuide";
 import { Skeleton } from "@/components/ui/Spinner";
 import { apiFetch } from "@/lib/fetchClient";
 import { getProviderTier } from "@/lib/tier";
@@ -545,23 +544,11 @@ export default function ProviderProfilePage() {
 
   return (
     <div className="space-y-6">
-      <PageGuide
-        pageKey="provider-profile"
-        title="How My Profile works"
-        steps={[
-          { icon: "🪪", title: "Complete your profile", description: "Add a photo, bio (50+ chars), years of experience, and hourly rate to hit 100% completeness. Clients see this before accepting your quote." },
-          { icon: "🛠️", title: "Add your skills", description: "List every service you offer. Clients filter by skill, so the more accurate your list, the more relevant jobs you'll see." },
-          { icon: "📍", title: "Save your home address", description: "Save a default address under Saved Addresses. It auto-fills the location field when you submit quotes, saving you time on every job." },
-          { icon: "🗺️", title: "Set your service areas", description: "Add the cities or neighborhoods you're willing to travel to. This lets the platform match you with jobs near you and shows clients where you operate." },
-          { icon: "🛡️", title: "Upload KYC docs", description: "Submit a government-issued ID to earn the Verified badge. Clients trust verified providers and are more likely to accept their quotes." },
-          { icon: "🕐", title: "Set your schedule", description: "Mark the days and hours you're available. Clients can see your availability before sending a job, reducing mismatched bookings." },
-        ]}
-      />
       {/* Page heading */}
       <div className="flex items-start justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-slate-900">My Profile</h2>
-          <p className="text-sm text-slate-500 mt-0.5">
+          <p className="text-sm text-slate-500 mt-1">
             Clients see this when you submit a quote.
           </p>
         </div>
@@ -749,27 +736,7 @@ export default function ProviderProfilePage() {
                   </button>
                 </div>
               </div>
-              <SkillsInput value={skills} onChange={setSkills} />
-              {skillSuggestions.length > 0 && (
-                <div className="mt-2 p-2.5 rounded-lg bg-violet-50 border border-violet-100">
-                  <p className="text-[10px] font-semibold text-violet-500 uppercase tracking-wide mb-2">AI Suggestions — click to add</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {skillSuggestions.map((s) => (
-                      <button
-                        key={s}
-                        type="button"
-                        onClick={() => {
-                          setSkills((prev) => [...prev, s]);
-                          setSkillSuggestions((prev) => prev.filter((x) => x !== s));
-                        }}
-                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-violet-200 bg-white text-violet-700 text-xs font-medium hover:bg-violet-100 transition-colors"
-                      >
-                        <span>+</span>{s}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
+              <SkillsInput value={skills} onChange={setSkills} externalSuggestions={skillSuggestions} />
               {skills.length === 0 && skillSuggestions.length === 0 && (
                 <p className="text-xs text-slate-400 mt-1.5">Add skills so clients can find you when filtering by service type.</p>
               )}

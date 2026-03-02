@@ -5,7 +5,6 @@ import toast from "react-hot-toast";
 import { formatCurrency, formatDate, formatRelativeTime } from "@/lib/utils";
 import Button from "@/components/ui/Button";
 import Modal from "@/components/ui/Modal";
-import { Skeleton } from "@/components/ui/Spinner";
 import {
   CheckCircle2,
   MapPin,
@@ -231,137 +230,182 @@ export default function MarketplaceClient({
   }
 
   return (
-    <div className="space-y-5">
-      {/* Page header */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-slate-900">Marketplace</h2>
-          <p className="text-slate-500 text-sm mt-0.5">Browse available jobs and submit quotes.</p>
-        </div>
-        <button
-          onClick={() => fetchJobs(true)}
-          disabled={isRefreshing || isLoading}
-          className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-700 transition-colors disabled:opacity-40 mt-1"
-        >
-          <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? "animate-spin" : ""}`} />
-          Refresh
-        </button>
-      </div>
-
-      {/* Filters bar */}
-      <div className="flex flex-col gap-3">
-        {/* Top row: search + sort */}
-        <div className="flex gap-2 flex-wrap items-center">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
-            <input
-              ref={searchRef}
-              type="search"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search jobs…"
-              className="input pl-9 pr-8 text-sm w-56"
-            />
-            {search && (
+    <>
+    <div className="flex gap-6 items-start">
+      {/* ── Left sidebar: filters ───────────────────────────────── */}
+      <aside className="hidden lg:flex flex-col gap-4 w-64 shrink-0 sticky top-6">
+        <div className="bg-white rounded-xl border border-slate-200 shadow-card p-4 space-y-5">
+          <div className="flex items-center justify-between">
+            <span className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 uppercase tracking-wide">
+              <SlidersHorizontal className="h-3.5 w-3.5" /> Filters
+            </span>
+            {hasFilters && (
               <button
-                onClick={() => setSearch("")}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                onClick={clearFilters}
+                className="flex items-center gap-1 text-xs text-red-500 hover:text-red-700 font-medium transition-colors"
               >
-                <X className="h-3.5 w-3.5" />
+                <X className="h-3 w-3" />Clear
               </button>
             )}
           </div>
 
-          {/* Sort */}
-          <div className="relative">
-            <ArrowUpDown className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
-            <select
-              value={sort}
-              onChange={(e) => setSort(e.target.value as SortKey)}
-              className="input pl-8 pr-8 text-sm appearance-none w-48 cursor-pointer"
-            >
-              {SORT_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>{o.label}</option>
-              ))}
-            </select>
-            <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
+          {/* Search */}
+          <div>
+            <label className="text-xs font-medium text-slate-500 mb-1.5 block">Search</label>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+              <input
+                ref={searchRef}
+                type="search"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Keyword, location…"
+                className="input pl-9 pr-8 text-sm w-full"
+              />
+              {search && (
+                <button
+                  onClick={() => setSearch("")}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
           </div>
 
-          {hasFilters && (
+          {/* Sort */}
+          <div>
+            <label className="text-xs font-medium text-slate-500 mb-1.5 block">Sort by</label>
+            <div className="relative">
+              <ArrowUpDown className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
+              <select
+                value={sort}
+                onChange={(e) => setSort(e.target.value as SortKey)}
+                className="input pl-8 pr-8 text-sm appearance-none w-full cursor-pointer"
+              >
+                {SORT_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
+            </div>
+          </div>
+
+          {/* Budget range */}
+          <div>
+            <label className="text-xs font-medium text-slate-500 mb-1.5 block">Budget range (₱)</label>
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                min="0"
+                value={minBudget}
+                onChange={(e) => setMinBudget(e.target.value)}
+                placeholder="Min"
+                className="input text-sm w-full tabular-nums"
+              />
+              <span className="text-xs text-slate-300 flex-shrink-0">–</span>
+              <input
+                type="number"
+                min="0"
+                value={maxBudget}
+                onChange={(e) => setMaxBudget(e.target.value)}
+                placeholder="Max"
+                className="input text-sm w-full tabular-nums"
+              />
+            </div>
+          </div>
+
+          {/* Category */}
+          <div>
+            <label className="text-xs font-medium text-slate-500 mb-1.5 block">Category</label>
+            <div className="flex flex-col gap-1">
+              {categories.map((c) => (
+                <button
+                  key={c}
+                  onClick={() => setCategory(c)}
+                  className={`flex items-center justify-between w-full text-left px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                    category === c
+                      ? "bg-primary/10 text-primary"
+                      : "text-slate-600 hover:bg-slate-50"
+                  }`}
+                >
+                  <span>{c}</span>
+                  {category === c && <div className="h-1.5 w-1.5 rounded-full bg-primary" />}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      {/* ── Right: content ─────────────────────────────────────── */}
+      <div className="flex-1 min-w-0 space-y-4">
+        {/* Toolbar: mobile filters inline + result count + refresh */}
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-sm text-slate-500">
+            {isLoading ? (
+              <span className="text-slate-300">Loading jobs…</span>
+            ) : filtered.length === 0 ? (
+              <>No jobs found{debouncedSearch && <> for &ldquo;<span className="font-medium text-slate-600">{debouncedSearch}</span>&rdquo;</>}{category !== "All" && <> in <span className="font-medium text-slate-600">{category}</span></>}</>
+            ) : (
+              <><span className="font-semibold text-slate-700">{filtered.length}</span> open job{filtered.length !== 1 ? "s" : ""}{category !== "All" && <> in <span className="font-medium text-slate-700">{category}</span></>}</>
+            )}
+          </p>
+          <div className="flex items-center gap-2">
+            {/* Mobile: inline search */}
+            <div className="relative lg:hidden">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+              <input
+                type="search"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search…"
+                className="input pl-9 text-sm w-40"
+              />
+            </div>
             <button
-              onClick={clearFilters}
-              className="flex items-center gap-1 text-xs text-red-500 hover:text-red-700 font-medium transition-colors"
+              onClick={() => fetchJobs(true)}
+              disabled={isRefreshing || isLoading}
+              className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-700 transition-colors disabled:opacity-40 whitespace-nowrap"
             >
-              <X className="h-3 w-3" />
-              Clear filters
+              <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? "animate-spin" : ""}`} />
+              Refresh
             </button>
-          )}
+          </div>
         </div>
 
-        {/* Budget range */}
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-xs text-slate-400 flex-shrink-0">Budget (₱)</span>
-          <input
-            type="number"
-            min="0"
-            value={minBudget}
-            onChange={(e) => setMinBudget(e.target.value)}
-            placeholder="Min"
-            className="input text-sm w-24 tabular-nums"
-          />
-          <span className="text-xs text-slate-400">–</span>
-          <input
-            type="number"
-            min="0"
-            value={maxBudget}
-            onChange={(e) => setMaxBudget(e.target.value)}
-            placeholder="Max"
-            className="input text-sm w-24 tabular-nums"
-          />
-        </div>
-
-        {/* Category pills */}
-        <div className="flex gap-2 flex-wrap items-center">
-          <SlidersHorizontal className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
-          {categories.map((c) => (
-            <button
-              key={c}
-              onClick={() => setCategory(c)}
-              className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                category === c
-                  ? "bg-primary text-white shadow-sm"
-                  : "bg-white border border-slate-200 text-slate-600 hover:border-primary hover:text-primary"
-              }`}
-            >
-              {c}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Result count */}
-      {!isLoading && (
+      {/* Result summary */}
+      {!isLoading && filtered.length > 0 && (
         <p className="text-xs text-slate-400">
-          {filtered.length === 0 ? (
-            <>No jobs found{category !== "All" && <> in <span className="font-medium">{category}</span></>}{debouncedSearch && <> matching &ldquo;<span className="font-medium">{debouncedSearch}</span>&rdquo;</>}</>
-          ) : (
-            <>
-              Showing{" "}
-              <span className="font-semibold text-slate-600">{(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)}</span>
-              {" "}of{" "}
-              <span className="font-semibold text-slate-600">{filtered.length}</span>
-              {" "}open job{filtered.length !== 1 ? "s" : ""}
-              {category !== "All" && <> in <span className="font-medium text-slate-600">{category}</span></>}
-              {debouncedSearch && <> matching <span className="font-medium text-slate-600">&ldquo;{debouncedSearch}&rdquo;</span></>}
-            </>
-          )}
+          Showing{" "}
+          <span className="font-semibold text-slate-600">{(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)}</span>
+          {" "}of{" "}
+          <span className="font-semibold text-slate-600">{filtered.length}</span>
+          {" "}open job{filtered.length !== 1 ? "s" : ""}
+          {debouncedSearch && <> matching <span className="font-medium text-slate-600">&ldquo;{debouncedSearch}&rdquo;</span></>}
         </p>
       )}
 
       {/* Jobs grid */}
       {isLoading ? (
-        <div className="grid sm:grid-cols-2 gap-4">
-          {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-52 rounded-xl" />)}
+        <div className="grid sm:grid-cols-2 gap-4 animate-pulse">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="bg-white rounded-xl border border-slate-200 p-5 space-y-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="space-y-1.5 flex-1">
+                  <div className="h-4 w-3/4 rounded bg-slate-100" />
+                  <div className="h-3 w-1/2 rounded bg-slate-100" />
+                </div>
+                <div className="h-6 w-16 rounded-full bg-slate-100" />
+              </div>
+              <div className="h-3 w-full rounded bg-slate-100" />
+              <div className="h-3 w-4/5 rounded bg-slate-100" />
+              <div className="flex gap-2 mt-1">
+                <div className="h-3 w-20 rounded bg-slate-100" />
+                <div className="h-3 w-24 rounded bg-slate-100" />
+              </div>
+            </div>
+          ))}
         </div>
       ) : filtered.length === 0 ? (
         <div className="bg-white rounded-xl border border-slate-200 p-14 flex flex-col items-center text-center gap-3">
@@ -491,6 +535,8 @@ export default function MarketplaceClient({
           </button>
         </div>
       )}
+      </div>{/* end right column */}
+    </div>{/* end flex layout */}
 
       {/* Quote modal */}
       <Modal isOpen={quoteModal.open} onClose={() => setQuoteModal({ open: false, job: null })} title="Submit a Quote">
@@ -566,6 +612,6 @@ export default function MarketplaceClient({
           </div>
         </div>
       </Modal>
-    </div>
+    </>
   );
 }

@@ -3,7 +3,6 @@
 import ChatWindow from "@/components/chat/ChatWindow";
 import { useAuthStore } from "@/stores/authStore";
 import { Headphones } from "lucide-react";
-import PageGuide from "@/components/shared/PageGuide";
 
 export default function ProviderSupportPage() {
   const user = useAuthStore((s) => s.user);
@@ -11,17 +10,13 @@ export default function ProviderSupportPage() {
   if (!user) return null;
 
   return (
-    <div className="flex flex-col gap-4 h-[calc(100vh-8rem)]">
-      <PageGuide
-        pageKey="provider-support"
-        title="How Support works"
-        steps={[
-          { icon: "🎧", title: "Chat with support", description: "Describe your issue below and our team will respond as quickly as possible." },
-          { icon: "⚖️", title: "Billing & disputes", description: "For payment issues or job disputes, provide your job ID and a clear description of the problem." },
-          { icon: "📸", title: "Upload evidence", description: "For disputes, mention any photo evidence you have — our team may request you share them." },
-          { icon: "⏱️", title: "Response times", description: "We typically reply within a few hours during business hours (Mon–Sat, 8am–6pm)." },
-        ]}
-      />
+    <div className="flex flex-col gap-6 h-[calc(100vh-8rem)]">
+      <div className="flex items-start justify-between gap-4 flex-shrink-0">
+        <div>
+          <h2 className="text-2xl font-bold text-slate-900">Support</h2>
+          <p className="text-slate-500 text-sm mt-1">Chat with our team for help with jobs, payments, or disputes.</p>
+        </div>
+      </div>
       <ChatWindow
         fetchUrl="/api/support"
         postUrl="/api/support"

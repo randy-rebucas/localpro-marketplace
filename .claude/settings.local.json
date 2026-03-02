@@ -42,7 +42,10 @@
       "Bash(npm run build)",
       "Bash(ls -la /c/Users/corew/localpro-marketplace/src/app/\\\\\\(dashboard\\\\\\)/)",
       "Bash(ls -la /c/Users/corew/localpro-marketplace/src/app/\\\\\\(dashboard\\\\\\)/admin/)",
-      "Bash(ls /c/Users/corew/localpro-marketplace/src/app/\\\\\\(dashboard\\\\\\)/admin/support/)"
+      "Bash(ls /c/Users/corew/localpro-marketplace/src/app/\\\\\\(dashboard\\\\\\)/admin/support/)",
+      "Bash(ls c:/Users/corew/localpro-marketplace/src/app/\\\\\\(dashboard\\\\\\)/client/)",
+      "Bash(ls c:/Users/corew/localpro-marketplace/src/app/\\\\\\(dashboard\\\\\\)/provider/)",
+      "Bash(pnpm add marked)"
     ]
   }
 }

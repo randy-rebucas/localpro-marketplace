@@ -6,18 +6,45 @@ import { paymentRepository } from "@/repositories/payment.repository";
 import Link from "next/link";
 import RealtimeRefresher from "@/components/shared/RealtimeRefresher";
 import ProviderJobsList from "./ProviderJobsList";
-import PageGuide from "@/components/shared/PageGuide";
 import type { IJob } from "@/types";
+import { Briefcase } from "lucide-react";
 
 export const metadata: Metadata = { title: "My Jobs" };
 
 
 function JobsListSkeleton() {
   return (
-    <div className="space-y-3 animate-pulse">
-      <div className="h-4 w-40 bg-slate-200 rounded" />
-      {[...Array(4)].map((_, i) => (
-        <div key={i} className="bg-white rounded-xl border border-slate-200 h-32" />
+    <div className="space-y-4 animate-pulse">
+      {/* Tab bar */}
+      <div className="flex gap-1 bg-slate-100 p-1 rounded-xl w-fit">
+        {[48, 64, 72, 56].map((w, i) => (
+          <div key={i} className={`h-7 w-${w === 48 ? '12' : w === 64 ? '16' : w === 72 ? '18' : '14'} rounded-lg bg-slate-200`} />
+        ))}
+      </div>
+      {/* Cards */}
+      {[...Array(3)].map((_, i) => (
+        <div key={i} className="bg-white rounded-xl border border-slate-200 p-5 space-y-3">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1 space-y-2">
+              <div className="h-4 w-2/3 rounded bg-slate-100" />
+              <div className="flex gap-2">
+                <div className="h-3 w-16 rounded bg-slate-100" />
+                <div className="h-3 w-24 rounded bg-slate-100" />
+                <div className="h-3 w-20 rounded bg-slate-100" />
+              </div>
+              <div className="h-3 w-full rounded bg-slate-100" />
+            </div>
+            <div className="flex flex-col items-end gap-2">
+              <div className="h-7 w-20 rounded bg-slate-100" />
+              <div className="h-5 w-16 rounded-full bg-slate-100" />
+              <div className="h-5 w-16 rounded-full bg-slate-100" />
+            </div>
+          </div>
+          <div className="pt-3 border-t border-slate-100 flex gap-3">
+            <div className="h-8 w-28 rounded-lg bg-slate-100" />
+            <div className="h-8 w-24 rounded-lg bg-slate-100" />
+          </div>
+        </div>
       ))}
     </div>
   );
@@ -46,9 +73,17 @@ async function ProviderJobsContent({ userId }: { userId: string }) {
 
   if (jobs.length === 0) {
     return (
-      <div className="bg-white rounded-xl border border-slate-200 p-12 text-center text-slate-400 text-sm">
-        No active jobs.{" "}
-        <Link href="/provider/marketplace" className="text-primary hover:underline">Browse the marketplace.</Link>
+      <div className="bg-white rounded-xl border border-slate-200 p-14 flex flex-col items-center gap-3 text-center">
+        <div className="flex items-center justify-center h-12 w-12 rounded-full bg-slate-100">
+          <Briefcase className="h-6 w-6 text-slate-400" />
+        </div>
+        <div>
+          <p className="text-sm font-semibold text-slate-700">No active jobs yet</p>
+          <p className="text-xs text-slate-400 mt-1">Accept a quote from the marketplace to get started.</p>
+        </div>
+        <Link href="/provider/marketplace" className="text-xs font-medium text-primary hover:underline">
+          Browse the marketplace →
+        </Link>
       </div>
     );
   }
@@ -67,20 +102,13 @@ export default async function ProviderJobsPage() {
 
   return (
     <div className="space-y-6">
-      <PageGuide
-        pageKey="provider-jobs"
-        title="How My Jobs works"
-        steps={[
-          { icon: "📋", title: "All assigned jobs", description: "See every job that's been assigned to you — from accepted quotes through to completion." },
-          { icon: "📸", title: "Upload before photos", description: "When starting a job, upload before photos to document the initial state of the work area." },
-          { icon: "✅", title: "Mark as complete", description: "Once the work is done, upload after photos and mark the job complete to trigger escrow release." },
-          { icon: "💰", title: "Track payments", description: "See the funded escrow amount for each job so you know exactly what you'll be paid." },
-        ]}
-      />
-      <RealtimeRefresher entity="job" />
-      <div>
-        <h2 className="text-2xl font-bold text-slate-900">Active Jobs</h2>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-bold text-slate-900">My Jobs</h2>
+          <p className="text-slate-500 text-sm mt-1">Manage your active and completed job assignments.</p>
+        </div>
       </div>
+      <RealtimeRefresher entity="job" />
       <Suspense fallback={<JobsListSkeleton />}>
         <ProviderJobsContent userId={user.userId} />
       </Suspense>

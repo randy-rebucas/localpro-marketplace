@@ -145,7 +145,7 @@ function JobCard({ job, today }: { job: CalendarJob; today: Date }) {
               <ShieldCheck className="h-3 w-3" /> Escrow held
             </span>
           )}
-          <Link href="/provider/jobs" className="text-xs text-primary hover:underline font-medium">
+          <Link href={`/provider/jobs/${job._id}`} className="text-xs text-primary hover:underline font-medium">
             View job →
           </Link>
         </div>
@@ -448,7 +448,7 @@ export default function CalendarView({ jobs: rawJobs }: { jobs: unknown[] }) {
         {Object.entries(STATUS_COLOR).map(([status, c]) => (
           <span key={status} className="flex items-center gap-1.5 capitalize">
             <span className={`h-2.5 w-2.5 rounded-full ${c.dot}`} />
-            {status.replace("_", " ")}
+            {status.replace(/_/g, " ")}
           </span>
         ))}
         <span className="flex items-center gap-1.5">
@@ -493,7 +493,11 @@ export default function CalendarView({ jobs: rawJobs }: { jobs: unknown[] }) {
             {/* Panel body */}
             <div className="p-4 space-y-3 max-h-[calc(100vh-280px)] overflow-y-auto">
               {selectedJobs.length === 0 ? (
-                <p className="text-sm text-slate-400 py-6 text-center">No jobs on this day.</p>
+                <div className="flex flex-col items-center gap-2 py-8 text-center">
+                  <CalendarDays className="h-7 w-7 text-slate-200" />
+                  <p className="text-sm font-medium text-slate-500">No jobs scheduled</p>
+                  <p className="text-xs text-slate-400">Select another day or browse the marketplace.</p>
+                </div>
               ) : (
                 selectedJobs.map((j) => (
                   <JobCard key={j._id} job={j} today={today} />

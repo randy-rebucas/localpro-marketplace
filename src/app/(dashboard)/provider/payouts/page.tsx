@@ -2,8 +2,7 @@ import type { Metadata } from "next";
 import { getCurrentUser } from "@/lib/auth";
 import { payoutService } from "@/services/payout.service";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import { Wallet, Clock, CheckCircle2, XCircle, ArrowLeft, Loader2 } from "lucide-react";
-import PageGuide from "@/components/shared/PageGuide";
+import { Wallet, Clock, CheckCircle2, XCircle, Loader2 } from "lucide-react";
 import type { IPayout, PayoutStatus } from "@/types";
 import Link from "next/link";
 import RequestPayoutModal from "@/components/payment/RequestPayoutModal";
@@ -42,21 +41,19 @@ export default async function ProviderPayoutsPage() {
 
   return (
     <div className="space-y-6">
-      <PageGuide
-        pageKey="provider-payouts"
-        title="How Payouts works"
-        steps={[
-          { icon: "💳", title: "Check your balance", description: "Your available balance in the Earnings page must be positive before requesting a payout." },
-          { icon: "🏦", title: "Submit bank details", description: "Enter your bank name, account number, and account name when requesting a payout." },
-          { icon: "⏳", title: "Processing time", description: "Payouts are reviewed by our admin team and typically processed within 1–3 business days." },
-          { icon: "📋", title: "Track status", description: "Each payout request moves through: Pending → Processing → Completed (or Rejected with a reason)." },
-        ]}
-      />
       {/* Header */}
-      <div className="flex items-start justify-between gap-4 flex-wrap">
+      <div className="flex items-start justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-slate-900">Payouts</h2>
-          <p className="text-slate-500 text-sm mt-0.5">History of your withdrawal requests.</p>
+          <p className="text-slate-500 text-sm mt-1">Track and manage your withdrawal requests.</p>
+        </div>
+        <div className="flex-shrink-0 mt-1">
+          <Link
+            href="/provider/earnings"
+            className="text-sm text-slate-500 hover:text-slate-700 underline underline-offset-2 transition-colors"
+          >
+            View earnings
+          </Link>
         </div>
       </div>
 

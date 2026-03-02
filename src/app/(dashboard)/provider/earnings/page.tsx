@@ -4,7 +4,6 @@ import { getCurrentUser } from "@/lib/auth";
 import { transactionRepository } from "@/repositories/transaction.repository";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { CircleDollarSign, TrendingDown, Wallet, ArrowUpRight } from "lucide-react";
-import PageGuide from "@/components/shared/PageGuide";
 import { payoutService } from "@/services/payout.service";
 import RequestPayoutModal from "@/components/payment/RequestPayoutModal";
 import ExportEarningsButton from "@/components/payment/ExportEarningsButton";
@@ -19,16 +18,41 @@ function EarningsSkeleton() {
       {/* Summary cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[...Array(4)].map((_, i) => (
-          <div key={i} className="h-28 bg-white rounded-xl border border-slate-200" />
+          <div key={i} className="bg-white rounded-xl border border-slate-200 p-5">
+            <div className="flex items-start justify-between">
+              <div className="space-y-2 flex-1">
+                <div className="h-3 w-24 rounded bg-slate-100" />
+                <div className="h-7 w-28 rounded bg-slate-100" />
+                <div className="h-2.5 w-20 rounded bg-slate-100" />
+              </div>
+              <div className="h-10 w-10 rounded-xl bg-slate-100 flex-shrink-0" />
+            </div>
+          </div>
         ))}
       </div>
       {/* Breakdown bar */}
-      <div className="h-20 bg-white rounded-xl border border-slate-200" />
+      <div className="bg-white rounded-xl border border-slate-200 p-5 space-y-3">
+        <div className="h-3 w-32 rounded bg-slate-100" />
+        <div className="h-3 rounded-full bg-slate-100" />
+        <div className="flex gap-4">
+          <div className="h-3 w-24 rounded bg-slate-100" />
+          <div className="h-3 w-24 rounded bg-slate-100" />
+        </div>
+      </div>
       {/* Transaction table */}
       <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-        <div className="h-14 border-b border-slate-100" />
-        {[...Array(5)].map((_, i) => (
-          <div key={i} className="h-14 border-b border-slate-50" />
+        <div className="px-6 py-4 border-b border-slate-100">
+          <div className="h-4 w-36 rounded bg-slate-100" />
+        </div>
+        {[...Array(4)].map((_, i) => (
+          <div key={i} className="px-6 py-4 border-b border-slate-50 flex items-center gap-4">
+            <div className="h-3.5 w-48 rounded bg-slate-100 flex-1" />
+            <div className="h-3.5 w-16 rounded bg-slate-100" />
+            <div className="h-3.5 w-16 rounded bg-slate-100" />
+            <div className="h-3.5 w-16 rounded bg-slate-100" />
+            <div className="h-5 w-20 rounded-full bg-slate-100" />
+            <div className="h-3.5 w-20 rounded bg-slate-100" />
+          </div>
         ))}
       </div>
     </div>
@@ -67,7 +91,7 @@ async function EarningsContent({ userId }: { userId: string }) {
             <div>
               <p className="text-xs text-slate-500">Commission Paid</p>
               <p className="text-2xl font-bold text-red-500 mt-1">-{formatCurrency(totalCommission)}</p>
-              <p className="text-xs text-slate-400 mt-0.5">20% platform fee</p>
+              <p className="text-xs text-slate-400 mt-0.5">{commissionPct}% platform fee</p>
             </div>
             <div className="p-2.5 bg-red-50 rounded-xl text-red-400">
               <TrendingDown className="h-5 w-5" />
@@ -132,7 +156,13 @@ async function EarningsContent({ userId }: { userId: string }) {
           <h3 className="font-semibold text-slate-900">Transaction History</h3>
         </div>
         {transactions.length === 0 ? (
-          <div className="px-6 py-8 text-center text-slate-400 text-sm">No transactions yet.</div>
+          <div className="px-6 py-12 flex flex-col items-center gap-2 text-center">
+            <div className="flex items-center justify-center h-12 w-12 rounded-full bg-slate-100">
+              <CircleDollarSign className="h-6 w-6 text-slate-400" />
+            </div>
+            <p className="text-sm font-semibold text-slate-700">No transactions yet</p>
+            <p className="text-xs text-slate-400">Completed jobs will appear here once escrow is released.</p>
+          </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -178,27 +208,17 @@ export default async function EarningsPage() {
 
   return (
     <div className="space-y-6">
-      <PageGuide
-        pageKey="provider-earnings"
-        title="How Earnings works"
-        steps={[
-          { icon: "💵", title: "Gross vs net", description: "Gross is the full job amount. A 20% platform commission is deducted, leaving your net payout." },
-          { icon: "📈", title: "Available balance", description: "Your available balance is net earnings minus any already-requested payouts." },
-          { icon: "🏦", title: "Request a payout", description: "Click 'Request Payout' to withdraw your available balance to your bank account." },
-          { icon: "📄", title: "Export history", description: "Download your full earnings history as a CSV for tax reporting or personal records." },
-        ]}
-      />
-      <div className="flex items-start justify-between gap-4 flex-wrap">
+      <div className="flex items-start justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-slate-900">Earnings</h2>
-          <p className="text-slate-500 text-sm mt-0.5">Commission breakdown and payment history.</p>
+          <p className="text-slate-500 text-sm mt-1">Commission breakdown and payment history.</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-shrink-0 mt-1">
           <Link
             href="/provider/payouts"
             className="text-sm text-slate-500 hover:text-slate-700 underline underline-offset-2 transition-colors"
           >
-            View payout history
+            Payout history
           </Link>
           <ExportEarningsButton />
         </div>

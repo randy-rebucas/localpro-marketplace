@@ -38,11 +38,13 @@ export default function ProviderJobChatPage({
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      <div className="px-5 py-3.5 border-b border-slate-200 bg-white shrink-0">
-        <p className="text-sm font-semibold text-slate-800 truncate">
-          {jobTitle ?? "Job Conversation"}
-        </p>
-        <p className="text-xs text-slate-400">Conversation thread</p>
+      <div className="px-5 py-3.5 border-b border-slate-200 bg-white shrink-0 flex items-center gap-3">
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-slate-800 truncate flex items-center gap-1.5">
+            {jobTitle ?? "Job Conversation"}
+          </p>
+          <p className="text-xs text-slate-400 mt-0.5">Client conversation thread</p>
+        </div>
       </div>
       <div className="flex-1 min-h-0">
         <ChatWindow

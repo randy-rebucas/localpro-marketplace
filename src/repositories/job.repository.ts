@@ -232,6 +232,34 @@ export class JobRepository extends BaseRepository<JobDocument> {
       .lean() as unknown as JobDocument[];
   }
 
+  /** Single job verified to belong to this provider, with client populated. */
+  async findByProviderAndId(providerId: string, jobId: string): Promise<{
+    _id: { toString(): string };
+    title: string;
+    category: string;
+    location: string;
+    description: string;
+    budget: number;
+    scheduleDate: Date;
+    createdAt: Date;
+    status: JobStatus;
+    escrowStatus: EscrowStatus;
+    specialInstructions?: string;
+    beforePhoto?: string[];
+    afterPhoto?: string[];
+    partialReleaseAmount?: number | null;
+    riskScore: number;
+    clientId: { _id: { toString(): string }; name: string; email: string } | null;
+  } | null> {
+    await this.connect();
+    return Job.findOne({
+      _id: new Types.ObjectId(jobId),
+      providerId: new Types.ObjectId(providerId),
+    })
+      .populate("clientId", "name email")
+      .lean() as never;
+  }
+
   /** All provider jobs — minimal fields for the messages thread list, sorted by updatedAt. */
   async findJobsForMessagesProvider(providerId: string): Promise<Array<{
     _id: { toString(): string }; title: string; status: JobStatus;

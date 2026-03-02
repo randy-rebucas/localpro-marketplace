@@ -8,6 +8,8 @@ interface SkillsInputProps {
   onChange: (skills: string[]) => void;
   maxSkills?: number;
   placeholder?: string;
+  /** Extra suggestions (e.g. from AI) — only shown when the user is actively typing */
+  externalSuggestions?: string[];
 }
 
 function useDebounce<T>(value: T, delay: number): T {
@@ -24,6 +26,7 @@ export default function SkillsInput({
   onChange,
   maxSkills = 20,
   placeholder = "Type a skill and press Enter…",
+  externalSuggestions = [],
 }: SkillsInputProps) {
   const [inputValue, setInputValue] = useState("");
   const [suggestions, setSuggestions] = useState<string[]>([]);
@@ -46,8 +49,24 @@ export default function SkillsInput({
         if (cancelled) return;
         // Filter out already-selected skills (case-insensitive)
         const lower = new Set(value.map((s) => s.toLowerCase()));
-        setSuggestions(data.skills.filter((s) => !lower.has(s.toLowerCase())));
-        setOpen(data.skills.length > 0);
+        const apiResults = data.skills.filter((s) => !lower.has(s.toLowerCase()));
+
+        // Merge external suggestions (e.g. AI) — only when actively typing
+        let combined = apiResults;
+        if (debouncedQuery.length > 0 && externalSuggestions.length > 0) {
+          const query = debouncedQuery.toLowerCase();
+          const seen = new Set(apiResults.map((s) => s.toLowerCase()));
+          const filtered = externalSuggestions.filter(
+            (s) =>
+              !lower.has(s.toLowerCase()) &&
+              !seen.has(s.toLowerCase()) &&
+              s.toLowerCase().includes(query)
+          );
+          combined = [...apiResults, ...filtered].slice(0, 10);
+        }
+
+        setSuggestions(combined);
+        setOpen(combined.length > 0);
         setActiveIdx(-1);
       } catch {
         // silently ignore network errors in autocomplete
@@ -55,7 +74,7 @@ export default function SkillsInput({
     }
     fetchSuggestions();
     return () => { cancelled = true; };
-  }, [debouncedQuery, value]);
+  }, [debouncedQuery, value, externalSuggestions]);
 
   // Close dropdown on outside click
   useEffect(() => {

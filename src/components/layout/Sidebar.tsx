@@ -30,6 +30,7 @@ import {
   UserCog,
   ScrollText,
   Megaphone,
+  BookOpen,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/authStore";
@@ -69,8 +70,9 @@ const navGroups: Partial<Record<UserRole, NavGroup[]>> = {
     {
       heading: "Communication",
       items: [
-        { label: "Messages",   href: "/client/messages",  icon: <MessageSquare  className="h-5 w-5" /> },
-        { label: "Support",    href: "/client/support",   icon: <Headphones     className="h-5 w-5" /> },
+        { label: "Messages",        href: "/client/messages",   icon: <MessageSquare className="h-5 w-5" /> },
+        { label: "Support",         href: "/client/support",    icon: <Headphones    className="h-5 w-5" /> },
+        { label: "Knowledge Base",  href: "/client/knowledge",  icon: <BookOpen      className="h-5 w-5" /> },
       ],
     },
     {
@@ -105,8 +107,9 @@ const navGroups: Partial<Record<UserRole, NavGroup[]>> = {
     {
       heading: "Communication",
       items: [
-        { label: "Messages",    href: "/provider/messages",  icon: <MessageSquare className="h-5 w-5" /> },
-        { label: "Support",     href: "/provider/support",   icon: <Headphones    className="h-5 w-5" /> },
+        { label: "Messages",        href: "/provider/messages",   icon: <MessageSquare className="h-5 w-5" /> },
+        { label: "Support",         href: "/provider/support",    icon: <Headphones    className="h-5 w-5" /> },
+        { label: "Knowledge Base",  href: "/provider/knowledge",  icon: <BookOpen      className="h-5 w-5" /> },
       ],
     },
     {
@@ -152,6 +155,7 @@ const navGroups: Partial<Record<UserRole, NavGroup[]>> = {
       items: [
         { label: "Support Inbox",  href: "/admin/support",        icon: <Headphones className="h-5 w-5" />, capability: "manage_support" },
         { label: "Announcements",  href: "/admin/announcements",  icon: <Megaphone  className="h-5 w-5" />, capability: "__admin_only__" },
+        { label: "Knowledge Base", href: "/admin/knowledge",      icon: <BookOpen   className="h-5 w-5" />, capability: "__admin_only__" },
         { label: "Notifications",  href: "/admin/notifications",  icon: <Bell       className="h-5 w-5" />, capability: null },
       ],
     },
