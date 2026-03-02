@@ -135,6 +135,21 @@ export class EscrowService {
 
     await transactionRepository.setPending(job._id!.toString(), "completed");
 
+    // ── loyalty points for client ────────────────────────────────────────────
+    try {
+      const { loyaltyService } = await import("@/services/loyalty.service");
+      const acct = await loyaltyService.getAccount(job.clientId.toString());
+      const isFirst = acct.lifetimePoints === 0;
+      await loyaltyService.awardJobPoints(
+        job.clientId.toString(),
+        job.budget,
+        job._id!.toString(),
+        isFirst
+      );
+    } catch {
+      // Non-critical — do not fail escrow release if loyalty fails
+    }
+
     await activityRepository.log({
       userId: user.userId,
       eventType: "escrow_released",

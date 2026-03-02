@@ -1,4 +1,19 @@
+import { Suspense } from "react";
 import { MapPin } from "lucide-react";
+
+function AuthCardSkeleton() {
+  return (
+    <div className="animate-pulse space-y-4">
+      <div className="h-6 w-32 bg-slate-200 rounded mx-auto" />
+      <div className="h-4 w-48 bg-slate-100 rounded mx-auto" />
+      <div className="space-y-3 mt-6">
+        <div className="h-10 bg-slate-100 rounded-lg" />
+        <div className="h-10 bg-slate-100 rounded-lg" />
+        <div className="h-10 bg-primary/20 rounded-lg" />
+      </div>
+    </div>
+  );
+}
 
 export default function AuthLayout({
   children,
@@ -14,15 +29,19 @@ export default function AuthLayout({
             <MapPin className="w-7 h-7 text-white" />
           </div>
           <h1 className="text-2xl font-bold">
-              <span className="text-primary-300">Local</span><span className="text-brand-400">Pro</span>
-            </h1>
+            <span className="text-primary-300">Local</span><span className="text-brand-400">Pro</span>
+          </h1>
           <p className="text-primary-300 text-sm mt-1">
             Connecting communities with trusted professionals
           </p>
         </div>
 
         {/* Card */}
-        <div className="bg-white rounded-2xl shadow-2xl p-8">{children}</div>
+        <div className="bg-white rounded-2xl shadow-2xl p-8">
+          <Suspense fallback={<AuthCardSkeleton />}>
+            {children}
+          </Suspense>
+        </div>
       </div>
     </div>
   );

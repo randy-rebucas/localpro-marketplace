@@ -16,6 +16,7 @@ const RegisterSchema = z.object({
       "Password must contain uppercase, lowercase, and a number"
     ),
   role: z.enum(["client", "provider"]),
+  referralCode: z.string().max(12).optional(),
 });
 
 export const POST = withHandler(async (req: NextRequest) => {

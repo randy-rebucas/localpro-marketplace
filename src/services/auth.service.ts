@@ -24,6 +24,7 @@ export interface RegisterInput {
   email: string;
   password: string;
   role: UserRole;
+  referralCode?: string;
 }
 
 export interface LoginInput {
@@ -68,6 +69,23 @@ export class AuthService {
     sendVerificationEmail(user.email as string, user.name as string, verificationToken).catch(
       (err) => console.error("[EMAIL] verification send failed:", err)
     );
+
+    // Loyalty: create account and link referral (fire-and-forget)
+    if (input.role === "client") {
+      try {
+        const { loyaltyService } = await import("@/services/loyalty.service");
+        const { loyaltyRepository } = await import("@/repositories/loyalty.repository");
+        const newAcct = await loyaltyService.getAccount(userId);
+        if (input.referralCode) {
+          const referrerAcct = await loyaltyRepository.findByReferralCode(input.referralCode);
+          if (referrerAcct && referrerAcct.userId.toString() !== userId) {
+            await loyaltyRepository.setReferredBy(newAcct._id.toString(), referrerAcct.userId.toString());
+          }
+        }
+      } catch {
+        // Non-critical
+      }
+    }
 
     const accessToken = signAccessToken(userId, user.role as UserRole);
     const refreshToken = signRefreshToken(userId);

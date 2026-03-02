@@ -80,6 +80,14 @@ export class ReviewService {
     const { providerProfileService } = await import("@/services/providerProfile.service");
     await providerProfileService.recalculateStats(j.providerId.toString());
 
+    // Award loyalty points for leaving a review
+    try {
+      const { loyaltyService } = await import("@/services/loyalty.service");
+      await loyaltyService.awardReviewPoints(user.userId, input.jobId);
+    } catch {
+      // Non-critical
+    }
+
     // Notify provider
     const stars = "★".repeat(input.rating) + "☆".repeat(5 - input.rating);
     const notification = await notificationRepository.create({

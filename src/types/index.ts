@@ -433,6 +433,43 @@ export interface IFavoriteProvider {
   createdAt: Date;
 }
 
+// ─── Loyalty & Rewards ────────────────────────────────────────────────────────
+
+export type ClientTier = "standard" | "silver" | "gold" | "platinum";
+
+export type LoyaltyTransactionType =
+  | "earned_job"
+  | "earned_first_job"
+  | "earned_referral"
+  | "earned_review"
+  | "redeemed"
+  | "credit_applied";
+
+export interface ILoyaltyAccount {
+  _id: Types.ObjectId | string;
+  userId: Types.ObjectId | string | IUser;
+  points: number;
+  lifetimePoints: number;
+  credits: number;
+  tier: ClientTier;
+  referralCode: string;
+  referredBy?: Types.ObjectId | string | null;
+  referralBonusAwarded: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface ILoyaltyTransaction {
+  _id: Types.ObjectId | string;
+  userId: Types.ObjectId | string | IUser;
+  type: LoyaltyTransactionType;
+  points: number;
+  credits: number;
+  jobId?: Types.ObjectId | string | null;
+  description: string;
+  createdAt: Date;
+}
+
 // ─── Category ─────────────────────────────────────────────────────────────────
 
 export interface ICategory {

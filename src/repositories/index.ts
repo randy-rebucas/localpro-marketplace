@@ -14,3 +14,4 @@ export { payoutRepository } from "./payout.repository";
 export { favoriteProviderRepository } from "./favoriteProvider.repository";
 export { announcementRepository } from "./announcement.repository";
 export { knowledgeArticleRepository } from "./knowledgeArticle.repository";
+export { loyaltyRepository } from "./loyalty.repository";

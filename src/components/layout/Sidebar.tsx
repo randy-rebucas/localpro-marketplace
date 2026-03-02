@@ -31,6 +31,7 @@ import {
   ScrollText,
   Megaphone,
   BookOpen,
+  Gift,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/authStore";
@@ -78,7 +79,8 @@ const navGroups: Partial<Record<UserRole, NavGroup[]>> = {
     {
       heading: "Account",
       items: [
-        { label: "My Profile",    href: "/client/profile",       icon: <User className="h-5 w-5" /> },
+        { label: "Rewards",       href: "/client/rewards",        icon: <Gift className="h-5 w-5" /> },
+        { label: "My Profile",    href: "/client/profile",        icon: <User className="h-5 w-5" /> },
         { label: "Notifications", href: "/client/notifications",  icon: <Bell className="h-5 w-5" /> },
       ],
     },
