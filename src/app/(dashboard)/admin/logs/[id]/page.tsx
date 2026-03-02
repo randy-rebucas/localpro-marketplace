@@ -193,8 +193,12 @@ export default async function AdminLogDetailPage({
               </Link>
             </div>
           ) : (
-            <div className="px-5 py-4">
-              <p className="text-xs text-slate-300 italic">No job associated</p>
+            <div className="px-5 py-6 flex flex-col items-center text-center gap-2">
+              <div className="h-10 w-10 rounded-full bg-slate-100 flex items-center justify-center">
+                <Briefcase className="h-4 w-4 text-slate-400" />
+              </div>
+              <p className="text-xs font-semibold text-slate-500">No job associated</p>
+              <p className="text-[11px] text-slate-400">This event was not linked to a job.</p>
             </div>
           )}
         </div>
@@ -218,7 +222,13 @@ export default async function AdminLogDetailPage({
             ))}
           </div>
         ) : (
-          <p className="px-5 py-4 text-xs text-slate-300 italic">No metadata recorded for this event.</p>
+          <div className="px-5 py-8 flex flex-col items-center text-center gap-2">
+            <div className="h-10 w-10 rounded-full bg-slate-100 flex items-center justify-center">
+              <Code2 className="h-4 w-4 text-slate-400" />
+            </div>
+            <p className="text-xs font-semibold text-slate-500">No metadata</p>
+            <p className="text-[11px] text-slate-400">No additional data was recorded for this event.</p>
+          </div>
         )}
       </div>
 

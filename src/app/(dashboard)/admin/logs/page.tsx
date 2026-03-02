@@ -5,7 +5,6 @@ import type { ActivityEventType } from "@/types";
 import { formatRelativeTime } from "@/lib/utils";
 import Link from "next/link";
 import { ScrollText, ChevronLeft, ChevronRight, Clock, ChevronRight as ArrowRight, Calendar, CalendarDays, Database } from "lucide-react";
-import PageGuide from "@/components/shared/PageGuide";
 
 export const metadata: Metadata = { title: "Activity Logs" };
 
@@ -92,27 +91,15 @@ export default async function AdminLogsPage({
 
   return (
     <div className="space-y-6">
-      <PageGuide
-        pageKey="admin-logs"
-        title="How Activity Logs work"
-        steps={[
-          { icon: "📋", title: "What is logged", description: "Every significant action — job lifecycle, escrow, disputes, reviews, and payouts — is automatically recorded here." },
-          { icon: "🔍", title: "Filter & drill down", description: "Filter by event type, then click any row to see the full detail for that event including metadata and related events." },
-          { icon: "🕒", title: "Timestamps", description: "Logs are sorted newest-first. Hover the relative time to see the precise timestamp." },
-          { icon: "🗂️", title: "Retention", description: "Logs older than 90 days are automatically pruned by the daily maintenance cron." },
-        ]}
-      />
-
       {/* Header */}
-      <div>
-        <div className="flex items-center gap-2.5 mb-0.5">
-          <ScrollText className="h-5 w-5 text-slate-400" />
+      <div className="flex items-start justify-between gap-4">
+        <div>
           <h2 className="text-2xl font-bold text-slate-900">Activity Logs</h2>
+          <p className="text-slate-500 text-sm mt-1">
+            Audit trail of every significant platform event
+            {eventFilter ? ` · filtered by "${EVENT_CONFIG[eventFilter]?.label}"` : ""}
+          </p>
         </div>
-        <p className="text-slate-500 text-sm">
-          Audit trail of every significant platform event
-          {eventFilter ? ` · filtered by "${EVENT_CONFIG[eventFilter]?.label}"` : ""}
-        </p>
       </div>
 
       {/* Stats strip */}
@@ -169,8 +156,11 @@ export default async function AdminLogsPage({
       <div className="bg-white rounded-xl border border-slate-200 shadow-card overflow-hidden">
         {logs.length === 0 ? (
           <div className="px-6 py-16 text-center">
-            <ScrollText className="h-8 w-8 text-slate-300 mx-auto mb-3" />
-            <p className="text-slate-400 text-sm">No activity logs found.</p>
+            <div className="h-12 w-12 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-3">
+              <ScrollText className="h-5 w-5 text-slate-400" />
+            </div>
+            <p className="text-sm font-semibold text-slate-700">No activity logs found</p>
+            <p className="text-xs text-slate-400 mt-1">{eventFilter ? "Try removing the event filter to see all logs." : "Platform events will appear here as they occur."}</p>
             {eventFilter && (
               <Link href="/admin/logs" className="mt-3 inline-block text-sm text-primary hover:underline">
                 Clear filter
