@@ -25,6 +25,19 @@ export default function JobActionButtons({ jobId, status, escrowStatus, budget, 
   const [loading, setLoading] = useState<string | null>(null);
   const [showFundModal, setShowFundModal] = useState(false);
   const [showReleaseModal, setShowReleaseModal] = useState(false);
+
+  // Satisfaction checklist — all three must be ticked before release is allowed
+  const [checkWorkCompleted,     setCheckWorkCompleted]     = useState(false);
+  const [checkIssuesResolved,    setCheckIssuesResolved]    = useState(false);
+  const [checkReadyToRelease,    setCheckReadyToRelease]    = useState(false);
+  const allChecked = checkWorkCompleted && checkIssuesResolved && checkReadyToRelease;
+
+  function openReleaseModal() {
+    setCheckWorkCompleted(false);
+    setCheckIssuesResolved(false);
+    setCheckReadyToRelease(false);
+    setShowReleaseModal(true);
+  }
   const [amountInput, setAmountInput] = useState<string>(
     String(acceptedAmount ?? budget)
   );
@@ -105,7 +118,7 @@ export default function JobActionButtons({ jobId, status, escrowStatus, budget, 
         {status === "completed" && escrowStatus === "funded" && (
           <Button
             isLoading={loading === "complete"}
-            onClick={() => setShowReleaseModal(true)}
+            onClick={openReleaseModal}
           >
             Approve &amp; Release Payment
           </Button>
@@ -129,9 +142,26 @@ export default function JobActionButtons({ jobId, status, escrowStatus, budget, 
               )}
             </div>
           </div>
-          <p className="text-sm text-slate-600">
-            Only confirm if you are satisfied with the completed work. Once released, funds cannot be recovered.
-          </p>
+          {/* Satisfaction checklist */}
+          <div className="space-y-2.5">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Confirm before releasing</p>
+            {([
+              { id: "check-completed",    state: checkWorkCompleted,  setter: setCheckWorkCompleted,  label: "Work was completed as described in the job post" },
+              { id: "check-issues",       state: checkIssuesResolved, setter: setCheckIssuesResolved, label: "All issues or concerns have been addressed" },
+              { id: "check-ready",        state: checkReadyToRelease, setter: setCheckReadyToRelease, label: "I am satisfied and ready to release payment" },
+            ] as const).map(({ id, state, setter, label }) => (
+              <label key={id} className="flex cursor-pointer items-start gap-3">
+                <input
+                  type="checkbox"
+                  id={id}
+                  checked={state}
+                  onChange={(e) => setter(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 accent-violet-600"
+                />
+                <span className="text-sm text-slate-700">{label}</span>
+              </label>
+            ))}
+          </div>
           <div className="flex gap-3 pt-1">
             <Button
               variant="secondary"
@@ -144,6 +174,7 @@ export default function JobActionButtons({ jobId, status, escrowStatus, budget, 
             <Button
               className="flex-1"
               isLoading={loading === "complete"}
+              disabled={!allChecked}
               onClick={() => { setShowReleaseModal(false); releaseEscrow(); }}
             >
               Confirm Release

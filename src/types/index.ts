@@ -68,6 +68,19 @@ export type JobStatus =
 
 export type EscrowStatus = "not_funded" | "funded" | "released" | "refunded";
 
+// ─── Milestone ────────────────────────────────────────────────────────────────
+
+export type MilestoneStatus = "pending" | "released";
+
+export interface IMilestone {
+  _id: Types.ObjectId | string;
+  title: string;
+  amount: number;
+  description?: string;
+  status: MilestoneStatus;
+  releasedAt?: Date;
+}
+
 export interface IJob {
   _id: Types.ObjectId | string;
   clientId: Types.ObjectId | string | IUser;
@@ -89,6 +102,8 @@ export interface IJob {
   coordinates?: { type: "Point"; coordinates: [number, number] } | null;
   /** When set, admin approval assigns this job directly to the provider */
   invitedProviderId?: Types.ObjectId | string | IUser | null;
+  /** Optional milestone payment plan — each milestone can be released individually */
+  milestones?: IMilestone[];
   createdAt: Date;
   updatedAt: Date;
 }

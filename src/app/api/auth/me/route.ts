@@ -7,6 +7,7 @@ import { ValidationError, NotFoundError } from "@/lib/errors";
 
 const UpdateMeSchema = z.object({
   name: z.string().min(2).max(100).optional(),
+  phone: z.string().max(30).nullable().optional(),
   currentPassword: z.string().optional(),
   newPassword: z.string().min(8).max(128).optional(),
   avatar: z.string().url().optional(),
@@ -23,6 +24,7 @@ export const PUT = withHandler(async (req: NextRequest) => {
 
   if (parsed.data.name) user.name = parsed.data.name;
   if (parsed.data.avatar !== undefined) user.avatar = parsed.data.avatar;
+  if (parsed.data.phone !== undefined) (user as unknown as { phone: string | null }).phone = parsed.data.phone ?? null;
 
   if (parsed.data.newPassword) {
     if (!parsed.data.currentPassword) throw new ValidationError("Current password is required");
@@ -39,6 +41,7 @@ export const PUT = withHandler(async (req: NextRequest) => {
     email: user.email,
     role: user.role,
     avatar: user.avatar ?? null,
+    phone: (user as unknown as { phone?: string | null }).phone ?? null,
     createdAt: user.createdAt,
   });
 });

@@ -95,6 +95,21 @@ const JobSchema = new Schema<JobDocument>(
       ref: "User",
       default: null,
     },
+    milestones: {
+      type: [
+        new Schema(
+          {
+            title:       { type: String, required: true, trim: true, maxlength: 100 },
+            amount:      { type: Number, required: true, min: 1 },
+            description: { type: String, trim: true, default: "" },
+            status:      { type: String, enum: ["pending", "released"], default: "pending" },
+            releasedAt:  { type: Date, default: null },
+          },
+          { _id: true }
+        ),
+      ],
+      default: [],
+    },
   },
   {
     timestamps: true,

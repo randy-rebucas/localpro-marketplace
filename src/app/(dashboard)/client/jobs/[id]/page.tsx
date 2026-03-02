@@ -23,6 +23,7 @@ const JobActionButtons   = dynamic(() => import("./JobActionButtons"));
 const QuoteAcceptButton  = dynamic(() => import("./QuoteAcceptButton"));
 const RaiseDisputeButton = dynamic(() => import("@/components/shared/RaiseDisputeButton"));
 const PartialReleaseButton = dynamic(() => import("@/components/payment/PartialReleaseButton"));
+const MilestonePanel = dynamic(() => import("@/components/payment/MilestonePanel").then((m) => ({ default: m.MilestonePanel })));
 const StickyJobCTA = dynamic(() => import("./StickyJobCTA"));
 
 export async function generateMetadata({
@@ -414,6 +415,18 @@ export default async function JobDetailPage({
         )}
         <RaiseDisputeButton jobId={job._id.toString()} status={job.status} />
       </div>
+
+      {/* Milestone payments — visible whenever escrow is funded */}
+      {job.escrowStatus === "funded" && (
+        <MilestonePanel
+          jobId={job._id.toString()}
+          budget={job.budget}
+          jobStatus={job.status}
+          escrowStatus={job.escrowStatus}
+          isClient
+          initialMilestones={job.milestones ?? []}
+        />
+      )}
 
       {/* Dispute — deferred: independent DB query */}
       <Suspense fallback={null}>

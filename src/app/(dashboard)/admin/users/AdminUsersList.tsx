@@ -4,6 +4,7 @@ import { useState } from "react";
 import { formatDate } from "@/lib/utils";
 import UserActions from "./UserActions";
 import type { IUser } from "@/types";
+import { CheckCircle2, XCircle } from "lucide-react";
 
 type FilterRole = "all" | "client" | "provider" | "admin";
 
@@ -12,6 +13,71 @@ interface Props {
   total: number;
   page: number;
   totalPages: number;
+}
+
+// ─── Completeness helpers ─────────────────────────────────────────────────────
+
+interface CompletenessItem { label: string; done: boolean }
+
+function getCompleteness(u: IUser): { items: CompletenessItem[]; score: number; pct: number } {
+  const base: CompletenessItem[] = [
+    { label: "Email verified",  done: u.isVerified },
+    { label: "Phone number",    done: !!u.phone },
+    { label: "Profile photo",   done: !!u.avatar },
+  ];
+
+  const extra: CompletenessItem[] =
+    u.role === "provider"
+      ? [
+          { label: "KYC submitted", done: !!u.kycStatus && u.kycStatus !== "none" },
+          { label: "KYC approved",  done: u.kycStatus === "approved" },
+        ]
+      : [
+          { label: "Address saved", done: (u.addresses?.length ?? 0) > 0 },
+        ];
+
+  const items = [...base, ...extra];
+  const score = items.filter((i) => i.done).length;
+  return { items, score, pct: Math.round((score / items.length) * 100) };
+}
+
+function completenessColor(pct: number) {
+  if (pct === 100) return { bar: "bg-emerald-500", text: "text-emerald-700", bg: "bg-emerald-50" };
+  if (pct >= 60)   return { bar: "bg-violet-500",  text: "text-violet-700",  bg: "bg-violet-50"  };
+  if (pct >= 40)   return { bar: "bg-amber-400",   text: "text-amber-700",   bg: "bg-amber-50"   };
+  return               { bar: "bg-red-400",     text: "text-red-700",     bg: "bg-red-50"     };
+}
+
+function CompletenessCell({ u }: { u: IUser }) {
+  const { items, pct } = getCompleteness(u);
+  const c = completenessColor(pct);
+
+  return (
+    <div className="group relative">
+      {/* Bar + score */}
+      <div className="flex items-center gap-2">
+        <div className="h-1.5 w-24 rounded-full bg-slate-100 overflow-hidden">
+          <div
+            className={`h-full rounded-full transition-all ${c.bar}`}
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+        <span className={`text-xs font-semibold tabular-nums ${c.text}`}>{pct}%</span>
+      </div>
+
+      {/* Hover tooltip */}
+      <div className={`pointer-events-none absolute left-0 top-6 z-20 hidden group-hover:flex flex-col gap-1 min-w-[180px] rounded-xl border border-slate-200 ${c.bg} px-3 py-2.5 shadow-lg`}>
+        {items.map((item) => (
+          <div key={item.label} className="flex items-center gap-1.5 text-xs">
+            {item.done
+              ? <CheckCircle2 size={12} className="text-emerald-600 flex-shrink-0" />
+              : <XCircle      size={12} className="text-slate-300    flex-shrink-0" />}
+            <span className={item.done ? "text-slate-700" : "text-slate-400"}>{item.label}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 const ROLE_COLOR: Record<string, string> = {
@@ -88,7 +154,7 @@ export default function AdminUsersList({ users, total, page, totalPages }: Props
                 <th className="px-6 py-3 text-left text-xs font-medium text-slate-500">User</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-slate-500">Role</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-slate-500">Status</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500">Joined</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500">Profile</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-slate-500">Actions</th>
               </tr>
             </thead>
@@ -127,7 +193,6 @@ export default function AdminUsersList({ users, total, page, totalPages }: Props
                     </td>
                     <td className="px-6 py-3.5">
                       <div className="flex flex-col gap-1">
-                        {/* Provider approval status */}
                         {u.role === "provider" && (
                           <span className={`badge capitalize ${APPROVAL_COLOR[approvalStatus] ?? "bg-slate-100 text-slate-500"}`}>
                             {approvalStatus.replace("_", " ")}
@@ -139,6 +204,9 @@ export default function AdminUsersList({ users, total, page, totalPages }: Props
                           <span className="badge bg-slate-100 text-slate-500">Unverified</span>
                         )}
                       </div>
+                    </td>
+                    <td className="px-6 py-3.5">
+                      <CompletenessCell u={u} />
                     </td>
                     <td className="px-6 py-3.5 text-xs text-slate-500">{formatDate(u.createdAt)}</td>
                     <td className="px-6 py-3.5">

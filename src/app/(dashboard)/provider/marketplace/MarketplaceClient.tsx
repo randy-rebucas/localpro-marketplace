@@ -99,6 +99,10 @@ export default function MarketplaceClient({
   const filtered = useMemo(() => {
     let list = [...jobs];
 
+    if (category !== "All") {
+      list = list.filter((j) => j.category === category);
+    }
+
     if (debouncedSearch.trim()) {
       const q = debouncedSearch.toLowerCase();
       list = list.filter(
@@ -123,7 +127,7 @@ export default function MarketplaceClient({
     });
 
     return list;
-  }, [jobs, debouncedSearch, sort, minBudget, maxBudget]);
+  }, [jobs, category, debouncedSearch, sort, minBudget, maxBudget]);
 
   // Reset to page 1 whenever filters change
   useEffect(() => { setPage(1); }, [debouncedSearch, category, sort, minBudget, maxBudget]);

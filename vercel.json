@@ -5,6 +5,7 @@
     { "path": "/api/cron/expire-quotes",         "schedule": "0 4 * * *" },
     { "path": "/api/cron/expire-payouts",        "schedule": "0 5 * * *" },
     { "path": "/api/cron/provider-availability", "schedule": "0 6 * * *" },
-    { "path": "/api/cron/reminders",             "schedule": "0 8 * * *" }
+    { "path": "/api/cron/reminders",             "schedule": "0 8 * * *" },
+    { "path": "/api/cron/dispute-overdue",       "schedule": "0 1 * * *" }
   ]
 }

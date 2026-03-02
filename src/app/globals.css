@@ -57,6 +57,77 @@
   }
 }
 
+/* ─── react-phone-number-input overrides ──────────────────────────────────── */
+
+/* Hide the default wrapper border/padding since we supply our own */
+.PhoneInput {
+  display: contents;
+}
+
+/* Country selector button */
+.PhoneInputCountry {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-right: 4px;
+  flex-shrink: 0;
+}
+
+.PhoneInputCountrySelect {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+}
+
+.PhoneInputCountrySelectArrow {
+  display: inline-block;
+  width: 0;
+  height: 0;
+  margin-left: 2px;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 5px solid #94a3b8;
+  vertical-align: middle;
+}
+
+.PhoneInputCountryIcon {
+  width: 22px;
+  height: 16px;
+  border-radius: 2px;
+  overflow: hidden;
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.PhoneInputCountryIcon img,
+.PhoneInputCountryIcon svg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* The number input itself is handled by our StyledInput */
+.PhoneInputInput {
+  min-width: 0;
+  flex: 1;
+  background: transparent;
+  font-size: 0.875rem;
+  color: #0f172a;
+}
+.PhoneInputInput:focus {
+  outline: none;
+}
+.PhoneInputInput::placeholder {
+  color: #94a3b8;
+}
+
+/* ─── Sidebar scrollbar ───────────────────────────────────────────────────── */
 /* Sidebar scrollbar */
 .sidebar-scroll::-webkit-scrollbar {
   width: 4px;

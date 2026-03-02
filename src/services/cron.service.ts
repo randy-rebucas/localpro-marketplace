@@ -405,6 +405,99 @@ export class CronService {
   }
 
   /**
+   * Automatically opens a system dispute for funded in_progress jobs whose
+   * `scheduleDate` passed more than `graceDays` ago without the provider
+   * marking the job complete. Runs daily.
+   *
+   * @param graceDays - Number of days after scheduleDate before auto-dispute fires (default: 2)
+   */
+  async autoDisputeOverdueJobs(graceDays = 2): Promise<{ disputed: number }> {
+    const cutoff = daysAgo(graceDays);
+    // Pass 0 so daysAgo(0) = now; we want jobs where scheduleDate < (now - graceDays)
+    const overdueJobs = await jobRepository.findOverdueInProgress(cutoff);
+    if (overdueJobs.length === 0) return { disputed: 0 };
+
+    let disputed = 0;
+
+    for (const job of overdueJobs) {
+      const j = job as unknown as {
+        _id: { toString(): string };
+        title: string;
+        clientId: { toString(): string };
+        providerId?: { toString(): string } | null;
+        scheduleDate: Date;
+        budget: number;
+      };
+
+      try {
+        // Create the system dispute record
+        const dispute = await disputeRepository.create({
+          jobId: j._id.toString(),
+          raisedBy: "system",
+          reason: `Job overdue — not completed within scheduled timeframe (scheduled: ${new Date(j.scheduleDate).toLocaleDateString()}).`,
+        });
+
+        // Transition the job to disputed
+        await jobRepository.updateMany({ _id: j._id } as never, { status: "disputed" });
+
+        // Log the automated action
+        await activityRepository.log({
+          userId: "system",
+          eventType: "dispute_opened",
+          jobId: j._id.toString(),
+          metadata: {
+            automated: true,
+            graceDays,
+            scheduledDate: j.scheduleDate,
+            disputeId: dispute._id!.toString(),
+          },
+        });
+
+        // Notify the client
+        await notificationService.push({
+          userId: j.clientId.toString(),
+          type: "dispute_opened",
+          title: "Dispute opened automatically",
+          message: `Your job "${j.title}" was not completed by the scheduled date. A dispute has been opened for review.`,
+          data: { jobId: j._id.toString(), disputeId: dispute._id!.toString() },
+        });
+
+        // Notify the provider
+        if (j.providerId) {
+          await notificationService.push({
+            userId: j.providerId.toString(),
+            type: "dispute_opened",
+            title: "Dispute opened — overdue job",
+            message: `Job "${j.title}" was flagged as overdue and a dispute has been automatically opened. Please respond promptly.`,
+            data: { jobId: j._id.toString(), disputeId: dispute._id!.toString() },
+          });
+        }
+
+        // Notify admins
+        await notificationService.notifyAdmins(
+          "dispute_opened",
+          "Auto-dispute: overdue job",
+          `Job "${j.title}" was automatically disputed after passing its scheduled date by ${graceDays}+ days.`,
+          { jobId: j._id.toString(), disputeId: dispute._id!.toString() }
+        );
+
+        // Push real-time status update
+        pushStatusUpdateMany(
+          [j.clientId.toString(), j.providerId?.toString()].filter(Boolean) as string[],
+          { entity: "job", id: j._id.toString(), status: "disputed" }
+        );
+
+        disputed++;
+      } catch {
+        // Log but continue so one failure doesn't stop the whole batch
+        console.error(`[cron] autoDisputeOverdueJobs: failed for job ${j._id.toString()}`);
+      }
+    }
+
+    return { disputed };
+  }
+
+  /**
    * Resets `availabilityStatus` from "busy" to "available" for providers who
    * currently have no active (assigned / in_progress) jobs.
    * Runs daily.

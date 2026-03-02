@@ -7,7 +7,7 @@ import Transaction from "@/models/Transaction";
 import ProviderProfile from "@/models/ProviderProfile";
 import { calculateCommission } from "@/lib/commission";
 import { pushStatusUpdateMany } from "@/lib/events";
-import { activityRepository } from "@/repositories";
+import { activityRepository, paymentRepository, transactionRepository } from "@/repositories";
 import {
   NotFoundError,
   ForbiddenError,
@@ -39,7 +39,11 @@ export const POST = withHandler(async (
   if (job.clientId.toString() !== user.userId) throw new ForbiddenError();
   if (job.status !== "completed") throw new UnprocessableError("Job must be marked as completed by the provider first");
   if (job.escrowStatus !== "funded") throw new UnprocessableError("Escrow must be in funded state for partial release");
-  if (releaseAmount > job.budget) throw new ValidationError(`Cannot exceed job budget of ${job.budget}`);
+
+  // Validate against actual funded amount, not job.budget (they may differ when escrow was funded at accepted quote price)
+  const payment = await paymentRepository.findByJobId(id);
+  const fundedAmount = payment?.amount ?? job.budget;
+  if (releaseAmount > fundedAmount) throw new ValidationError(`Cannot exceed funded escrow of ₱${fundedAmount.toLocaleString()}`);
 
   const { commission, netAmount } = calculateCommission(releaseAmount);
 
@@ -49,7 +53,9 @@ export const POST = withHandler(async (
     { $set: { escrowStatus: "released", partialReleaseAmount: releaseAmount } }
   );
 
-  // Create completed transaction for partial amount
+  // Resolve the original pending transaction created at escrow funding time,
+  // then create a new completed transaction recording the actual partial payout.
+  await transactionRepository.setPending(id, "refunded");
   await Transaction.create({
     jobId: job._id,
     payerId: user.userId,

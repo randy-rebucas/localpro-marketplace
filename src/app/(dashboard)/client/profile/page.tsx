@@ -12,6 +12,7 @@ import { formatDate } from "@/lib/utils";
 import { ShieldCheck, CalendarDays, Camera, MapPin, Trash2, Plus, LocateFixed, Loader2, User, KeyRound } from "lucide-react";
 import PageGuide from "@/components/shared/PageGuide";
 import KycUpload from "@/components/shared/KycUpload";
+import PhoneInput from "@/components/shared/PhoneInput";
 import { apiFetch } from "@/lib/fetchClient";
 
 // Lazy-load StructuredAddressInput (depends on Google Maps / Nominatim)
@@ -26,6 +27,7 @@ interface MeData {
   role: string;
   isVerified: boolean;
   avatar?: string | null;
+  phone?: string | null;
   createdAt: string;
 }
 
@@ -42,14 +44,16 @@ export default function ClientProfilePage() {
           role: user.role,
           isVerified: user.isVerified,
           avatar: user.avatar ?? null,
+          phone: user.phone ?? null,
           createdAt: String(user.createdAt),
         }
       : null
   );
   const [jobCount, setJobCount] = useState(0);
 
-  // Edit name state
+  // Edit name + phone state
   const [name, setName] = useState(user?.name ?? "");
+  const [phone, setPhone] = useState(user?.phone ?? "");
   const [savingName, setSavingName] = useState(false);
 
   // Avatar upload state
@@ -123,19 +127,27 @@ export default function ClientProfilePage() {
 
   async function saveName(e: React.FormEvent) {
     e.preventDefault();
-    if (!name.trim() || name === me?.name) return;
+    const trimmedName  = name.trim();
+    const trimmedPhone = phone.trim();
+    if (!trimmedName) return;
+    const nameChanged  = trimmedName  !== me?.name;
+    const phoneChanged = trimmedPhone !== (me?.phone ?? "");
+    if (!nameChanged && !phoneChanged) return;
     setSavingName(true);
     try {
       const res = await apiFetch("/api/auth/me", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: name.trim() }),
+        body: JSON.stringify({
+          ...(nameChanged  ? { name: trimmedName }  : {}),
+          ...(phoneChanged ? { phone: trimmedPhone || null } : {}),
+        }),
       });
       const data = await res.json();
-      if (!res.ok) { toast.error(data.error ?? "Failed to update name"); return; }
-      setMe((prev) => prev ? { ...prev, name: data.name } : prev);
-      if (user) setUser({ ...user, name: data.name });
-      toast.success("Name updated!");
+      if (!res.ok) { toast.error(data.error ?? "Failed to update details"); return; }
+      setMe((prev) => prev ? { ...prev, name: data.name, phone: data.phone } : prev);
+      if (user) setUser({ ...user, name: data.name, phone: data.phone });
+      toast.success("Details updated!");
     } finally {
       setSavingName(false);
     }
@@ -430,6 +442,15 @@ export default function ClientProfilePage() {
               />
             </div>
             <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">Phone number</label>
+              <PhoneInput
+                value={phone}
+                onChange={setPhone}
+                className="w-full"
+              />
+              <p className="text-xs text-slate-400 mt-1">Used for job notifications and provider contact.</p>
+            </div>
+            <div>
               <label className="block text-sm font-medium text-slate-700 mb-1.5">Email address</label>
               <input
                 type="email"
@@ -441,7 +462,7 @@ export default function ClientProfilePage() {
             </div>
           </CardBody>
           <CardFooter className="flex justify-end">
-            <Button type="submit" isLoading={savingName} size="md" disabled={!name.trim() || name === me?.name}>
+            <Button type="submit" isLoading={savingName} size="md" disabled={!name.trim() || (name === me?.name && phone.trim() === (me?.phone ?? ""))}>
               Save changes
             </Button>
           </CardFooter>

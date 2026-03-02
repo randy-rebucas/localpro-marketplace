@@ -99,6 +99,21 @@ export class JobRepository extends BaseRepository<JobDocument> {
     return Job.find({ status: "in_progress", updatedAt: { $lt: cutoffDate } }).lean() as unknown as JobDocument[];
   }
 
+  /**
+   * In-progress funded jobs whose scheduleDate has passed by more than the given cutoff.
+   * Used by the auto-dispute cron to flag jobs that are overdue without completion.
+   */
+  async findOverdueInProgress(cutoff: Date): Promise<JobDocument[]> {
+    await this.connect();
+    return Job.find({
+      status: "in_progress",
+      escrowStatus: "funded",
+      scheduleDate: { $lt: cutoff },
+    })
+      .select("_id title clientId providerId scheduleDate budget")
+      .lean() as unknown as JobDocument[];
+  }
+
   /** Completed jobs with released escrow whose escrow was released before cutoffDate (for review reminders). */
   async findReleasedUnreviewed(cutoffDate: Date): Promise<JobDocument[]> {
     await this.connect();
@@ -146,6 +161,7 @@ export class JobRepository extends BaseRepository<JobDocument> {
     escrowStatus: EscrowStatus;
     riskScore: number;
     providerId?: { _id: { toString(): string }; name: string; email: string; isVerified: boolean } | null;
+    milestones?: import("@/types").IMilestone[];
   } | null> {
     await this.connect();
     return Job.findOne({
