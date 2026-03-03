@@ -117,12 +117,12 @@ export default async function AdminRevenuePage() {
 
       {/* Revenue over time */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-card p-5">
-        <div className="flex items-start justify-between mb-4">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-4">
           <div>
             <h3 className="text-sm font-semibold text-slate-800">Revenue Over Time</h3>
             <p className="text-xs text-slate-400">Last 12 months — GMV and commission</p>
           </div>
-          <div className="flex gap-4 text-xs text-slate-500">
+          <div className="flex gap-3 sm:gap-4 text-xs text-slate-500 flex-wrap">
             <span>
               This month:{" "}
               <strong className="text-slate-800">{formatCurrency(thisMonth.gmv)}</strong>
@@ -148,6 +148,7 @@ export default async function AdminRevenuePage() {
         <div className="px-5 py-4 border-b border-slate-100">
           <h3 className="text-sm font-semibold text-slate-800">Top Earning Providers</h3>
         </div>
+        <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-slate-100">
@@ -182,6 +183,7 @@ export default async function AdminRevenuePage() {
             )}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );
