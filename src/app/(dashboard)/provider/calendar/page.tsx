@@ -14,8 +14,8 @@ export default async function ProviderCalendarPage() {
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900">Calendar</h2>
-          <p className="text-slate-500 text-sm mt-1">View and manage your scheduled job assignments.</p>
+          <h2 className="text-xl sm:text-2xl font-bold text-slate-900">Calendar</h2>
+          <p className="hidden sm:block text-slate-500 text-sm mt-1">View and manage your scheduled job assignments.</p>
         </div>
       </div>
       <Suspense fallback={<CalendarSkeleton />}>

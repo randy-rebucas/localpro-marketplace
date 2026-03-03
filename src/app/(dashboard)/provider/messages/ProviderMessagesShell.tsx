@@ -2,7 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { MessageSquare, Briefcase } from "lucide-react";
+import { MessageSquare, Briefcase, ChevronLeft } from "lucide-react";
 import { JobStatusBadge } from "@/components/ui/Badge";
 import { formatRelativeTime } from "@/lib/utils";
 import { MessagesProvider, type ThreadPreview } from "@/components/chat/MessagesContext";
@@ -15,11 +15,18 @@ interface Props {
 export default function ProviderMessagesShell({ threads, children }: Props) {
   const pathname = usePathname();
   const activeJobId = pathname.split("/messages/")[1]?.split("/")[0] ?? null;
+  const hasActiveThread = !!activeJobId;
 
   return (
     <div className="flex h-[calc(100vh-8rem)] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
       {/* ── Left: thread list ─────────────────────────────────────────────── */}
-      <aside className="w-72 shrink-0 flex flex-col border-r border-slate-200 overflow-hidden">
+      <aside
+        className={[
+          "flex flex-col border-r border-slate-200 overflow-hidden",
+          // Mobile: full width when no thread selected, hidden when chat is open
+          hasActiveThread ? "hidden md:flex md:w-72 md:shrink-0" : "flex w-full md:w-72 md:shrink-0",
+        ].join(" ")}
+      >
         <div className="px-4 py-3.5 border-b border-slate-200 bg-slate-50 shrink-0">
           <h2 className="text-sm font-semibold text-slate-800">Messages</h2>
           {threads.length > 0 && (
@@ -93,7 +100,24 @@ export default function ProviderMessagesShell({ threads, children }: Props) {
       </aside>
 
       {/* ── Right: chat panel ─────────────────────────────────────────────── */}
-      <main className="flex-1 min-w-0 flex flex-col overflow-hidden">
+      <main
+        className={[
+          "flex-1 min-w-0 flex flex-col overflow-hidden",
+          hasActiveThread ? "flex" : "hidden md:flex",
+        ].join(" ")}
+      >
+        {/* Mobile back button */}
+        {hasActiveThread && (
+          <div className="md:hidden flex items-center gap-2 px-4 py-3 border-b border-slate-200 bg-slate-50 shrink-0">
+            <Link
+              href="/provider/messages"
+              className="flex items-center gap-1.5 text-sm font-medium text-slate-600 hover:text-primary transition-colors"
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Back to Messages
+            </Link>
+          </div>
+        )}
         <MessagesProvider threads={threads}>
           {children}
         </MessagesProvider>

@@ -31,60 +31,86 @@ export default function ScheduleEditor({ value, onChange }: ScheduleEditorProps)
         return (
           <div
             key={key}
-            className={`flex items-center gap-3 px-4 py-3 transition-colors ${
-              enabled ? "bg-white" : "bg-slate-50"
-            }`}
+            className={`px-4 py-3 transition-colors ${enabled ? "bg-white" : "bg-slate-50"}`}
           >
-            {/* Toggle */}
-            <button
-              type="button"
-              role="switch"
-              aria-checked={enabled}
-              onClick={() => updateSlot(key, { enabled: !enabled })}
-              className={`relative flex-shrink-0 h-5 w-9 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
-                enabled ? "bg-primary" : "bg-slate-300"
-              }`}
-            >
-              <span
-                className={`absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${
-                  enabled ? "translate-x-4" : "translate-x-0"
+            {/* Top row: toggle + day label (+ "Unavailable" when off) */}
+            <div className="flex items-center gap-3">
+              {/* Toggle */}
+              <button
+                type="button"
+                role="switch"
+                aria-checked={enabled}
+                onClick={() => updateSlot(key, { enabled: !enabled })}
+                className={`relative flex-shrink-0 h-5 w-9 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+                  enabled ? "bg-primary" : "bg-slate-300"
                 }`}
-              />
-            </button>
+              >
+                <span
+                  className={`absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${
+                    enabled ? "translate-x-4" : "translate-x-0"
+                  }`}
+                />
+              </button>
 
-            {/* Day label */}
-            <span
-              className={`w-24 text-sm font-medium select-none ${
-                enabled ? "text-slate-800" : "text-slate-400"
-              }`}
-            >
-              <span className="hidden sm:inline">{label}</span>
-              <span className="sm:hidden">{short}</span>
-            </span>
+              {/* Day label */}
+              <span
+                className={`w-20 sm:w-24 text-sm font-medium select-none flex-shrink-0 ${
+                  enabled ? "text-slate-800" : "text-slate-400"
+                }`}
+              >
+                <span className="hidden sm:inline">{label}</span>
+                <span className="sm:hidden">{short}</span>
+              </span>
 
-            {/* Time range */}
-            {enabled ? (
-              <div className="flex items-center gap-2 flex-1">
+              {/* On sm+: show time pickers inline */}
+              {enabled ? (
+                <div className="hidden sm:flex items-center gap-2 flex-1">
+                  <input
+                    type="time"
+                    value={slot.from}
+                    onChange={(e) => updateSlot(key, { from: e.target.value })}
+                    className="rounded-md border border-slate-200 px-2 py-1 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                  />
+                  <span className="text-slate-400 text-sm">–</span>
+                  <input
+                    type="time"
+                    value={slot.to}
+                    min={slot.from}
+                    onChange={(e) => updateSlot(key, { to: e.target.value })}
+                    className="rounded-md border border-slate-200 px-2 py-1 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                  />
+                  <span className="text-xs text-slate-400 ml-1">
+                    {formatHours(slot.from, slot.to)}
+                  </span>
+                </div>
+              ) : (
+                <span className="text-sm text-slate-400 italic">Unavailable</span>
+              )}
+            </div>
+
+            {/* Mobile: time pickers on a second row, indented under day label */}
+            {enabled && (
+              <div className="sm:hidden flex items-center gap-2 mt-2 pl-12">
                 <input
                   type="time"
                   value={slot.from}
                   onChange={(e) => updateSlot(key, { from: e.target.value })}
-                  className="rounded-md border border-slate-200 px-2 py-1 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                  className="flex-1 rounded-md border border-slate-200 px-2 py-1.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
                 />
-                <span className="text-slate-400 text-sm">–</span>
+                <span className="text-slate-400 text-sm flex-shrink-0">–</span>
                 <input
                   type="time"
                   value={slot.to}
                   min={slot.from}
                   onChange={(e) => updateSlot(key, { to: e.target.value })}
-                  className="rounded-md border border-slate-200 px-2 py-1 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                  className="flex-1 rounded-md border border-slate-200 px-2 py-1.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
                 />
-                <span className="hidden sm:inline text-xs text-slate-400 ml-1">
-                  {formatHours(slot.from, slot.to)}
-                </span>
+                {formatHours(slot.from, slot.to) && (
+                  <span className="text-xs text-slate-400 flex-shrink-0">
+                    {formatHours(slot.from, slot.to)}
+                  </span>
+                )}
               </div>
-            ) : (
-              <span className="text-sm text-slate-400 italic">Unavailable</span>
             )}
           </div>
         );

@@ -64,7 +64,7 @@ export async function DashboardKpis({ userId }: { userId: string }) {
             {dateLabel}
           </p>
           <div className="flex items-center gap-2.5 flex-wrap">
-            <h1 className="text-2xl font-bold text-slate-900">
+            <h1 className="text-xl sm:text-2xl font-bold text-slate-900">
               Welcome back, <span className="text-primary">{firstName}</span>!
             </h1>
             {isTopPro && (
@@ -83,7 +83,7 @@ export async function DashboardKpis({ userId }: { userId: string }) {
               </span>
             )}
           </div>
-          <p className="text-sm text-slate-500 mt-0.5">Here&apos;s your performance overview.</p>
+          <p className="hidden sm:block text-sm text-slate-500 mt-0.5">Here&apos;s your performance overview.</p>
         </div>
         <Link href="/provider/marketplace" className="btn-primary flex-shrink-0">
           Browse Jobs

@@ -61,7 +61,7 @@ export async function RecentActivity({ userId }: { userId: string }) {
                     </div>
                   </div>
                   <div className="flex items-center gap-3 flex-shrink-0">
-                    <div className="text-right">
+                    <div className="hidden sm:block text-right">
                       <p className="text-xs text-slate-400">Budget</p>
                       <p className="text-sm font-semibold text-slate-800">{formatCurrency(job.budget)}</p>
                     </div>

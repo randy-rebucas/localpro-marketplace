@@ -35,9 +35,9 @@ export async function PayoutsContent({ user }: { user: TokenPayload }) {
     <>
       {/* Available balance banner */}
       {availableBalance > 0 && (
-        <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-primary/10 rounded-lg text-primary">
+        <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+          <div className="flex items-center gap-3 flex-1 min-w-0">
+            <div className="p-2 bg-primary/10 rounded-lg text-primary flex-shrink-0">
               <Wallet className="h-5 w-5" />
             </div>
             <div>
@@ -49,13 +49,15 @@ export async function PayoutsContent({ user }: { user: TokenPayload }) {
               <p className="text-xs text-slate-500">Payouts are processed within 1–3 business days.</p>
             </div>
           </div>
-          <RequestPayoutModal availableBalance={availableBalance} />
+          <div className="flex-shrink-0">
+            <RequestPayoutModal availableBalance={availableBalance} />
+          </div>
         </div>
       )}
 
       {/* Payouts table */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-card overflow-hidden">
-        <div className="px-6 py-4 border-b border-slate-100">
+        <div className="px-4 sm:px-6 py-3.5 sm:py-4 border-b border-slate-100">
           <h3 className="font-semibold text-slate-900">Payout Requests</h3>
         </div>
         {payouts.length === 0 ? (
@@ -67,49 +69,80 @@ export async function PayoutsContent({ user }: { user: TokenPayload }) {
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-slate-100 bg-slate-50/50">
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500">Date</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-slate-500">Amount</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500">Bank</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500">Account</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500">Notes</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {(payouts as unknown as IPayout[]).map((p) => {
-                  const cfg = statusConfig[p.status];
-                  return (
-                    <tr key={p._id.toString()} className="hover:bg-slate-50/50 transition-colors">
-                      <td className="px-6 py-4 text-slate-500">{formatDate(p.createdAt)}</td>
-                      <td className="px-6 py-4 text-right font-semibold text-slate-900">
-                        {formatCurrency(p.amount)}
-                      </td>
-                      <td className="px-6 py-4 text-slate-700">{p.bankName}</td>
-                      <td className="px-6 py-4 text-slate-500">
-                        <div className="text-xs">
-                          <span className="block font-medium text-slate-700">{p.accountName}</span>
-                          <span className="font-mono">{p.accountNumber}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${cfg.classes}`}>
-                          {cfg.icon}
-                          {cfg.label}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-slate-400 text-xs max-w-[200px] truncate">
-                        {p.notes ?? "—"}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          <>
+            {/* Mobile: card list */}
+            <div className="sm:hidden divide-y divide-slate-100">
+              {(payouts as unknown as IPayout[]).map((p) => {
+                const cfg = statusConfig[p.status];
+                return (
+                  <div key={p._id.toString()} className="px-4 py-3.5 space-y-2">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-slate-900">{formatCurrency(p.amount)}</p>
+                        <p className="text-xs text-slate-500 mt-0.5">{p.bankName}</p>
+                      </div>
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium flex-shrink-0 ${cfg.classes}`}>
+                        {cfg.icon}
+                        {cfg.label}
+                      </span>
+                    </div>
+                    <div className="text-xs text-slate-400 space-y-0.5">
+                      <p><span className="font-medium text-slate-600">{p.accountName}</span> · <span className="font-mono">{p.accountNumber}</span></p>
+                      <div className="flex flex-wrap gap-x-3 gap-y-0.5">
+                        <span>{formatDate(p.createdAt)}</span>
+                        {p.notes && <span className="truncate max-w-[200px] text-slate-400">{p.notes}</span>}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* sm+: table */}
+            <div className="hidden sm:block overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-slate-100 bg-slate-50/50">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500">Date</th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-slate-500">Amount</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500">Bank</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500">Account</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500">Status</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500">Notes</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {(payouts as unknown as IPayout[]).map((p) => {
+                    const cfg = statusConfig[p.status];
+                    return (
+                      <tr key={p._id.toString()} className="hover:bg-slate-50/50 transition-colors">
+                        <td className="px-6 py-4 text-slate-500">{formatDate(p.createdAt)}</td>
+                        <td className="px-6 py-4 text-right font-semibold text-slate-900">
+                          {formatCurrency(p.amount)}
+                        </td>
+                        <td className="px-6 py-4 text-slate-700">{p.bankName}</td>
+                        <td className="px-6 py-4 text-slate-500">
+                          <div className="text-xs">
+                            <span className="block font-medium text-slate-700">{p.accountName}</span>
+                            <span className="font-mono">{p.accountNumber}</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${cfg.classes}`}>
+                            {cfg.icon}
+                            {cfg.label}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-slate-400 text-xs max-w-[200px] truncate">
+                          {p.notes ?? "—"}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
     </>

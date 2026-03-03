@@ -63,14 +63,14 @@ export default async function PublicProviderProfilePage({
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto px-4 py-8">
+      <main className="max-w-5xl mx-auto px-4 py-5 sm:py-8">
         <Suspense fallback={<PublicProfileSkeleton />}>
           <PublicProfileContent providerId={id} />
         </Suspense>
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-slate-200 mt-16 py-8">
+      <footer className="border-t border-slate-200 mt-8 sm:mt-16 py-6 sm:py-8">
         <div className="max-w-5xl mx-auto px-4 text-center text-xs text-slate-400 space-y-1">
           <p>© {new Date().getFullYear()} LocalPro. All rights reserved.</p>
           <p>

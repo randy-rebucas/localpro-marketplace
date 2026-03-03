@@ -83,7 +83,7 @@ function Stars({ rating, sm }: { rating: number; sm?: boolean }) {
 function RatingBar({ label, value }: { label: string; value: number }) {
   return (
     <div className="flex items-center gap-3">
-      <span className="text-xs text-slate-500 w-28 flex-shrink-0 capitalize">{label}</span>
+      <span className="text-xs text-slate-500 w-20 sm:w-28 flex-shrink-0 capitalize">{label}</span>
       <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
         <div className="h-full bg-amber-400 rounded-full" style={{ width: `${(value / 5) * 100}%` }} />
       </div>
@@ -176,7 +176,7 @@ function ShareButton() {
   return (
     <button
       onClick={handleShare}
-      className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg border border-slate-200 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors"
+      className="flex items-center gap-1.5 px-2.5 sm:px-3.5 py-2 rounded-lg border border-slate-200 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors"
     >
       {copied ? <Check className="h-4 w-4 text-green-500" /> : <Share2 className="h-4 w-4" />}
       {copied ? "Copied!" : "Share"}
@@ -262,94 +262,98 @@ export default function PublicProfileClient({
   return (
     <div className="max-w-4xl mx-auto space-y-5">
       {/* ── Hero ─────────────────────────────────────────────── */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-5">
-        <div className="flex flex-col sm:flex-row items-start gap-5">
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-6 space-y-4 sm:space-y-5">
+        <div className="flex items-start gap-3 sm:gap-5">
           {/* Avatar */}
-          <div className="w-20 h-20 rounded-2xl flex-shrink-0 overflow-hidden bg-primary/10 flex items-center justify-center ring-4 ring-white shadow-md">
+          <div className="w-14 h-14 sm:w-20 sm:h-20 rounded-2xl flex-shrink-0 overflow-hidden bg-primary/10 flex items-center justify-center ring-4 ring-white shadow-md">
             {profile.userId.avatar ? (
               <Image src={profile.userId.avatar} alt={name} width={80} height={80} className="object-cover w-full h-full" />
             ) : (
-              <span className="text-3xl font-bold text-primary">{initial}</span>
+              <span className="text-2xl sm:text-3xl font-bold text-primary">{initial}</span>
             )}
           </div>
 
-          {/* Info */}
+          {/* Info + actions */}
           <div className="flex-1 min-w-0">
-            <div className="flex flex-wrap items-center gap-2 mb-1">
-              <h1 className="text-xl font-bold text-slate-900">{name}</h1>
-              {profile.userId.isVerified && (
-                <span className="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-semibold">✓ Verified</span>
-              )}
-              {profile.isLocalProCertified && (
-                <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded bg-indigo-100 text-indigo-700 border border-indigo-200">
-                  🎖️ LocalPro Certified
-                </span>
-              )}
-              {profile.userId.kycStatus === "approved" && (
-                <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded bg-teal-100 text-teal-700 border border-teal-200">
-                  <ShieldCheck className="h-3 w-3" /> KYC Verified
-                </span>
-              )}
-              {(profile.streak ?? 0) >= 3 && (
-                <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded bg-orange-100 text-orange-700 border border-orange-200">
-                  <Flame className="h-3 w-3" /> {profile.streak}-star streak
-                </span>
-              )}
-            </div>
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mb-1">
+                  <h1 className="text-base sm:text-xl font-bold text-slate-900 truncate">{name}</h1>
+                  {profile.userId.isVerified && (
+                    <span className="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-semibold whitespace-nowrap">✓ Verified</span>
+                  )}
+                  {profile.isLocalProCertified && (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded bg-indigo-100 text-indigo-700 border border-indigo-200 whitespace-nowrap">
+                      🎖️ LocalPro Certified
+                    </span>
+                  )}
+                  {profile.userId.kycStatus === "approved" && (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded bg-teal-100 text-teal-700 border border-teal-200 whitespace-nowrap">
+                      <ShieldCheck className="h-3 w-3" /> KYC Verified
+                    </span>
+                  )}
+                  {(profile.streak ?? 0) >= 3 && (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded bg-orange-100 text-orange-700 border border-orange-200 whitespace-nowrap">
+                      <Flame className="h-3 w-3" /> {profile.streak}-star streak
+                    </span>
+                  )}
+                </div>
 
-            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${availabilityConfig[avail].classes}`}>
-              <AvailIcon className="h-3 w-3" />
-              {availabilityConfig[avail].label}
-            </span>
+                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${availabilityConfig[avail].classes}`}>
+                  <AvailIcon className="h-3 w-3" />
+                  {availabilityConfig[avail].label}
+                </span>
 
-            {(profile.avgRating ?? 0) > 0 && (
-              <div className="flex items-center gap-1.5 mt-2">
-                <Stars rating={profile.avgRating ?? 0} />
-                <span className="text-sm font-semibold text-slate-700">{(profile.avgRating ?? 0).toFixed(1)}</span>
-                <span className="text-xs text-slate-400">({reviewsTotal} review{reviewsTotal !== 1 ? "s" : ""})</span>
+                {(profile.avgRating ?? 0) > 0 && (
+                  <div className="flex items-center gap-1.5 mt-2">
+                    <Stars rating={profile.avgRating ?? 0} />
+                    <span className="text-sm font-semibold text-slate-700">{(profile.avgRating ?? 0).toFixed(1)}</span>
+                    <span className="text-xs text-slate-400">({reviewsTotal} review{reviewsTotal !== 1 ? "s" : ""})</span>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
 
-          {/* Actions */}
-          <div className="flex gap-2 flex-shrink-0">
-            <ShareButton />
-            <Link
-              href={`/login?next=/providers/${providerId}`}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary text-white text-sm font-semibold hover:bg-primary/90 transition-colors"
-            >
-              <Sparkles className="h-4 w-4" />
-              Hire
-            </Link>
+              {/* Actions - always top-right */}
+              <div className="flex gap-1.5 sm:gap-2 flex-shrink-0">
+                <ShareButton />
+                <Link
+                  href={`/login?next=/providers/${providerId}`}
+                  className="flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-lg bg-primary text-white text-sm font-semibold hover:bg-primary/90 transition-colors"
+                >
+                  <Sparkles className="h-4 w-4" />
+                  <span className="hidden sm:inline">Hire</span>
+                </Link>
+              </div>
+            </div>
           </div>
         </div>
 
         {/* Stats strip */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-5 border-t border-slate-100">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 pt-4 sm:pt-5 border-t border-slate-100">
           <div className="text-center">
-            <p className="text-[11px] text-slate-400 mb-0.5">Completed Jobs</p>
-            <p className="text-lg font-bold text-slate-900 flex items-center justify-center gap-1">
-              <Briefcase className="h-4 w-4 text-slate-400" />
+            <p className="text-[10px] sm:text-[11px] text-slate-400 mb-0.5">Completed Jobs</p>
+            <p className="text-base sm:text-lg font-bold text-slate-900 flex items-center justify-center gap-1">
+              <Briefcase className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-slate-400" />
               {profile.completedJobCount ?? 0}
             </p>
           </div>
           <div className="text-center">
-            <p className="text-[11px] text-slate-400 mb-0.5">Experience</p>
-            <p className="text-lg font-bold text-slate-900 flex items-center justify-center gap-1">
-              <Timer className="h-4 w-4 text-slate-400" />
+            <p className="text-[10px] sm:text-[11px] text-slate-400 mb-0.5">Experience</p>
+            <p className="text-base sm:text-lg font-bold text-slate-900 flex items-center justify-center gap-1">
+              <Timer className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-slate-400" />
               {profile.yearsExperience ? `${profile.yearsExperience}yr` : "—"}
             </p>
           </div>
           <div className="text-center">
-            <p className="text-[11px] text-slate-400 mb-0.5">Hourly Rate</p>
-            <p className="text-lg font-bold text-slate-900">
+            <p className="text-[10px] sm:text-[11px] text-slate-400 mb-0.5">Hourly Rate</p>
+            <p className="text-base sm:text-lg font-bold text-slate-900">
               {profile.hourlyRate ? formatCurrency(profile.hourlyRate) : "—"}
             </p>
           </div>
           <div className="text-center">
-            <p className="text-[11px] text-slate-400 mb-0.5">Completion Rate</p>
-            <p className="text-lg font-bold text-slate-900 flex items-center justify-center gap-1">
-              <TrendingUp className="h-4 w-4 text-emerald-500" />
+            <p className="text-[10px] sm:text-[11px] text-slate-400 mb-0.5">Completion Rate</p>
+            <p className="text-base sm:text-lg font-bold text-slate-900 flex items-center justify-center gap-1">
+              <TrendingUp className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-emerald-500" />
               {profile.completionRate ? `${profile.completionRate}%` : "—"}
             </p>
           </div>
@@ -357,18 +361,18 @@ export default function PublicProfileClient({
       </div>
 
       {/* ── Tabs ─────────────────────────────────────────────── */}
-      <div className="flex gap-1 bg-slate-100 p-1 rounded-xl w-fit overflow-x-auto">
+      <div className="flex gap-1 bg-slate-100 p-1 rounded-xl overflow-x-auto">
         {TABS.map((t) => (
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
+            className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
               tab === t.key ? "bg-white shadow-sm text-slate-900" : "text-slate-500 hover:text-slate-700"
             }`}
           >
             {t.label}
             {t.count !== undefined && t.count > 0 && (
-              <span className={`ml-1.5 text-xs rounded-full px-1.5 py-0.5 ${
+              <span className={`ml-1 sm:ml-1.5 text-xs rounded-full px-1.5 py-0.5 ${
                 tab === t.key ? "bg-primary text-white" : "bg-slate-200 text-slate-500"
               }`}>
                 {t.count}

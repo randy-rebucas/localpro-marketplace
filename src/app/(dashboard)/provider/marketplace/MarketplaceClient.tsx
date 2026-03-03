@@ -74,6 +74,7 @@ export default function MarketplaceClient({
   const [minBudget, setMinBudget] = useState("");
   const [maxBudget, setMaxBudget] = useState("");
   const [page, setPage] = useState(1);
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
 
   const debouncedSearch = useDebounce(search);
@@ -356,17 +357,19 @@ export default function MarketplaceClient({
             )}
           </p>
           <div className="flex items-center gap-2">
-            {/* Mobile: inline search */}
-            <div className="relative lg:hidden">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
-              <input
-                type="search"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search…"
-                className="input pl-9 text-sm w-40"
-              />
-            </div>
+            {/* Mobile: filter toggle */}
+            <button
+              onClick={() => setMobileFiltersOpen((o) => !o)}
+              className={`lg:hidden flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-colors ${
+                mobileFiltersOpen || hasFilters
+                  ? "bg-primary/10 border-primary/30 text-primary"
+                  : "border-slate-200 text-slate-600 hover:bg-slate-50"
+              }`}
+            >
+              <SlidersHorizontal className="h-3.5 w-3.5" />
+              Filters
+              {hasFilters && <span className="w-1.5 h-1.5 rounded-full bg-primary" />}
+            </button>
             <button
               onClick={() => fetchJobs(true)}
               disabled={isRefreshing || isLoading}
@@ -377,6 +380,82 @@ export default function MarketplaceClient({
             </button>
           </div>
         </div>
+
+      {/* Mobile filter panel */}
+      {mobileFiltersOpen && (
+        <div className="lg:hidden bg-white rounded-xl border border-slate-200 shadow-card p-4 space-y-4">
+          <div className="flex items-center justify-between">
+            <span className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 uppercase tracking-wide">
+              <SlidersHorizontal className="h-3.5 w-3.5" /> Filters
+            </span>
+            {hasFilters && (
+              <button
+                onClick={clearFilters}
+                className="flex items-center gap-1 text-xs text-red-500 hover:text-red-700 font-medium transition-colors"
+              >
+                <X className="h-3 w-3" />Clear all
+              </button>
+            )}
+          </div>
+          {/* Search */}
+          <div>
+            <label className="text-xs font-medium text-slate-500 mb-1.5 block">Search</label>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+              <input
+                type="search"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Keyword, location…"
+                className="input pl-9 pr-8 text-sm w-full"
+              />
+              {search && (
+                <button onClick={() => setSearch("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+          </div>
+          {/* Sort */}
+          <div>
+            <label className="text-xs font-medium text-slate-500 mb-1.5 block">Sort by</label>
+            <div className="relative">
+              <ArrowUpDown className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
+              <select value={sort} onChange={(e) => setSort(e.target.value as SortKey)} className="input pl-8 pr-8 text-sm appearance-none w-full cursor-pointer">
+                {SORT_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+              <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
+            </div>
+          </div>
+          {/* Budget range */}
+          <div>
+            <label className="text-xs font-medium text-slate-500 mb-1.5 block">Budget range (₱)</label>
+            <div className="flex items-center gap-2">
+              <input type="number" min="0" value={minBudget} onChange={(e) => setMinBudget(e.target.value)} placeholder="Min" className="input text-sm w-full tabular-nums" />
+              <span className="text-xs text-slate-300 flex-shrink-0">–</span>
+              <input type="number" min="0" value={maxBudget} onChange={(e) => setMaxBudget(e.target.value)} placeholder="Max" className="input text-sm w-full tabular-nums" />
+            </div>
+          </div>
+          {/* Category */}
+          <div>
+            <label className="text-xs font-medium text-slate-500 mb-1.5 block">Category</label>
+            <div className="grid grid-cols-2 gap-1">
+              {categories.map((c) => (
+                <button
+                  key={c}
+                  onClick={() => setCategory(c)}
+                  className={`flex items-center justify-between text-left px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                    category === c ? "bg-primary/10 text-primary" : "text-slate-600 hover:bg-slate-50 border border-slate-100"
+                  }`}
+                >
+                  <span className="truncate">{c}</span>
+                  {category === c && <div className="h-1.5 w-1.5 rounded-full bg-primary flex-shrink-0" />}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Result summary */}
       {!isLoading && filtered.length > 0 && (

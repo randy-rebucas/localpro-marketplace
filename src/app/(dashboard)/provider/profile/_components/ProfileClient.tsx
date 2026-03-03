@@ -542,8 +542,8 @@ export default function ProfileClient({ initialProfile }: Props) {
       {/* Page heading */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900">My Profile</h2>
-          <p className="text-sm text-slate-500 mt-1">
+          <h2 className="text-xl sm:text-2xl font-bold text-slate-900">My Profile</h2>
+          <p className="hidden sm:block text-sm text-slate-500 mt-1">
             Clients see this when you submit a quote.
           </p>
         </div>
@@ -576,7 +576,7 @@ export default function ProfileClient({ initialProfile }: Props) {
               : <AlertCircle className="h-4 w-4 text-amber-400" />}
             <span className="text-xs font-medium text-slate-600">{completeness}% complete</span>
           </div>
-          <div className="w-32 h-1.5 rounded-full bg-slate-100 overflow-hidden">
+          <div className="w-24 sm:w-32 h-1.5 rounded-full bg-slate-100 overflow-hidden">
             <div className={`h-full rounded-full transition-all ${completenessColor}`} style={{ width: `${completeness}%` }} />
           </div>
           </div>
@@ -768,7 +768,7 @@ export default function ProfileClient({ initialProfile }: Props) {
                 </div>
 
                 {/* Years of experience + hourly rate */}
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1.5">
                       Years of experience
@@ -906,7 +906,7 @@ export default function ProfileClient({ initialProfile }: Props) {
 
               {addingAddress ? (
                 <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-3 space-y-2.5">
-                  <div className="grid grid-cols-[120px_1fr] gap-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-[120px_1fr] gap-2">
                     <div>
                       <label className="block text-xs font-medium text-slate-600 mb-1">Label</label>
                       <input
@@ -1016,7 +1016,7 @@ export default function ProfileClient({ initialProfile }: Props) {
 
               {addingArea ? (
                 <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-3 space-y-2.5">
-                  <div className="grid grid-cols-[140px_1fr] gap-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-[140px_1fr] gap-2">
                     <div>
                       <label className="block text-xs font-medium text-slate-600 mb-1">Label</label>
                       <input

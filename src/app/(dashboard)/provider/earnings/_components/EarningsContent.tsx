@@ -23,7 +23,7 @@ export async function EarningsContent({ userId }: { userId: string }) {
           <div className="flex items-start justify-between">
             <div>
               <p className="text-xs text-slate-500">Gross Earned</p>
-              <p className="text-2xl font-bold text-slate-900 mt-1">{formatCurrency(totalGross)}</p>
+              <p className="text-xl sm:text-2xl font-bold text-slate-900 mt-1">{formatCurrency(totalGross)}</p>
               <p className="text-xs text-slate-400 mt-0.5">Before commission</p>
             </div>
             <div className="p-2.5 bg-primary/10 rounded-xl text-primary">
@@ -35,7 +35,7 @@ export async function EarningsContent({ userId }: { userId: string }) {
           <div className="flex items-start justify-between">
             <div>
               <p className="text-xs text-slate-500">Commission Paid</p>
-              <p className="text-2xl font-bold text-red-500 mt-1">-{formatCurrency(totalCommission)}</p>
+              <p className="text-xl sm:text-2xl font-bold text-red-500 mt-1">-{formatCurrency(totalCommission)}</p>
               <p className="text-xs text-slate-400 mt-0.5">{commissionPct}% platform fee</p>
             </div>
             <div className="p-2.5 bg-red-50 rounded-xl text-red-400">
@@ -47,7 +47,7 @@ export async function EarningsContent({ userId }: { userId: string }) {
           <div className="flex items-start justify-between">
             <div>
               <p className="text-xs text-green-600 font-medium">Net Received</p>
-              <p className="text-2xl font-bold text-green-700 mt-1">{formatCurrency(totalNet)}</p>
+              <p className="text-xl sm:text-2xl font-bold text-green-700 mt-1">{formatCurrency(totalNet)}</p>
               <p className="text-xs text-green-500 mt-0.5">Your take-home pay</p>
             </div>
             <div className="p-2.5 bg-green-100 rounded-xl text-green-600">
@@ -61,7 +61,7 @@ export async function EarningsContent({ userId }: { userId: string }) {
               <p className={`text-xs font-medium ${availableBalance > 0 ? "text-primary" : "text-slate-500"}`}>
                 Available to Payout
               </p>
-              <p className={`text-2xl font-bold mt-1 ${availableBalance > 0 ? "text-primary" : "text-slate-400"}`}>
+              <p className={`text-xl sm:text-2xl font-bold mt-1 ${availableBalance > 0 ? "text-primary" : "text-slate-400"}`}>
                 {formatCurrency(availableBalance)}
               </p>
               <p className={`text-xs mt-0.5 ${availableBalance > 0 ? "text-primary/70" : "text-slate-400"}`}>
@@ -103,7 +103,7 @@ export async function EarningsContent({ userId }: { userId: string }) {
 
       {/* Transaction table */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-card overflow-hidden">
-        <div className="px-6 py-4 border-b border-slate-100">
+        <div className="px-4 sm:px-6 py-3.5 sm:py-4 border-b border-slate-100">
           <h3 className="font-semibold text-slate-900">Transaction History</h3>
         </div>
         {transactions.length === 0 ? (
@@ -115,42 +115,72 @@ export async function EarningsContent({ userId }: { userId: string }) {
             <p className="text-xs text-slate-400">Completed jobs will appear here once escrow is released.</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-slate-100 bg-slate-50/50">
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500">Job</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-slate-500">Gross</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-slate-500">Commission</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-slate-500">Net</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500">Date</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {transactions.map((t) => (
-                  <tr key={String(t._id)} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="px-6 py-4 font-medium text-slate-900">{t.jobId?.title ?? "—"}</td>
-                    <td className="px-6 py-4 text-right text-slate-700">{formatCurrency(t.amount)}</td>
-                    <td className="px-6 py-4 text-right text-red-500">-{formatCurrency(t.commission)}</td>
-                    <td className="px-6 py-4 text-right font-semibold text-green-600">{formatCurrency(t.netAmount)}</td>
-                    <td className="px-6 py-4">
-                      <span className={`badge ${
-                        t.status === "completed"
-                          ? "bg-green-100 text-green-700"
-                          : t.status === "refunded"
-                          ? "bg-slate-100 text-slate-600"
-                          : "bg-amber-100 text-amber-700"
-                      }`}>
-                        {t.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-slate-500">{formatDate(t.createdAt)}</td>
+          <>
+            {/* Mobile: card list */}
+            <div className="sm:hidden divide-y divide-slate-100">
+              {transactions.map((t) => {
+                const badgeCls = t.status === "completed"
+                  ? "bg-green-100 text-green-700"
+                  : t.status === "refunded"
+                  ? "bg-slate-100 text-slate-600"
+                  : "bg-amber-100 text-amber-700";
+                return (
+                  <div key={String(t._id)} className="px-4 py-3.5 space-y-2">
+                    <div className="flex items-start justify-between gap-3">
+                      <p className="text-sm font-medium text-slate-900 leading-snug">{t.jobId?.title ?? "—"}</p>
+                      <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                        <span className="text-base font-bold text-green-600">{formatCurrency(t.netAmount)}</span>
+                        <span className={`badge ${badgeCls}`}>{t.status}</span>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-slate-400">
+                      <span>Gross: {formatCurrency(t.amount)}</span>
+                      <span className="text-red-400">Fee: -{formatCurrency(t.commission)}</span>
+                      <span>{formatDate(t.createdAt)}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* sm+: table */}
+            <div className="hidden sm:block overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-slate-100 bg-slate-50/50">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500">Job</th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-slate-500">Gross</th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-slate-500">Commission</th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-slate-500">Net</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500">Status</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500">Date</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {transactions.map((t) => (
+                    <tr key={String(t._id)} className="hover:bg-slate-50/50 transition-colors">
+                      <td className="px-6 py-4 font-medium text-slate-900">{t.jobId?.title ?? "—"}</td>
+                      <td className="px-6 py-4 text-right text-slate-700">{formatCurrency(t.amount)}</td>
+                      <td className="px-6 py-4 text-right text-red-500">-{formatCurrency(t.commission)}</td>
+                      <td className="px-6 py-4 text-right font-semibold text-green-600">{formatCurrency(t.netAmount)}</td>
+                      <td className="px-6 py-4">
+                        <span className={`badge ${
+                          t.status === "completed"
+                            ? "bg-green-100 text-green-700"
+                            : t.status === "refunded"
+                            ? "bg-slate-100 text-slate-600"
+                            : "bg-amber-100 text-amber-700"
+                        }`}>
+                          {t.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-slate-500">{formatDate(t.createdAt)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
     </>

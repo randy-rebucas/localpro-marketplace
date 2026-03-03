@@ -20,9 +20,9 @@ async function CategoriesSection() {
   if (!cats.length) return null;
 
   return (
-    <section className="max-w-6xl mx-auto px-4 py-20">
-      <div className="text-center mb-12">
-        <h2 className="text-3xl font-bold text-slate-900 mb-3">Browse by Service</h2>
+    <section className="max-w-6xl mx-auto px-4 py-12 sm:py-20">
+      <div className="text-center mb-8 sm:mb-12">
+        <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-3">Browse by Service</h2>
         <p className="text-slate-500 text-sm max-w-md mx-auto">Whatever you need done, we&apos;ve got a pro for it.</p>
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
@@ -32,9 +32,9 @@ async function CategoriesSection() {
             <Link
               key={String(c._id)}
               href={`/register?role=client&category=${c.slug}`}
-              className="group flex flex-col items-center gap-2.5 p-5 rounded-2xl border border-slate-200 hover:border-primary/40 hover:shadow-card-hover hover:-translate-y-0.5 transition-all bg-white text-center"
+              className="group flex flex-col items-center gap-2 sm:gap-2.5 p-3.5 sm:p-5 rounded-2xl border border-slate-200 hover:border-primary/40 hover:shadow-card-hover hover:-translate-y-0.5 transition-all bg-white text-center"
             >
-              <span className="text-3xl group-hover:scale-110 transition-transform">{c.icon}</span>
+              <span className="text-2xl sm:text-3xl group-hover:scale-110 transition-transform">{c.icon}</span>
               <span className="text-xs font-medium text-slate-600 group-hover:text-primary transition-colors leading-tight">{c.name}</span>
             </Link>
           );
@@ -73,10 +73,10 @@ async function TopProvidersSection() {
   for (const r of reviewCounts) countMap[String(r._id)] = r.count;
 
   return (
-    <section className="max-w-6xl mx-auto px-4 py-20">
-      <div className="flex items-end justify-between mb-10">
+    <section className="max-w-6xl mx-auto px-4 py-12 sm:py-20">
+      <div className="flex items-end justify-between mb-8 sm:mb-10">
         <div>
-          <h2 className="text-3xl font-bold text-slate-900 mb-2">Top-Rated Providers</h2>
+          <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-2">Top-Rated Providers</h2>
           <p className="text-slate-500 text-sm">Ready to take on your next job.</p>
         </div>
         <Link href="/register?role=client" className="text-sm font-medium text-primary hover:underline hidden sm:block shrink-0">
@@ -210,8 +210,8 @@ async function TopProvidersSection() {
 
 function CategoriesSkeleton() {
   return (
-    <section className="max-w-6xl mx-auto px-4 py-20 animate-pulse">
-      <div className="text-center mb-12">
+    <section className="max-w-6xl mx-auto px-4 py-12 sm:py-20 animate-pulse">
+      <div className="text-center mb-8 sm:mb-12">
         <div className="h-8 w-52 bg-slate-200 rounded-lg mx-auto mb-3" />
         <div className="h-4 w-72 bg-slate-100 rounded mx-auto" />
       </div>
@@ -226,8 +226,8 @@ function CategoriesSkeleton() {
 
 function TopProvidersSkeleton() {
   return (
-    <section className="max-w-6xl mx-auto px-4 py-20 animate-pulse">
-      <div className="h-8 w-56 bg-slate-200 rounded-lg mb-10" />
+    <section className="max-w-6xl mx-auto px-4 py-12 sm:py-20 animate-pulse">
+      <div className="h-8 w-56 bg-slate-200 rounded-lg mb-8 sm:mb-10" />
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
         {[...Array(6)].map((_, i) => (
           <div key={i} className="h-40 rounded-2xl bg-slate-100 border border-slate-200" />
@@ -251,7 +251,7 @@ async function StatsStrip() {
 
   return (
     <section className="border-y border-slate-100 bg-slate-50/70 py-8 px-4">
-      <div className="max-w-3xl mx-auto grid grid-cols-3 gap-6 text-center">
+      <div className="max-w-3xl mx-auto grid grid-cols-3 gap-4 sm:gap-6 text-center">
         {[
           { icon: <TrendingUp className="h-5 w-5 text-primary mx-auto mb-1" />, value: displayCount, label: "Jobs completed" },
           { icon: <Users      className="h-5 w-5 text-brand mx-auto mb-1" />,   value: "500+",       label: "Verified providers" },
@@ -304,39 +304,39 @@ export default async function RootPage() {
       </header>
 
       {/* ── Hero — no data dependency, streams instantly ── */}
-      <section className="relative overflow-hidden bg-gradient-to-b from-slate-50 via-white to-white pt-20 pb-24 px-4">
+      <section className="relative overflow-hidden bg-gradient-to-b from-slate-50 via-white to-white pt-14 pb-16 sm:pt-20 sm:pb-24 px-4">
         <div className="pointer-events-none absolute inset-0 overflow-hidden">
           <div className="absolute -top-40 -right-40 w-[600px] h-[600px] rounded-full bg-primary/6 blur-3xl" />
           <div className="absolute -bottom-40 -left-40 w-[500px] h-[500px] rounded-full bg-blue-100/60 blur-3xl" />
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[400px] rounded-full bg-primary/3 blur-3xl" />
         </div>
         <div className="relative max-w-4xl mx-auto text-center">
-          <div className="inline-flex items-center gap-2 text-xs font-semibold text-primary bg-primary/8 border border-primary/20 rounded-full px-4 py-1.5 mb-8">
+          <div className="inline-flex items-center gap-2 text-xs font-semibold text-primary bg-primary/8 border border-primary/20 rounded-full px-4 py-1.5 mb-6 sm:mb-8">
             <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
             Trusted by Filipinos across the country
           </div>
-          <h1 className="text-5xl md:text-6xl font-extrabold text-slate-900 leading-[1.1] tracking-tight mb-6">
-            Hire Trusted Local<br />
-            <span className="text-primary">Service </span><span className="text-brand">Professionals</span>
+          <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold text-slate-900 leading-[1.1] tracking-tight mb-5 sm:mb-6">
+            Hire Trusted Local<br className="hidden sm:block" />
+            {" "}<span className="text-primary">Service </span><span className="text-brand">Professionals</span>
           </h1>
-          <p className="text-lg text-slate-500 mb-10 max-w-xl mx-auto leading-relaxed">
+          <p className="text-base sm:text-lg text-slate-500 mb-8 sm:mb-10 max-w-xl mx-auto leading-relaxed">
             Post a job, receive quotes from verified providers, and pay with full escrow protection. Plumbing, electrical, cleaning, and more.
           </p>
-          <div className="flex flex-col sm:flex-row gap-3 justify-center mb-12">
+          <div className="flex flex-col sm:flex-row gap-3 justify-center mb-10 sm:mb-12">
             <Link
               href="/register?role=client"
-              className="btn-primary text-base px-8 py-3 rounded-xl shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all"
+              className="btn-primary text-sm sm:text-base px-6 sm:px-8 py-3 rounded-xl shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all"
             >
               Post a Job — It&apos;s Free
             </Link>
             <Link
               href="/register?role=provider"
-              className="btn-secondary text-base px-8 py-3 rounded-xl hover:-translate-y-0.5 transition-all"
+              className="btn-secondary text-sm sm:text-base px-6 sm:px-8 py-3 rounded-xl hover:-translate-y-0.5 transition-all"
             >
               Become a Provider <ArrowRight className="inline h-4 w-4 ml-1" />
             </Link>
           </div>
-          <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-slate-500">
+          <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs sm:text-sm text-slate-500">
             {[
               { icon: <CheckCircle className="h-4 w-4 text-brand" />, text: "Free to post a job" },
               { icon: <Lock        className="h-4 w-4 text-primary" />, text: "Escrow payment protection" },
@@ -361,10 +361,10 @@ export default async function RootPage() {
       </Suspense>
 
       {/* ── How it works — no data dependency ── */}
-      <section className="bg-slate-50 py-20 px-4">
+      <section className="bg-slate-50 py-12 sm:py-20 px-4">
         <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-14">
-            <h2 className="text-3xl font-bold text-slate-900 mb-3">How It Works</h2>
+          <div className="text-center mb-10 sm:mb-14">
+            <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-3">How It Works</h2>
             <p className="text-slate-500 text-sm">Three simple steps to get the job done.</p>
           </div>
           <div className="grid sm:grid-cols-3 gap-6 relative">
@@ -393,10 +393,10 @@ export default async function RootPage() {
       </Suspense>
 
       {/* ── Why LocalPro — no data dependency ── */}
-      <section className="bg-slate-50 py-20 px-4">
+      <section className="bg-slate-50 py-12 sm:py-20 px-4">
         <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-14">
-            <h2 className="text-3xl font-bold text-slate-900 mb-3">Why choose LocalPro?</h2>
+          <div className="text-center mb-10 sm:mb-14">
+            <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-3">Why choose LocalPro?</h2>
             <p className="text-slate-500 text-sm max-w-md mx-auto">Built for the Filipino market, with the protections you deserve.</p>
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
@@ -419,17 +419,17 @@ export default async function RootPage() {
       </section>
 
       {/* ── Provider Tiers ── */}
-      <section className="bg-white py-20 px-4">
+      <section className="bg-white py-12 sm:py-20 px-4">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-4">
             <span className="inline-flex items-center gap-2 text-xs font-semibold text-primary bg-primary/8 border border-primary/20 rounded-full px-4 py-1.5 mb-5">
               🏆 Provider Reward Tiers
             </span>
-            <h2 className="text-3xl font-bold text-slate-900 mb-3">Grow your business with LocalPro</h2>
+            <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-3">Grow your business with LocalPro</h2>
             <p className="text-slate-500 text-sm max-w-md mx-auto">The more jobs you complete, the more perks you unlock — lower fees, higher visibility, and exclusive opportunities.</p>
           </div>
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-12">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-8 sm:mt-12">
             {/* Bronze */}
             <div className="relative rounded-2xl border border-orange-200 bg-orange-50/50 p-5 flex flex-col gap-3">
               <div className="flex items-center gap-2">
@@ -520,9 +520,9 @@ export default async function RootPage() {
       </section>
 
       {/* ── Partners ── */}
-      <section className="border-y border-slate-100 bg-white py-14 px-4">
+      <section className="border-y border-slate-100 bg-white py-10 sm:py-14 px-4">
         <div className="max-w-4xl mx-auto text-center">
-          <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-8">Trusted Partners</p>
+          <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-6 sm:mb-8">Trusted Partners</p>
           <div className="flex flex-wrap items-center justify-center gap-8">
             <div className="flex flex-col items-center gap-3 group">
               <div className="w-20 h-20 rounded-2xl border border-slate-200 shadow-sm bg-white flex items-center justify-center overflow-hidden group-hover:border-primary/40 group-hover:shadow-card-hover transition-all p-2">
@@ -545,26 +545,26 @@ export default async function RootPage() {
       </section>
 
       {/* ── CTA Banner ── */}
-      <section className="relative overflow-hidden bg-primary py-20 px-4">
+      <section className="relative overflow-hidden bg-primary py-14 sm:py-20 px-4">
         <div className="pointer-events-none absolute inset-0">
           <div className="absolute -top-20 -right-20 w-80 h-80 rounded-full bg-white/5 blur-2xl" />
           <div className="absolute -bottom-20 -left-20 w-64 h-64 rounded-full bg-white/5 blur-2xl" />
         </div>
         <div className="relative max-w-2xl mx-auto text-center text-white">
-          <h2 className="text-3xl md:text-4xl font-extrabold mb-4 leading-tight">Ready to get started?</h2>
-          <p className="text-white/75 mb-10 text-sm leading-relaxed max-w-lg mx-auto">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold mb-4 leading-tight">Ready to get started?</h2>
+          <p className="text-white/75 mb-8 sm:mb-10 text-sm leading-relaxed max-w-lg mx-auto">
             Join thousands of clients and providers on LocalPro. It&apos;s completely free to sign up and post your first job.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Link
               href="/register?role=client"
-              className="bg-white text-primary font-semibold text-sm px-8 py-3 rounded-xl hover:bg-slate-50 hover:-translate-y-0.5 transition-all shadow-md"
+              className="bg-white text-primary font-semibold text-sm px-6 sm:px-8 py-3 rounded-xl hover:bg-slate-50 hover:-translate-y-0.5 transition-all shadow-md"
             >
               I need a service
             </Link>
             <Link
               href="/register?role=provider"
-              className="bg-white/10 border border-white/30 text-white font-semibold text-sm px-8 py-3 rounded-xl hover:bg-white/20 hover:-translate-y-0.5 transition-all"
+              className="bg-white/10 border border-white/30 text-white font-semibold text-sm px-6 sm:px-8 py-3 rounded-xl hover:bg-white/20 hover:-translate-y-0.5 transition-all"
             >
               I offer services
             </Link>
@@ -573,9 +573,9 @@ export default async function RootPage() {
       </section>
 
       {/* ── Footer ── */}
-      <footer className="bg-slate-950 text-slate-400 py-12 px-4">
+      <footer className="bg-slate-950 text-slate-400 py-10 sm:py-12 px-4">
         <div className="max-w-6xl mx-auto">
-          <div className="flex flex-col md:flex-row items-start justify-between gap-10 mb-10">
+          <div className="flex flex-col md:flex-row items-start justify-between gap-8 sm:gap-10 mb-8 sm:mb-10">
             <div className="flex flex-col gap-3 max-w-xs">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
@@ -589,7 +589,7 @@ export default async function RootPage() {
                 The trusted marketplace connecting Filipino clients with verified local service professionals.
               </p>
             </div>
-            <div className="flex flex-wrap gap-x-16 gap-y-8">
+            <div className="flex flex-wrap gap-x-10 sm:gap-x-16 gap-y-8">
               <div>
                 <p className="text-xs font-semibold text-slate-300 uppercase tracking-wider mb-3">Platform</p>
                 <ul className="space-y-2 text-sm">

@@ -16,15 +16,15 @@ export default async function EarningsPage() {
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900">Earnings</h2>
-          <p className="text-slate-500 text-sm mt-1">Commission breakdown and payment history.</p>
+          <h2 className="text-xl sm:text-2xl font-bold text-slate-900">Earnings</h2>
+          <p className="hidden sm:block text-slate-500 text-sm mt-1">Commission breakdown and payment history.</p>
         </div>
-        <div className="flex items-center gap-3 flex-shrink-0 mt-1">
+        <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0 mt-1">
           <Link
             href="/provider/payouts"
-            className="text-sm text-slate-500 hover:text-slate-700 underline underline-offset-2 transition-colors"
+            className="text-xs sm:text-sm text-slate-500 hover:text-slate-700 underline underline-offset-2 transition-colors whitespace-nowrap"
           >
-            Payout history
+            Payouts
           </Link>
           <ExportEarningsButton />
         </div>
