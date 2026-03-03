@@ -60,34 +60,36 @@ export async function QuotesSection({
           <h3 className="font-semibold text-slate-900">Accepted Quote</h3>
           <QuoteStatusBadge status={accepted.status} />
         </div>
-        <div className="px-6 py-5 flex items-start gap-4">
-          <ProviderAvatar name={accepted.providerId.name} avatar={accepted.providerId.avatar ?? undefined} />
-          <div className="flex-1 min-w-0">
-            <div className="flex flex-wrap items-center gap-2 mb-0.5">
-              <p className="font-semibold text-slate-900 text-sm">{accepted.providerId.name}</p>
-              {accepted.providerId.isVerified && (
-                <span className="badge bg-blue-100 text-blue-700 text-xs">Verified</span>
-              )}
-              {profile?.isLocalProCertified && (
-                <span className="inline-flex items-center gap-1 text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-medium border border-indigo-200">
-                  🎖️ LocalPro Certified
+        <div className="px-6 py-5 flex flex-col sm:flex-row items-start gap-4">
+          <div className="flex items-start gap-3 flex-1 min-w-0">
+            <ProviderAvatar name={accepted.providerId.name} avatar={accepted.providerId.avatar ?? undefined} />
+            <div className="flex-1 min-w-0">
+              <div className="flex flex-wrap items-center gap-2 mb-0.5">
+                <p className="font-semibold text-slate-900 text-sm">{accepted.providerId.name}</p>
+                {accepted.providerId.isVerified && (
+                  <span className="badge bg-blue-100 text-blue-700 text-xs">Verified</span>
+                )}
+                {profile?.isLocalProCertified && (
+                  <span className="inline-flex items-center gap-1 text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-medium border border-indigo-200">
+                    🎖️ LocalPro Certified
+                  </span>
+                )}
+              </div>
+              {profile && (profile.avgRating ?? 0) > 0 && (
+                <span className="flex items-center gap-1 text-xs text-slate-500">
+                  <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                  {(profile.avgRating ?? 0).toFixed(1)} · {profile.completedJobCount} jobs
                 </span>
               )}
+              <p className="text-xs text-slate-500 mt-1">Timeline: {accepted.timeline}</p>
+              <ProviderInfoButton
+                providerId={accepted.providerId._id.toString()}
+                providerName={accepted.providerId.name}
+              />
+              <p className="text-sm text-slate-700 mt-2 leading-relaxed">{accepted.message}</p>
             </div>
-            {profile && (profile.avgRating ?? 0) > 0 && (
-              <span className="flex items-center gap-1 text-xs text-slate-500">
-                <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-                {(profile.avgRating ?? 0).toFixed(1)} · {profile.completedJobCount} jobs
-              </span>
-            )}
-            <p className="text-xs text-slate-500 mt-1">Timeline: {accepted.timeline}</p>
-            <ProviderInfoButton
-              providerId={accepted.providerId._id.toString()}
-              providerName={accepted.providerId.name}
-            />
-            <p className="text-sm text-slate-700 mt-2 leading-relaxed">{accepted.message}</p>
           </div>
-          <div className="flex-shrink-0 text-right">
+          <div className="sm:flex-shrink-0 sm:text-right w-full sm:w-auto border-t sm:border-t-0 pt-3 sm:pt-0 border-slate-100">
             <p className="text-xl font-bold text-slate-900">{formatCurrency(accepted.proposedAmount)}</p>
             <p className="text-[11px] text-slate-400 mt-0.5">
               Provider gets{" "}
@@ -139,9 +141,9 @@ export async function QuotesSection({
             const breakdown  = calculateCommission(q.proposedAmount);
 
             return (
-              <li key={q._id.toString()} className="px-6 py-5">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex gap-3 flex-1">
+              <li key={q._id.toString()} className="px-5 sm:px-6 py-5">
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                  <div className="flex gap-3 flex-1 min-w-0">
                     <ProviderAvatar name={q.providerId.name} avatar={q.providerId.avatar ?? undefined} />
                     <div className="flex-1 min-w-0">
                       <div className="flex flex-wrap items-center gap-2 mb-0.5">
@@ -182,8 +184,9 @@ export async function QuotesSection({
                     </div>
                   </div>
 
-                  <div className="flex flex-col items-end gap-2 flex-shrink-0">
-                    <div className="text-right">
+                  {/* Amount + actions — stacks below on mobile, right column on desktop */}
+                  <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-start gap-3 sm:gap-2 sm:flex-shrink-0 pt-3 sm:pt-0 border-t sm:border-t-0 border-slate-100">
+                    <div className="sm:text-right">
                       <p className="text-lg font-bold text-slate-900">
                         {formatCurrency(q.proposedAmount)}
                       </p>
@@ -194,14 +197,16 @@ export async function QuotesSection({
                         </span>
                       </p>
                     </div>
-                    <QuoteStatusBadge status={q.status} />
-                    {q.status === "pending" && (
-                      <QuoteAcceptButton
-                        quoteId={q._id.toString()}
-                        proposedAmount={q.proposedAmount}
-                        providerName={q.providerId.name}
-                      />
-                    )}
+                    <div className="flex sm:flex-col items-center sm:items-end gap-2">
+                      <QuoteStatusBadge status={q.status} />
+                      {q.status === "pending" && (
+                        <QuoteAcceptButton
+                          quoteId={q._id.toString()}
+                          proposedAmount={q.proposedAmount}
+                          providerName={q.providerId.name}
+                        />
+                      )}
+                    </div>
                   </div>
                 </div>
               </li>

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { requireUser, requireRole } from "@/lib/auth";
+import { requireUser } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { connectDB } from "@/lib/db";
 import { ValidationError } from "@/lib/errors";
@@ -15,10 +15,9 @@ const SubmitKycSchema = z.object({
   ).min(1, "At least one document is required"),
 });
 
-/** POST /api/kyc — provider submits KYC documents */
+/** POST /api/kyc — authenticated user submits KYC documents */
 export const POST = withHandler(async (req: NextRequest) => {
   const user = await requireUser();
-  requireRole(user, "provider");
 
   const body = await req.json();
   const parsed = SubmitKycSchema.safeParse(body);

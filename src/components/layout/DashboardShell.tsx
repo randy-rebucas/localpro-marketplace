@@ -21,6 +21,8 @@ export default function DashboardShell({ children, role, capabilities, pageTitle
   const router = useRouter();
   const { user, isLoading, initialized, fetchMe } = useAuthStore();
 
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
   // Check for active impersonation session (cookie readable by JS)
   const [impersonatedName, setImpersonatedName] = useState<string | null>(null);
   useEffect(() => {
@@ -50,11 +52,11 @@ export default function DashboardShell({ children, role, capabilities, pageTitle
   return (
     <div className="flex h-screen bg-surface overflow-hidden">
       {impersonatedName && <ImpersonationBanner userName={impersonatedName} />}
-      <Sidebar role={role} capabilities={capabilities} />
-      <div className={`flex-1 flex flex-col overflow-hidden ${impersonatedName ? "pt-10" : ""}`}>
-        <Header title={pageTitle} />
+      <Sidebar role={role} capabilities={capabilities} isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <div className={`flex-1 flex flex-col overflow-hidden min-w-0 ${impersonatedName ? "pt-10" : ""}`}>
+        <Header title={pageTitle} onMenuClick={() => setSidebarOpen(true)} />
         <AnnouncementBanner />
-        <main className="flex-1 overflow-y-auto p-6">{children}</main>
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6">{children}</main>
       </div>
     </div>
   );

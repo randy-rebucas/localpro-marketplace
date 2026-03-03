@@ -25,24 +25,26 @@ export async function DashboardKpis({ userId }: { userId: string }) {
   return (
     <>
       {/* ── Header row ── */}
-      <div className="flex items-center justify-between gap-4 flex-wrap">
-        <div>
+      <div className="flex items-start sm:items-center justify-between gap-3">
+        <div className="min-w-0">
           <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest">{dateLabel}</p>
-          <h1 className="text-2xl font-bold text-slate-900 mt-0.5">
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 mt-0.5">
             Welcome back, <span className="text-primary">{firstName}</span>!
           </h1>
-          <p className="text-sm text-slate-500 mt-0.5">Here&apos;s what&apos;s happening with your jobs today.</p>
+          <p className="text-sm text-slate-500 mt-0.5 hidden sm:block">Here&apos;s what&apos;s happening with your jobs today.</p>
         </div>
         <Link
           href="/client/post-job"
-          className="btn-primary inline-flex items-center gap-2 flex-shrink-0"
+          className="btn-primary inline-flex items-center gap-1.5 flex-shrink-0 text-sm"
         >
-          <span className="text-base leading-none">+</span> Post a Job
+          <span className="text-base leading-none">+</span>
+          <span className="hidden xs:inline">Post a Job</span>
+          <span className="xs:hidden">Post</span>
         </Link>
       </div>
 
       {/* ── KPI cards ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
         <KpiCard
           title="Active Jobs"
           value={activeJobs}

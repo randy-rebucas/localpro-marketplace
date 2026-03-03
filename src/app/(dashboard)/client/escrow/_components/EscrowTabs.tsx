@@ -76,14 +76,14 @@ function EscrowCard({
 
   return (
     <div
-      className={`relative bg-white rounded-xl border border-slate-200 border-l-4 ${c.border} shadow-card hover:shadow-card-hover hover:border-primary/30 transition-all p-5 space-y-3 group`}
+      className={`relative bg-white rounded-xl border border-slate-200 border-l-4 ${c.border} shadow-card hover:shadow-card-hover hover:border-primary/30 transition-all p-4 sm:p-5 space-y-3 group`}
     >
       {/* Overlay link */}
       <Link href={`/client/jobs/${j._id}`} className="absolute inset-0 rounded-xl" aria-label={j.title} />
 
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
-          {/* Urgency pill for needs-action items */}
+          {/* Urgency pills */}
           {needsFunding && (
             <span className="mb-1.5 inline-flex items-center gap-1 text-[10px] font-semibold bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">
               <Zap className="h-2.5 w-2.5" /> Fund to start
@@ -110,7 +110,7 @@ function EscrowCard({
             )}
             <span className="flex items-center gap-1">
               <Calendar className="h-3 w-3" />
-              Scheduled {formatDate(new Date(j.scheduleDate))}
+              {formatDate(new Date(j.scheduleDate))}
             </span>
           </div>
           {j.providerId?._id && (
@@ -123,10 +123,10 @@ function EscrowCard({
           )}
         </div>
 
-        <div className="flex flex-col items-end gap-2 flex-shrink-0">
+        <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
           <div className="text-right">
-            <p className="text-xs text-slate-400">Budget</p>
-            <p className="text-lg font-bold text-slate-900">{formatCurrency(j.budget)}</p>
+            <p className="text-[10px] text-slate-400">Budget</p>
+            <p className="text-base sm:text-lg font-bold text-slate-900">{formatCurrency(j.budget)}</p>
           </div>
           <EscrowBadge status={j.escrowStatus as never} />
           {needsFunding && (
@@ -134,7 +134,7 @@ function EscrowCard({
               href={`/client/jobs/${j._id}`}
               className="relative z-10 btn-primary text-xs py-1.5 px-3"
             >
-              Fund Escrow →
+              Fund →
             </Link>
           )}
           {needsRelease && (

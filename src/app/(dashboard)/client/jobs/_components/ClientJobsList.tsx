@@ -109,32 +109,32 @@ export default function ClientJobsList({
     <div className="space-y-4">
 
       {/* ── Summary stats strip ── */}
-      <div className="grid grid-cols-3 gap-3">
-        <div className="bg-white rounded-xl border border-slate-200 p-4 flex items-center gap-3">
+      <div className="grid grid-cols-3 gap-2 sm:gap-3">
+        <div className="bg-white rounded-xl border border-slate-200 p-3 sm:p-4 flex items-center gap-2 sm:gap-3">
           <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
             <Briefcase className="h-4 w-4 text-primary" />
           </div>
-          <div>
-            <p className="text-xs text-slate-400 leading-none">Total</p>
-            <p className="text-xl font-bold text-slate-900 leading-tight">{jobs.length}</p>
+          <div className="min-w-0">
+            <p className="text-xs text-slate-400 leading-none truncate">Total</p>
+            <p className="text-lg sm:text-xl font-bold text-slate-900 leading-tight">{jobs.length}</p>
           </div>
         </div>
-        <div className="bg-white rounded-xl border border-slate-200 p-4 flex items-center gap-3">
+        <div className="bg-white rounded-xl border border-slate-200 p-3 sm:p-4 flex items-center gap-2 sm:gap-3">
           <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center flex-shrink-0">
             <Zap className="h-4 w-4 text-amber-500" />
           </div>
-          <div>
-            <p className="text-xs text-slate-400 leading-none">Active</p>
-            <p className="text-xl font-bold text-slate-900 leading-tight">{totalActive}</p>
+          <div className="min-w-0">
+            <p className="text-xs text-slate-400 leading-none truncate">Active</p>
+            <p className="text-lg sm:text-xl font-bold text-slate-900 leading-tight">{totalActive}</p>
           </div>
         </div>
-        <div className="bg-white rounded-xl border border-slate-200 p-4 flex items-center gap-3">
+        <div className="bg-white rounded-xl border border-slate-200 p-3 sm:p-4 flex items-center gap-2 sm:gap-3">
           <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
             <MessageSquare className="h-4 w-4 text-blue-500" />
           </div>
-          <div>
-            <p className="text-xs text-slate-400 leading-none">Quotes</p>
-            <p className="text-xl font-bold text-slate-900 leading-tight">{totalQuotes}</p>
+          <div className="min-w-0">
+            <p className="text-xs text-slate-400 leading-none truncate">Quotes</p>
+            <p className="text-lg sm:text-xl font-bold text-slate-900 leading-tight">{totalQuotes}</p>
           </div>
         </div>
       </div>
@@ -218,7 +218,7 @@ export default function ClientJobsList({
             return (
               <div
                 key={j._id.toString()}
-                className={`relative block bg-white rounded-xl border border-slate-200 border-l-4 ${borderClass} shadow-card hover:shadow-card-hover hover:border-primary/30 transition-all p-5 group`}
+                className={`relative block bg-white rounded-xl border border-slate-200 border-l-4 ${borderClass} shadow-card hover:shadow-card-hover hover:border-primary/30 transition-all p-4 sm:p-5 group`}
               >
                 {/* Overlay link covers the whole card except interactive children */}
                 <Link
@@ -227,30 +227,29 @@ export default function ClientJobsList({
                   aria-label={j.title}
                 />
 
-                <div className="flex items-start justify-between gap-4">
-                  <div className="min-w-0 flex-1 space-y-2">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1 space-y-1.5">
                     <h3 className="font-semibold text-slate-900 truncate group-hover:text-primary transition-colors">
                       {j.title}
                     </h3>
-                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-400">
+                    <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-slate-400">
                       <span className="inline-block bg-slate-100 text-slate-600 rounded px-2 py-0.5 font-medium">
                         {j.category}
                       </span>
                       {j.location && (
-                        <span className="flex items-center gap-1">
+                        <span className="hidden sm:flex items-center gap-1">
                           <MapPin className="h-3 w-3" />
                           {j.location}
                         </span>
                       )}
                       <span className="flex items-center gap-1">
                         <Calendar className="h-3 w-3" />
-                        Posted {formatDate(j.createdAt)}
+                        {formatDate(j.createdAt)}
                       </span>
                     </div>
-                    <div className="flex flex-wrap items-center gap-3">
+                    <div className="flex flex-wrap items-center gap-2">
                       {j.providerId && (
-                        <span className="relative z-10 flex items-center gap-2 text-xs text-slate-500">
-                          Provider:{" "}
+                        <span className="relative z-10 flex items-center gap-1.5 text-xs text-slate-500">
                           <span className="font-medium text-slate-700">{j.providerId.name}</span>
                           <ProviderInfoButton
                             providerId={j.providerId._id}
@@ -261,16 +260,16 @@ export default function ClientJobsList({
                       {pendingQuotes > 0 && (
                         <span className="relative z-10 inline-flex items-center gap-1 text-xs font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
                           <MessageSquare className="h-3 w-3" />
-                          {pendingQuotes} new quote{pendingQuotes !== 1 ? "s" : ""}
+                          {pendingQuotes} quote{pendingQuotes !== 1 ? "s" : ""}
                         </span>
                       )}
                     </div>
                   </div>
 
-                  <div className="flex flex-col items-end gap-2 flex-shrink-0">
+                  <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
                     <div className="text-right">
-                      <p className="text-xs text-slate-400">Budget</p>
-                      <p className="text-xl font-bold text-slate-900">{formatCurrency(j.budget)}</p>
+                      <p className="text-[10px] text-slate-400">Budget</p>
+                      <p className="text-base sm:text-xl font-bold text-slate-900">{formatCurrency(j.budget)}</p>
                     </div>
                     <JobStatusBadge status={j.status} />
                     <EscrowBadge status={j.escrowStatus} />

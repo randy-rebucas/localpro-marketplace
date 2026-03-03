@@ -20,6 +20,7 @@ import {
   MapPin,
   Tag,
   LogOut,
+  X,
   Banknote,
   Heart,
   MessageSquare,
@@ -181,9 +182,11 @@ function filterForStaff(groups: NavGroup[], capabilities: string[]): NavGroup[] 
 interface SidebarProps {
   role: UserRole;
   capabilities?: string[];
+  isOpen?: boolean;
+  onClose?: () => void;
 }
 
-export default function Sidebar({ role, capabilities }: SidebarProps) {
+export default function Sidebar({ role, capabilities, isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { logout } = useAuthStore();
@@ -205,15 +208,42 @@ export default function Sidebar({ role, capabilities }: SidebarProps) {
   }
 
   return (
-    <aside className="w-64 bg-primary-950 flex flex-col h-full">
+    <>
+      {/* Mobile backdrop */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          onClick={onClose}
+          aria-hidden="true"
+        />
+      )}
+
+      <aside
+        className={cn(
+          "w-64 bg-primary-950 flex flex-col h-full flex-shrink-0",
+          // Mobile: fixed drawer that slides in/out
+          "fixed inset-y-0 left-0 z-50 transition-transform duration-300 md:relative md:translate-x-0",
+          isOpen ? "translate-x-0" : "-translate-x-full"
+        )}
+      >
       {/* Brand */}
-      <div className="flex items-center gap-3 px-6 py-5 border-b border-white/10">
-        <div className="flex-shrink-0 w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-          <MapPin className="w-5 h-5 text-white" />
+      <div className="flex items-center justify-between px-6 py-5 border-b border-white/10">
+        <div className="flex items-center gap-3">
+          <div className="flex-shrink-0 w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+            <MapPin className="w-5 h-5 text-white" />
+          </div>
+          <span className="text-lg font-bold">
+            <span className="text-primary-300">Local</span><span className="text-brand-400">Pro</span>
+          </span>
         </div>
-        <span className="text-lg font-bold">
-          <span className="text-primary-300">Local</span><span className="text-brand-400">Pro</span>
-        </span>
+        {/* Close button — mobile only */}
+        <button
+          onClick={onClose}
+          className="md:hidden p-1 text-primary-300 hover:text-white transition-colors rounded"
+          aria-label="Close menu"
+        >
+          <X className="h-5 w-5" />
+        </button>
       </div>
 
       {/* Role badge */}
@@ -239,6 +269,7 @@ export default function Sidebar({ role, capabilities }: SidebarProps) {
                   <Link
                     key={item.href}
                     href={item.href}
+                    onClick={onClose}
                     className={cn(
                       "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
                       isActive
@@ -266,6 +297,7 @@ export default function Sidebar({ role, capabilities }: SidebarProps) {
           Sign out
         </button>
       </div>
-    </aside>
+      </aside>
+    </>
   );
 }

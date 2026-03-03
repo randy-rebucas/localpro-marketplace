@@ -2,7 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { MessageSquare } from "lucide-react";
+import { MessageSquare, ChevronLeft } from "lucide-react";
 import { JobStatusBadge } from "@/components/ui/Badge";
 import { formatRelativeTime } from "@/lib/utils";
 import type { JobStatus } from "@/types";
@@ -16,11 +16,15 @@ interface Props {
 export default function MessagesShell({ threads, children }: Props) {
   const pathname = usePathname();
   const activeJobId = pathname.split("/messages/")[1]?.split("/")[0] ?? null;
+  const hasActiveThread = !!activeJobId;
 
   return (
     <div className="flex h-[calc(100vh-8rem)] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
       {/* ── Left: thread list ─────────────────────────────────────────────── */}
-      <aside className="w-72 shrink-0 flex flex-col border-r border-slate-200 overflow-hidden">
+      {/* On mobile: full-width when no thread selected, hidden when thread is active */}
+      <aside className={`flex flex-col border-r border-slate-200 overflow-hidden ${
+        hasActiveThread ? "hidden md:flex md:w-72 md:shrink-0" : "flex w-full md:w-72 md:shrink-0"
+      }`}>
         <div className="px-4 py-3.5 border-b border-slate-200 bg-slate-50 shrink-0">
           <h2 className="text-sm font-semibold text-slate-800">Messages</h2>
         </div>
@@ -88,8 +92,23 @@ export default function MessagesShell({ threads, children }: Props) {
       </aside>
 
       {/* ── Right: chat panel ─────────────────────────────────────────────── */}
-      <main className="flex-1 min-w-0 flex flex-col overflow-hidden">
+      {/* On mobile: full-width when thread selected, hidden when on thread list */}
+      <main className={`flex-1 min-w-0 flex-col overflow-hidden ${
+        hasActiveThread ? "flex" : "hidden md:flex"
+      }`}>
         <MessagesProvider threads={threads}>
+          {/* Mobile: back-to-list button */}
+          {hasActiveThread && (
+            <div className="md:hidden shrink-0 px-4 py-2.5 border-b border-slate-100 bg-slate-50">
+              <Link
+                href="/client/messages"
+                className="inline-flex items-center gap-1 text-sm text-slate-600 hover:text-primary transition-colors"
+              >
+                <ChevronLeft className="h-4 w-4" />
+                All conversations
+              </Link>
+            </div>
+          )}
           {children}
         </MessagesProvider>
       </main>

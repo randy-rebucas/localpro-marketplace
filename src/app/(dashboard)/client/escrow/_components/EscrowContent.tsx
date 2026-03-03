@@ -112,18 +112,18 @@ export async function EscrowContent({
 
       {/* Stats strip */}
       {jobs.length > 0 && (
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-3 gap-2 sm:gap-3">
           {stats.map((s) => (
             <div
               key={s.label}
-              className={`rounded-xl border border-slate-200 p-4 flex items-center gap-3 ${s.bg}`}
+              className={`rounded-xl border border-slate-200 p-3 sm:p-4 flex items-center gap-2 sm:gap-3 ${s.bg}`}
             >
               <div className="w-8 h-8 rounded-lg bg-white shadow-sm flex items-center justify-center flex-shrink-0">
                 {s.icon}
               </div>
               <div className="min-w-0">
-                <p className="text-[11px] text-slate-400 truncate">{s.label}</p>
-                <p className="text-lg font-bold text-slate-900 leading-tight">{s.value}</p>
+                <p className="text-[10px] sm:text-[11px] text-slate-400 truncate">{s.label}</p>
+                <p className="text-base sm:text-lg font-bold text-slate-900 leading-tight">{s.value}</p>
               </div>
             </div>
           ))}

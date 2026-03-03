@@ -5,13 +5,14 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import toast from "react-hot-toast";
-import { ChevronDown, LogOut, User, Shield, Briefcase, UserCog } from "lucide-react";
+import { ChevronDown, LogOut, User, Shield, Briefcase, UserCog, Menu } from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
 import NotificationBell from "@/components/shared/NotificationBell";
 import GlobalSearch from "@/components/shared/GlobalSearch";
 
 interface HeaderProps {
   title?: string;
+  onMenuClick?: () => void;
 }
 
 const ROLE_CONFIG: Record<string, { label: string; icon: typeof User; color: string }> = {
@@ -21,7 +22,7 @@ const ROLE_CONFIG: Record<string, { label: string; icon: typeof User; color: str
   staff:    { label: "Staff",    icon: UserCog,  color: "bg-teal-100 text-teal-700"    },
 };
 
-export default function Header({ title }: HeaderProps) {
+export default function Header({ title, onMenuClick }: HeaderProps) {
   const router = useRouter();
   const { user, logout } = useAuthStore();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -55,9 +56,16 @@ export default function Header({ title }: HeaderProps) {
     null;
 
   return (
-    <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 flex-shrink-0">
-      {/* Page title */}
-      <div>
+    <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 sm:px-6 flex-shrink-0">
+      {/* Left: hamburger (mobile) + page title */}
+      <div className="flex items-center gap-3">
+        <button
+          onClick={onMenuClick}
+          className="md:hidden p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 transition-colors flex-shrink-0"
+          aria-label="Open navigation menu"
+        >
+          <Menu className="h-5 w-5" />
+        </button>
         {title && (
           <h1 className="text-base font-semibold text-slate-800 tracking-tight">{title}</h1>
         )}

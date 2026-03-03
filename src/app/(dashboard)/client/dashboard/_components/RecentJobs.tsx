@@ -34,9 +34,9 @@ export async function RecentJobs({ userId }: { userId: string }) {
           {recentJobs.map((job) => {
             const fundedAmount = fundedMap.get(String(job._id));
             return (
-              <li key={String(job._id)} className="px-6 py-3.5 hover:bg-slate-50 transition-colors">
-                <div className="flex items-center justify-between gap-4">
-                  <div className="min-w-0 flex items-center gap-3">
+              <li key={String(job._id)} className="px-4 sm:px-6 py-3.5 hover:bg-slate-50 transition-colors">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0 flex items-center gap-3 flex-1">
                     <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
                       <Briefcase className="h-4 w-4 text-primary" />
                     </div>
@@ -47,17 +47,17 @@ export async function RecentJobs({ userId }: { userId: string }) {
                       >
                         {job.title}
                       </Link>
-                      <p className="text-xs text-slate-400 mt-0.5">
-                        <span className="inline-block bg-slate-100 text-slate-600 rounded px-1.5 py-0.5 mr-1.5">
+                      <p className="text-xs text-slate-400 mt-0.5 flex items-center gap-1.5 flex-wrap">
+                        <span className="inline-block bg-slate-100 text-slate-600 rounded px-1.5 py-0.5">
                           {job.category}
                         </span>
-                        {formatRelativeTime(job.createdAt)}
+                        <span>{formatRelativeTime(job.createdAt)}</span>
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3 flex-shrink-0">
-                    <div className="text-right">
-                      <p className="text-xs text-slate-400">Budget</p>
+                  <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+                    <div className="text-right hidden sm:block">
+                      <p className="text-[10px] text-slate-400">Budget</p>
                       <p className="text-sm font-semibold text-slate-800">{formatCurrency(job.budget)}</p>
                     </div>
                     <JobStatusBadge status={job.status} />

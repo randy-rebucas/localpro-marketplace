@@ -18,6 +18,8 @@ import {
   Timer,
   SlidersHorizontal,
   X,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import Link from "next/link";
 import Button from "@/components/ui/Button";
@@ -118,8 +120,8 @@ function ProviderListRow({
   if (profile?.hourlyRate) stats.push(`${formatCurrency(profile.hourlyRate)}/hr`);
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 hover:border-primary/30 hover:shadow-sm transition-all px-5 py-4 flex items-center gap-4 group">
-      <div className="w-11 h-11 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm flex-shrink-0 ring-2 ring-white">
+    <div className="bg-white rounded-xl border border-slate-200 hover:border-primary/30 hover:shadow-sm transition-all px-4 py-4 sm:px-5 flex items-center gap-3 sm:gap-4 group">
+      <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm flex-shrink-0 ring-2 ring-white">
         {name.charAt(0).toUpperCase()}
       </div>
 
@@ -135,7 +137,7 @@ function ProviderListRow({
             </span>
           )}
           {isTopRated && (
-            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">⭐ Top Rated</span>
+            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">⭐ Top</span>
           )}
           {isFastResponder && (
             <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">⚡ Fast</span>
@@ -143,7 +145,7 @@ function ProviderListRow({
         </div>
 
         {profile?.bio && (
-          <p className="text-xs text-slate-500 truncate max-w-[420px] mb-1">{profile.bio}</p>
+          <p className="text-xs text-slate-500 truncate mb-1">{profile.bio}</p>
         )}
 
         <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-slate-400">
@@ -172,7 +174,7 @@ function ProviderListRow({
         {cfg.icon}{cfg.label}
       </span>
 
-      <div className="flex items-center gap-2 flex-shrink-0">
+      <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
         {onFavoriteToggle && (
           <button
             onClick={onFavoriteToggle}
@@ -187,9 +189,10 @@ function ProviderListRow({
             <Heart className={`h-3.5 w-3.5 ${isFavorite ? "fill-red-400" : ""}`} />
           </button>
         )}
-        <Button size="sm" onClick={() => onPostJob(id, name)} className="flex items-center gap-1.5 h-8 px-3 text-xs">
+        <Button size="sm" onClick={() => onPostJob(id, name)} className="flex items-center gap-1.5 h-8 px-2.5 sm:px-3 text-xs">
           <Sparkles className="h-3.5 w-3.5" />
-          Post Job
+          <span className="hidden sm:inline">Post Job</span>
+          <span className="sm:hidden">Post</span>
         </Button>
       </div>
     </div>
@@ -350,6 +353,7 @@ export default function FavoritesClient({
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [directJobTarget, setDirectJobTarget] = useState<{ id: string; name: string } | null>(null);
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   const fetchProviders = useCallback(async () => {
     setLoadingBrowse(true);
@@ -487,147 +491,226 @@ export default function FavoritesClient({
 
       {/* Discover tab */}
       {tab === "discover" && (
-        <div className="flex gap-5 items-start">
-          {/* Filter sidebar */}
-          <aside className="w-60 flex-shrink-0 sticky top-4 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-            <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-slate-100 bg-slate-50">
-              <div className="flex items-center gap-2">
-                <SlidersHorizontal className="h-3.5 w-3.5 text-slate-500" />
-                <span className="text-xs font-semibold text-slate-700">Filters</span>
-              </div>
-              {(search || availability) && (
-                <button
-                  onClick={() => { setSearch(""); setAvailability(""); }}
-                  className="text-[11px] text-primary hover:underline font-medium"
-                >
-                  Reset
-                </button>
-              )}
-            </div>
-            <div className="p-4 space-y-5">
-              <div>
-                <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide block mb-1.5">Search</label>
-                <div className="relative">
-                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
-                  <input
-                    className="input w-full pl-8 h-8 text-sm"
-                    placeholder="Name, skill, or bio…"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && fetchProviders()}
-                  />
-                  {search && (
-                    <button
-                      onClick={() => setSearch("")}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500"
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  )}
-                </div>
-              </div>
+        <div className="space-y-4">
+          {/* Mobile filter toggle */}
+          <div className="md:hidden">
+            <button
+              onClick={() => setFiltersOpen((v) => !v)}
+              className="w-full flex items-center justify-between gap-2 px-4 py-3 bg-white rounded-xl border border-slate-200 text-sm font-medium text-slate-700"
+            >
+              <span className="flex items-center gap-2">
+                <SlidersHorizontal className="h-4 w-4 text-slate-500" />
+                Filters
+                {(search || availability) && (
+                  <span className="ml-1 text-xs bg-primary text-white rounded-full px-1.5 py-0.5 font-semibold">Active</span>
+                )}
+              </span>
+              {filtersOpen ? <ChevronUp className="h-4 w-4 text-slate-400" /> : <ChevronDown className="h-4 w-4 text-slate-400" />}
+            </button>
 
-              <div>
-                <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide block mb-1.5">Availability</label>
-                <div className="flex flex-col gap-1">
-                  {[
-                    { value: "",          label: "All providers", icon: <Users className="h-3.5 w-3.5" /> },
-                    { value: "available", label: "Available now",  icon: <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> },
-                    { value: "busy",      label: "Busy",           icon: <Clock className="h-3.5 w-3.5 text-amber-500" /> },
-                  ].map((opt) => (
-                    <button
-                      key={opt.value}
-                      onClick={() => setAvailability(opt.value)}
-                      className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors text-left ${
-                        availability === opt.value
-                          ? "bg-primary/8 text-primary border border-primary/20"
-                          : "text-slate-600 hover:bg-slate-50 border border-transparent"
-                      }`}
-                    >
-                      <span className="flex-shrink-0 text-current opacity-70">{opt.icon}</span>
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="pt-1 border-t border-slate-100">
-                <Button size="sm" onClick={fetchProviders} className="w-full h-8 text-xs">
-                  <Search className="h-3.5 w-3.5 mr-1.5" />
-                  Search
-                </Button>
-              </div>
-            </div>
-          </aside>
-
-          {/* Provider list */}
-          <div className="flex-1 min-w-0 space-y-2">
-            <div className="flex items-center justify-between h-6 mb-1">
-              {!loadingBrowse && browse.length > 0 && (
-                <p className="text-xs text-slate-400">
-                  {browse.length} provider{browse.length !== 1 ? "s" : ""}
-                  {(search || availability) ? " matching filters" : " found"}
-                </p>
-              )}
-              {!loadingBrowse && browse.length > 0 && (
-                <p className="text-[11px] text-slate-300">
-                  {availability === "available" ? "Sorted by availability" : "Sorted by rating"}
-                </p>
-              )}
-            </div>
-
-            {loadingBrowse ? (
-              <div className="space-y-2">
-                {[...Array(5)].map((_, i) => (
-                  <div key={i} className="bg-white rounded-xl border border-slate-200 p-4 flex items-center gap-4 animate-pulse">
-                    <div className="w-11 h-11 rounded-full bg-slate-100 flex-shrink-0" />
-                    <div className="flex-1 space-y-2">
-                      <div className="h-3.5 w-40 rounded bg-slate-100" />
-                      <div className="h-3 w-56 rounded bg-slate-100" />
-                      <div className="h-3 w-32 rounded bg-slate-100" />
-                    </div>
-                    <div className="flex gap-2">
-                      <div className="h-8 w-8 rounded-lg bg-slate-100" />
-                      <div className="h-8 w-20 rounded-lg bg-slate-100" />
+            {/* Mobile filter panel */}
+            {filtersOpen && (
+              <div className="mt-2 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div className="p-4 space-y-4">
+                  <div>
+                    <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide block mb-1.5">Search</label>
+                    <div className="relative">
+                      <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                      <input
+                        className="input w-full pl-8 h-9 text-sm"
+                        placeholder="Name, skill, or bio…"
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        onKeyDown={(e) => e.key === "Enter" && fetchProviders()}
+                      />
+                      {search && (
+                        <button onClick={() => setSearch("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500">
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      )}
                     </div>
                   </div>
-                ))}
-              </div>
-            ) : browse.length === 0 ? (
-              <div className="bg-white rounded-xl border border-slate-200 p-12 flex flex-col items-center gap-3 text-center">
-                <div className="flex items-center justify-center h-12 w-12 rounded-full bg-slate-100">
-                  <UserX className="h-6 w-6 text-slate-400" />
+                  <div>
+                    <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide block mb-1.5">Availability</label>
+                    <div className="flex flex-wrap gap-2">
+                      {[
+                        { value: "",          label: "All" },
+                        { value: "available", label: "Available" },
+                        { value: "busy",      label: "Busy" },
+                      ].map((opt) => (
+                        <button
+                          key={opt.value}
+                          onClick={() => setAvailability(opt.value)}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+                            availability === opt.value
+                              ? "bg-primary text-white border-primary"
+                              : "text-slate-600 border-slate-200 hover:bg-slate-50"
+                          }`}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="flex gap-2 pt-1 border-t border-slate-100">
+                    {(search || availability) && (
+                      <button onClick={() => { setSearch(""); setAvailability(""); }} className="flex-1 text-xs text-slate-500 hover:text-slate-700 border border-slate-200 rounded-lg py-2">
+                        Reset
+                      </button>
+                    )}
+                    <Button size="sm" onClick={() => { fetchProviders(); setFiltersOpen(false); }} className="flex-1 h-9 text-xs">
+                      <Search className="h-3.5 w-3.5 mr-1.5" />
+                      Search
+                    </Button>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm font-semibold text-slate-700">No providers found</p>
-                  <p className="text-xs text-slate-400 mt-1">Try adjusting your search or availability filter.</p>
-                </div>
               </div>
-            ) : (
-              browse.map((p) => (
-                <ProviderListRow
-                  key={p.userId._id}
-                  id={p.userId._id}
-                  name={p.userId.name}
-                  email={p.userId.email}
-                  isVerified={p.userId.isVerified}
-                  profile={{
-                    bio: p.bio,
-                    skills: p.skills,
-                    yearsExperience: p.yearsExperience,
-                    hourlyRate: p.hourlyRate,
-                    avgRating: p.avgRating,
-                    completedJobCount: p.completedJobCount,
-                    availabilityStatus: p.availabilityStatus,
-                    isLocalProCertified: p.isLocalProCertified,
-                  }}
-                  onFavoriteToggle={() => toggleFavoriteFromDiscover(p)}
-                  onPostJob={(id, name) => setDirectJobTarget({ id, name })}
-                  isFavorite={p.isFavorite}
-                  isToggling={togglingId === p.userId._id}
-                />
-              ))
             )}
+          </div>
+
+          {/* Desktop layout: sidebar + list */}
+          <div className="flex gap-5 items-start">
+            {/* Filter sidebar — desktop only */}
+            <aside className="hidden md:block w-60 flex-shrink-0 sticky top-4 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+              <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-slate-100 bg-slate-50">
+                <div className="flex items-center gap-2">
+                  <SlidersHorizontal className="h-3.5 w-3.5 text-slate-500" />
+                  <span className="text-xs font-semibold text-slate-700">Filters</span>
+                </div>
+                {(search || availability) && (
+                  <button
+                    onClick={() => { setSearch(""); setAvailability(""); }}
+                    className="text-[11px] text-primary hover:underline font-medium"
+                  >
+                    Reset
+                  </button>
+                )}
+              </div>
+              <div className="p-4 space-y-5">
+                <div>
+                  <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide block mb-1.5">Search</label>
+                  <div className="relative">
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                    <input
+                      className="input w-full pl-8 h-8 text-sm"
+                      placeholder="Name, skill, or bio…"
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && fetchProviders()}
+                    />
+                    {search && (
+                      <button
+                        onClick={() => setSearch("")}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide block mb-1.5">Availability</label>
+                  <div className="flex flex-col gap-1">
+                    {[
+                      { value: "",          label: "All providers", icon: <Users className="h-3.5 w-3.5" /> },
+                      { value: "available", label: "Available now",  icon: <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> },
+                      { value: "busy",      label: "Busy",           icon: <Clock className="h-3.5 w-3.5 text-amber-500" /> },
+                    ].map((opt) => (
+                      <button
+                        key={opt.value}
+                        onClick={() => setAvailability(opt.value)}
+                        className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors text-left ${
+                          availability === opt.value
+                            ? "bg-primary/8 text-primary border border-primary/20"
+                            : "text-slate-600 hover:bg-slate-50 border border-transparent"
+                        }`}
+                      >
+                        <span className="flex-shrink-0 text-current opacity-70">{opt.icon}</span>
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="pt-1 border-t border-slate-100">
+                  <Button size="sm" onClick={fetchProviders} className="w-full h-8 text-xs">
+                    <Search className="h-3.5 w-3.5 mr-1.5" />
+                    Search
+                  </Button>
+                </div>
+              </div>
+            </aside>
+
+            {/* Provider list */}
+            <div className="flex-1 min-w-0 space-y-2">
+              <div className="flex items-center justify-between h-6 mb-1">
+                {!loadingBrowse && browse.length > 0 && (
+                  <p className="text-xs text-slate-400">
+                    {browse.length} provider{browse.length !== 1 ? "s" : ""}
+                    {(search || availability) ? " matching filters" : " found"}
+                  </p>
+                )}
+                {!loadingBrowse && browse.length > 0 && (
+                  <p className="text-[11px] text-slate-300">
+                    {availability === "available" ? "Sorted by availability" : "Sorted by rating"}
+                  </p>
+                )}
+              </div>
+
+              {loadingBrowse ? (
+                <div className="space-y-2">
+                  {[...Array(5)].map((_, i) => (
+                    <div key={i} className="bg-white rounded-xl border border-slate-200 p-4 flex items-center gap-4 animate-pulse">
+                      <div className="w-11 h-11 rounded-full bg-slate-100 flex-shrink-0" />
+                      <div className="flex-1 space-y-2">
+                        <div className="h-3.5 w-40 rounded bg-slate-100" />
+                        <div className="h-3 w-56 rounded bg-slate-100" />
+                        <div className="h-3 w-32 rounded bg-slate-100" />
+                      </div>
+                      <div className="flex gap-2">
+                        <div className="h-8 w-8 rounded-lg bg-slate-100" />
+                        <div className="h-8 w-20 rounded-lg bg-slate-100" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : browse.length === 0 ? (
+                <div className="bg-white rounded-xl border border-slate-200 p-12 flex flex-col items-center gap-3 text-center">
+                  <div className="flex items-center justify-center h-12 w-12 rounded-full bg-slate-100">
+                    <UserX className="h-6 w-6 text-slate-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-slate-700">No providers found</p>
+                    <p className="text-xs text-slate-400 mt-1">Try adjusting your search or availability filter.</p>
+                  </div>
+                </div>
+              ) : (
+                browse.map((p) => (
+                  <ProviderListRow
+                    key={p.userId._id}
+                    id={p.userId._id}
+                    name={p.userId.name}
+                    email={p.userId.email}
+                    isVerified={p.userId.isVerified}
+                    profile={{
+                      bio: p.bio,
+                      skills: p.skills,
+                      yearsExperience: p.yearsExperience,
+                      hourlyRate: p.hourlyRate,
+                      avgRating: p.avgRating,
+                      completedJobCount: p.completedJobCount,
+                      availabilityStatus: p.availabilityStatus,
+                      isLocalProCertified: p.isLocalProCertified,
+                    }}
+                    onFavoriteToggle={() => toggleFavoriteFromDiscover(p)}
+                    onPostJob={(id, name) => setDirectJobTarget({ id, name })}
+                    isFavorite={p.isFavorite}
+                    isToggling={togglingId === p.userId._id}
+                  />
+                ))
+              )}
+            </div>
           </div>
         </div>
       )}

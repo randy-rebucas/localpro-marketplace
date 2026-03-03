@@ -1,10 +1,10 @@
 import { FileText, CalendarDays, Camera, ClipboardCheck } from "lucide-react";
 
 const STEPS = [
-  { label: "Job Details",       icon: FileText,         color: "blue" },
-  { label: "Budget & Schedule", icon: CalendarDays,     color: "violet" },
-  { label: "Photos",            icon: Camera,           color: "emerald" },
-  { label: "Review & Submit",   icon: ClipboardCheck,   color: "primary" },
+  { label: "Details",  shortLabel: "Details",  icon: FileText,      color: "blue"    },
+  { label: "Budget",   shortLabel: "Budget",   icon: CalendarDays,  color: "violet"  },
+  { label: "Photos",   shortLabel: "Photos",   icon: Camera,        color: "emerald" },
+  { label: "Review",   shortLabel: "Review",   icon: ClipboardCheck,color: "primary" },
 ] as const;
 
 interface StepIndicatorProps {
@@ -14,7 +14,7 @@ interface StepIndicatorProps {
 export function StepIndicator({ current }: StepIndicatorProps) {
   return (
     <div className="flex items-start gap-1">
-      {STEPS.map(({ label, icon: Icon }, i) => {
+      {STEPS.map(({ shortLabel, icon: Icon }, i) => {
         const done    = i < current;
         const active  = i === current;
         return (
@@ -52,7 +52,7 @@ export function StepIndicator({ current }: StepIndicatorProps) {
                               : "text-slate-400",
               ].join(" ")}
             >
-              {label}
+              {shortLabel}
             </span>
           </div>
         );
