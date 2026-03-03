@@ -119,6 +119,7 @@ export class DisputeService {
 
       if (input.escrowAction === "release") {
         job.escrowStatus = "released";
+        job.status = "completed";
         await transactionRepository.setPending(job._id!.toString(), "completed");
       } else {
         job.escrowStatus = "refunded";

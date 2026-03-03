@@ -3,7 +3,7 @@
 import { memo, useState, useCallback, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
-import { CheckCheck, Check, FileText, Download, X, ZoomIn } from "lucide-react";
+import { CheckCheck, Check, FileText, Download, X, ZoomIn, ZoomOut, ExternalLink } from "lucide-react";
 
 interface MessageBubbleProps {
   body: string;
@@ -62,31 +62,87 @@ function SenderAvatar({ name, visible }: { name: string; visible: boolean }) {
 }
 
 function ImageLightbox({ src, alt, onClose }: { src: string; alt: string; onClose: () => void }) {
+  const [zoomed, setZoomed] = useState(false);
+
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+      if (e.key === "z" || e.key === "Z") setZoomed((z) => !z);
+    };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [onClose]);
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm"
-      onClick={onClose}
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/85 backdrop-blur-sm"
+      onClick={() => { if (zoomed) setZoomed(false); else onClose(); }}
     >
-      <button
-        onClick={onClose}
-        className="absolute top-4 right-4 text-white bg-black/50 hover:bg-black/70 rounded-full p-2 transition-colors"
-        aria-label="Close"
-      >
-        <X className="h-5 w-5" />
-      </button>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={src}
-        alt={alt}
-        className="max-w-[90vw] max-h-[90vh] object-contain rounded-xl shadow-2xl"
+      {/* Toolbar */}
+      <div
+        className="absolute top-4 right-4 flex items-center gap-2"
         onClick={(e) => e.stopPropagation()}
-      />
+      >
+        <a
+          href={src}
+          download
+          className="flex items-center justify-center text-white bg-black/50 hover:bg-black/70 rounded-full p-2 transition-colors"
+          aria-label="Download"
+        >
+          <Download className="h-4 w-4" />
+        </a>
+        <a
+          href={src}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center justify-center text-white bg-black/50 hover:bg-black/70 rounded-full p-2 transition-colors"
+          aria-label="Open in new tab"
+        >
+          <ExternalLink className="h-4 w-4" />
+        </a>
+        <button
+          onClick={() => setZoomed((z) => !z)}
+          className="flex items-center justify-center text-white bg-black/50 hover:bg-black/70 rounded-full p-2 transition-colors"
+          aria-label={zoomed ? "Zoom out" : "Zoom in"}
+        >
+          {zoomed ? <ZoomOut className="h-4 w-4" /> : <ZoomIn className="h-4 w-4" />}
+        </button>
+        <button
+          onClick={onClose}
+          className="flex items-center justify-center text-white bg-black/50 hover:bg-black/70 rounded-full p-2 transition-colors"
+          aria-label="Close"
+        >
+          <X className="h-5 w-5" />
+        </button>
+      </div>
+
+      {/* Image */}
+      <div
+        className={cn(
+          "transition-all duration-200",
+          zoomed ? "overflow-auto cursor-zoom-out" : "cursor-zoom-in"
+        )}
+        onClick={(e) => { e.stopPropagation(); setZoomed((z) => !z); }}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={src}
+          alt={alt}
+          className={cn(
+            "rounded-xl shadow-2xl object-contain transition-all duration-200",
+            zoomed
+              ? "max-w-none max-h-none w-auto h-auto"
+              : "max-w-[90vw] max-h-[90vh]"
+          )}
+        />
+      </div>
+
+      {/* Hint */}
+      {!zoomed && (
+        <p className="absolute bottom-5 left-1/2 -translate-x-1/2 text-white/40 text-xs select-none">
+          Click to zoom · Esc to close
+        </p>
+      )}
     </div>,
     document.body
   );

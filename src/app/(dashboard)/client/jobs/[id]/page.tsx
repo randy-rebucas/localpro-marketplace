@@ -4,28 +4,28 @@ import { redirect, notFound } from "next/navigation";
 import { jobRepository } from "@/repositories/job.repository";
 import { quoteRepository } from "@/repositories/quote.repository";
 import { paymentRepository } from "@/repositories/payment.repository";
-import { disputeRepository } from "@/repositories/dispute.repository";
-import { providerProfileRepository } from "@/repositories/providerProfile.repository";
-import { JobStatusBadge, EscrowBadge, QuoteStatusBadge } from "@/components/ui/Badge";
-import { formatCurrency, formatDate, formatRelativeTime } from "@/lib/utils";
-import { calculateCommission } from "@/lib/commission";
-import Image from "next/image";
+import { JobStatusBadge, EscrowBadge } from "@/components/ui/Badge";
+import { formatDate } from "@/lib/utils";
 import dynamic from "next/dynamic";
 import RealtimeRefresher from "@/components/shared/RealtimeRefresher";
-import ProviderInfoButton from "@/components/shared/ProviderInfoButtonLazy";
 import BundleSuggestion from "@/components/shared/BundleSuggestion";
 import Link from "next/link";
 import { Suspense } from "react";
-import { AlertCircle, ShieldCheck, Star, CheckCircle2, Clock, Search, ChevronLeft, Banknote, CalendarDays, User2 } from "lucide-react";
+import { AlertCircle, ChevronLeft } from "lucide-react";
+import { StatusBanner }        from "./_components/StatusBanner";
+import { JobDetailCard }       from "./_components/JobDetailCard";
+import { JobProgressBar, JobServiceChecklist } from "./_components/JobTimeline";
+import { DisputeSection }      from "./_components/DisputeSection";
+import { QuotesSection }       from "./_components/QuotesSection";
+import { SectionSkeleton }     from "./_components/skeletons";
 
-// Client-side interactive components — deferred, no ssr:false needed
-const JobActionButtons   = dynamic(() => import("./JobActionButtons"));
-const QuoteAcceptButton  = dynamic(() => import("./QuoteAcceptButton"));
-const RaiseDisputeButton = dynamic(() => import("@/components/shared/RaiseDisputeButton"));
+// Client-side interactive components — deferred
+const JobActionButtons     = dynamic(() => import("./_components/JobActionButtons"));
+const RaiseDisputeButton   = dynamic(() => import("@/components/shared/RaiseDisputeButton"));
 const PartialReleaseButton = dynamic(() => import("@/components/payment/PartialReleaseButton"));
-const MilestonePanel = dynamic(() => import("@/components/payment/MilestonePanel").then((m) => ({ default: m.MilestonePanel })));
-const StickyJobCTA = dynamic(() => import("./StickyJobCTA"));
-const JobPhotoGallery = dynamic(() => import("@/components/shared/JobPhotoGallery"));
+const MilestonePanel       = dynamic(() => import("@/components/payment/MilestonePanel").then((m) => ({ default: m.MilestonePanel })));
+const StickyJobCTA         = dynamic(() => import("./_components/StickyJobCTA"));
+const JobPhotoGallery      = dynamic(() => import("@/components/shared/JobPhotoGallery"));
 
 export async function generateMetadata({
   params,
@@ -37,351 +37,6 @@ export async function generateMetadata({
   const { id } = await params;
   const job = await jobRepository.findByClientAndId(user.userId, id);
   return { title: job ? `${job.title} — Job Details` : "Job Details" };
-}
-
-// ─── Skeletons ────────────────────────────────────────────────────────────────
-
-function SectionSkeleton({ rows = 3 }: { rows?: number }) {
-  return (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-card animate-pulse">
-      <div className="px-6 py-4 border-b border-slate-100">
-        <div className="h-4 w-28 rounded bg-slate-100" />
-      </div>
-      <div className="divide-y divide-slate-100">
-        {[...Array(rows)].map((_, i) => (
-          <div key={i} className="px-6 py-4 flex gap-3">
-            <div className="h-9 w-9 rounded-full bg-slate-100 flex-shrink-0" />
-            <div className="flex-1 space-y-2">
-              <div className="h-3.5 w-40 rounded bg-slate-100" />
-              <div className="h-3 w-24 rounded bg-slate-100" />
-              <div className="h-3 w-56 rounded bg-slate-100" />
-            </div>
-            <div className="flex flex-col items-end gap-1.5">
-              <div className="h-5 w-20 rounded bg-slate-100" />
-              <div className="h-4 w-14 rounded-full bg-slate-100" />
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// ─── Dispute section ──────────────────────────────────────────────────────────
-
-async function DisputeSection({ jobId }: { jobId: string }) {
-  const disputeDoc = await disputeRepository.findLatestByJobId(jobId);
-  if (!disputeDoc) return null;
-
-  const steps = [
-    { label: "Submitted",    description: `Raised ${formatRelativeTime(disputeDoc.createdAt)}`,      icon: <CheckCircle2 className="h-4 w-4" /> },
-    { label: "Under Review", description: "An admin is investigating the issue",                     icon: <Search className="h-4 w-4" /> },
-    { label: "Resolved",     description: disputeDoc.resolutionNotes ?? "Dispute has been resolved", icon: <ShieldCheck className="h-4 w-4" /> },
-  ];
-  const activeIdx = disputeDoc.status === "open" ? 0 : disputeDoc.status === "investigating" ? 1 : 2;
-
-  return (
-    <div className="bg-white rounded-xl border border-red-200 shadow-card p-6">
-      <h3 className="font-semibold text-slate-900 mb-4 flex items-center gap-2">
-        <AlertCircle className="h-4 w-4 text-red-500" />
-        Dispute Status
-      </h3>
-      <div className="flex flex-col gap-0">
-        {steps.map((s, i) => {
-          const done    = i < activeIdx;
-          const current = i === activeIdx;
-          return (
-            <div key={s.label} className="flex gap-3">
-              <div className="flex flex-col items-center">
-                <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ${
-                  done ? "bg-green-500 text-white" : current ? "bg-primary text-white" : "bg-slate-200 text-slate-400"
-                }`}>
-                  {s.icon}
-                </div>
-                {i < steps.length - 1 && (
-                  <div className={`w-0.5 flex-1 min-h-[24px] ${done ? "bg-green-400" : "bg-slate-200"}`} />
-                )}
-              </div>
-              <div className="pb-5">
-                <p className={`text-sm font-medium ${current ? "text-primary" : done ? "text-slate-900" : "text-slate-400"}`}>
-                  {s.label}
-                </p>
-                {(done || current) && (
-                  <p className="text-xs text-slate-500 mt-0.5">{s.description}</p>
-                )}
-                {current && disputeDoc.status === "open" && (
-                  <p className="text-xs text-slate-500 mt-0.5">Your dispute is queued for admin review.</p>
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-      <p className="text-xs text-slate-400 mt-1 border-t border-slate-100 pt-3">
-        Reason: <span className="text-slate-600">{disputeDoc.reason}</span>
-      </p>
-    </div>
-  );
-}
-
-// ─── Quotes section ───────────────────────────────────────────────────────────
-
-async function QuotesSection({ jobId, jobStatus }: { jobId: string; jobStatus: string }) {
-  const quotes = await quoteRepository.findForJobWithProvider(jobId);
-
-  const providerIds = quotes.map((q) => q.providerId._id.toString());
-  const profiles = providerIds.length > 0
-    ? await providerProfileRepository.findStatsByUserIds(providerIds)
-    : [];
-  const profileMap = new Map(profiles.map((p) => [p.userId.toString(), p]));
-
-  // Accepted quote summary (assigned / in_progress / completed / disputed)
-  if (["assigned", "in_progress", "completed", "disputed"].includes(jobStatus)) {
-    const accepted = quotes.find((q) => q.status === "accepted");
-    if (!accepted) return null;
-    const profile = profileMap.get(accepted.providerId._id.toString());
-    return (
-      <div className="bg-white rounded-xl border border-slate-200 shadow-card">
-        <div className="px-6 py-4 border-b border-slate-100">
-          <h3 className="font-semibold text-slate-900">Accepted Quote</h3>
-        </div>
-        <div className="px-6 py-4 flex items-start justify-between gap-4">
-          <div className="flex gap-3 flex-1">
-            <div className="flex-shrink-0 w-9 h-9 rounded-full overflow-hidden border border-slate-200">
-              {accepted.providerId.avatar ? (
-                <Image
-                  src={accepted.providerId.avatar}
-                  alt={accepted.providerId.name}
-                  width={36}
-                  height={36}
-                  className="h-9 w-9 object-cover"
-                />
-              ) : (
-                <div className="h-full w-full bg-primary/10 flex items-center justify-center">
-                  <span className="text-xs font-bold text-primary">
-                    {accepted.providerId.name.split(" ").filter(Boolean).map((w) => w[0]).join("").slice(0, 2).toUpperCase()}
-                  </span>
-                </div>
-              )}
-            </div>
-            <div className="flex-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <p className="font-medium text-slate-900 text-sm">{accepted.providerId.name}</p>
-                {accepted.providerId.isVerified && (
-                  <span className="badge bg-blue-100 text-blue-700 text-xs">Verified</span>
-                )}
-                {profile?.isLocalProCertified && (
-                  <span className="inline-flex items-center gap-1 text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-medium border border-indigo-200">
-                    🎖️ LocalPro Certified
-                  </span>
-                )}
-              </div>
-              {profile && (profile.avgRating ?? 0) > 0 && (
-                <span className="flex items-center gap-1 text-xs text-slate-500 mt-0.5">
-                  <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-                  {(profile.avgRating ?? 0).toFixed(1)} · {profile.completedJobCount} jobs
-                </span>
-              )}
-              <p className="text-xs text-slate-500 mt-0.5">Timeline: {accepted.timeline}</p>
-              <ProviderInfoButton
-                providerId={accepted.providerId._id.toString()}
-                providerName={accepted.providerId.name}
-              />
-              <p className="text-sm text-slate-700 mt-2">{accepted.message}</p>
-            </div>
-          </div>
-          <div className="flex flex-col items-end gap-1 flex-shrink-0">
-            <p className="text-lg font-bold text-slate-900">{formatCurrency(accepted.proposedAmount)}</p>
-            <QuoteStatusBadge status={accepted.status} />
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // All quotes (open jobs only)
-  if (jobStatus !== "open") return null;
-
-  return (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-card">
-      <div className="px-6 py-4 border-b border-slate-100">
-        <h3 className="font-semibold text-slate-900">Quotes ({quotes.length})</h3>
-      </div>
-      {quotes.length === 0 ? (
-        <div className="px-6 py-10 flex flex-col items-center gap-2 text-center">
-          <Clock className="h-7 w-7 text-slate-200" />
-          <p className="text-sm font-medium text-slate-500">No quotes yet</p>
-          <p className="text-xs text-slate-400">Providers will submit quotes once the job is approved.</p>
-        </div>
-      ) : (
-        <ul className="divide-y divide-slate-100">
-          {quotes.map((q) => {
-            const providerInitials = q.providerId.name
-              .split(" ").filter(Boolean).map((w) => w[0]).join("").slice(0, 2).toUpperCase();
-            const profile  = profileMap.get(q.providerId._id.toString());
-            const avgRating = profile?.avgRating ?? 0;
-            const jobsDone  = profile?.completedJobCount ?? 0;
-            const isTopRated = avgRating >= 4.5 && jobsDone >= 3;
-
-            return (
-              <li key={q._id.toString()} className="px-6 py-4">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex gap-3 flex-1">
-                    <div className="flex-shrink-0 w-9 h-9 rounded-full overflow-hidden border border-slate-200">
-                      {q.providerId.avatar ? (
-                        <Image
-                          src={q.providerId.avatar}
-                          alt={q.providerId.name}
-                          width={36}
-                          height={36}
-                          className="h-9 w-9 object-cover"
-                        />
-                      ) : (
-                        <div className="h-full w-full bg-primary/10 flex items-center justify-center">
-                          <span className="text-xs font-bold text-primary">{providerInitials}</span>
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <p className="font-medium text-slate-900 text-sm">{q.providerId.name}</p>
-                        {q.providerId.isVerified && (
-                          <span className="badge bg-blue-100 text-blue-700 text-xs">Verified</span>
-                        )}
-                        {profile?.isLocalProCertified && (
-                          <span className="inline-flex items-center gap-1 text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-medium border border-indigo-200">
-                            🎖️ LocalPro Certified
-                          </span>
-                        )}
-                        {isTopRated && (
-                          <span className="badge bg-amber-100 text-amber-700 text-xs">⭐ Top Rated</span>
-                        )}
-                      </div>
-                      {(avgRating > 0 || jobsDone > 0) && (
-                        <div className="flex items-center gap-3 mt-0.5">
-                          {avgRating > 0 && (
-                            <span className="flex items-center gap-1 text-xs text-slate-500">
-                              <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-                              {avgRating.toFixed(1)}
-                            </span>
-                          )}
-                          {jobsDone > 0 && (
-                            <span className="text-xs text-slate-400">{jobsDone} job{jobsDone !== 1 ? "s" : ""} completed</span>
-                          )}
-                        </div>
-                      )}
-                      <p className="text-xs text-slate-500 mt-0.5">Timeline: {q.timeline}</p>
-                      <ProviderInfoButton
-                        providerId={q.providerId._id.toString()}
-                        providerName={q.providerId.name}
-                      />
-                      <p className="text-sm text-slate-700 mt-2">{q.message}</p>
-                    </div>
-                  </div>
-                  <div className="flex flex-col items-end gap-2 flex-shrink-0">
-                    <div className="text-right">
-                      <p className="text-lg font-bold text-slate-900">{formatCurrency(q.proposedAmount)}</p>
-                      <p className="text-[11px] text-slate-400 mt-0.5">
-                        Provider gets{" "}
-                        <span className="font-medium text-slate-600">
-                          {formatCurrency(calculateCommission(q.proposedAmount).netAmount)}
-                        </span>
-                      </p>
-                    </div>
-                    <QuoteStatusBadge status={q.status} />
-                    {q.status === "pending" && (
-                      <QuoteAcceptButton
-                        quoteId={q._id.toString()}
-                        proposedAmount={q.proposedAmount}
-                        providerName={q.providerId.name}
-                      />
-                    )}
-                  </div>
-                </div>
-              </li>
-            );
-          })}
-        </ul>
-      )}
-    </div>
-  );
-}
-
-// ─── Job Progress Bar ───────────────────────────────────────────────────────
-
-const STATUS_STEPS = [
-  { key: "assigned",   label: "Provider Assigned",  pct: 20 },
-  { key: "funded",     label: "Escrow Funded",       pct: 40 },
-  { key: "in_progress",label: "Work in Progress",   pct: 65 },
-  { key: "completed",  label: "Work Completed",      pct: 100 },
-] as const;
-
-function JobProgressBar({ status, escrowStatus }: { status: string; escrowStatus: string }) {
-  if (![ "assigned", "in_progress", "completed"].includes(status)) return null;
-
-  // Derive effective progress pct
-  let pct = 20;
-  if (status === "in_progress") pct = 65;
-  else if (status === "completed")  pct = 100;
-  else if (escrowStatus === "funded") pct = 40;
-
-  const label = STATUS_STEPS.find((s) => s.pct === pct)?.label ?? "In Progress";
-
-  return (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-card p-5">
-      <div className="flex items-center justify-between mb-2">
-        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Job Progress</p>
-        <span className="text-xs font-bold text-primary">{pct}%</span>
-      </div>
-      <div className="h-2.5 w-full rounded-full bg-slate-100 overflow-hidden">
-        <div
-          className="h-full rounded-full bg-primary transition-all duration-500"
-          style={{ width: `${pct}%` }}
-        />
-      </div>
-      <p className="text-xs text-slate-500 mt-2">{label}</p>
-    </div>
-  );
-}
-
-// ─── Service Checklist ────────────────────────────────────────────────────────
-
-function JobServiceChecklist({ status, escrowStatus }: { status: string; escrowStatus: string }) {
-  if (![ "assigned", "in_progress", "completed", "disputed"].includes(status)) return null;
-
-  const steps = [
-    { label: "Provider assigned",  done: true },
-    { label: "Escrow funded",       done: escrowStatus !== "not_funded" },
-    { label: "Work started",        done: ["in_progress", "completed", "disputed"].includes(status) },
-    { label: "Work completed",      done: ["completed", "disputed"].includes(status) },
-    { label: "Payment released",    done: escrowStatus === "released" },
-  ];
-
-  return (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-card p-5">
-      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-3">Service Checklist</p>
-      <ul className="space-y-2">
-        {steps.map((s) => (
-          <li key={s.label} className="flex items-center gap-2.5">
-            <span
-              className={`flex h-4.5 w-4.5 items-center justify-center rounded-full flex-shrink-0 ${
-                s.done ? "text-emerald-600" : "text-slate-300"
-              }`}
-            >
-              {s.done ? (
-                <CheckCircle2 className="h-4 w-4" />
-              ) : (
-                <Clock className="h-4 w-4" />
-              )}
-            </span>
-            <span className={`text-sm ${s.done ? "text-slate-800 font-medium" : "text-slate-400"}`}>
-              {s.label}
-            </span>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -424,7 +79,7 @@ export default async function JobDetailPage({
     <div className="max-w-3xl mx-auto space-y-6 pb-24">
       <RealtimeRefresher entity="job" id={id} />
 
-      {/* Back navigation — streams immediately */}
+      {/* Back navigation */}
       <Link
         href="/client/jobs"
         className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800 transition-colors"
@@ -442,80 +97,71 @@ export default async function JobDetailPage({
         </div>
       )}
 
-      {/* Header + status row */}
+      {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <h2 className="text-2xl font-bold text-slate-900 truncate">{job.title}</h2>
-          <p className="text-slate-400 text-sm mt-1">{job.category} · {job.location} · Posted {formatDate(job.createdAt)}</p>
+          <h1 className="text-2xl font-bold text-slate-900 leading-snug">{job.title}</h1>
+          <p className="text-slate-400 text-sm mt-1">
+            Posted {formatDate(job.createdAt)}
+          </p>
         </div>
         <div className="flex flex-wrap justify-end gap-2 flex-shrink-0 pt-1">
           <JobStatusBadge status={job.status} />
           <EscrowBadge status={job.escrowStatus} />
           {job.riskScore > 0 && (
-            <span className={`badge ${job.riskScore > 60 ? "bg-red-100 text-red-700" : job.riskScore > 30 ? "bg-amber-100 text-amber-700" : "bg-green-100 text-green-700"}`}>
+            <span
+              className={`badge ${
+                job.riskScore > 60
+                  ? "bg-red-100 text-red-700"
+                  : job.riskScore > 30
+                  ? "bg-amber-100 text-amber-700"
+                  : "bg-green-100 text-green-700"
+              }`}
+            >
               Risk: {job.riskScore}
             </span>
           )}
         </div>
       </div>
 
-      {/* Job details card */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-card p-6 space-y-4">
-        <div>
-          <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Description</p>
-          <p className="text-slate-800 whitespace-pre-wrap text-sm">{job.description}</p>
-        </div>
-        <div className="grid grid-cols-2 gap-4 text-sm">
-          <div>
-            <p className="flex items-center gap-1 text-xs text-slate-400 mb-0.5">
-              <Banknote className="h-3 w-3" />Budget
-            </p>
-            <p className="font-semibold text-slate-900">{formatCurrency(job.budget)}</p>
-          </div>
-          <div>
-            <p className="flex items-center gap-1 text-xs text-slate-400 mb-0.5">
-              <CalendarDays className="h-3 w-3" />Schedule
-            </p>
-            <p className="font-semibold text-slate-900">{formatDate(job.scheduleDate)}</p>
-          </div>
-          {job.providerId && (
-            <div className="col-span-2">
-              <p className="flex items-center gap-1 text-xs text-slate-400 mb-0.5">
-                <User2 className="h-3 w-3" />Assigned Provider
-              </p>
-              <p className="font-semibold text-slate-900">{job.providerId.name}</p>
-              <div className="mt-1">
-                <ProviderInfoButton
-                  providerId={String(job.providerId._id)}
-                  providerName={job.providerId.name}
-                />
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
+      {/* Contextual status banner */}
+      <StatusBanner status={job.status} escrowStatus={job.escrowStatus} />
 
-      {/* Progress bar — visible for active/completed jobs */}
+      {/* Job details */}
+      <JobDetailCard job={JSON.parse(JSON.stringify(job))} />
+
+      {/* Progress bar — visible for active / completed jobs */}
       <JobProgressBar status={job.status} escrowStatus={job.escrowStatus} />
 
-      {/* Service checklist — milestone steps visible to client */}
+      {/* Service checklist */}
       <JobServiceChecklist status={job.status} escrowStatus={job.escrowStatus} />
 
-      {/* Before & after photos — visible when provider has uploaded them */}
-      {((job.beforePhoto && job.beforePhoto.length > 0) || (job.afterPhoto && job.afterPhoto.length > 0)) && (
-        <JobPhotoGallery beforePhoto={job.beforePhoto ?? []} afterPhoto={job.afterPhoto ?? []} />
+      {/* Before & after photos */}
+      {((job.beforePhoto && job.beforePhoto.length > 0) ||
+        (job.afterPhoto && job.afterPhoto.length > 0)) && (
+        <JobPhotoGallery
+          beforePhoto={job.beforePhoto ?? []}
+          afterPhoto={job.afterPhoto ?? []}
+        />
       )}
 
       {/* Action buttons */}
       <div className="flex flex-wrap items-center gap-4">
-        <JobActionButtons jobId={job._id.toString()} status={job.status} escrowStatus={job.escrowStatus} budget={job.budget} acceptedAmount={acceptedQuoteAmount} fundedAmount={fundedAmount} />
+        <JobActionButtons
+          jobId={job._id.toString()}
+          status={job.status}
+          escrowStatus={job.escrowStatus}
+          budget={job.budget}
+          acceptedAmount={acceptedQuoteAmount}
+          fundedAmount={fundedAmount}
+        />
         {job.status === "completed" && job.escrowStatus === "funded" && (
           <PartialReleaseButton jobId={job._id.toString()} budget={job.budget} />
         )}
         <RaiseDisputeButton jobId={job._id.toString()} status={job.status} />
       </div>
 
-      {/* Milestone payments — visible whenever escrow is funded */}
+      {/* Milestone payments */}
       {job.escrowStatus === "funded" && (
         <MilestonePanel
           jobId={job._id.toString()}
@@ -523,8 +169,10 @@ export default async function JobDetailPage({
           jobStatus={job.status}
           escrowStatus={job.escrowStatus}
           isClient
-          initialMilestones={(job.milestones ?? []).map(m => ({ ...m, _id: m._id?.toString?.() ?? m._id }))
-          }
+          initialMilestones={(job.milestones ?? []).map((m) => ({
+            ...m,
+            _id: m._id?.toString?.() ?? m._id,
+          }))}
         />
       )}
 
@@ -538,12 +186,12 @@ export default async function JobDetailPage({
         <QuotesSection jobId={id} jobStatus={job.status} />
       </Suspense>
 
-      {/* Bundle suggestions — show for active/completed jobs */}
-      {(["assigned", "in_progress", "completed"] as const).includes(job.status as never) && (
-        <BundleSuggestion category={job.category} />
-      )}
+      {/* Bundle suggestions */}
+      {(["assigned", "in_progress", "completed"] as const).includes(
+        job.status as never
+      ) && <BundleSuggestion category={job.category} />}
 
-      {/* Sticky CTA bar — primary action always visible at bottom */}
+      {/* Sticky CTA bar */}
       <StickyJobCTA
         jobId={job._id.toString()}
         status={job.status}
