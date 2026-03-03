@@ -1,19 +1,14 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { getCurrentUser } from "@/lib/auth";
-import { jobRepository } from "@/repositories/job.repository";
-import type { IJob } from "@/types";
-import CalendarView from "./CalendarView";
+import { CalendarContent } from "./_components/CalendarContent";
+import { CalendarSkeleton } from "./_components/skeletons";
 
 export const metadata: Metadata = { title: "Calendar" };
 
 export default async function ProviderCalendarPage() {
   const user = await getCurrentUser();
   if (!user) return null;
-
-  const jobs = await jobRepository.findCalendarJobsForProvider(user.userId);
-
-  // Serialize dates for the CalendarView Client Component
-  const serializedJobs = JSON.parse(JSON.stringify(jobs)) as IJob[];
 
   return (
     <div className="space-y-6">
@@ -23,7 +18,9 @@ export default async function ProviderCalendarPage() {
           <p className="text-slate-500 text-sm mt-1">View and manage your scheduled job assignments.</p>
         </div>
       </div>
-      <CalendarView jobs={serializedJobs} />
+      <Suspense fallback={<CalendarSkeleton />}>
+        <CalendarContent userId={user.userId} />
+      </Suspense>
     </div>
   );
 }
