@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import { Toaster } from "react-hot-toast";
 import Script from "next/script";
 import { GoogleTagManagerScript, GoogleTagManagerNoscript } from "@/components/analytics/GoogleTagManager";
+import PwaSetup from "@/components/pwa/PwaSetup";
 import "./globals.css";
 
 const inter = Inter({
@@ -67,6 +68,7 @@ export const metadata: Metadata = {
   icons: {
     icon: "/favicon.ico",
     shortcut: "/favicon-16x16.png",
+    apple: "/icons/apple-touch-icon.png",
   },
   verification: {
     google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION,
@@ -98,6 +100,7 @@ export default function RootLayout({
           />
         )}
         {children}
+        <PwaSetup />
         <Toaster
           position="top-right"
           toastOptions={{

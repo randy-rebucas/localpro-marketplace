@@ -1,5 +1,5 @@
 import User from "@/models/User";
-import type { UserDocument } from "@/models/User";
+import type { UserDocument, PushSubscriptionRecord } from "@/models/User";
 import { BaseRepository } from "./base.repository";
 
 export class UserRepository extends BaseRepository<UserDocument> {
@@ -238,6 +238,39 @@ export class UserRepository extends BaseRepository<UserDocument> {
       .limit(5)
       .select("_id name email role")
       .lean() as never;
+  }
+
+  // ─── PWA Push Subscriptions ───────────────────────────────────────────────
+
+  /** Upsert a push subscription for a user (keyed on endpoint). */
+  async upsertPushSubscription(
+    userId: string,
+    sub: PushSubscriptionRecord
+  ): Promise<void> {
+    await this.connect();
+    // Remove any existing entry with the same endpoint, then add the new one
+    await User.findByIdAndUpdate(userId, {
+      $pull: { pushSubscriptions: { endpoint: sub.endpoint } },
+    });
+    await User.findByIdAndUpdate(userId, {
+      $push: { pushSubscriptions: sub },
+    });
+  }
+
+  /** Remove a push subscription by endpoint. */
+  async removePushSubscription(userId: string, endpoint: string): Promise<void> {
+    await this.connect();
+    await User.findByIdAndUpdate(userId, {
+      $pull: { pushSubscriptions: { endpoint } },
+    });
+  }
+
+  /** Fetch all push subscriptions for a user. */
+  async getPushSubscriptions(userId: string): Promise<PushSubscriptionRecord[]> {
+    await this.connect();
+    const doc = await User.findById(userId).select("+pushSubscriptions").lean();
+    return (doc as unknown as { pushSubscriptions?: PushSubscriptionRecord[] })
+      ?.pushSubscriptions ?? [];
   }
 
   // ─── Duplicate Detection ──────────────────────────────────────────────────

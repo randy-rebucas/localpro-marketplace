@@ -53,7 +53,10 @@
       "Bash(grep -n \"export const\\\\|export async function\\\\|export function\" /c/Users/corew/localpro-marketplace/src/lib/*.ts)",
       "Bash(xargs grep -l \"crypto\\\\|fs\\\\|path\")",
       "Bash(find \"c:\\\\Users\\\\corew\\\\localpro-marketplace\\\\src\\\\app\\\\\\(dashboard\\)\\\\provider\" -type f -name \"*.tsx\" -o -name \"*.ts\")",
-      "Bash(find \"c:\\\\Users\\\\corew\\\\localpro-marketplace\\\\src\\\\app\\\\\\(dashboard\\)\\\\provider\" -type d)"
+      "Bash(find \"c:\\\\Users\\\\corew\\\\localpro-marketplace\\\\src\\\\app\\\\\\(dashboard\\)\\\\provider\" -type d)",
+      "Bash(pnpm add web-push)",
+      "Bash(pnpm add -D @types/web-push)",
+      "Bash(ls c:/Users/corew/localpro-marketplace/src/app/manifest*)"
     ]
   }
 }

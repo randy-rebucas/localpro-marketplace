@@ -2,6 +2,12 @@ import mongoose, { Schema, Document, Model } from "mongoose";
 import bcrypt from "bcryptjs";
 import type { IUser } from "@/types";
 
+export interface PushSubscriptionRecord {
+  endpoint: string;
+  expirationTime?: number | null;
+  keys: { p256dh: string; auth: string };
+}
+
 export interface UserDocument extends Omit<IUser, "_id">, Document {
   comparePassword(candidate: string): Promise<boolean>;
   password?: string;
@@ -13,6 +19,7 @@ export interface UserDocument extends Omit<IUser, "_id">, Document {
   otpExpiry?: Date;
   isDeleted?: boolean;
   deletedAt?: Date | null;
+  pushSubscriptions?: PushSubscriptionRecord[];
 }
 
 const AddressSubSchema = new Schema(
@@ -98,6 +105,23 @@ const UserSchema = new Schema<UserDocument>(
     verificationTokenExpiry: { type: Date, select: false },
     resetPasswordToken: { type: String, select: false },
     resetPasswordTokenExpiry: { type: Date, select: false },
+    // PWA web-push subscriptions (one per device/browser)
+    pushSubscriptions: {
+      type: [
+        {
+          endpoint: { type: String, required: true },
+          expirationTime: { type: Number, default: null },
+          keys: {
+            p256dh: { type: String, required: true },
+            auth:   { type: String, required: true },
+            _id: false,
+          },
+          _id: false,
+        },
+      ],
+      default: [],
+      select: false,
+    },
     // Soft delete
     isDeleted: { type: Boolean, default: false, index: true },
     deletedAt: { type: Date, default: null },

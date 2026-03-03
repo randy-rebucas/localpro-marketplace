@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Background circle -->
+  <circle cx="256" cy="256" r="256" fill="#2563eb"/>
+  <!-- White "LP" monogram -->
+  <!-- L -->
+  <rect x="100" y="140" width="44" height="232" rx="10" fill="white"/>
+  <rect x="100" y="332" width="120" height="40" rx="10" fill="white"/>
+  <!-- P -->
+  <rect x="268" y="140" width="44" height="232" rx="10" fill="white"/>
+  <path d="M268 140 h80 a72 72 0 0 1 0 144 H268 Z" fill="#2563eb"/>
+  <rect x="268" y="140" width="44" height="144" rx="0" fill="white"/>
+  <path d="M312 140 h36 a72 72 0 0 1 0 144 h-36 Z" fill="white"/>
+</svg>
