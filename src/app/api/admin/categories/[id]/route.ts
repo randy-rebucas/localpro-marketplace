@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withHandler } from "@/lib/utils";
 import { requireUser, requireCapability } from "@/lib/auth";
-import { connectDB } from "@/lib/db";
-import Category from "@/models/Category";
+import { categoryRepository } from "@/repositories";
+import { NotFoundError } from "@/lib/errors";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -10,7 +10,6 @@ type Ctx = { params: Promise<{ id: string }> };
 export const PATCH = withHandler(async (req: NextRequest, ctx: Ctx) => {
   const user = await requireUser();
   requireCapability(user, "manage_categories");
-  await connectDB();
 
   const { id } = await ctx.params;
   const updates = await req.json();
@@ -25,10 +24,8 @@ export const PATCH = withHandler(async (req: NextRequest, ctx: Ctx) => {
     updates.name = updates.name.trim();
   }
 
-  const category = await Category.findByIdAndUpdate(id, updates, { new: true, runValidators: true }).lean();
-  if (!category) {
-    return NextResponse.json({ error: "Category not found" }, { status: 404 });
-  }
+  const category = await categoryRepository.updateById(id, updates);
+  if (!category) throw new NotFoundError("Category");
 
   return NextResponse.json(category);
 });
@@ -37,13 +34,10 @@ export const PATCH = withHandler(async (req: NextRequest, ctx: Ctx) => {
 export const DELETE = withHandler(async (_req: NextRequest, ctx: Ctx) => {
   const user = await requireUser();
   requireCapability(user, "manage_categories");
-  await connectDB();
 
   const { id } = await ctx.params;
-  const category = await Category.findByIdAndDelete(id).lean();
-  if (!category) {
-    return NextResponse.json({ error: "Category not found" }, { status: 404 });
-  }
+  const category = await categoryRepository.deleteById(id);
+  if (!category) throw new NotFoundError("Category");
 
   return NextResponse.json({ success: true });
 });

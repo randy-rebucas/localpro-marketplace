@@ -183,7 +183,7 @@ export class JobRepository extends BaseRepository<JobDocument> {
     status: JobStatus;
     escrowStatus: EscrowStatus;
     scheduleDate: Date;
-    milestones?: Array<{ amount: number; status: string }>;
+    milestones?: import("@/types").IMilestone[];
     providerId?: { _id: { toString(): string }; name: string; email: string; isVerified: boolean } | null;
   }>> {
     await this.connect();
@@ -442,6 +442,48 @@ export class JobRepository extends BaseRepository<JobDocument> {
       },
     ]);
     return results;
+  }
+
+  // ─── Search ────────────────────────────────────────────────────────────────
+
+  /** Jobs matching the regex across title/category/location — for admin global search. */
+  async searchForAdmin(
+    regex: RegExp
+  ): Promise<Array<{ _id: unknown; title: string; status: string; category: string }>> {
+    await this.connect();
+    return Job.find({ $or: [{ title: regex }, { category: regex }, { location: regex }] })
+      .limit(5)
+      .select("_id title status category")
+      .lean() as never;
+  }
+
+  /** Jobs belonging to a specific client matching the regex — for client global search. */
+  async searchForClient(
+    clientId: string,
+    regex: RegExp
+  ): Promise<Array<{ _id: unknown; title: string; status: string; category: string }>> {
+    await this.connect();
+    return Job.find({
+      clientId,
+      $or: [{ title: regex }, { category: regex }],
+    })
+      .limit(5)
+      .select("_id title status category")
+      .lean() as never;
+  }
+
+  /** Open jobs matching the regex across title/category/location — for provider global search. */
+  async searchForProvider(
+    regex: RegExp
+  ): Promise<Array<{ _id: unknown; title: string; category: string; location: string }>> {
+    await this.connect();
+    return Job.find({
+      status: "open",
+      $or: [{ title: regex }, { category: regex }, { location: regex }],
+    })
+      .limit(5)
+      .select("_id title category location")
+      .lean() as never;
   }
 
   /**

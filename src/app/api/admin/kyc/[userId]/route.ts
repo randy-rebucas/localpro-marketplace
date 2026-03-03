@@ -2,10 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireUser, requireCapability } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
-import { connectDB } from "@/lib/db";
 import { ValidationError, NotFoundError } from "@/lib/errors";
-import User from "@/models/User";
-import { notificationRepository } from "@/repositories";
+import { userRepository, notificationRepository } from "@/repositories";
 import { pushNotification } from "@/lib/events";
 
 const ReviewSchema = z.object({
@@ -28,8 +26,7 @@ export const PATCH = withHandler(async (
 
   const { action, reason } = parsed.data;
 
-  await connectDB();
-  const target = await User.findById(userId);
+  const target = await userRepository.getDocById(userId);
   if (!target) throw new NotFoundError("User");
 
   if (action === "approve") {

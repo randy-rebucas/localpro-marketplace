@@ -2,12 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireUser, requireRole } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
-import { connectDB } from "@/lib/db";
 import { ValidationError, NotFoundError, UnprocessableError } from "@/lib/errors";
-import Job from "@/models/Job";
-import Transaction from "@/models/Transaction";
+import { jobRepository, transactionRepository, activityRepository, notificationRepository } from "@/repositories";
 import { calculateCommission } from "@/lib/commission";
-import { activityRepository, notificationRepository } from "@/repositories";
 import { pushStatusUpdateMany, pushNotification } from "@/lib/events";
 import type { IJob } from "@/types";
 
@@ -31,8 +28,7 @@ export const POST = withHandler(async (
 
   const { action, reason } = parsed.data;
 
-  await connectDB();
-  const jobDoc = await Job.findById(id);
+  const jobDoc = await jobRepository.getDocById(id);
   if (!jobDoc) throw new NotFoundError("Job");
 
   const job = jobDoc as unknown as IJob & { save(): Promise<void> };
@@ -47,10 +43,10 @@ export const POST = withHandler(async (
     await jobDoc.save();
 
     // Ensure a transaction record exists (for non-PayMongo or edge cases)
-    const existingTxn = await Transaction.findOne({ jobId: id });
+    const existingTxn = await transactionRepository.findOneByJobId(id);
     if (!existingTxn && job.providerId) {
       const { commission, netAmount } = calculateCommission(job.budget);
-      await Transaction.create({
+      await transactionRepository.create({
         jobId: job._id,
         payerId: job.clientId,
         payeeId: job.providerId,
@@ -60,7 +56,10 @@ export const POST = withHandler(async (
         status: "completed",
       });
     } else if (existingTxn) {
-      await Transaction.findByIdAndUpdate(existingTxn._id, { status: "completed" });
+      await transactionRepository.updateById(
+        (existingTxn._id as { toString(): string }).toString(),
+        { status: "completed" }
+      );
     }
 
     const notifBase = { data: { jobId: id }, type: "escrow_released" as const };
@@ -87,10 +86,7 @@ export const POST = withHandler(async (
     job.status = "refunded";
     await jobDoc.save();
 
-    await Transaction.updateMany(
-      { jobId: id },
-      { status: "refunded" }
-    );
+    await transactionRepository.updateManyByJobId(id, { $set: { status: "refunded" } });
 
     const clientNote = await notificationRepository.create({
       userId: job.clientId.toString(),

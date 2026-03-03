@@ -115,6 +115,16 @@ export class TransactionRepository extends BaseRepository<TransactionDocument> {
     return map;
   }
 
+  /** Returns the first transaction record for the given job (if any). */
+  async findOneByJobId(jobId: string): Promise<TransactionDocument | null> {
+    return this.findOne({ jobId } as never);
+  }
+
+  /** Updates all transactions for a job with the given update. */
+  async updateManyByJobId(jobId: string, update: Record<string, unknown>): Promise<void> {
+    await this.updateMany({ jobId } as never, update as never);
+  }
+
   /** Per-job funded amounts for all pending transactions where the provider is the payee.
    *  Returns a jobId → { gross, net } map. */
   async findFundedByPayee(payeeId: string): Promise<Map<string, { gross: number; net: number }>> {

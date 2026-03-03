@@ -3,8 +3,7 @@ import OpenAI from "openai";
 import { requireUser, requireRole } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { ValidationError } from "@/lib/errors";
-import { connectDB } from "@/lib/db";
-import ProviderProfile from "@/models/ProviderProfile";
+import { providerProfileRepository } from "@/repositories";
 import { getProviderTier } from "@/lib/tier";
 
 function getClient(): OpenAI | null {
@@ -20,13 +19,15 @@ export const POST = withHandler(async (req: NextRequest) => {
   const { jobTitle, jobDescription, jobBudget, category } = await req.json();
 
   // Tier gate: Gold+ only
-  await connectDB();
-  const qProfile = await ProviderProfile.findOne({ userId: user.userId })
-    .select("completedJobCount avgRating completionRate").lean();
+  const qProfile = await providerProfileRepository.findByUserId(user.userId) as {
+    completedJobCount?: number;
+    avgRating?: number;
+    completionRate?: number;
+  } | null;
   const quoteTier = getProviderTier(
-    (qProfile as { completedJobCount?: number } | null)?.completedJobCount ?? 0,
-    (qProfile as { avgRating?: number } | null)?.avgRating ?? 0,
-    (qProfile as { completionRate?: number } | null)?.completionRate ?? 0
+    qProfile?.completedJobCount ?? 0,
+    qProfile?.avgRating ?? 0,
+    qProfile?.completionRate ?? 0
   );
   if (!quoteTier.hasAIAccess) {
     return NextResponse.json({

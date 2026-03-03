@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireUser, requireCapability } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { NotFoundError } from "@/lib/errors";
-import User from "@/models/User";
-import { connectDB } from "@/lib/db";
+import { userRepository } from "@/repositories";
 
 /**
  * GET /api/admin/users/[id]/duplicates
@@ -11,7 +10,7 @@ import { connectDB } from "@/lib/db";
  * Returns users that might be duplicates of [id] based on:
  *  - Identical phone number (exact)
  *  - Prefix of the normalised email local-part (first 5 chars)
- *  - Name similarity (≥ first 4 words match)
+ *  - Name similarity (first word of name, case-insensitive)
  *
  * Excludes the user themselves and soft-deleted accounts.
  */
@@ -23,9 +22,8 @@ export const GET = withHandler(async (
   requireCapability(admin, "manage_users");
 
   const { id } = await params;
-  await connectDB();
 
-  const user = await User.findById(id).select("name email phone").lean() as {
+  const user = await userRepository.findById(id) as {
     _id: { toString(): string };
     name: string;
     email: string;
@@ -56,14 +54,7 @@ export const GET = withHandler(async (
     return NextResponse.json({ duplicates: [] });
   }
 
-  const duplicates = await User.find({
-    _id: { $ne: id },
-    isDeleted: { $ne: true },
-    $or: orClauses,
-  })
-    .select("name email role isVerified createdAt phone")
-    .limit(10)
-    .lean();
+  const duplicates = await userRepository.findPotentialDuplicates(id, orClauses);
 
   return NextResponse.json({
     duplicates: duplicates.map((u) => ({

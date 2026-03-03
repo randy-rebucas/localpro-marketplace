@@ -132,6 +132,7 @@ UserSchema.methods.comparePassword = async function (
 
 // Indexes
 UserSchema.index({ role: 1 });
+UserSchema.index({ approvalStatus: 1 });
 
 const User: Model<UserDocument> =
   mongoose.models.User ?? mongoose.model<UserDocument>("User", UserSchema);

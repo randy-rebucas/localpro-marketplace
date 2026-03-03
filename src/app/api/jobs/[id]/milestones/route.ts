@@ -1,9 +1,8 @@
 import { type NextRequest } from "next/server";
 import { z } from "zod";
-import { connectDB } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { jobRepository, paymentRepository } from "@/repositories";
-import { NotFoundError, ForbiddenError, UnprocessableError } from "@/lib/errors";
+import { NotFoundError, ForbiddenError, UnprocessableError, ValidationError } from "@/lib/errors";
 import type { IJob, IMilestone } from "@/types";
 
 const AddMilestoneSchema = z.object({
@@ -20,7 +19,6 @@ type Ctx = { params: Promise<{ id: string }> };
  */
 export async function GET(_req: NextRequest, { params }: Ctx) {
   const { id } = await params;
-  await connectDB();
   const user = await requireUser();
 
   const jobDoc = await jobRepository.getDocById(id);
@@ -46,13 +44,12 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
  */
 export async function POST(req: NextRequest, { params }: Ctx) {
   const { id } = await params;
-  await connectDB();
   const user = await requireUser();
 
   const body = await req.json();
   const parsed = AddMilestoneSchema.safeParse(body);
   if (!parsed.success) {
-    return Response.json({ error: parsed.error.flatten() }, { status: 422 });
+    throw new ValidationError(parsed.error.errors[0]?.message ?? "Invalid input");
   }
 
   const jobDoc = await jobRepository.getDocById(id);

@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireUser, requireCapability } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
-import { userRepository } from "@/repositories/user.repository";
-import ProviderProfile from "@/models/ProviderProfile";
+import { userRepository, providerProfileRepository } from "@/repositories";
 
 const RowSchema = z.object({
   name:     z.string().min(2, "Name must be at least 2 chars").max(100),
@@ -107,7 +106,7 @@ export const POST = withHandler(async (req: NextRequest) => {
 
       // Create provider profile if profile fields provided
       if (role === "provider" && (skills || workExperiences || yearsOfExperience != null)) {
-        await ProviderProfile.create({
+        await providerProfileRepository.create({
           userId:          newUser._id,
           skills:          skills          ? skills.split("|").map((s) => s.trim()).filter(Boolean)          : [],
           workExperiences: workExperiences ? workExperiences.split("|").map((s) => s.trim()).filter(Boolean) : [],

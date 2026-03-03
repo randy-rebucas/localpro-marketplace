@@ -1,19 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { withHandler } from "@/lib/utils";
 import { requireUser, requireCapability } from "@/lib/auth";
-import { connectDB } from "@/lib/db";
-import Category from "@/models/Category";
+import { categoryRepository } from "@/repositories";
+import { ValidationError, ConflictError } from "@/lib/errors";
+
+const CreateCategorySchema = z.object({
+  name:        z.string().min(1, "Name is required").max(60),
+  icon:        z.string().optional(),
+  description: z.string().max(300).optional(),
+  order:       z.number().int().optional(),
+});
 
 // GET /api/admin/categories — all categories (active + inactive)
 export const GET = withHandler(async () => {
   const user = await requireUser();
   requireCapability(user, "manage_categories");
-  await connectDB();
 
-  const categories = await Category.find()
-    .sort({ order: 1, name: 1 })
-    .lean();
-
+  const categories = await categoryRepository.findAll();
   return NextResponse.json(categories);
 });
 
@@ -21,25 +25,23 @@ export const GET = withHandler(async () => {
 export const POST = withHandler(async (req: NextRequest) => {
   const user = await requireUser();
   requireCapability(user, "manage_categories");
-  await connectDB();
 
-  const { name, icon, description, order } = await req.json();
-  if (!name?.trim()) {
-    return NextResponse.json({ error: "Name is required" }, { status: 400 });
-  }
+  const body = await req.json();
+  const parsed = CreateCategorySchema.safeParse(body);
+  if (!parsed.success) throw new ValidationError(parsed.error.errors[0].message);
 
-  const slug = name.trim().toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+  const { name, icon, description, order } = parsed.data;
+  const trimmedName = name.trim();
+  const slug = trimmedName.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
 
-  const existing = await Category.findOne({ $or: [{ name: name.trim() }, { slug }] });
-  if (existing) {
-    return NextResponse.json({ error: "Category already exists" }, { status: 409 });
-  }
+  const existing = await categoryRepository.findByNameOrSlug(trimmedName, slug);
+  if (existing) throw new ConflictError("Category already exists");
 
-  const maxOrder = await Category.findOne().sort({ order: -1 }).select("order").lean();
-  const nextOrder = typeof order === "number" ? order : ((maxOrder as any)?.order ?? -1) + 1;
+  const maxOrder = await categoryRepository.findMaxOrder();
+  const nextOrder = typeof order === "number" ? order : maxOrder + 1;
 
-  const category = await Category.create({
-    name: name.trim(),
+  const category = await categoryRepository.create({
+    name: trimmedName,
     slug,
     icon: icon?.trim() || "🔧",
     description: description?.trim() || "",

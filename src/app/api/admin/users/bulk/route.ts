@@ -3,8 +3,7 @@ import { z } from "zod";
 import { requireUser, requireCapability } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { ValidationError, ForbiddenError } from "@/lib/errors";
-import User from "@/models/User";
-import { connectDB } from "@/lib/db";
+import { userRepository } from "@/repositories";
 
 const BulkSchema = z.object({
   ids: z.array(z.string().min(1)).min(1).max(200),
@@ -20,9 +19,6 @@ export const POST = withHandler(async (req: NextRequest) => {
   if (!parsed.success) throw new ValidationError(parsed.error.errors[0].message);
 
   const { ids, action } = parsed.data;
-
-  // Safety: admins cannot bulk-delete other admins (only non-admin accounts)
-  await connectDB();
 
   let update: Record<string, unknown>;
   let additionalFilter: Record<string, unknown> = {};
@@ -45,10 +41,10 @@ export const POST = withHandler(async (req: NextRequest) => {
       break;
   }
 
-  const result = await User.updateMany(
-    { _id: { $in: ids }, ...additionalFilter },
-    { $set: update }
+  await userRepository.updateMany(
+    { _id: { $in: ids }, ...additionalFilter } as never,
+    { $set: update } as never
   );
 
-  return NextResponse.json({ ok: true, affected: result.modifiedCount });
+  return NextResponse.json({ ok: true });
 });

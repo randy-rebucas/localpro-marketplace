@@ -101,6 +101,16 @@ export class ProviderProfileRepository extends BaseRepository<ProviderProfileDoc
     );
     return result.modifiedCount ?? 0;
   }
+
+  /** Batch fetch export fields (skills, workExperiences, yearsExperience) for the user CSV export. */
+  async findForExport(
+    userIds: string[]
+  ): Promise<Array<{ userId: { toString(): string }; skills: string[]; workExperiences: string[]; yearsExperience: number }>> {
+    await this.connect();
+    return ProviderProfile.find({ userId: { $in: userIds } })
+      .select("userId skills workExperiences yearsExperience")
+      .lean() as never;
+  }
 }
 
 export const providerProfileRepository = new ProviderProfileRepository();

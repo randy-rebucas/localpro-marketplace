@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireUser, requireCapability } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
-import { userRepository } from "@/repositories/user.repository";
-import ProviderProfile from "@/models/ProviderProfile";
+import { userRepository, providerProfileRepository } from "@/repositories";
 
 /** Escape a CSV cell: wrap in quotes if it contains a comma, quote, or newline. */
 function csvCell(value: string | number | null | undefined): string {
@@ -46,13 +45,10 @@ export const GET = withHandler(async (req: NextRequest) => {
 
   const profileMap = new Map<string, { skills: string[]; workExperiences: string[]; yearsExperience: number }>();
   if (providerIds.length > 0) {
-    const profiles = await ProviderProfile.find(
-      { userId: { $in: providerIds } },
-      { userId: 1, skills: 1, workExperiences: 1, yearsExperience: 1 }
-    ).lean();
+    const profiles = await providerProfileRepository.findForExport(providerIds);
     for (const p of profiles) {
       profileMap.set(
-        (p.userId as { toString(): string }).toString(),
+        p.userId.toString(),
         {
           skills:          Array.isArray(p.skills)          ? p.skills          : [],
           workExperiences: Array.isArray(p.workExperiences) ? p.workExperiences : [],

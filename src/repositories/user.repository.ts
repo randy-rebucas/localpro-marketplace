@@ -217,6 +217,49 @@ export class UserRepository extends BaseRepository<UserDocument> {
   ): Promise<UserDocument | null> {
     return this.updateById(id, updates);
   }
+
+  // ─── Role & Capability Management ────────────────────────────────────────
+
+  async updateRoleAndCapabilities(
+    id: string,
+    updates: { role?: string; capabilities?: string[] }
+  ): Promise<UserDocument | null> {
+    return this.updateById(id, { $set: updates });
+  }
+
+  // ─── Search ───────────────────────────────────────────────────────────────
+
+  /** Full-text search across name and email for admin global search. */
+  async searchForAdmin(
+    regex: RegExp
+  ): Promise<Array<{ _id: unknown; name: string; email: string; role: string }>> {
+    await this.connect();
+    return User.find({ $or: [{ name: regex }, { email: regex }] })
+      .limit(5)
+      .select("_id name email role")
+      .lean() as never;
+  }
+
+  // ─── Duplicate Detection ──────────────────────────────────────────────────
+
+  /**
+   * Finds potential duplicate users based on phone, email local prefix, or first name word.
+   * Excludes soft-deleted accounts and the source user.
+   */
+  async findPotentialDuplicates(
+    excludeId: string,
+    orClauses: Record<string, unknown>[]
+  ): Promise<Array<{ _id: unknown; name: string; email: string; role: string; isVerified: boolean; createdAt: Date; phone?: string | null }>> {
+    await this.connect();
+    return User.find({
+      _id: { $ne: excludeId },
+      isDeleted: { $ne: true },
+      $or: orClauses,
+    })
+      .select("name email role isVerified createdAt phone")
+      .limit(10)
+      .lean() as never;
+  }
 }
 
 export const userRepository = new UserRepository();

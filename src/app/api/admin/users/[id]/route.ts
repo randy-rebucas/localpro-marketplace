@@ -3,9 +3,8 @@ import { z } from "zod";
 import { adminService } from "@/services";
 import { requireUser, requireCapability, requireRole, STAFF_CAPABILITIES } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
-import { ValidationError, ForbiddenError, NotFoundError } from "@/lib/errors";
-import User from "@/models/User";
-import { connectDB } from "@/lib/db";
+import { ValidationError, NotFoundError } from "@/lib/errors";
+import { userRepository } from "@/repositories";
 
 const UpdateUserSchema = z.object({
   isVerified:     z.boolean().optional(),
@@ -58,12 +57,11 @@ export const PATCH = withHandler(async (
 
   // Apply role / capability updates directly
   if (role !== undefined || capabilities !== undefined) {
-    await connectDB();
-    const roleUpdate: Record<string, unknown> = {};
+    const roleUpdate: { role?: string; capabilities?: string[] } = {};
     if (role !== undefined)         roleUpdate.role = role;
     if (capabilities !== undefined) roleUpdate.capabilities = capabilities;
 
-    const updated = await User.findByIdAndUpdate(id, { $set: roleUpdate }, { new: true }).lean();
+    const updated = await userRepository.updateRoleAndCapabilities(id, roleUpdate);
     if (!updated) throw new NotFoundError("User");
     result = updated as never;
   }

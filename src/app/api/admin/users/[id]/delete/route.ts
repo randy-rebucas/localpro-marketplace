@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireUser, requireRole } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { NotFoundError } from "@/lib/errors";
-import User from "@/models/User";
-import { connectDB } from "@/lib/db";
+import { userRepository } from "@/repositories";
 
 /**
  * DELETE /api/admin/users/[id]
@@ -24,11 +23,9 @@ export const DELETE = withHandler(async (
     return NextResponse.json({ error: "You cannot delete your own account." }, { status: 400 });
   }
 
-  await connectDB();
-  const user = await User.findByIdAndUpdate(
+  const user = await userRepository.updateById(
     id,
-    { $set: { isDeleted: true, deletedAt: new Date(), isSuspended: true } },
-    { new: true }
+    { $set: { isDeleted: true, deletedAt: new Date(), isSuspended: true } }
   );
   if (!user) throw new NotFoundError("User");
 

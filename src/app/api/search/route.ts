@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
-import { connectDB } from "@/lib/db";
-import Job from "@/models/Job";
-import User from "@/models/User";
+import { jobRepository, userRepository } from "@/repositories";
 
 export interface SearchResult {
   _id: string;
@@ -21,24 +19,17 @@ export const GET = withHandler(async (req: NextRequest) => {
     return NextResponse.json({ results: [] });
   }
 
-  await connectDB();
   const regex = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
   const results: SearchResult[] = [];
 
   // ── Admin / Staff ────────────────────────────────────────────────────────────
   if (user.role === "admin" || user.role === "staff") {
     const [jobs, users] = await Promise.all([
-      Job.find({ $or: [{ title: regex }, { category: regex }, { location: regex }] })
-        .limit(5)
-        .select("_id title status category")
-        .lean(),
-      User.find({ $or: [{ name: regex }, { email: regex }] })
-        .limit(5)
-        .select("_id name email role")
-        .lean(),
+      jobRepository.searchForAdmin(regex),
+      userRepository.searchForAdmin(regex),
     ]);
 
-    for (const j of jobs as { _id: object; title: string; status: string; category: string }[]) {
+    for (const j of jobs) {
       results.push({
         _id: String(j._id),
         label: j.title,
@@ -48,7 +39,7 @@ export const GET = withHandler(async (req: NextRequest) => {
       });
     }
 
-    for (const u of users as { _id: object; name: string; email: string; role: string }[]) {
+    for (const u of users) {
       results.push({
         _id: String(u._id),
         label: u.name,
@@ -63,15 +54,9 @@ export const GET = withHandler(async (req: NextRequest) => {
 
   // ── Client ───────────────────────────────────────────────────────────────────
   if (user.role === "client") {
-    const jobs = await Job.find({
-      clientId: user.userId,
-      $or: [{ title: regex }, { category: regex }],
-    })
-      .limit(5)
-      .select("_id title status category")
-      .lean();
+    const jobs = await jobRepository.searchForClient(user.userId, regex);
 
-    for (const j of jobs as { _id: object; title: string; status: string; category: string }[]) {
+    for (const j of jobs) {
       results.push({
         _id: String(j._id),
         label: j.title,
@@ -86,15 +71,9 @@ export const GET = withHandler(async (req: NextRequest) => {
 
   // ── Provider ─────────────────────────────────────────────────────────────────
   if (user.role === "provider") {
-    const jobs = await Job.find({
-      status: "open",
-      $or: [{ title: regex }, { category: regex }, { location: regex }],
-    })
-      .limit(5)
-      .select("_id title category location")
-      .lean();
+    const jobs = await jobRepository.searchForProvider(regex);
 
-    for (const j of jobs as { _id: object; title: string; category: string; location: string }[]) {
+    for (const j of jobs) {
       results.push({
         _id: String(j._id),
         label: j.title,

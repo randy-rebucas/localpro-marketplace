@@ -2,12 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireUser, requireCapability } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { NotFoundError } from "@/lib/errors";
-import { userRepository } from "@/repositories/user.repository";
-import { activityRepository } from "@/repositories/activity.repository";
-import { connectDB } from "@/lib/db";
-import Job from "@/models/Job";
-import Review from "@/models/Review";
-import Message from "@/models/Message";
+import { userRepository, activityRepository, jobRepository, reviewRepository, messageRepository } from "@/repositories";
 
 /**
  * GET /api/admin/users/[id]/gdpr-export
@@ -26,19 +21,11 @@ export const GET = withHandler(async (
   const user = await userRepository.findById(id);
   if (!user) throw new NotFoundError("User");
 
-  await connectDB();
-
   const [activityResult, jobs, reviews, messages] = await Promise.all([
     activityRepository.findByUser(id, { page: 1, limit: 1000 }),
-    Job.find({ $or: [{ clientId: id }, { providerId: id }] })
-      .select("title status budget createdAt")
-      .lean(),
-    Review.find({ $or: [{ reviewerId: id }, { providerId: id }] })
-      .select("rating comment createdAt")
-      .lean(),
-    Message.find({ senderId: id })
-      .select("content createdAt")
-      .lean(),
+    jobRepository.find({ $or: [{ clientId: id }, { providerId: id }] } as never),
+    reviewRepository.find({ $or: [{ reviewerId: id }, { providerId: id }] } as never),
+    messageRepository.find({ senderId: id } as never),
   ]);
 
   const exportData = {
