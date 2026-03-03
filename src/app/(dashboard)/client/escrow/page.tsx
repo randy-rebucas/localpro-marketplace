@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { jobRepository } from "@/repositories/job.repository";
 import { paymentService } from "@/services";
-import { paymentRepository, transactionRepository } from "@/repositories";
+import { paymentRepository } from "@/repositories";
 import { formatCurrency } from "@/lib/utils";
 import { CheckCircle, ShieldCheck } from "lucide-react";
 import { Suspense } from "react";
@@ -74,14 +74,27 @@ async function EscrowContent({
     }
   }
 
-  const [jobs, totalLocked] = await Promise.all([
+  const [jobs] = await Promise.all([
     jobRepository.findEscrowJobsForClient(userId),
-    transactionRepository.sumPendingByPayer(userId),
   ]);
 
   // Fetch actual paid amounts from Payment records, keyed by jobId
   const jobIds = jobs.map((j) => j._id.toString());
   const fundedAmounts = await paymentRepository.findAmountsByJobIds(jobIds);
+
+  // Compute remaining escrow accurately:
+  // For each funded job, subtract already-released milestone amounts from the
+  // funded amount. This is correct even when only some milestones are released
+  // (the DB pending transaction isn't resolved until ALL milestones are done).
+  const totalLocked = jobs
+    .filter((j) => j.escrowStatus === "funded")
+    .reduce((sum, job) => {
+      const funded = fundedAmounts.get(job._id.toString()) ?? job.budget;
+      const released = (job.milestones ?? [])
+        .filter((m) => m.status === "released")
+        .reduce((s, m) => s + m.amount, 0);
+      return sum + Math.max(0, funded - released);
+    }, 0);
 
   const needsAction = jobs.filter(
     (j) => (j.status === "assigned" && j.escrowStatus === "not_funded") || (j.status === "completed" && j.escrowStatus === "funded")

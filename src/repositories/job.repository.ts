@@ -183,6 +183,7 @@ export class JobRepository extends BaseRepository<JobDocument> {
     status: JobStatus;
     escrowStatus: EscrowStatus;
     scheduleDate: Date;
+    milestones?: Array<{ amount: number; status: string }>;
     providerId?: { _id: { toString(): string }; name: string; email: string; isVerified: boolean } | null;
   }>> {
     await this.connect();
@@ -190,7 +191,7 @@ export class JobRepository extends BaseRepository<JobDocument> {
       clientId: new Types.ObjectId(clientId),
       status: { $in: ["assigned", "in_progress", "completed", "disputed"] },
     })
-      .select("title category budget status escrowStatus providerId createdAt scheduleDate partialReleaseAmount")
+      .select("title category budget status escrowStatus providerId createdAt scheduleDate partialReleaseAmount milestones")
       .populate("providerId", "name email isVerified")
       .sort({ createdAt: -1 })
       .lean() as never;
