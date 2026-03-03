@@ -3,347 +3,211 @@
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
-import dynamic from "next/dynamic";
 import Button from "@/components/ui/Button";
-import Card, { CardHeader, CardBody, CardFooter } from "@/components/ui/Card";
-import { Sparkles, LocateFixed, ImagePlus, X, Star, Bot } from "lucide-react";
-
-const LocationAutocomplete = dynamic(
-  () => import("@/components/shared/LocationAutocomplete"),
-  {
-    ssr: false,
-    loading: () => <input className="input w-full" placeholder="Loading location search…" disabled />,
-  }
-);
-import { formatCurrency } from "@/lib/utils";
-import type { ICategory } from "@/types";
+import Card, { CardBody, CardFooter } from "@/components/ui/Card";
 import { apiFetch } from "@/lib/fetchClient";
 import PageGuide from "@/components/shared/PageGuide";
+import type { ICategory } from "@/types";
 
-interface FormData {
-  title: string;
-  category: string;
-  description: string;
-  budget: string;
-  location: string;
-  scheduleDate: string;
-  specialInstructions: string;
-}
+import type { FormData, BudgetHint } from "./_components/types";
+import { StepIndicator }  from "./_components/StepIndicator";
+import { JobDetails }     from "./_components/steps/JobDetails";
+import { BudgetSchedule } from "./_components/steps/BudgetSchedule";
+import { Photos }         from "./_components/steps/Photos";
+import { ReviewSubmit }   from "./_components/steps/ReviewSubmit";
 
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const STEP_TITLES = ["Job Details", "Budget & Schedule", "Photos", "Review & Submit"];
+const STEP_SUBTITLES = [
+  "Describe the work you need — AI can help write a description.",
+  "Set your budget and preferred date so providers can send accurate quotes.",
+  "Add photos to help providers understand the scope. (optional)",
+  "Double-check everything before sending to providers.",
+];
 const INITIAL: FormData = {
   title: "", category: "", description: "",
   budget: "", location: "", scheduleDate: "", specialInstructions: "",
 };
 
-// ─── Provider Recommendations ────────────────────────────────────────────────
-
-interface RecommendedProvider {
-  providerId: string;
-  name: string;
-  avatar?: string;
-  avgRating: number;
-  completedJobCount: number;
-  reason: string;
-}
-
-function ProviderRecommendations({ category, budget }: { category: string; budget: number }) {
-  const [providers, setProviders] = useState<RecommendedProvider[]>([]);
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (!category || !budget) return;
-    setLoading(true);
-    apiFetch(`/api/ai/recommend-providers?category=${encodeURIComponent(category)}&budget=${budget}`)
-      .then((r) => r.json())
-      .then((data: { providers?: RecommendedProvider[] }) => { if (data.providers) setProviders(data.providers); })
-      .catch(() => { /* silently hide */ })
-      .finally(() => setLoading(false));
-  }, [category, budget]);
-
-  if (!category || !budget) return null;
-
-  return (
-    <div className="space-y-2.5">
-      <div className="flex items-center gap-2">
-        <Bot className="h-4 w-4 text-violet-600 flex-shrink-0" />
-        <p className="text-sm font-semibold text-slate-700">AI-Recommended Providers</p>
-      </div>
-      {loading ? (
-        <div className="space-y-2 animate-pulse">
-          {[0, 1, 2].map((i) => (
-            <div key={i} className="h-16 rounded-xl bg-slate-100 border border-slate-200" />
-          ))}
-        </div>
-      ) : providers.length === 0 ? null : (
-        <ul className="space-y-2">
-          {providers.map((p) => (
-            <li key={p.providerId} className="flex items-start gap-3 rounded-xl border border-slate-200 bg-white px-3.5 py-3 shadow-sm">
-              <div className="flex-shrink-0 w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">
-                {p.avatar ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={p.avatar} alt={p.name} className="w-full h-full rounded-full object-cover" />
-                ) : p.name.charAt(0).toUpperCase()}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-sm font-semibold text-slate-900 truncate">{p.name}</span>
-                  <span className="flex items-center gap-0.5 text-xs text-amber-600 font-medium">
-                    <Star className="h-3 w-3 fill-amber-400 stroke-amber-400" />
-                    {p.avgRating.toFixed(1)}
-                  </span>
-                  <span className="text-xs text-slate-400">{p.completedJobCount} jobs</span>
-                </div>
-                <p className="text-xs text-slate-500 mt-0.5 leading-snug">{p.reason}</p>
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-
-const STEPS = ["Job Details", "Budget & Schedule", "Photos", "Review & Submit"];
-const STEP_SUBTITLES = [
-  "Describe the work you need — AI can help generate a description.",
-  "Set your budget and preferred date so providers can send accurate quotes.",
-  "Add photos to give providers a clearer picture of the scope. (optional)",
-  "Double-check everything looks good before sending to providers.",
-];
+// ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function PostJobPage() {
-  const router = useRouter();
+  const router       = useRouter();
   const searchParams = useSearchParams();
-  const [step, setStep] = useState(0);
-  const [form, setForm] = useState<FormData>(() => ({
-    ...INITIAL,
-    category: searchParams.get("category") ?? "",
-  }));
+
+  const [step, setStep]     = useState(0);
+  const [form, setForm]     = useState<FormData>(() => ({ ...INITIAL, category: searchParams.get("category") ?? "" }));
   const [errors, setErrors] = useState<Partial<FormData>>({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isGenerating, setIsGenerating] = useState(false);
+
+  const [isSubmitting, setIsSubmitting]             = useState(false);
+  const [isGenerating, setIsGenerating]             = useState(false);
   const [isEstimatingBudget, setIsEstimatingBudget] = useState(false);
-  const [budgetHint, setBudgetHint] = useState<{ min: number; max: number; midpoint: number; note: string } | null>(null);
-  const [isClassifying, setIsClassifying] = useState(false);
-  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
-  const [categories, setCategories] = useState<ICategory[]>([]);
-  const [isGeolocating, setIsGeolocating] = useState(false);
-  const [photoFiles, setPhotoFiles]     = useState<{ file: File; preview: string }[]>([]);
-  const [isUploadingPhotos, setIsUploadingPhotos] = useState(false);
+  const [isClassifying, setIsClassifying]           = useState(false);
+  const [isGeolocating, setIsGeolocating]           = useState(false);
+  const [isUploadingPhotos, setIsUploadingPhotos]   = useState(false);
+
+  const [budgetHint, setBudgetHint]               = useState<BudgetHint | null>(null);
+  const [coords, setCoords]                       = useState<{ lat: number; lng: number } | null>(null);
+  const [categories, setCategories]               = useState<ICategory[]>([]);
+  const [photoFiles, setPhotoFiles]               = useState<{ file: File; preview: string }[]>([]);
   const [uploadedPhotoUrls, setUploadedPhotoUrls] = useState<string[]>([]);
 
+  // ── Load categories ──────────────────────────────────────────────────────────
   useEffect(() => {
     apiFetch("/api/categories")
       .then((r) => r.json())
       .then((data: ICategory[]) => {
         setCategories(data);
-        // If a ?category= query param was provided, normalize it to the exact
-        // category name (case-insensitive) once options are available.
-        const qCategory = searchParams.get("category");
-        if (qCategory) {
-          const match = data.find(
-            (c) => c.name.toLowerCase() === qCategory.toLowerCase()
-          );
-          if (match) {
-            setForm((f) => ({ ...f, category: match.name }));
-          }
+        const q = searchParams.get("category");
+        if (q) {
+          const match = data.find((c) => c.name.toLowerCase() === q.toLowerCase());
+          if (match) setForm((f) => ({ ...f, category: match.name }));
         }
       })
-      .catch(() => { /* silently fall back to empty list */ });
+      .catch(() => {});
   }, [searchParams]);
 
+  // ── Helpers ──────────────────────────────────────────────────────────────────
+  function update(field: keyof FormData, value: string) {
+    setForm((f) => ({ ...f, [field]: value }));
+    setErrors((e) => ({ ...e, [field]: "" }));
+  }
+
+  // ── AI actions ───────────────────────────────────────────────────────────────
+  async function generateDescription() {
+    if (!form.title || form.title.trim().length < 3) { toast.error("Enter a job title first."); return; }
+    setIsGenerating(true);
+    try {
+      const res  = await apiFetch("/api/ai/generate-description", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: form.title, category: form.category }),
+      });
+      const data = await res.json();
+      if (!res.ok) { toast.error(data.error ?? "AI generation failed"); return; }
+      update("description", data.description);
+    } catch { toast.error("Could not reach AI service."); }
+    finally   { setIsGenerating(false); }
+  }
+
+  async function estimateBudget() {
+    if (!form.title || form.title.trim().length < 3) { toast.error("Enter a job title first."); return; }
+    setIsEstimatingBudget(true);
+    setBudgetHint(null);
+    try {
+      const res  = await apiFetch("/api/ai/estimate-budget", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: form.title, category: form.category, description: form.description }),
+      });
+      const data = await res.json();
+      if (!res.ok) { toast.error(data.error ?? "Budget estimation failed"); return; }
+      setBudgetHint(data);
+    } catch { toast.error("Could not reach AI service."); }
+    finally   { setIsEstimatingBudget(false); }
+  }
+
+  async function classifyCategory() {
+    if (!form.title || form.title.trim().length < 3) { toast.error("Enter a job title first."); return; }
+    if (categories.length === 0) return;
+    setIsClassifying(true);
+    try {
+      const res  = await apiFetch("/api/ai/classify-category", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: form.title, description: form.description, availableCategories: categories.map((c) => c.name) }),
+      });
+      const data = await res.json();
+      if (!res.ok) { toast.error(data.error ?? "Could not detect category"); return; }
+      update("category", data.category);
+      toast.success(`Category set to "${data.category}"`);
+    } catch { toast.error("Could not reach AI service."); }
+    finally   { setIsClassifying(false); }
+  }
+
+  // ── Geolocation ──────────────────────────────────────────────────────────────
   async function detectLocation() {
-    if (!("geolocation" in navigator)) {
-      toast.error("Geolocation is not supported by your browser");
-      return;
-    }
+    if (!("geolocation" in navigator)) { toast.error("Geolocation not supported by your browser."); return; }
     setIsGeolocating(true);
     try {
-      const position = await new Promise<GeolocationPosition>((resolve, reject) =>
-        navigator.geolocation.getCurrentPosition(resolve, reject, {
-          enableHighAccuracy: true,
-          timeout: 15000,
-          maximumAge: 0,
-        })
+      const pos = await new Promise<GeolocationPosition>((res, rej) =>
+        navigator.geolocation.getCurrentPosition(res, rej, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 })
       );
-      const { latitude: lat, longitude: lng, accuracy } = position.coords;
+      const { latitude: lat, longitude: lng, accuracy } = pos.coords;
       setCoords({ lat, lng });
-      const isPrecise = accuracy <= 300;
-
       let resolved = "";
-
-      if (isPrecise) {
+      if (accuracy <= 300) {
         if (typeof window !== "undefined" && window.google?.maps) {
-          const geocoder = new window.google.maps.Geocoder();
-          const { results } = await geocoder.geocode({ location: { lat, lng } });
-          if (results && results.length > 0) {
-            const PREFERRED = [
-              "street_address", "premise", "subpremise",
-              "route", "neighborhood", "sublocality_level_1",
-              "sublocality", "locality",
-            ];
+          const { results } = await new window.google.maps.Geocoder().geocode({ location: { lat, lng } });
+          if (results?.length) {
+            const PREFERRED = ["street_address","premise","subpremise","route","neighborhood","sublocality_level_1","sublocality","locality"];
             let best = results[0];
-            for (const type of PREFERRED) {
-              const match = results.find((r) => r.types.includes(type));
-              if (match) { best = match; break; }
-            }
+            for (const t of PREFERRED) { const m = results.find((r) => r.types.includes(t)); if (m) { best = m; break; } }
             resolved = best.formatted_address;
           }
         }
         if (!resolved) {
           try {
-            const r = await fetch(
-              `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=jsonv2&addressdetails=1&zoom=18`,
-              { headers: { "Accept-Language": "en", "User-Agent": "LocalPro/1.0" } }
-            );
+            const r = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=jsonv2&addressdetails=1&zoom=18`, { headers: { "Accept-Language": "en", "User-Agent": "LocalPro/1.0" } });
             if (r.ok) resolved = (await r.json()).display_name ?? "";
           } catch { /* ignore */ }
         }
         update("location", resolved || `${lat.toFixed(6)}, ${lng.toFixed(6)}`);
         toast.success("Location detected!");
       } else {
-        // Coarse desktop/IP fix — use IP geolocation for a correct city name
         try {
           const r = await fetch("https://ipapi.co/json/");
-          if (r.ok) {
-            const d = await r.json();
-            const parts = [d.city, d.region, d.country_name].filter(Boolean);
-            resolved = parts.join(", ");
-          }
+          if (r.ok) { const d = await r.json(); resolved = [d.city, d.region, d.country_name].filter(Boolean).join(", "); }
         } catch { /* ignore */ }
         update("location", resolved || `${lat.toFixed(4)}, ${lng.toFixed(4)}`);
-        toast("Approximate area detected — please refine your exact address.", {
-          icon: "⚠️",
-          duration: 5000,
-        });
+        toast("Approximate area detected — please refine your exact address.", { icon: "⚠️", duration: 5000 });
       }
     } catch (e: unknown) {
       const err = e as { code?: number };
       if (err.code === 1) toast.error("Location access denied. Enable it in your browser settings.");
-      else toast.error("Could not detect your location. Try typing it manually.");
-    } finally {
-      setIsGeolocating(false);
-    }
+      else toast.error("Could not detect your location.");
+    } finally { setIsGeolocating(false); }
   }
 
-  async function generateDescription() {
-    if (!form.title || form.title.trim().length < 3) {
-      toast.error("Enter a job title first so AI knows what to write.");
-      return;
-    }
-    setIsGenerating(true);
-    try {
-      const res = await apiFetch("/api/ai/generate-description", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: form.title, category: form.category }),
-      });
-      const data = await res.json();
-      if (!res.ok) { toast.error(data.error ?? "AI generation failed"); return; }
-      update("description", data.description);
-    } catch {
-      toast.error("Could not reach AI service.");
-    } finally {
-      setIsGenerating(false);
-    }
+  // ── Photo handling ────────────────────────────────────────────────────────────
+  function handleAddFiles(files: FileList | null) {
+    if (!files) return;
+    const next = Array.from(files).filter((f) => f.type.startsWith("image/")).slice(0, 5 - photoFiles.length);
+    setPhotoFiles((prev) => [...prev, ...next.map((file) => ({ file, preview: URL.createObjectURL(file) }))].slice(0, 5));
   }
 
-  async function estimateBudget() {
-    if (!form.title || form.title.trim().length < 3) {
-      toast.error("Enter a job title first.");
-      return;
-    }
-    setIsEstimatingBudget(true);
-    setBudgetHint(null);
-    try {
-      const res = await apiFetch("/api/ai/estimate-budget", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: form.title, category: form.category, description: form.description }),
-      });
-      const data = await res.json();
-      if (!res.ok) { toast.error(data.error ?? "Budget estimation failed"); return; }
-      setBudgetHint(data);
-    } catch {
-      toast.error("Could not reach AI service.");
-    } finally {
-      setIsEstimatingBudget(false);
-    }
+  function removePhoto(idx: number) {
+    setPhotoFiles((prev) => { URL.revokeObjectURL(prev[idx].preview); return prev.filter((_, i) => i !== idx); });
+    setUploadedPhotoUrls([]);
   }
 
-  async function classifyCategory() {
-    if (!form.title || form.title.trim().length < 3) {
-      toast.error("Enter a job title first.");
-      return;
-    }
-    if (categories.length === 0) return;
-    setIsClassifying(true);
-    try {
-      const res = await apiFetch("/api/ai/classify-category", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: form.title,
-          description: form.description,
-          availableCategories: categories.map((c) => c.name),
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) { toast.error(data.error ?? "Could not detect category"); return; }
-      update("category", data.category);
-      toast.success(`Category set to \"${data.category}\"`);
-    } catch {
-      toast.error("Could not reach AI service.");
-    } finally {
-      setIsClassifying(false);
-    }
-  }
-
-  function update(field: keyof FormData, value: string) {
-    setForm((f) => ({ ...f, [field]: value }));
-    setErrors((e) => ({ ...e, [field]: "" }));
-  }
-
+  // ── Navigation ────────────────────────────────────────────────────────────────
   function validateStep0() {
-    const errs: Partial<FormData> = {};
-    if (!form.title || form.title.length < 5) errs.title = "Title must be at least 5 characters";
-    if (!form.category) errs.category = "Please select a category";
-    if (!form.description || form.description.length < 20) errs.description = "Description must be at least 20 characters";
-    return errs;
+    const e: Partial<FormData> = {};
+    if (!form.title || form.title.length < 5)              e.title       = "Title must be at least 5 characters";
+    if (!form.category)                                    e.category    = "Please select a category";
+    if (!form.description || form.description.length < 20) e.description = "Description must be at least 20 characters";
+    return e;
   }
 
   function validateStep1() {
-    const errs: Partial<FormData> = {};
-    if (!form.budget || isNaN(Number(form.budget)) || Number(form.budget) < 1) {
-      errs.budget = "Please enter a valid budget";
-    }
-    if (!form.location) errs.location = "Location is required";
-    if (!form.scheduleDate) errs.scheduleDate = "Schedule date is required";
-    return errs;
+    const e: Partial<FormData> = {};
+    if (!form.budget || isNaN(Number(form.budget)) || Number(form.budget) < 1) e.budget       = "Please enter a valid budget";
+    if (!form.location)                                                          e.location     = "Location is required";
+    if (!form.scheduleDate)                                                      e.scheduleDate = "Schedule date is required";
+    return e;
   }
 
   function nextStep() {
     if (step === 0) {
       const errs = validateStep0();
-      if (Object.keys(errs).length > 0) { setErrors(errs); return; }
-      setErrors({});
-      setStep(1);
-      return;
+      if (Object.keys(errs).length) { setErrors(errs); return; }
     }
     if (step === 1) {
       const errs = validateStep1();
-      if (Object.keys(errs).length > 0) { setErrors(errs); return; }
-      setErrors({});
-      setStep(2);
-      return;
+      if (Object.keys(errs).length) { setErrors(errs); return; }
     }
-    if (step === 2) {
-      // Upload photos then advance to review
-      void uploadPhotosAndAdvance();
-      return;
-    }
+    if (step === 2) { void uploadPhotosAndAdvance(); return; }
+    setErrors({});
+    setStep((s) => s + 1);
   }
 
   async function uploadPhotosAndAdvance() {
@@ -361,369 +225,114 @@ export default function PostJobPage() {
       }
       setUploadedPhotoUrls(urls);
       setStep(3);
-    } catch {
-      toast.error("Photo upload failed. Remove images or try again.");
-    } finally {
-      setIsUploadingPhotos(false);
-    }
+    } catch { toast.error("Photo upload failed. Remove images or try again."); }
+    finally   { setIsUploadingPhotos(false); }
   }
 
-  function handlePhotoFiles(files: FileList | null) {
-    if (!files) return;
-    const next = Array.from(files).filter((f) => f.type.startsWith("image/")).slice(0, 5 - photoFiles.length);
-    setPhotoFiles((prev) => [...prev, ...next.map((file) => ({ file, preview: URL.createObjectURL(file) }))].slice(0, 5));
-  }
-
-  function removePhoto(idx: number) {
-    setPhotoFiles((prev) => { URL.revokeObjectURL(prev[idx].preview); return prev.filter((_, i) => i !== idx); });
-    setUploadedPhotoUrls([]);
-  }
-
+  // ── Submit ────────────────────────────────────────────────────────────────────
   async function handleSubmit() {
     setIsSubmitting(true);
     try {
       const res = await apiFetch("/api/jobs", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+        method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...form,
           budget: Number(form.budget),
           scheduleDate: new Date(form.scheduleDate).toISOString(),
           ...(uploadedPhotoUrls.length > 0 ? { beforePhoto: uploadedPhotoUrls } : {}),
-          ...(coords && {
-            coordinates: {
-              type: "Point" as const,
-              coordinates: [coords.lng, coords.lat] as [number, number],
-            },
-          }),
+          ...(coords ? { coordinates: { type: "Point" as const, coordinates: [coords.lng, coords.lat] as [number, number] } } : {}),
         }),
       });
       const data = await res.json();
       if (!res.ok) { toast.error(data.error ?? "Failed to post job"); return; }
       toast.success("Job posted! It will be reviewed by our team.");
       router.push("/client/jobs");
-    } catch {
-      toast.error("Something went wrong. Please try again.");
-    } finally {
-      setIsSubmitting(false);
-    }
+    } catch { toast.error("Something went wrong. Please try again."); }
+    finally   { setIsSubmitting(false); }
   }
 
+  // ── Render ────────────────────────────────────────────────────────────────────
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <PageGuide
         pageKey="client-post-job"
         title="How to post a job"
         steps={[
-          { icon: "🔧", title: "Service details", description: "Choose a service category, describe what you need done, and enter your location." },
-          { icon: "💰", title: "Budget & schedule", description: "Set your budget and preferred date. Providers will use this to send you accurate quotes." },
-          { icon: "📸", title: "Upload photos", description: "Add photos to help providers better understand the scope of work (optional but recommended)." },
-          { icon: "🚀", title: "Submit & wait", description: "Once submitted, eligible providers in your area will be notified and start sending quotes." },
+          { icon: "🔧", title: "Service details",  description: "Choose a category, describe what you need done, and enter your location." },
+          { icon: "💰", title: "Budget & schedule", description: "Set your budget and preferred date. Providers use this to send accurate quotes." },
+          { icon: "📸", title: "Upload photos",     description: "Add photos to help providers understand the scope of work (optional but recommended)." },
+          { icon: "🚀", title: "Submit & wait",     description: "Eligible providers in your area will be notified and start sending quotes." },
         ]}
       />
-      <div className="flex items-start justify-between gap-4">
+
+      {/* Page header */}
+      <div className="flex items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900">Post a Job</h2>
-          <p className="text-slate-500 text-sm mt-1">{STEP_SUBTITLES[step]}</p>
+          <h1 className="text-2xl font-bold text-slate-900">Post a Job</h1>
+          <p className="text-sm text-slate-500 mt-0.5">{STEP_SUBTITLES[step]}</p>
         </div>
-        <span className="flex-shrink-0 mt-1 text-xs font-semibold text-slate-400 bg-slate-100 px-2.5 py-1 rounded-full">
-          Step {step + 1} of {STEPS.length}
+        <span className="flex-shrink-0 text-xs font-semibold text-slate-500 bg-slate-100 px-3 py-1 rounded-full">
+          {step + 1} / {STEP_TITLES.length}
         </span>
       </div>
 
-      {/* Step progress */}
-      <div className="flex items-start gap-1">
-        {STEPS.map((label, i) => (
-          <div key={i} className="flex flex-col items-center flex-1 gap-1.5">
-            <div className="flex items-center w-full">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 transition-all ${
-                i < step
-                  ? "bg-green-500 text-white shadow-sm shadow-green-200"
-                  : i === step
-                  ? "bg-primary text-white shadow-sm shadow-primary/30 ring-4 ring-primary/10"
-                  : "bg-slate-100 text-slate-400"
-              }`}>
-                {i < step ? "✓" : i + 1}
-              </div>
-              {i < STEPS.length - 1 && (
-                <div className={`flex-1 h-0.5 mx-1 rounded-full transition-colors ${i < step ? "bg-green-400" : "bg-slate-200"}`} />
-              )}
-            </div>
-            <span className={`text-[10px] font-medium text-center leading-tight ${
-              i === step ? "text-primary" : i < step ? "text-green-600" : "text-slate-400"
-            }`}>
-              {label}
-            </span>
-          </div>
-        ))}
-      </div>
+      {/* Step indicator */}
+      <StepIndicator current={step} />
 
+      {/* Step card */}
       <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <h3 className="font-semibold text-slate-900">{STEPS[step]}</h3>
-            <span className="text-xs text-slate-400">{step + 1} / {STEPS.length}</span>
-          </div>
-        </CardHeader>
+        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+          <h2 className="font-semibold text-slate-900">{STEP_TITLES[step]}</h2>
+          <span className="text-xs text-slate-400 font-medium">Step {step + 1} of {STEP_TITLES.length}</span>
+        </div>
 
-        <CardBody className="space-y-4">
+        <CardBody>
           {step === 0 && (
-            <>
-              <div>
-                <label className="label block mb-1">Job Title</label>
-                <input className={`input w-full ${errors.title ? "border-red-400" : ""}`}
-                  placeholder="e.g. Fix leaking kitchen faucet"
-                  value={form.title} onChange={(e) => update("title", e.target.value)} />
-                {errors.title && <p className="mt-1 text-xs text-red-500">{errors.title}</p>}
-              </div>
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="label">Category</label>
-                  <button
-                    type="button"
-                    onClick={classifyCategory}
-                    disabled={isClassifying}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-violet-200 bg-violet-50 px-2.5 py-1 text-xs font-medium text-violet-700 hover:bg-violet-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    <Sparkles className={`h-3.5 w-3.5 ${isClassifying ? "animate-pulse" : ""}`} />
-                    {isClassifying ? "Detecting…" : "Auto-detect"}
-                  </button>
-                </div>
-                <select className={`input w-full ${errors.category ? "border-red-400" : ""}`}
-                  value={form.category} onChange={(e) => update("category", e.target.value)}>
-                  <option value="">Select a category</option>
-                  {categories.map((c) => <option key={c.name} value={c.name}>{c.icon} {c.name}</option>)}
-                </select>
-                {(() => {
-                  const selected = categories.find((c) => c.name === form.category);
-                  return selected?.description ? (
-                    <p className="mt-1.5 text-sm text-slate-500 flex items-start gap-1.5">
-                      <span className="mt-0.5 text-base leading-none">{selected.icon}</span>
-                      {selected.description}
-                    </p>
-                  ) : null;
-                })()}
-                {errors.category && <p className="mt-1 text-xs text-red-500">{errors.category}</p>}
-              </div>
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="label">Description</label>
-                  <button
-                    type="button"
-                    onClick={generateDescription}
-                    disabled={isGenerating}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-violet-200 bg-violet-50 px-2.5 py-1 text-xs font-medium text-violet-700 hover:bg-violet-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    <Sparkles className={`h-3.5 w-3.5 ${isGenerating ? "animate-pulse" : ""}`} />
-                    {isGenerating ? "Generating…" : "AI Generate"}
-                  </button>
-                </div>
-                <textarea className={`input w-full min-h-[120px] resize-y ${errors.description ? "border-red-400" : ""}`}
-                  placeholder="Describe the work needed in detail (what, where, any special requirements)..."
-                  value={form.description} onChange={(e) => update("description", e.target.value)} />
-                <div className="flex justify-between mt-1">
-                  {errors.description && <p className="text-xs text-red-500">{errors.description}</p>}
-                  <p className="text-xs text-slate-400 ml-auto">{form.description.length} chars</p>
-                </div>
-              </div>
-            </>
+            <JobDetails
+              form={form} errors={errors} categories={categories}
+              isGenerating={isGenerating} isClassifying={isClassifying}
+              update={update}
+              onGenerateDescription={generateDescription}
+              onClassifyCategory={classifyCategory}
+            />
           )}
-
           {step === 1 && (
-            <>
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="label">Budget (PHP)</label>
-                  <button
-                    type="button"
-                    onClick={estimateBudget}
-                    disabled={isEstimatingBudget}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-violet-200 bg-violet-50 px-2.5 py-1 text-xs font-medium text-violet-700 hover:bg-violet-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    <Sparkles className={`h-3.5 w-3.5 ${isEstimatingBudget ? "animate-pulse" : ""}`} />
-                    {isEstimatingBudget ? "Estimating…" : "Estimate with AI"}
-                  </button>
-                </div>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">₱</span>
-                  <input type="number" min="1" className={`input w-full pl-7 ${errors.budget ? "border-red-400" : ""}`}
-                    placeholder="1000"
-                    value={form.budget} onChange={(e) => { update("budget", e.target.value); setBudgetHint(null); }} />
-                </div>
-                {budgetHint && (
-                  <div className="mt-2 p-2.5 rounded-lg bg-violet-50 border border-violet-100 text-xs">
-                    <p className="font-medium text-violet-700">
-                      Suggested range: <span className="tabular-nums">₱{budgetHint.min.toLocaleString()} – ₱{budgetHint.max.toLocaleString()}</span>
-                    </p>
-                    {budgetHint.note && <p className="text-violet-500 mt-0.5">{budgetHint.note}</p>}
-                    <button
-                      type="button"
-                      onClick={() => { update("budget", String(budgetHint.midpoint)); setBudgetHint(null); }}
-                      className="mt-1.5 text-violet-700 font-medium hover:underline"
-                    >
-                      Use midpoint (₱{budgetHint.midpoint.toLocaleString()})
-                    </button>
-                  </div>
-                )}
-                {errors.budget && <p className="mt-1 text-xs text-red-500">{errors.budget}</p>}
-              </div>
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="label">Location</label>
-                  <button
-                    type="button"
-                    onClick={detectLocation}
-                    disabled={isGeolocating}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700 hover:bg-blue-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    <LocateFixed className={`h-3.5 w-3.5 ${isGeolocating ? "animate-spin" : ""}`} />
-                    {isGeolocating ? "Detecting…" : "Use my location"}
-                  </button>
-                </div>
-                <LocationAutocomplete
-                  value={form.location}
-                  onChange={(address, c) => {
-                    update("location", address);
-                    setCoords(c ?? null);
-                  }}
-                  error={errors.location}
-                />
-                {errors.location && <p className="mt-1 text-xs text-red-500">{errors.location}</p>}
-              </div>
-              <div>
-                <label className="label block mb-1">Preferred Date</label>
-                <input type="datetime-local" className={`input w-full ${errors.scheduleDate ? "border-red-400" : ""}`}
-                  value={form.scheduleDate} onChange={(e) => update("scheduleDate", e.target.value)}
-                  min={new Date().toISOString().slice(0, 16)} />
-                {errors.scheduleDate && <p className="mt-1 text-xs text-red-500">{errors.scheduleDate}</p>}
-              </div>
-              <div>
-                <label className="label block mb-1">
-                  Special Instructions
-                  <span className="ml-1 text-xs font-normal text-slate-400">(optional)</span>
-                </label>
-                <textarea
-                  className="input w-full min-h-[80px] resize-y"
-                  placeholder="e.g. Please call before arriving, dog on premises, use side entrance…"
-                  value={form.specialInstructions}
-                  onChange={(e) => update("specialInstructions", e.target.value)}
-                />
-              </div>
-            </>
+            <BudgetSchedule
+              form={form} errors={errors}
+              budgetHint={budgetHint}
+              isEstimatingBudget={isEstimatingBudget} isGeolocating={isGeolocating}
+              onEstimateBudget={estimateBudget}
+              onDetectLocation={detectLocation}
+              update={update} setCoords={setCoords} setBudgetHint={setBudgetHint}
+            />
           )}
-
           {step === 2 && (
-            <div className="space-y-4">
-              <p className="text-sm text-slate-500">Attach up to 5 photos to help providers understand the scope of work. <span className="text-slate-400">(optional)</span></p>
-              <input
-                id="photo-upload"
-                type="file"
-                accept="image/*"
-                multiple
-                className="hidden"
-                onChange={(e) => handlePhotoFiles(e.target.files)}
-              />
-              <div className="flex flex-wrap gap-3">
-                {photoFiles.map(({ preview }, i) => (
-                  <div key={i} className="relative w-24 h-24 rounded-xl overflow-hidden border border-slate-200 flex-shrink-0">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={preview} alt={`photo-${i}`} className="w-full h-full object-cover" />
-                    <button
-                      onClick={() => removePhoto(i)}
-                      className="absolute top-1 right-1 bg-black/60 rounded-full p-0.5 text-white hover:bg-black/80"
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                ))}
-                {photoFiles.length < 5 && (
-                  <label
-                    htmlFor="photo-upload"
-                    className="w-24 h-24 rounded-xl border-2 border-dashed border-slate-300 flex flex-col items-center justify-center gap-1.5 text-slate-400 hover:border-primary hover:text-primary transition-colors cursor-pointer flex-shrink-0"
-                  >
-                    <ImagePlus className="h-6 w-6" />
-                    <span className="text-xs font-medium">Add photo</span>
-                  </label>
-                )}
-              </div>
-              {photoFiles.length > 0 && (
-                <p className="text-xs text-slate-400">{photoFiles.length} / 5 photo{photoFiles.length !== 1 ? "s" : ""} selected — they&apos;ll upload when you continue.</p>
-              )}
-            </div>
+            <Photos
+              photoFiles={photoFiles}
+              isUploadingPhotos={isUploadingPhotos}
+              onAddFiles={handleAddFiles}
+              onRemove={removePhoto}
+            />
           )}
-
           {step === 3 && (
-            <div className="space-y-4">
-              {/* Job info */}
-              <div className="rounded-xl bg-slate-50 border border-slate-200 divide-y divide-slate-200 overflow-hidden">
-                {[
-                  { label: "Title", value: form.title },
-                  { label: "Category", value: form.category },
-                  { label: "Description", value: form.description },
-                ].map(({ label, value }) => (
-                  <div key={label} className="flex gap-3 px-4 py-2.5 text-sm">
-                    <span className="text-slate-400 w-24 flex-shrink-0 text-xs font-semibold uppercase tracking-wide pt-0.5">{label}</span>
-                    <span className="text-slate-800 break-words flex-1">{value}</span>
-                  </div>
-                ))}
-              </div>
-
-              {/* Schedule info */}
-              <div className="rounded-xl bg-slate-50 border border-slate-200 divide-y divide-slate-200 overflow-hidden">
-                {[
-                  { label: "Budget", value: formatCurrency(Number(form.budget)) },
-                  { label: "Location", value: form.location },
-                  { label: "Date", value: new Date(form.scheduleDate).toLocaleString("en-PH", { dateStyle: "medium", timeStyle: "short" }) },
-                  ...(form.specialInstructions ? [{ label: "Instructions", value: form.specialInstructions }] : []),
-                  ...(photoFiles.length > 0 ? [{ label: "Photos", value: `${photoFiles.length} photo${photoFiles.length !== 1 ? "s" : ""} attached` }] : []),
-                ].map(({ label, value }) => (
-                  <div key={label} className="flex gap-3 px-4 py-2.5 text-sm">
-                    <span className="text-slate-400 w-24 flex-shrink-0 text-xs font-semibold uppercase tracking-wide pt-0.5">{label}</span>
-                    <span className="text-slate-800 break-words flex-1">{value}</span>
-                  </div>
-                ))}
-              </div>
-
-              {/* Map preview */ }
-              {coords && process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY && (
-                <div className="overflow-hidden rounded-xl border border-slate-200">
-                  <img
-                    src={`https://maps.googleapis.com/maps/api/staticmap?center=${coords.lat},${coords.lng}&zoom=16&size=640x180&markers=color:red%7Clabel:P%7C${coords.lat},${coords.lng}&scale=2&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`}
-                    alt="Job location map"
-                    className="w-full h-[150px] object-cover"
-                  />
-                  <div className="flex items-center justify-between bg-slate-50 px-3 py-1.5">
-                    <span className="text-xs font-medium text-green-700 flex items-center gap-1.5">
-                      <span className="inline-block h-1.5 w-1.5 rounded-full bg-green-500" />
-                      Coordinates captured
-                    </span>
-                    <span className="font-mono text-xs text-slate-400">
-                      {coords.lat.toFixed(5)}, {coords.lng.toFixed(5)}
-                    </span>
-                  </div>
-                </div>
-              )}
-              <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 text-xs text-amber-700 mt-4">
-                Your job will be reviewed by our admin team before being published to providers.
-              </div>
-
-              {/* AI provider recommendations */}
-              <ProviderRecommendations category={form.category} budget={Number(form.budget)} />
-            </div>
+            <ReviewSubmit
+              form={form} photoFiles={photoFiles} coords={coords}
+              onEdit={(s) => { setStep(s); setErrors({}); }}
+            />
           )}
         </CardBody>
 
-        <CardFooter className="flex justify-between">
-          <Button variant="secondary" onClick={() => setStep((s) => s - 1)} disabled={step === 0}>
-            Back
+        <CardFooter className="flex items-center justify-between gap-3">
+          <Button variant="secondary" onClick={() => { setStep((s) => s - 1); setErrors({}); }} disabled={step === 0}>
+            ← Back
           </Button>
-          {step < STEPS.length - 1 ? (
+          {step < STEP_TITLES.length - 1 ? (
             <Button onClick={nextStep} isLoading={isUploadingPhotos}>
-              {isUploadingPhotos ? "Uploading…" : "Continue"}
+              {isUploadingPhotos ? "Uploading…" : "Continue →"}
             </Button>
           ) : (
             <Button onClick={handleSubmit} isLoading={isSubmitting}>
-              Submit Job
+              🚀 Submit Job
             </Button>
           )}
         </CardFooter>
