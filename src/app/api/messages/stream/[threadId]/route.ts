@@ -51,7 +51,10 @@ export const GET = withHandler(async (
         }
       }, 25_000);
 
+      let cleaned = false;
       cleanup = () => {
+        if (cleaned) return;
+        cleaned = true;
         messageBus.off(eventKey, onMessage);
         clearInterval(heartbeat);
         try { controller.close(); } catch {}

@@ -155,22 +155,31 @@ export class UserRepository extends BaseRepository<UserDocument> {
       .lean() as never;
   }
 
-  /** Providers filtered by kycStatus for the admin KYC review queue. */
-  async findProvidersByKycStatus(
+  /** Users filtered by kycStatus for the admin KYC review queue (providers + clients). */
+  async findUsersByKycStatus(
     status: string | string[],
-    opts: { sort?: 1 | -1; limit?: number } = {}
+    opts: { roles?: string[]; sort?: 1 | -1; limit?: number } = {}
   ): Promise<Array<{
-    _id: { toString(): string }; name: string; email: string;
+    _id: { toString(): string }; name: string; email: string; role: string;
     kycStatus: string; kycDocuments: { type: string; url: string; uploadedAt: string }[];
     kycRejectionReason?: string | null; createdAt: string | Date;
   }>> {
     await this.connect();
     const statusFilter = Array.isArray(status) ? { $in: status } : status;
-    let q = User.find({ role: "provider", kycStatus: statusFilter })
-      .select("name email kycStatus kycDocuments kycRejectionReason createdAt")
+    const roleFilter = opts.roles ?? ["provider", "client"];
+    let q = User.find({ role: { $in: roleFilter }, kycStatus: statusFilter })
+      .select("name email role kycStatus kycDocuments kycRejectionReason createdAt")
       .sort({ createdAt: opts.sort ?? -1 });
     if (opts.limit) q = q.limit(opts.limit);
     return q.lean() as never;
+  }
+
+  /** @deprecated Use findUsersByKycStatus instead */
+  async findProvidersByKycStatus(
+    status: string | string[],
+    opts: { sort?: 1 | -1; limit?: number } = {}
+  ) {
+    return this.findUsersByKycStatus(status, { ...opts, roles: ["provider"] });
   }
 
   // ─── Provider Approval ───────────────────────────────────────────────────

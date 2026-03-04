@@ -33,6 +33,7 @@ import {
   Megaphone,
   BookOpen,
   Gift,
+  Eye,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/authStore";
@@ -64,6 +65,7 @@ const navGroups: Partial<Record<UserRole, NavGroup[]>> = {
       items: [
         { label: "Post a Job", href: "/client/post-job",  icon: <PlusCircle    className="h-5 w-5" /> },
         { label: "My Jobs",    href: "/client/jobs",      icon: <ClipboardList  className="h-5 w-5" /> },
+        { label: "Consultations", href: "/client/consultations", icon: <Eye className="h-5 w-5" /> },
         { label: "Escrow",     href: "/client/escrow",    icon: <Lock           className="h-5 w-5" /> },
         { label: "Favorites",  href: "/client/favorites", icon: <Heart          className="h-5 w-5" /> },
         { label: "Reviews",    href: "/client/reviews",   icon: <Star           className="h-5 w-5" /> },
@@ -97,6 +99,7 @@ const navGroups: Partial<Record<UserRole, NavGroup[]>> = {
       items: [
         { label: "Marketplace", href: "/provider/marketplace", icon: <Store        className="h-5 w-5" /> },
         { label: "Active Jobs", href: "/provider/jobs",        icon: <Briefcase    className="h-5 w-5" /> },
+        { label: "Consultations", href: "/provider/consultations", icon: <Eye className="h-5 w-5" /> },
         { label: "Calendar",    href: "/provider/calendar",    icon: <CalendarDays className="h-5 w-5" /> },
       ],
     },

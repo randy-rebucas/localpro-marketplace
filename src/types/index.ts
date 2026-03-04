@@ -196,7 +196,12 @@ export type ActivityEventType =
   | "job_expired"
   | "quote_expired"
   | "payout_requested"
-  | "payout_updated";
+  | "payout_updated"
+  | "consultation_requested"
+  | "consultation_accepted"
+  | "consultation_declined"
+  | "consultation_converted_to_job"
+  | "consultation_stale_accepted";
 
 export interface IActivityLog {
   _id: Types.ObjectId | string;
@@ -270,6 +275,43 @@ export interface AdminStats {
 
 // ─── Notification ─────────────────────────────────────────────────────────────
 
+// ─── Consultation ─────────────────────────────────────────────────────────────
+
+export type ConsultationType = "site_inspection" | "chat";
+
+export type ConsultationStatus =
+  | "pending"
+  | "accepted"
+  | "declined"
+  | "converted"
+  | "expired";
+
+export interface IConsultation {
+  _id: Types.ObjectId | string;
+  initiatorId: Types.ObjectId | string | IUser;
+  targetUserId: Types.ObjectId | string | IUser;
+  initiatorRole: "client" | "provider";
+  type: ConsultationType;
+  title: string;
+  description: string;
+  location: string;
+  coordinates?: {
+    type: "Point";
+    coordinates: [number, number];
+  } | null;
+  photos: string[];
+  conversationThreadId: string;
+  status: ConsultationStatus;
+  estimateProvidedAt?: Date | null;
+  estimateProvidedBy?: Types.ObjectId | string | IUser | null;
+  estimateAmount?: number | null;
+  estimateNote?: string;
+  jobCreatedFromConsultationId?: Types.ObjectId | string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  expiresAt: Date;
+}
+
 export type NotificationType =
   | "job_submitted"
   | "job_approved"
@@ -300,6 +342,11 @@ export type NotificationType =
   | "payout_requested"
   | "payout_status_update"
   | "job_direct_invite"
+  | "consultation_request"
+  | "consultation_accepted"
+  | "estimate_provided"
+  | "consultation_expired"
+  | "consultation_stale"
   | "admin_message";
 
 export interface INotification {
@@ -315,6 +362,9 @@ export interface INotification {
     messageThreadId?: string;
     paymentIntentId?: string;
     payoutId?: string;
+    consultationId?: string;
+    initiatorId?: string;
+    estimateAmount?: number;
   };
   readAt?: Date | null;
   createdAt: Date;

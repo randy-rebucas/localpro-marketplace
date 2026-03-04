@@ -25,6 +25,12 @@ import {
   Timer,
   PenLine,
   ShieldAlert,
+  CalendarSearch,
+  CalendarCheck2,
+  ReceiptText,
+  CalendarX2,
+  CalendarClock,
+  Megaphone,
   type LucideIcon,
 } from "lucide-react";
 
@@ -58,6 +64,14 @@ export const TYPE_ICON: Record<string, IconConfig> = {
   reminder_complete_job:  { icon: Timer,              bg: "bg-orange-100",  color: "text-orange-600"  },
   reminder_leave_review:  { icon: PenLine,            bg: "bg-amber-100",   color: "text-amber-600"   },
   reminder_stale_dispute: { icon: ShieldAlert,        bg: "bg-red-100",     color: "text-red-600"     },
+  consultation_request:    { icon: CalendarSearch,     bg: "bg-indigo-100",  color: "text-indigo-600"  },
+  consultation_accepted:   { icon: CalendarCheck2,     bg: "bg-emerald-100", color: "text-emerald-600" },
+  estimate_provided:       { icon: ReceiptText,         bg: "bg-violet-100",  color: "text-violet-600"  },
+  consultation_expired:    { icon: CalendarX2,          bg: "bg-slate-100",   color: "text-slate-500"   },
+  consultation_stale:      { icon: CalendarClock,       bg: "bg-amber-100",   color: "text-amber-600"   },
+  admin_message:           { icon: Megaphone,           bg: "bg-sky-100",     color: "text-sky-600"     },
+  reminder_pending_validation: { icon: ShieldAlert,    bg: "bg-orange-100",  color: "text-orange-600"  },
+  reminder_profile_incomplete: { icon: PenLine,        bg: "bg-amber-100",   color: "text-amber-600"   },
 };
 
 const FALLBACK: IconConfig = { icon: Bell, bg: "bg-slate-100", color: "text-slate-500" };

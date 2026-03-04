@@ -25,8 +25,13 @@ export const EVENT_CONFIG: Record<ActivityEventType, { label: string; color: str
   dispute_opened:   { label: "Dispute Opened",    color: "bg-red-100 text-red-700 border-red-200",             dot: "bg-red-500" },
   dispute_resolved: { label: "Dispute Resolved",  color: "bg-orange-100 text-orange-700 border-orange-200",    dot: "bg-orange-500" },
   review_submitted: { label: "Review Submitted",  color: "bg-yellow-100 text-yellow-700 border-yellow-200",    dot: "bg-yellow-500" },
-  payout_requested: { label: "Payout Requested",  color: "bg-purple-100 text-purple-700 border-purple-200",    dot: "bg-purple-500" },
-  payout_updated:   { label: "Payout Updated",    color: "bg-pink-100 text-pink-700 border-pink-200",          dot: "bg-pink-500" },
+  payout_requested:              { label: "Payout Requested",          color: "bg-purple-100 text-purple-700 border-purple-200",  dot: "bg-purple-500" },
+  payout_updated:                { label: "Payout Updated",            color: "bg-pink-100 text-pink-700 border-pink-200",        dot: "bg-pink-500" },
+  consultation_requested:        { label: "Consultation Requested",    color: "bg-sky-100 text-sky-700 border-sky-200",           dot: "bg-sky-500" },
+  consultation_accepted:         { label: "Consultation Accepted",     color: "bg-green-100 text-green-700 border-green-200",     dot: "bg-green-500" },
+  consultation_declined:         { label: "Consultation Declined",     color: "bg-red-100 text-red-700 border-red-200",          dot: "bg-red-500" },
+  consultation_converted_to_job: { label: "Converted to Job",          color: "bg-teal-100 text-teal-700 border-teal-200",        dot: "bg-teal-500" },
+  consultation_stale_accepted:   { label: "Stale Accepted",            color: "bg-orange-100 text-orange-700 border-orange-200",   dot: "bg-orange-500" },
 };
 
 export const ALL_EVENT_TYPES = Object.keys(EVENT_CONFIG) as ActivityEventType[];

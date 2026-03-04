@@ -16,3 +16,4 @@ export { announcementRepository } from "./announcement.repository";
 export { knowledgeArticleRepository } from "./knowledgeArticle.repository";
 export { loyaltyRepository } from "./loyalty.repository";
 export { categoryRepository } from "./category.repository";
+export { consultationRepository } from "./consultation.repository";

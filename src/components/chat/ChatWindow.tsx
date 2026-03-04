@@ -111,28 +111,63 @@ export default function ChatWindow({
     if (!loading) scrollToBottom("instant" as ScrollBehavior);
   }, [loading]);
 
-  // SSE real-time updates
+  // SSE real-time updates (with auto-reconnect on close + visibility change)
   useEffect(() => {
     if (!streamUrl) return;
-    const es = new EventSource(streamUrl);
 
-    es.onmessage = (e) => {
-      try {
-        const raw = JSON.parse(e.data) as Record<string, unknown>;
-        if (raw.type === "connected") return;
+    let es: EventSource | null = null;
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
+    let destroyed = false;
 
-        const msg = streamTransform ? streamTransform(raw) : (raw as unknown as RawMessage);
-        if (!msg || !msg._id) return;
+    const open = () => {
+      if (destroyed) return;
+      es = new EventSource(streamUrl, { withCredentials: true });
 
-        setMessages((prev) => {
-          if (prev.some((m) => m._id === msg._id)) return prev;
-          return [...prev, msg];
-        });
-        setTimeout(() => scrollToBottom(), 50);
-      } catch {}
+      es.onmessage = (e) => {
+        try {
+          const raw = JSON.parse(e.data) as Record<string, unknown>;
+          if (raw.type === "connected") return;
+
+          const msg = streamTransform ? streamTransform(raw) : (raw as unknown as RawMessage);
+          if (!msg || !msg._id) return;
+
+          setMessages((prev) => {
+            if (prev.some((m) => m._id === msg._id)) return prev;
+            return [...prev, msg];
+          });
+          setTimeout(() => scrollToBottom(), 50);
+        } catch {}
+      };
+
+      es.onerror = () => {
+        if (es?.readyState === EventSource.CLOSED) {
+          es = null;
+          if (!destroyed) {
+            retryTimer = setTimeout(open, 5_000);
+          }
+        }
+      };
     };
 
-    return () => es.close();
+    open();
+
+    const onVisibility = () => {
+      if (!document.hidden && (!es || es.readyState === EventSource.CLOSED)) {
+        retryTimer && clearTimeout(retryTimer);
+        retryTimer = null;
+        open();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+
+    return () => {
+      destroyed = true;
+      retryTimer && clearTimeout(retryTimer);
+      retryTimer = null;
+      es?.close();
+      es = null;
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
   }, [streamUrl, streamTransform]);
 
   const handleSend = useCallback(async (body: string) => {

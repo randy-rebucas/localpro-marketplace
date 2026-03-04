@@ -48,6 +48,7 @@ interface NotificationState {
 }
 
 let _eventSource: EventSource | null = null;
+let _visibilityCleanup: (() => void) | null = null;
 
 export const useNotificationStore = create<NotificationState>((set, get) => ({
   notifications: [],
@@ -78,38 +79,60 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     if (_eventSource) return; // already open
     if (typeof window === "undefined") return;
 
-    _eventSource = new EventSource("/api/notifications/stream", {
-      withCredentials: true,
-    });
+    const open = () => {
+      if (_eventSource) return;
+      _eventSource = new EventSource("/api/notifications/stream", {
+        withCredentials: true,
+      });
 
-    _eventSource.onopen = () => set({ sseConnected: true });
+      _eventSource.onopen = () => set({ sseConnected: true });
 
-    _eventSource.onmessage = (event) => {
-      try {
-        const payload = JSON.parse(event.data);
-        // Skip the initial connection confirmation event
-        if (payload?.type === "connected") return;
+      _eventSource.onmessage = (event) => {
+        try {
+          const payload = JSON.parse(event.data);
+          // Skip the initial connection confirmation event
+          if (payload?.type === "connected") return;
 
-        // Route silent status-update events to the status store
-        if (payload?.__event === "status_update") {
-          import("@/stores/statusStore").then(({ useStatusStore }) => {
-            useStatusStore.getState().dispatch(payload);
-          });
-          return;
+          // Route silent status-update events to the status store
+          if (payload?.__event === "status_update") {
+            import("@/stores/statusStore").then(({ useStatusStore }) => {
+              useStatusStore.getState().dispatch(payload);
+            });
+            return;
+          }
+
+          // Only ingest objects that look like INotification (have a title field)
+          if (!payload?.title) return;
+          get()._ingest(payload as INotification);
+        } catch {
+          // ignore malformed events
         }
+      };
 
-        // Only ingest objects that look like INotification (have a title field)
-        if (!payload?.title) return;
-        get()._ingest(payload as INotification);
-      } catch {
-        // ignore malformed events
+      _eventSource.onerror = () => {
+        set({ sseConnected: false });
+        // If the EventSource was permanently closed (e.g. 401 after token expiry
+        // or server restart), reset so connectSSE() can reopen it.
+        if (_eventSource && _eventSource.readyState === EventSource.CLOSED) {
+          _eventSource.close();
+          _eventSource = null;
+          // Retry after 5 s
+          setTimeout(() => open(), 5_000);
+        }
+      };
+    };
+
+    open();
+
+    // Reconnect when the user returns to the tab after it was hidden
+    const onVisibility = () => {
+      if (document.visibilityState === "visible" && !_eventSource) {
+        open();
       }
     };
-
-    _eventSource.onerror = () => {
-      // Browser will auto-reconnect on network errors
-      set({ sseConnected: false });
-    };
+    document.addEventListener("visibilitychange", onVisibility);
+    // Store cleanup reference on the module-level variable so disconnectSSE can remove it
+    _visibilityCleanup = () => document.removeEventListener("visibilitychange", onVisibility);
   },
 
   disconnectSSE: () => {
@@ -117,6 +140,8 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
       _eventSource.close();
       _eventSource = null;
     }
+    _visibilityCleanup?.();
+    _visibilityCleanup = null;
     set({ sseConnected: false });
   },
 
@@ -175,6 +200,8 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
       _eventSource.close();
       _eventSource = null;
     }
+    _visibilityCleanup?.();
+    _visibilityCleanup = null;
     set({ notifications: [], unreadCount: 0, hydrated: false, sseConnected: false });
   },
 }));

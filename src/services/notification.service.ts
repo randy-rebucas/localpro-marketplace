@@ -21,6 +21,11 @@ const EMAIL_ALWAYS: Set<NotificationType> = new Set([
   "escrow_auto_released",
   "quote_expired",
   "reminder_profile_incomplete",
+  "consultation_request",
+  "consultation_accepted",
+  "estimate_provided",
+  "consultation_stale",
+  "admin_message",
 ]);
 
 export interface PushNotificationInput {

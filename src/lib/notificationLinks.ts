@@ -133,6 +133,21 @@ export function getNotificationLink(
       if (role === "client")   return "/client/profile";
       return null;
 
+    case "consultation_request":
+      if (role === "provider" && data?.consultationId) return `/provider/consultations/${data.consultationId}`;
+      return null;
+
+    case "consultation_accepted":
+    case "estimate_provided":
+      if (role === "client" && data?.consultationId) return `/client/consultations/${data.consultationId}`;
+      return null;
+
+    case "consultation_expired":
+    case "consultation_stale":
+      if (role === "client" && data?.consultationId) return `/client/consultations/${data.consultationId}`;
+      if (role === "provider" && data?.consultationId) return `/provider/consultations/${data.consultationId}`;
+      return null;
+
     default:
       return null;
   }

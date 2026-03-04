@@ -1,6 +1,7 @@
 import { type NextRequest } from "next/server";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
+import { withHandler } from "@/lib/utils";
 import { jobRepository, paymentRepository } from "@/repositories";
 import { NotFoundError, ForbiddenError, UnprocessableError, ValidationError } from "@/lib/errors";
 import type { IJob, IMilestone } from "@/types";
@@ -17,7 +18,7 @@ type Ctx = { params: Promise<{ id: string }> };
  * GET /api/jobs/:id/milestones
  * Returns the milestone list for a job. Accessible by client, provider, or admin.
  */
-export async function GET(_req: NextRequest, { params }: Ctx) {
+export const GET = withHandler(async (_req: NextRequest, { params }: Ctx) => {
   const { id } = await params;
   const user = await requireUser();
 
@@ -35,14 +36,14 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
   if (!isClient && !isProvider && !isAdmin) throw new ForbiddenError();
 
   return Response.json({ milestones: job.milestones ?? [] });
-}
+});
 
 /**
  * POST /api/jobs/:id/milestones
  * Adds a new pending milestone to a funded job.
  * Only the client who owns the job may add milestones.
  */
-export async function POST(req: NextRequest, { params }: Ctx) {
+export const POST = withHandler(async (req: NextRequest, { params }: Ctx) => {
   const { id } = await params;
   const user = await requireUser();
 
@@ -101,4 +102,4 @@ export async function POST(req: NextRequest, { params }: Ctx) {
     { milestone: existing[existing.length - 1] },
     { status: 201 }
   );
-}
+});

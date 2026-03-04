@@ -15,10 +15,11 @@ interface KycDoc {
   uploadedAt: string;
 }
 
-interface ProviderWithKyc {
+interface UserWithKyc {
   _id: { toString(): string };
   name: string;
   email: string;
+  role: string;
   kycStatus: string;
   kycDocuments: KycDoc[];
   kycRejectionReason?: string | null;
@@ -36,27 +37,39 @@ export default async function AdminKycPage() {
   if (!user || (user.role !== "admin" && user.role !== "staff")) return null;
 
   const [pending, reviewed] = await Promise.all([
-    userRepository.findProvidersByKycStatus("pending", { sort: 1 }),
-    userRepository.findProvidersByKycStatus(["approved", "rejected"], { sort: -1, limit: 20 }),
+    userRepository.findUsersByKycStatus("pending", { sort: 1 }),
+    userRepository.findUsersByKycStatus(["approved", "rejected"], { sort: -1, limit: 50 }),
   ]);
 
-  const typedPending = pending as unknown as ProviderWithKyc[];
-  const typedReviewed = reviewed as unknown as ProviderWithKyc[];
+  const typedPending = pending as unknown as UserWithKyc[];
+  const typedReviewed = reviewed as unknown as UserWithKyc[];
 
-  // Fetch certification status for all listed providers
-  const allUserIds = [...typedPending, ...typedReviewed].map((p) => p._id.toString());
-  const certMap = allUserIds.length > 0
-    ? await providerProfileRepository.findCertificationByUserIds(allUserIds)
+  // Fetch certification status — only relevant for provider-role users
+  const providerIds = [...typedPending, ...typedReviewed]
+    .filter((u) => u.role === "provider")
+    .map((u) => u._id.toString());
+  const certMap = providerIds.length > 0
+    ? await providerProfileRepository.findCertificationByUserIds(providerIds)
     : new Map<string, boolean>();
 
-  function ProviderRow({ p }: { p: ProviderWithKyc }) {
+  function ProviderRow({ p }: { p: UserWithKyc }) {
     const cfg = STATUS_CONFIG[p.kycStatus as keyof typeof STATUS_CONFIG];
-    const isLocalProCertified = certMap.get(p._id.toString()) ?? false;
+    const isProvider = p.role === "provider";
+    const isLocalProCertified = isProvider ? (certMap.get(p._id.toString()) ?? false) : false;
     return (
       <div className="bg-white rounded-xl border border-slate-200 shadow-card overflow-hidden">
         <div className="px-5 py-4 flex items-start justify-between gap-4">
           <div className="min-w-0">
-            <p className="font-semibold text-slate-900">{p.name}</p>
+            <div className="flex items-center gap-2 flex-wrap">
+              <p className="font-semibold text-slate-900">{p.name}</p>
+              <span className={`inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
+                isProvider
+                  ? "bg-violet-50 text-violet-700 border-violet-200"
+                  : "bg-sky-50 text-sky-700 border-sky-200"
+              }`}>
+                {isProvider ? "Provider" : "Client"}
+              </span>
+            </div>
             <p className="text-sm text-slate-500">{p.email}</p>
             <p className="text-xs text-slate-400 mt-0.5">
               Submitted {new Date(p.createdAt).toLocaleDateString("en-PH")}
@@ -99,7 +112,7 @@ export default async function AdminKycPage() {
         )}
 
         {/* Certification toggle — only for approved providers */}
-        {p.kycStatus === "approved" && (
+        {p.kycStatus === "approved" && isProvider && (
           <div className="border-t border-slate-100 px-5 py-3 bg-slate-50 flex items-center justify-between">
             {isLocalProCertified && (
               <span className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-full px-2.5 py-1">
@@ -129,7 +142,7 @@ export default async function AdminKycPage() {
       <div>
         <h2 className="text-2xl font-bold text-slate-900">KYC Review</h2>
         <p className="text-slate-500 text-sm mt-0.5">
-          {typedPending.length} provider{typedPending.length !== 1 ? "s" : ""} awaiting verification
+          {typedPending.length} submission{typedPending.length !== 1 ? "s" : ""} awaiting verification
         </p>
       </div>
 
