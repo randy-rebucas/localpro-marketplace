@@ -53,6 +53,10 @@ export interface IUser {
   flaggedJobCount?: number;
   /** Active fraud/suspicious-behaviour flags */
   fraudFlags?: string[];
+  /** Saved card PM ID for recurring auto-pay (card only) */
+  savedPaymentMethodId?: string | null;
+  savedPaymentMethodLast4?: string | null;
+  savedPaymentMethodBrand?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -112,6 +116,8 @@ export interface IJob {
   invitedProviderId?: Types.ObjectId | string | IUser | null;
   /** Optional milestone payment plan — each milestone can be released individually */
   milestones?: IMilestone[];
+  /** Non-null when this job was auto-spawned by a recurring schedule */
+  recurringScheduleId?: Types.ObjectId | string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -207,7 +213,10 @@ export type ActivityEventType =
   | "consultation_accepted"
   | "consultation_declined"
   | "consultation_converted_to_job"
-  | "consultation_stale_accepted";
+  | "consultation_stale_accepted"
+  | "recurring_created"
+  | "recurring_cancelled"
+  | "recurring_job_spawned";
 
 export interface IActivityLog {
   _id: Types.ObjectId | string;
@@ -353,6 +362,8 @@ export type NotificationType =
   | "estimate_provided"
   | "consultation_expired"
   | "consultation_stale"
+  | "recurring_job_spawned"
+  | "payment_reminder"
   | "admin_message";
 
 export interface INotification {
@@ -552,6 +563,47 @@ export interface ILoyaltyTransaction {
   jobId?: Types.ObjectId | string | null;
   description: string;
   createdAt: Date;
+}
+
+// ─── Recurring Schedule ───────────────────────────────────────────────────────
+
+export type RecurringFrequency = "weekly" | "monthly";
+export type RecurringStatus    = "active" | "paused" | "cancelled";
+
+/** Categories eligible for recurring bookings. */
+export const RECURRING_CATEGORIES = [
+  "Cleaning",
+  "Maintenance",
+  "Landscaping",
+  "Pest Control",
+] as const;
+
+export interface IRecurringSchedule {
+  _id: Types.ObjectId | string;
+  clientId: Types.ObjectId | string | IUser;
+  /** Optional: pin to a specific provider */
+  providerId?: Types.ObjectId | string | IUser | null;
+  category: string;
+  title: string;
+  description: string;
+  budget: number;
+  location: string;
+  frequency: RecurringFrequency;
+  status: RecurringStatus;
+  /** Whether to send auto-pay notification on each spawn */
+  autoPayEnabled: boolean;
+  specialInstructions?: string;
+  /** When the next job should be spawned */
+  nextRunAt: Date;
+  /** When the last job was spawned */
+  lastRunAt?: Date | null;
+  /** Running count of spawned jobs */
+  totalRuns: number;
+  /** Optional cap on total runs; null = unlimited */
+  maxRuns?: number | null;
+  pausedAt?: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 // ─── Category ─────────────────────────────────────────────────────────────────

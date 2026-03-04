@@ -8,8 +8,11 @@ import {
   createCheckoutSession,
   getCheckoutSession,
   createRefund,
+  chargeWithSavedMethod,
   type RefundReason,
 } from "@/lib/paymongo";
+import { connectDB } from "@/lib/db";
+import User from "@/models/User";
 import { calculateCommission } from "@/lib/commission";
 import { canTransitionEscrow } from "@/lib/jobLifecycle";
 import {
@@ -240,7 +243,81 @@ export class PaymentService {
   }
 
   /**
-   * Issue a PayMongo refund when a dispute resolves in the client's favor.
+   * Called by the recurring cron when `autoPayEnabled` is true and the client
+   * has a saved card payment method.
+   * Creates a PaymentIntent and charges it off-session.
+   * Returns `{ success, reason }` — on failure the caller should send a
+   * manual-funding notification instead.
+   */
+  async autoChargeEscrow(
+    jobId: string,
+    clientId: string,
+    paymentMethodId: string
+  ): Promise<{ success: boolean; reason?: string }> {
+    const jobDoc = await jobRepository.getDocById(jobId);
+    if (!jobDoc) return { success: false, reason: "Job not found" };
+
+    const job = jobDoc as unknown as IJob & { save(): Promise<void> };
+    const check = canTransitionEscrow(job, "funded");
+    if (!check.allowed) return { success: false, reason: check.reason ?? "Cannot fund escrow" };
+
+    const jobTitle = (job as unknown as { title: string }).title;
+    const result = await chargeWithSavedMethod(
+      paymentMethodId,
+      job.budget,
+      `Recurring escrow: ${jobTitle}`,
+      { jobId, clientId, source: "recurring_auto" }
+    );
+
+    if (!result.success) return result;
+
+    // Mark escrow funded
+    job.escrowStatus = "funded";
+    await jobDoc.save();
+
+    const { commission, netAmount } = calculateCommission(job.budget);
+    await connectDB();
+    await transactionRepository.create({
+      jobId: job._id,
+      payerId: clientId,
+      payeeId: job.providerId,
+      amount: job.budget,
+      commission,
+      netAmount,
+      status: "pending",
+    });
+
+    await activityRepository.log({
+      userId: clientId,
+      eventType: "escrow_funded",
+      jobId: jobId,
+      metadata: { autoCharge: true, paymentMethodId },
+    });
+
+    const { notificationService } = await import("@/services/notification.service");
+    await notificationService.push({
+      userId: clientId,
+      type: "payment_confirmed",
+      title: "Auto-pay successful ✅",
+      message: `₱${job.budget.toLocaleString()} escrow funded automatically for "${jobTitle}".`,
+      data: { jobId },
+    });
+
+    if (job.providerId) {
+      await notificationService.push({
+        userId: job.providerId.toString(),
+        type: "escrow_funded",
+        title: "Escrow funded",
+        message: "The client has funded escrow for your recurring job. You may begin work.",
+        data: { jobId },
+      });
+    }
+
+    return { success: true };
+  }
+
+  /**
+   * Issue a PayMongo refund when a dispute resolves in the client’s favor.
    */
   async refundEscrow(
     jobId: string,

@@ -128,6 +128,10 @@ const UserSchema = new Schema<UserDocument>(
     // Fraud tracking
     flaggedJobCount: { type: Number, default: 0 },
     fraudFlags: { type: [String], default: [] },
+    // Saved card for recurring auto-pay (card PMs only — not GCash/PayMaya)
+    savedPaymentMethodId:   { type: String, default: null },
+    savedPaymentMethodLast4: { type: String, default: null },
+    savedPaymentMethodBrand: { type: String, default: null },
   },
   {
     timestamps: true,

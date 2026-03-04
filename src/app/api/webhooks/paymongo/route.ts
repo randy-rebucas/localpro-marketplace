@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyWebhookSignature } from "@/lib/paymongo";
 import { paymentService } from "@/services";
 import { checkRateLimit } from "@/lib/rateLimit";
+import { connectDB } from "@/lib/db";
+import User from "@/models/User";
 
 /**
  * POST /api/webhooks/paymongo
@@ -49,9 +51,13 @@ export async function POST(req: NextRequest) {
           attributes: {
             status?: string;
             payment_intent?: { id: string } | null;
+            metadata?: Record<string, string>;
             payments?: Array<{
               id: string;
-              attributes: { status: string; source?: { type: string } };
+              attributes: {
+                status: string;
+                source?: { id: string; type: string };
+              };
             }>;
           };
         };
@@ -74,6 +80,34 @@ export async function POST(req: NextRequest) {
       const sessionId = resourceData.id;
       const paymentIntentId = resourceData.attributes.payment_intent?.id ?? "";
       await paymentService.confirmEscrowFunding(sessionId, paymentIntentId, "checkout");
+
+      // ── Save card payment method for future recurring auto-pay ─────────────
+      // Only cards can be charged off-session; GCash/PayMaya need a new redirect.
+      const payments = resourceData.attributes.payments ?? [];
+      const cardPayment = payments.find(
+        (p) => p.attributes.status === "paid" && p.attributes.source?.type === "card"
+      );
+      const pmId = cardPayment?.attributes.source?.id;
+      const clientId = resourceData.attributes.metadata?.clientId;
+
+      if (pmId && clientId) {
+        try {
+          const { getPaymentMethodDetails } = await import("@/lib/paymongo");
+          const details = await getPaymentMethodDetails(pmId);
+          if (details) {
+            await connectDB();
+            await User.findByIdAndUpdate(clientId, {
+              savedPaymentMethodId:    details.paymentMethodId,
+              savedPaymentMethodLast4: details.last4,
+              savedPaymentMethodBrand: details.brand,
+            });
+            console.log(`[PAYMONGO] Saved card PM ${pmId} for user ${clientId}`);
+          }
+        } catch (err) {
+          // Non-critical — log and continue
+          console.error("[PAYMONGO] Failed to save payment method:", err);
+        }
+      }
     }
 
     // ── Legacy Payment Intent succeeded ─────────────────────────────────────

@@ -98,6 +98,23 @@ export class EscrowService {
       { entity: "job", id: job._id!.toString(), status: "completed" }
     );
 
+    // Auto-lock the recurring schedule to this provider (first successful run only)
+    const recurringId = (job as unknown as { recurringScheduleId?: { toString(): string } | null }).recurringScheduleId;
+    if (recurringId && job.providerId) {
+      try {
+        const { recurringScheduleRepository } = await import("@/repositories");
+        const schedule = await recurringScheduleRepository.findById(recurringId.toString());
+        if (schedule && !schedule.providerId) {
+          await recurringScheduleRepository.setPreferredProvider(
+            recurringId.toString(),
+            job.providerId.toString()
+          );
+        }
+      } catch {
+        // Non-critical — don't fail job completion because of this
+      }
+    }
+
     return { job };
   }
 

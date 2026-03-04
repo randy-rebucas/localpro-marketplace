@@ -373,10 +373,26 @@ export class JobRepository extends BaseRepository<JobDocument> {
       .lean() as never;
   }
 
+  /** Unique providers a client has previously hired (completed jobs). Used for the preferred-provider picker. */
+  async findPastProviders(
+    clientId: string
+  ): Promise<Array<{ _id: string; name: string; email: string }>> {
+    await this.connect();
+    return Job.aggregate([
+      { $match: { clientId: new Types.ObjectId(clientId), status: "completed", providerId: { $ne: null } } },
+      { $group: { _id: "$providerId" } },
+      { $lookup: { from: "users", localField: "_id", foreignField: "_id", as: "user" } },
+      { $unwind: "$user" },
+      { $project: { _id: { $toString: "$user._id" }, name: "$user.name", email: "$user.email" } },
+      { $sort: { name: 1 } },
+    ]);
+  }
+
   /** Jobs awaiting admin validation, newest first, with client info populated. */
   async findPendingValidation(): Promise<Array<{
     _id: unknown; title: string; description: string; category: string;
     location: string; budget: number; scheduleDate: Date; riskScore: number;
+    fraudFlags?: string[]; recurringScheduleId?: string | null;
     createdAt: Date; clientId: { name: string; email: string };
   }>> {
     await this.connect();

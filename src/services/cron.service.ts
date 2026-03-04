@@ -572,6 +572,15 @@ export class CronService {
     const reset = await providerProfileRepository.resetBusyExcluding(activeProviderIds);
     return { reset };
   }
+
+  /**
+   * Spawns jobs for all active recurring schedules whose `nextRunAt` is due.
+   * Runs daily (or more frequently if desired).
+   */
+  async spawnRecurringJobs(): Promise<{ spawned: number; errors: string[] }> {
+    const { recurringScheduleService } = await import("@/services/recurringSchedule.service");
+    return recurringScheduleService.spawnDue();
+  }
 }
 
 export const cronService = new CronService();

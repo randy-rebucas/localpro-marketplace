@@ -78,6 +78,11 @@ export default async function AdminJobsPage() {
                         </Link>
                         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5 text-xs text-slate-400">
                           <span className="inline-block bg-slate-100 text-slate-600 rounded px-2 py-0.5 font-medium">{job.category}</span>
+                          {job.recurringScheduleId && (
+                            <span className="inline-flex items-center gap-1 bg-violet-100 text-violet-700 rounded px-2 py-0.5 font-medium">
+                              🔁 Recurring
+                            </span>
+                          )}
                           <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{job.location}</span>
                           <span className="flex items-center gap-1"><User className="h-3 w-3" />{job.clientId.name}</span>
                           <span className="flex items-center gap-1"><Calendar className="h-3 w-3" />Submitted {formatDate(job.createdAt)}</span>

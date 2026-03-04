@@ -217,6 +217,163 @@ export async function getCheckoutSession(id: string): Promise<CheckoutSessionDat
   };
 }
 
+// ─── Saved Payment Method (Card) — Off-Session Charging ──────────────────────
+
+export interface SavedPaymentMethodInfo {
+  /** PayMongo payment_method ID (pm_xxx) */
+  paymentMethodId: string;
+  /** Last 4 digits of the card */
+  last4: string;
+  /** Card brand: "visa" | "mastercard" | etc. */
+  brand: string;
+  /** Expiry month 1–12 */
+  expMonth: number;
+  /** Expiry year (4-digit) */
+  expYear: number;
+}
+
+export interface AutoChargeResult {
+  /** true = charged successfully; false = needs 3DS or failed */
+  success: boolean;
+  /** Payment intent ID on success */
+  paymentIntentId?: string;
+  /** Human-readable reason when success=false */
+  reason?: string;
+}
+
+/**
+ * Attempts to charge a stored card payment method server-side (off-session).
+ * Works for card PMs that were collected in a prior checkout session.
+ * GCash / PayMaya cannot be charged off-session — those require a new user redirect.
+ *
+ * Returns `success: false` with a reason when 3DS authentication is required
+ * or the charge fails, so the caller can fall back to a notification prompt.
+ */
+export async function chargeWithSavedMethod(
+  paymentMethodId: string,
+  amountPHP: number,
+  description: string,
+  metadata?: Record<string, string>
+): Promise<AutoChargeResult> {
+  // 1. Create the payment intent
+  const amountCentavos = Math.round(amountPHP * 100);
+
+  let piRes: {
+    data: { id: string; attributes: { client_key: string; status: string } };
+  };
+
+  try {
+    piRes = await request<typeof piRes>("POST", "/payment_intents", {
+      data: {
+        attributes: {
+          amount: amountCentavos,
+          currency: "PHP",
+          description,
+          payment_method_allowed: ["card"],
+          payment_method_options: { card: { request_three_d_secure: "any" } },
+          capture_type: "automatic",
+          metadata: metadata ?? {},
+        },
+      },
+    });
+  } catch (err) {
+    return {
+      success: false,
+      reason: `Failed to create payment intent: ${err instanceof Error ? err.message : String(err)}`,
+    };
+  }
+
+  const piId = piRes.data.id;
+  const clientKey = piRes.data.attributes.client_key;
+
+  // 2. Attach the saved payment method (off-session)
+  let attachRes: {
+    data: {
+      id: string;
+      attributes: {
+        status: string;
+        next_action?: { type: string } | null;
+      };
+    };
+  };
+
+  try {
+    attachRes = await request<typeof attachRes>(
+      "POST",
+      `/payment_intents/${piId}/attach`,
+      {
+        data: {
+          attributes: {
+            payment_method: paymentMethodId,
+            client_key: clientKey,
+          },
+        },
+      }
+    );
+  } catch (err) {
+    return {
+      success: false,
+      reason: `Failed to attach payment method: ${err instanceof Error ? err.message : String(err)}`,
+    };
+  }
+
+  const status = attachRes.data.attributes.status;
+  const nextAction = attachRes.data.attributes.next_action;
+
+  if (status === "succeeded") {
+    return { success: true, paymentIntentId: piId };
+  }
+
+  if (nextAction?.type === "redirect") {
+    // 3DS required — cannot complete server-side
+    return { success: false, reason: "3DS authentication required" };
+  }
+
+  return {
+    success: false,
+    reason: `Payment intent status: ${status}`,
+  };
+}
+
+/**
+ * Retrieves the last-4, brand, and expiry from a payment method ID.
+ * Returns null if the PM is not found or is not a card.
+ */
+export async function getPaymentMethodDetails(
+  paymentMethodId: string
+): Promise<SavedPaymentMethodInfo | null> {
+  try {
+    const res = await request<{
+      data: {
+        id: string;
+        attributes: {
+          type: string;
+          details?: {
+            last4?: string;
+            brand?: string;
+            exp_month?: number;
+            exp_year?: number;
+          };
+        };
+      };
+    }>("GET", `/payment_methods/${paymentMethodId}`);
+
+    if (res.data.attributes.type !== "card") return null;
+    const d = res.data.attributes.details;
+    if (!d?.last4) return null;
+
+    return {
+      paymentMethodId,
+      last4: d.last4,
+      brand: d.brand ?? "card",
+      expMonth: d.exp_month ?? 0,
+      expYear: d.exp_year ?? 0,
+    };
+  } catch {
+    return null;
+  }
+}
+
 // ─── Refunds ──────────────────────────────────────────────────────────────────
 
 export type RefundReason = "duplicate" | "fraudulent" | "requested_by_customer";

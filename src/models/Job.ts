@@ -114,6 +114,12 @@ const JobSchema = new Schema<JobDocument>(
       ],
       default: [],
     },
+    /** Set when this job was auto-spawned from a recurring schedule */
+    recurringScheduleId: {
+      type: Schema.Types.ObjectId,
+      ref: "RecurringSchedule",
+      default: null,
+    },
   },
   {
     timestamps: true,
