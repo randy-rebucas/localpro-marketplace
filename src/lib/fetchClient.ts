@@ -54,3 +54,25 @@ export async function apiFetch(
   // Retry original request once with fresh cookie
   return fetch(input, options);
 }
+
+/**
+ * Typed JSON helper built on top of apiFetch.
+ * Throws an Error with the API `error` message on non-2xx responses.
+ */
+export async function fetchClient<T = unknown>(
+  input: RequestInfo | URL,
+  init?: RequestInit
+): Promise<T> {
+  const res = await apiFetch(input, {
+    headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) },
+    ...init,
+  });
+
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(
+      (json as { error?: string }).error ?? `Request failed: ${res.status}`
+    );
+  }
+  return json as T;
+}

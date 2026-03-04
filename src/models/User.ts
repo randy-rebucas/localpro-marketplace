@@ -77,6 +77,11 @@ const UserSchema = new Schema<UserDocument>(
       enum: ["pending_approval", "approved", "rejected"],
       default: "approved",
     },
+    accountType: {
+      type: String,
+      enum: ["personal", "business"],
+      default: "personal",
+    },
     avatar: { type: String, default: null },
     kycStatus: {
       type: String,

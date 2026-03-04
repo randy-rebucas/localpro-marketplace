@@ -18,3 +18,5 @@ export { loyaltyRepository } from "./loyalty.repository";
 export { categoryRepository } from "./category.repository";
 export { consultationRepository } from "./consultation.repository";
 export { recurringScheduleRepository } from "./recurringSchedule.repository";
+export { businessOrganizationRepository } from "./businessOrganization.repository";
+export { businessMemberRepository } from "./businessMember.repository";

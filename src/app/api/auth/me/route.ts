@@ -61,6 +61,8 @@ export const GET = withHandler(async () => {
     isSuspended: user.isSuspended,
     avatar: user.avatar ?? null,
     addresses: user.addresses ?? [],
+    accountType: user.accountType ?? "personal",
     createdAt: user.createdAt,
+
   });
 });

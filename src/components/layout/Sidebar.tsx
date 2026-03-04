@@ -36,6 +36,10 @@ import {
   Eye,
   ShieldAlert,
   Repeat2,
+  Building2,
+  Wallet,
+  UserPlus,
+  PieChart,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/authStore";
@@ -80,6 +84,12 @@ const navGroups: Partial<Record<UserRole, NavGroup[]>> = {
         { label: "Messages",        href: "/client/messages",   icon: <MessageSquare className="h-5 w-5" /> },
         { label: "Support",         href: "/client/support",    icon: <Headphones    className="h-5 w-5" /> },
         { label: "Knowledge Base",  href: "/client/knowledge",  icon: <BookOpen      className="h-5 w-5" /> },
+      ],
+    },
+    {
+      heading: "Business",
+      items: [
+        { label: "Business Hub",    href: "/client/business",            icon: <Building2  className="h-5 w-5" /> }
       ],
     },
     {
@@ -196,15 +206,21 @@ interface SidebarProps {
 export default function Sidebar({ role, capabilities, isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const { logout } = useAuthStore();
+  const { logout, user } = useAuthStore();
 
   // Staff shares the admin nav structure but filtered by capabilities
   const sourceRole = role === "staff" ? "admin" : role;
   const rawGroups = navGroups[sourceRole] ?? [];
-  const groups =
+  const baseGroups =
     role === "staff" && capabilities
       ? filterForStaff(rawGroups, capabilities)
       : rawGroups;
+
+  // Hide the Business nav group unless the client has a business account type
+  const groups =
+    role === "client" && user?.accountType !== "business"
+      ? baseGroups.filter((g) => g.heading !== "Business")
+      : baseGroups;
 
   const portalLabel = role === "staff" ? "staff portal" : `${role} portal`;
 
