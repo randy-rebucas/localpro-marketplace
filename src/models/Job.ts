@@ -84,6 +84,10 @@ const JobSchema = new Schema<JobDocument>(
       max: 100,
       default: 0,
     },
+    fraudFlags: {
+      type: [String],
+      default: [],
+    },
     beforePhoto: { type: [String], default: [] },
     afterPhoto: { type: [String], default: [] },
     coordinates: {

@@ -500,6 +500,48 @@ export class JobRepository extends BaseRepository<JobDocument> {
       .select("category budget")
       .lean() as never;
   }
+
+  /** Count jobs with "rejected" status posted by a specific client. */
+  async countRejectedByClient(clientId: string): Promise<number> {
+    await this.connect();
+    return Job.countDocuments({
+      clientId: new Types.ObjectId(clientId),
+      status: "rejected",
+    });
+  }
+
+  /**
+   * Find jobs with fraud flags or a high risk score (≥ threshold).
+   * Used by the admin fraud monitoring dashboard.
+   */
+  async findFlaggedJobs(opts: {
+    riskThreshold?: number;
+    limit?: number;
+  } = {}): Promise<Array<{
+    _id: { toString(): string };
+    title: string;
+    category: string;
+    budget: number;
+    status: string;
+    riskScore: number;
+    fraudFlags: string[];
+    clientId: { _id: { toString(): string }; name: string; email: string };
+    createdAt: Date;
+  }>> {
+    await this.connect();
+    const threshold = opts.riskThreshold ?? 50;
+    return Job.find({
+      $or: [
+        { fraudFlags: { $exists: true, $not: { $size: 0 } } },
+        { riskScore: { $gte: threshold } },
+      ],
+    })
+      .sort({ riskScore: -1, createdAt: -1 })
+      .limit(opts.limit ?? 100)
+      .populate("clientId", "name email")
+      .select("title category budget status riskScore fraudFlags clientId createdAt")
+      .lean() as never;
+  }
 }
 
 export const jobRepository = new JobRepository();

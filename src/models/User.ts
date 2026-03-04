@@ -125,6 +125,9 @@ const UserSchema = new Schema<UserDocument>(
     // Soft delete
     isDeleted: { type: Boolean, default: false, index: true },
     deletedAt: { type: Date, default: null },
+    // Fraud tracking
+    flaggedJobCount: { type: Number, default: 0 },
+    fraudFlags: { type: [String], default: [] },
   },
   {
     timestamps: true,

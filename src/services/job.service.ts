@@ -1,9 +1,11 @@
 import { jobRepository, activityRepository, providerProfileRepository } from "@/repositories";
-import { calculateRiskScore } from "@/lib/riskScore";
+import { assessJobRisk } from "@/lib/riskScore";
 import { rankJobsForProvider } from "@/lib/openai";
 import { NotFoundError, ForbiddenError, UnprocessableError } from "@/lib/errors";
 import type { TokenPayload } from "@/lib/auth";
 import type { PaginatedJobs } from "@/repositories/job.repository";
+import { connectDB } from "@/lib/db";
+import User from "@/models/User";
 
 export interface CreateJobInput {
   title: string;
@@ -83,8 +85,47 @@ export class JobService {
       ...(invitedProviderId ? { invitedProviderId } : {}),
     };
 
-    const riskScore = calculateRiskScore(jobData);
-    const job = await jobRepository.create({ ...jobData, riskScore });
+    // ── Fraud & risk assessment ─────────────────────────────────────────────
+    await connectDB();
+    const [sevenDayCount, rejectedCount, clientDoc] = await Promise.all([
+      jobRepository.countByClientSince(
+        user.userId,
+        new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+      ),
+      jobRepository.countRejectedByClient(user.userId),
+      User.findById(user.userId)
+        .select("isVerified kycStatus flaggedJobCount createdAt")
+        .lean() as Promise<{
+          isVerified?: boolean;
+          kycStatus?: string;
+          flaggedJobCount?: number;
+          createdAt?: Date;
+        } | null>,
+    ]);
+
+    const accountAgeDays = clientDoc?.createdAt
+      ? (Date.now() - new Date(clientDoc.createdAt).getTime()) / (1000 * 60 * 60 * 24)
+      : 999;
+
+    const { score: riskScore, fraudFlags } = assessJobRisk(jobData, {
+      jobsLast24h: todayCount,
+      jobsLast7Days: sevenDayCount,
+      rejectedJobCount: rejectedCount,
+      flaggedJobCount: clientDoc?.flaggedJobCount ?? 0,
+      isVerified: clientDoc?.isVerified ?? false,
+      kycApproved: clientDoc?.kycStatus === "approved",
+      accountAgeDays,
+    });
+
+    const job = await jobRepository.create({ ...jobData, riskScore, fraudFlags });
+
+    // Increment user's flaggedJobCount when fraud signals are present
+    if (fraudFlags.length > 0) {
+      await User.findByIdAndUpdate(user.userId, {
+        $inc: { flaggedJobCount: 1 },
+        $addToSet: { fraudFlags: { $each: fraudFlags.slice(0, 3) } },
+      });
+    }
 
     await activityRepository.log({
       userId: user.userId,
@@ -96,10 +137,11 @@ export class JobService {
     // Notify all admins about the new pending job
     const { notificationService } = await import("@/services/notification.service");
     const directNote = invitedProviderId ? " (direct invite to a specific provider)" : "";
+    const fraudNote = fraudFlags.length > 0 ? ` ⚠️ Fraud flags detected.` : "";
     await notificationService.notifyAdmins(
       "job_submitted",
       "New job pending review",
-      `A new job "${input.title}" has been submitted and needs validation${directNote}.`,
+      `A new job "${input.title}" has been submitted and needs validation${directNote}.${fraudNote}`,
       { jobId: job._id!.toString() }
     );
 

@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import toast from "react-hot-toast";
-import { UserSearch, Camera, FileText, LocateFixed } from "lucide-react";
+import { UserSearch, Camera, FileText, LocateFixed, Sparkles } from "lucide-react";
 import Button from "@/components/ui/Button";
 import Card, { CardBody, CardFooter } from "@/components/ui/Card";
 import type { ConsultationType } from "@/types";
@@ -37,6 +37,7 @@ interface Provider {
 
 interface RequestConsultationFormProps {
   userId: string;
+  hasAIAccess?: boolean;
 }
 
 // ─── Step config ────────────────────────────────────────────────────────────
@@ -101,12 +102,13 @@ function StepIndicator({ current }: { current: number }) {
 
 // ─── Main component ─────────────────────────────────────────────────────────
 
-export function RequestConsultationForm({ userId }: RequestConsultationFormProps) {
+export function RequestConsultationForm({ userId, hasAIAccess = false }: RequestConsultationFormProps) {
   const router = useRouter();
   const [step, setStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
   const [isGeolocating, setIsGeolocating] = useState(false);
+  const [generatingDesc, setGeneratingDesc] = useState(false);
   const [photos, setPhotos] = useState<string[]>([]);
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
 
@@ -188,6 +190,31 @@ export function RequestConsultationForm({ userId }: RequestConsultationFormProps
   };
 
   const removePhoto = (idx: number) => setPhotos((prev) => prev.filter((_, i) => i !== idx));
+
+  // ── AI Description ────────────────────────────────────────────────────────
+
+  async function generateDescription() {
+    if (!formData.title || formData.title.trim().length < 3) {
+      toast.error("Enter a title first so AI has context.");
+      return;
+    }
+    setGeneratingDesc(true);
+    try {
+      const res = await fetch("/api/ai/generate-consultation-description", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: formData.title, type: formData.type }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "AI generation failed");
+      update("description", data.description);
+      toast.success("Description generated!");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to generate description");
+    } finally {
+      setGeneratingDesc(false);
+    }
+  }
 
   // ── Geolocation ───────────────────────────────────────────────────────────
 
@@ -481,9 +508,31 @@ export function RequestConsultationForm({ userId }: RequestConsultationFormProps
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                  Detailed Description <span className="text-red-500">*</span>
-                </label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-sm font-medium text-slate-700">
+                    Detailed Description <span className="text-red-500">*</span>
+                  </label>
+                  {hasAIAccess ? (
+                    <button
+                      type="button"
+                      onClick={generateDescription}
+                      disabled={generatingDesc || !formData.title}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-violet-200 bg-violet-50 px-2.5 py-1 text-xs font-medium text-violet-700 hover:bg-violet-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      <Sparkles className={`h-3.5 w-3.5 ${generatingDesc ? "animate-pulse" : ""}`} />
+                      {generatingDesc ? "Generating…" : "AI Write"}
+                    </button>
+                  ) : (
+                    <span
+                      title="Upgrade to Gold or Platinum to unlock AI writing"
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-400 cursor-not-allowed select-none"
+                    >
+                      <Sparkles className="h-3.5 w-3.5" />
+                      AI Write
+                      <span className="ml-0.5 bg-amber-100 text-amber-700 rounded px-1 py-0.5 text-[10px] font-semibold">Gold+</span>
+                    </span>
+                  )}
+                </div>
                 <textarea
                   value={formData.description}
                   onChange={(e) => update("description", e.target.value)}
@@ -493,7 +542,7 @@ export function RequestConsultationForm({ userId }: RequestConsultationFormProps
                   rows={5}
                   className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
                 />
-                <p className="text-xs text-slate-400 mt-1">{formData.description.length}/1000 characters</p>
+                <p className="text-xs text-slate-400 mt-1">{formData.description.length}/1000 characters · AI-generated text can be edited freely</p>
               </div>
 
               <div>

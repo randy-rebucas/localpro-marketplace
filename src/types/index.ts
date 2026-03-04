@@ -49,6 +49,10 @@ export interface IUser {
   capabilities?: StaffCapability[];
   dateOfBirth?: Date | string | null;
   gender?: "male" | "female" | "other" | null;
+  /** Number of jobs by this user that were flagged during fraud detection */
+  flaggedJobCount?: number;
+  /** Active fraud/suspicious-behaviour flags */
+  fraudFlags?: string[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -99,6 +103,8 @@ export interface IJob {
   scheduleDate: Date;
   specialInstructions?: string;
   riskScore: number;
+  /** Fraud / spam flags generated at submission time */
+  fraudFlags?: string[];
   beforePhoto?: string[];
   afterPhoto?: string[];
   coordinates?: { type: "Point"; coordinates: [number, number] } | null;
