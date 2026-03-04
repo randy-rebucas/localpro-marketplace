@@ -50,6 +50,7 @@ export default function AdminSupportThread({ userId, adminId, targetUser }: Prop
         fetchUrl={`/api/admin/support/${userId}`}
         postUrl={`/api/admin/support/${userId}`}
         streamUrl="/api/admin/support/stream"
+        attachUrl={`/api/admin/support/${userId}/attachment`}
         currentUserId={adminId}
         transformResponse={transformResponse}
         streamTransform={streamTransform}

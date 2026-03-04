@@ -1,6 +1,7 @@
 import { messageRepository, jobRepository, notificationRepository } from "@/repositories";
 import { pushMessage } from "@/lib/events";
 import { pushNotification } from "@/lib/events";
+import { maskContactInfo } from "@/lib/contactFilter";
 import {
   NotFoundError,
   ForbiddenError,
@@ -59,7 +60,7 @@ export class MessagingService {
       threadId: input.threadId,
       senderId: user.userId,
       receiverId,
-      body: input.body.trim(),
+      body: maskContactInfo(input.body.trim()),
     });
 
     // Push to SSE stream

@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useRef, useEffect, KeyboardEvent } from "react";
-import { Send, Sparkles, Loader2, Paperclip, X, FileText } from "lucide-react";
+import { Send, Sparkles, Loader2, Paperclip, X, FileText, ShieldAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
 import toast from "react-hot-toast";
 import { apiFetch } from "@/lib/fetchClient";
+import { containsContactInfo } from "@/lib/contactFilter";
 
 interface MessageInputProps {
   onSend: (body: string) => Promise<void>;
@@ -132,8 +133,20 @@ export default function MessageInput({
     }
   };
 
+  const hasContactInfo = value.trim().length > 0 && containsContactInfo(value);
+
   return (
     <div className="border-t border-slate-200 bg-white">
+      {/* Contact-info warning */}
+      {hasContactInfo && (
+        <div className="mx-3 mt-2.5 flex items-start gap-2 rounded-xl bg-amber-50 border border-amber-200 px-3 py-2">
+          <ShieldAlert className="h-4 w-4 text-amber-500 flex-shrink-0 mt-0.5" />
+          <p className="text-xs text-amber-700 leading-snug">
+            Sharing phone numbers, emails, or social handles is not allowed. Contact details will be removed before delivery to protect both parties.
+          </p>
+        </div>
+      )}
+
       {/* AI quick reply chips */}
       {(suggestions.length > 0 || (aiSuggestData && aiSuggestData.lastMessages.length > 0)) && (
         <div className="flex items-center gap-2 px-3 pt-2.5 flex-wrap">

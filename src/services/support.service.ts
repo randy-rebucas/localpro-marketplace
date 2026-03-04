@@ -4,6 +4,7 @@ import {
   pushSupportToUser,
   pushNotification,
 } from "@/lib/events";
+import { maskContactInfo } from "@/lib/contactFilter";
 import { NotFoundError } from "@/lib/errors";
 import type { TokenPayload } from "@/lib/auth";
 
@@ -29,7 +30,7 @@ export class SupportService {
       threadId: `support:${user.userId}`,
       senderId: user.userId,
       receiverId,
-      body: body.trim(),
+      body: maskContactInfo(body.trim()),
     });
 
     // Populate senderId so UI can show name
@@ -65,7 +66,7 @@ export class SupportService {
       threadId: `support:${targetUserId}`,
       senderId: admin.userId,
       receiverId: targetUserId,
-      body: body.trim(),
+      body: maskContactInfo(body.trim()),
     });
 
     const payload = { ...message, __support: true };

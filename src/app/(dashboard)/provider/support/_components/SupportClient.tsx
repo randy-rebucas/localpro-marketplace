@@ -9,6 +9,7 @@ export function SupportClient({ userId }: { userId: string }) {
       fetchUrl="/api/support"
       postUrl="/api/support"
       streamUrl="/api/support/stream"
+      attachUrl="/api/support/attachment"
       currentUserId={userId}
       header={
         <div className="flex items-center gap-3">
