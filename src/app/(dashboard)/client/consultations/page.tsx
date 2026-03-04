@@ -29,14 +29,14 @@ export default async function ClientConsultationsPage() {
       <RealtimeRefresher entity="consultation" />
 
       {/* Header */}
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Consultations</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900">Consultations</h1>
           <p className="text-slate-500 text-sm mt-1">
             Request photo-based consultations from providers and get estimates before posting a job.
           </p>
         </div>
-        <Link href="/client/consultations/request" className="btn-primary flex-shrink-0 mt-1">
+        <Link href="/client/consultations/request" className="btn-primary self-start sm:flex-shrink-0 sm:mt-1">
           + Request Consultation
         </Link>
       </div>

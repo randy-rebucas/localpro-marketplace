@@ -13,6 +13,22 @@ interface Props {
   onSuccess: () => void;
 }
 
+function formatPhone(raw: string): string {
+  const digits = raw.replace(/\D/g, "");
+  if (!digits) return "";
+
+  // Strip country code and leading 0 unconditionally
+  let local = digits;
+  if (local.startsWith("63")) local = local.slice(2);
+  if (local.startsWith("0"))  local = local.slice(1);
+
+  const d = local.slice(0, 10);
+  if (!d)        return "+63";
+  if (d.length <= 3) return `+63 ${d}`;
+  if (d.length <= 6) return `+63 ${d.slice(0, 3)} ${d.slice(3)}`;
+  return `+63 ${d.slice(0, 3)} ${d.slice(3, 6)} ${d.slice(6)}`;
+}
+
 function generatePassword(len = 14): string {
   const upper  = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
   const lower  = "abcdefghijklmnopqrstuvwxyz";
@@ -41,6 +57,10 @@ export default function CreateUserModal({ onClose, onSuccess }: Props) {
   const [role,       setRole]       = useState<Role>("client");
   const [isVerified, setIsVerified] = useState(false);
   const [saving,     setSaving]     = useState(false);
+  // Provider-only fields
+  const [phone,           setPhone]           = useState("");
+  const [skillsRaw,       setSkillsRaw]       = useState("");
+  const [yearsExperience, setYearsExperience] = useState("");
 
   // Password strength indicator (reused from client profile)
   const pwStrength = (() => {
@@ -66,7 +86,16 @@ export default function CreateUserModal({ onClose, onSuccess }: Props) {
       const res = await apiFetch("/api/admin/users", {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ name: name.trim(), email: email.trim(), password, role, isVerified }),
+        body:    JSON.stringify({
+          name: name.trim(),
+          email: email.trim(),
+          password,
+          role,
+          isVerified,
+          ...(role === "provider" && phone.trim()           ? { phone: phone.trim() }                                                      : {}),
+          ...(role === "provider" && skillsRaw.trim()       ? { skills: skillsRaw.split(",").map((s) => s.trim()).filter(Boolean) }         : {}),
+          ...(role === "provider" && yearsExperience !== "" ? { yearsExperience: Math.max(0, parseInt(yearsExperience, 10) || 0) }          : {}),
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -218,6 +247,55 @@ export default function CreateUserModal({ onClose, onSuccess }: Props) {
             />
             <span className="text-xs text-slate-600">Mark email as verified</span>
           </label>
+
+          {/* Provider-only fields */}
+          {role === "provider" && (
+            <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3.5 space-y-3">
+              <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Provider profile (optional)</p>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1.5">Phone number</label>
+                <input
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(formatPhone(e.target.value))}
+                  placeholder="+63 912 345 6789"
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1.5">Skills <span className="font-normal text-slate-400">(comma-separated)</span></label>
+                <input
+                  type="text"
+                  value={skillsRaw}
+                  onChange={(e) => setSkillsRaw(e.target.value)}
+                  placeholder="e.g. Plumbing, Electrical, Painting"
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                />
+                {skillsRaw.trim() && (
+                  <div className="flex flex-wrap gap-1 mt-1.5">
+                    {skillsRaw.split(",").map((s) => s.trim()).filter(Boolean).map((skill) => (
+                      <span key={skill} className="text-[11px] bg-primary/10 text-primary rounded px-2 py-0.5 font-medium">{skill}</span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1.5">Years of experience</label>
+                <input
+                  type="number"
+                  value={yearsExperience}
+                  onChange={(e) => setYearsExperience(e.target.value)}
+                  min={0}
+                  max={60}
+                  placeholder="0"
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                />
+              </div>
+            </div>
+          )}
 
           {/* Footer */}
           <div className="flex items-center justify-end gap-2 pt-1">
