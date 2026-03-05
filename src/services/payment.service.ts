@@ -13,7 +13,7 @@ import {
 } from "@/lib/paymongo";
 import { connectDB } from "@/lib/db";
 import User from "@/models/User";
-import { calculateCommission } from "@/lib/commission";
+import { calculateCommission, getCommissionRate } from "@/lib/commission";
 import { canTransitionEscrow } from "@/lib/jobLifecycle";
 import {
   NotFoundError,
@@ -49,7 +49,7 @@ export class PaymentService {
       job.escrowStatus = "funded";
       await jobDoc.save();
 
-      const { commission, netAmount } = calculateCommission(amount);
+      const { commission, netAmount } = calculateCommission(amount, getCommissionRate(job.category));
       await transactionRepository.create({
         jobId: job._id,
         payerId: user.userId,
@@ -197,7 +197,7 @@ export class PaymentService {
     job.escrowStatus = "funded";
     await jobDoc.save();
 
-    const { commission, netAmount } = calculateCommission(p.amount);
+    const { commission, netAmount } = calculateCommission(p.amount, getCommissionRate(job.category));
     await transactionRepository.create({
       jobId: p.jobId,
       payerId: p.clientId,
@@ -275,7 +275,7 @@ export class PaymentService {
     job.escrowStatus = "funded";
     await jobDoc.save();
 
-    const { commission, netAmount } = calculateCommission(job.budget);
+    const { commission, netAmount } = calculateCommission(job.budget, getCommissionRate(job.category));
     await connectDB();
     await transactionRepository.create({
       jobId: job._id,

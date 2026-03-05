@@ -14,13 +14,14 @@ interface Props {
   budget: number;
   acceptedAmount?: number;
   fundedAmount?: number;
+  category?: string;
 }
 
 /**
  * Sticky bottom bar surfacing the primary job action (fund escrow / release payment).
  * Only renders when there is an actionable CTA for the client.
  */
-export default function StickyJobCTA({ jobId, status, escrowStatus, budget, acceptedAmount, fundedAmount }: Props) {
+export default function StickyJobCTA({ jobId, status, escrowStatus, budget, acceptedAmount, fundedAmount, category }: Props) {
   const needsFunding = status === "assigned" && escrowStatus === "not_funded";
   const needsRelease = status === "completed" && escrowStatus === "funded";
 
@@ -59,6 +60,7 @@ export default function StickyJobCTA({ jobId, status, escrowStatus, budget, acce
             budget={budget}
             acceptedAmount={acceptedAmount}
             fundedAmount={fundedAmount}
+            category={category}
           />
         </div>
       </div>

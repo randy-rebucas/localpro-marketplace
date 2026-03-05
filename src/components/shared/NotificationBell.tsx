@@ -94,7 +94,7 @@ export default function NotificationBell() {
           </div>
 
           {/* List */}
-          <div className="max-h-80 overflow-y-auto divide-y divide-slate-50">
+          <div className="max-h-[22rem] overflow-y-auto divide-y divide-slate-50">
             {notifications.length === 0 ? (
               <div className="py-10 flex flex-col items-center gap-2 text-center">
                 <Bell className="h-6 w-6 text-slate-300" />
@@ -131,6 +131,19 @@ export default function NotificationBell() {
                 );
               })
             )}
+          </div>
+
+          {/* Footer */}
+          <div className="border-t border-slate-100 px-4 py-2.5 text-center">
+            <button
+              onClick={() => {
+                setOpen(false);
+                if (user?.role) router.push(`/${user.role}/notifications`);
+              }}
+              className="text-xs font-medium text-primary hover:underline"
+            >
+              View all notifications
+            </button>
           </div>
         </div>
       )}

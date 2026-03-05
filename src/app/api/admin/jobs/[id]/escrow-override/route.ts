@@ -4,7 +4,7 @@ import { requireUser, requireRole } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { ValidationError, NotFoundError, UnprocessableError } from "@/lib/errors";
 import { jobRepository, transactionRepository, activityRepository, notificationRepository } from "@/repositories";
-import { calculateCommission } from "@/lib/commission";
+import { calculateCommission, getCommissionRate } from "@/lib/commission";
 import { pushStatusUpdateMany, pushNotification } from "@/lib/events";
 import type { IJob } from "@/types";
 
@@ -45,7 +45,7 @@ export const POST = withHandler(async (
     // Ensure a transaction record exists (for non-PayMongo or edge cases)
     const existingTxn = await transactionRepository.findOneByJobId(id);
     if (!existingTxn && job.providerId) {
-      const { commission, netAmount } = calculateCommission(job.budget);
+      const { commission, netAmount } = calculateCommission(job.budget, getCommissionRate(job.category));
       await transactionRepository.create({
         jobId: job._id,
         payerId: job.clientId,

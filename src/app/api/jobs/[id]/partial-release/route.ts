@@ -5,7 +5,7 @@ import { connectDB } from "@/lib/db";
 import Job from "@/models/Job";
 import Transaction from "@/models/Transaction";
 import ProviderProfile from "@/models/ProviderProfile";
-import { calculateCommission } from "@/lib/commission";
+import { calculateCommission, getCommissionRate } from "@/lib/commission";
 import { pushStatusUpdateMany } from "@/lib/events";
 import { activityRepository, paymentRepository, transactionRepository } from "@/repositories";
 import {
@@ -45,7 +45,7 @@ export const POST = withHandler(async (
   const fundedAmount = payment?.amount ?? job.budget;
   if (releaseAmount > fundedAmount) throw new ValidationError(`Cannot exceed funded escrow of ₱${fundedAmount.toLocaleString()}`);
 
-  const { commission, netAmount } = calculateCommission(releaseAmount);
+  const { commission, netAmount } = calculateCommission(releaseAmount, getCommissionRate(job.category));
 
   // Save partial release and close escrow
   await Job.collection.updateOne(

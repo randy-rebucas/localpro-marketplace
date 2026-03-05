@@ -6,7 +6,7 @@ import toast from "react-hot-toast";
 import Button from "@/components/ui/Button";
 import { apiFetch } from "@/lib/fetchClient";
 import Modal from "@/components/ui/Modal";
-import { calculateCommission } from "@/lib/commission";
+import { calculateCommission, getCommissionRate } from "@/lib/commission";
 import { formatCurrency } from "@/lib/utils";
 import { ShieldCheck, Info } from "lucide-react";
 import type { JobStatus, EscrowStatus } from "@/types";
@@ -18,9 +18,10 @@ interface Props {
   budget: number;
   acceptedAmount?: number;
   fundedAmount?: number;
+  category?: string;
 }
 
-export default function JobActionButtons({ jobId, status, escrowStatus, budget, acceptedAmount, fundedAmount }: Props) {
+export default function JobActionButtons({ jobId, status, escrowStatus, budget, acceptedAmount, fundedAmount, category }: Props) {
   const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
   const [showFundModal, setShowFundModal] = useState(false);
@@ -47,8 +48,9 @@ export default function JobActionButtons({ jobId, status, escrowStatus, budget, 
     return isNaN(v) || v <= 0 ? 0 : v;
   }, [amountInput]);
 
-  const breakdown = useMemo(() => calculateCommission(parsedAmount || budget), [parsedAmount, budget]);
-  const releaseBreakdown = useMemo(() => calculateCommission(fundedAmount ?? budget), [fundedAmount, budget]);
+  const commissionRate = getCommissionRate(category);
+  const breakdown = useMemo(() => calculateCommission(parsedAmount || budget, commissionRate), [parsedAmount, budget, commissionRate]);
+  const releaseBreakdown = useMemo(() => calculateCommission(fundedAmount ?? budget, commissionRate), [fundedAmount, budget, commissionRate]);
 
   function openFundModal() {
     setAmountInput(String(acceptedAmount ?? budget));

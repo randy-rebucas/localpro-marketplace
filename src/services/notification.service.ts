@@ -3,29 +3,64 @@ import { pushNotification } from "@/lib/events";
 import { sendNotificationEmail } from "@/lib/email";
 import type { NotificationType, INotification } from "@/types";
 
-// Notification types that always warrant an email in addition to in-app push
+// All notification types that should also send an email.
 const EMAIL_ALWAYS: Set<NotificationType> = new Set([
+  // Job lifecycle
   "job_submitted",
   "job_approved",
   "job_rejected",
+  "job_expired",
+  "job_direct_invite",
+  "recurring_job_spawned",
+  // Quotes
   "quote_received",
   "quote_accepted",
   "quote_rejected",
+  "quote_expired",
+  // Payments & escrow
   "escrow_funded",
   "payment_confirmed",
+  "payment_failed",
+  "payment_reminder",
   "job_completed",
   "escrow_released",
+  "escrow_auto_released",
+  // Payouts
+  "payout_requested",
+  "payout_status_update",
+  // Disputes
   "dispute_opened",
   "dispute_resolved",
-  "job_expired",
-  "escrow_auto_released",
-  "quote_expired",
-  "reminder_profile_incomplete",
+  // Reviews & messages
+  "review_received",
+  "new_message",
+  // Consultations
   "consultation_request",
   "consultation_accepted",
   "estimate_provided",
   "consultation_stale",
-  "admin_message",
+  "consultation_expired",
+  // Reminders
+  "reminder_profile_incomplete",
+  "reminder_fund_escrow",
+  "reminder_no_quotes",
+  "reminder_start_job",
+  "reminder_complete_job",
+  "reminder_leave_review",
+  "reminder_stale_dispute",
+  "reminder_pending_validation",
+  // admin_message is intentionally excluded — the admin message routes (single + bulk)
+  // call sendEmail() directly, so letting it pass through here would double-send.
+]);
+
+// Notification types that involve an escrow/payment amount (look up payment record).
+const PAYMENT_AMOUNT_TYPES: Set<NotificationType> = new Set([
+  "escrow_funded",
+  "payment_confirmed",
+  "payment_failed",
+  "job_completed",
+  "escrow_released",
+  "escrow_auto_released",
 ]);
 
 export interface PushNotificationInput {
@@ -45,20 +80,71 @@ export class NotificationService {
     if (EMAIL_ALWAYS.has(input.type)) {
       const user = await userRepository.findById(input.userId);
       if (user?.email) {
-        sendNotificationEmail(user.email, {
-          type: input.type,
-          recipientName: user.name,
-          title: input.title,
-          message: input.message,
-          data: input.data
-            ? {
-                jobId: input.data.jobId,
-                quoteId: input.data.quoteId,
-              }
-            : undefined,
-        });
+        // Enrich email context asynchronously (fire-and-forget)
+        this.buildAndSendEmail(user, input).catch((err) =>
+          console.error("[EMAIL] Failed to send notification email:", err)
+        );
       }
     }
+  }
+
+  /** Build an enriched email context and dispatch through sendNotificationEmail. */
+  private async buildAndSendEmail(
+    user: { email: string; name: string; role?: string },
+    input: PushNotificationInput
+  ): Promise<void> {
+    const d = input.data ?? {};
+    let jobTitle: string | undefined;
+    let amount: number | undefined = d.estimateAmount;
+
+    // Look up job title when a jobId is available
+    if (d.jobId) {
+      try {
+        const { jobRepository } = await import("@/repositories");
+        const job = await jobRepository.findById(d.jobId);
+        jobTitle = (job as { title?: string } | null)?.title;
+
+        // For financial events, pull the actual funded/released amount from the payment record
+        if (PAYMENT_AMOUNT_TYPES.has(input.type)) {
+          const { paymentRepository } = await import("@/repositories");
+          const payment = await paymentRepository.findByJobId(d.jobId);
+          amount =
+            (payment as { amount?: number } | null)?.amount ??
+            (job as { budget?: number } | null)?.budget;
+        }
+      } catch {
+        // Non-critical — email still sends without enrichment
+      }
+    }
+
+    // For payout events, pull the payout amount from the payout record
+    if (!amount && d.payoutId && (input.type === "payout_requested" || input.type === "payout_status_update")) {
+      try {
+        const { payoutRepository } = await import("@/repositories");
+        const payout = await payoutRepository.findById(d.payoutId);
+        amount = (payout as { amount?: number } | null)?.amount;
+      } catch {
+        // Non-critical
+      }
+    }
+
+    await sendNotificationEmail(user.email, {
+      type: input.type,
+      recipientName: user.name,
+      recipientRole: user.role,
+      title: input.title,
+      message: input.message,
+      data: {
+        jobId: d.jobId,
+        jobTitle,
+        amount,
+        quoteId: d.quoteId,
+        consultationId: d.consultationId,
+        estimateAmount: d.estimateAmount,
+        payoutId: d.payoutId,
+        disputeId: d.disputeId,
+      },
+    });
   }
 
   /** Broadcast a notification to all admin users. */
@@ -94,3 +180,4 @@ export class NotificationService {
 }
 
 export const notificationService = new NotificationService();
+

@@ -16,6 +16,56 @@ import { apiFetch } from "@/lib/fetchClient";
 
 export type { INotification as Notification };
 
+// Per-type toast emoji — falls back to 🔔 for unknown types
+const TOAST_EMOJI: Record<string, string> = {
+  // Job lifecycle
+  job_submitted:              "📋",
+  job_approved:               "✅",
+  job_rejected:               "❌",
+  job_expired:                "⏰",
+  job_direct_invite:          "🎯",
+  recurring_job_spawned:      "🔄",
+  // Quotes
+  quote_received:             "📝",
+  quote_accepted:             "🎉",
+  quote_rejected:             "👎",
+  quote_expired:              "⏰",
+  // Payments & escrow
+  escrow_funded:              "🔒",
+  payment_confirmed:          "💳",
+  payment_failed:             "❌",
+  payment_reminder:           "💳",
+  job_completed:              "🏁",
+  escrow_released:            "💰",
+  escrow_auto_released:       "💰",
+  // Payouts
+  payout_requested:           "🏦",
+  payout_status_update:       "💵",
+  // Disputes
+  dispute_opened:             "⚠️",
+  dispute_resolved:           "⚖️",
+  // Reviews & messages
+  review_received:            "⭐",
+  new_message:                "💬",
+  // Consultations
+  consultation_request:       "📅",
+  consultation_accepted:      "📅",
+  estimate_provided:          "🧾",
+  consultation_stale:         "📅",
+  consultation_expired:       "📅",
+  // Reminders
+  reminder_fund_escrow:       "📌",
+  reminder_no_quotes:         "📌",
+  reminder_start_job:         "📌",
+  reminder_complete_job:      "📌",
+  reminder_leave_review:      "📌",
+  reminder_stale_dispute:     "📌",
+  reminder_pending_validation:"📌",
+  reminder_profile_incomplete:"📌",
+  // Admin
+  admin_message:              "📢",
+};
+
 interface NotificationState {
   notifications: INotification[];
   unreadCount: number;
@@ -186,11 +236,12 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
       unreadCount: state.unreadCount + (n.readAt ? 0 : 1),
     }));
     if (!silent && !n.readAt) {
-      const body = n.message ? `${n.title}: ${n.message.slice(0, 80)}` : n.title;
+      const emoji = TOAST_EMOJI[n.type] ?? "🔔";
+      const body = n.message ? n.message.slice(0, 100) : n.title;
       toast(body, {
-        icon: "🔔",
-        duration: 6000,
-        style: { maxWidth: "360px" },
+        icon: emoji,
+        duration: 5000,
+        style: { maxWidth: "380px", fontSize: "13px" },
       });
     }
   },

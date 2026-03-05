@@ -154,6 +154,7 @@ export default async function JobDetailPage({
           budget={job.budget}
           acceptedAmount={acceptedQuoteAmount}
           fundedAmount={fundedAmount}
+          category={job.category}
         />
         {job.status === "completed" && job.escrowStatus === "funded" && (
           <PartialReleaseButton jobId={job._id.toString()} budget={job.budget} />
@@ -199,6 +200,7 @@ export default async function JobDetailPage({
         budget={job.budget}
         acceptedAmount={acceptedQuoteAmount}
         fundedAmount={fundedAmount}
+        category={job.category}
       />
     </div>
   );

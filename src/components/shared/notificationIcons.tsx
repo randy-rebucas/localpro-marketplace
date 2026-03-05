@@ -31,6 +31,8 @@ import {
   CalendarX2,
   CalendarClock,
   Megaphone,
+  Repeat2,
+  CreditCard,
   type LucideIcon,
 } from "lucide-react";
 
@@ -71,8 +73,8 @@ export const TYPE_ICON: Record<string, IconConfig> = {
   consultation_stale:      { icon: CalendarClock,       bg: "bg-amber-100",   color: "text-amber-600"   },
   admin_message:           { icon: Megaphone,           bg: "bg-sky-100",     color: "text-sky-600"     },
   reminder_pending_validation: { icon: ShieldAlert,    bg: "bg-orange-100",  color: "text-orange-600"  },
-  reminder_profile_incomplete: { icon: PenLine,        bg: "bg-amber-100",   color: "text-amber-600"   },
-};
+  reminder_profile_incomplete: { icon: PenLine,        bg: "bg-amber-100",   color: "text-amber-600"   },  recurring_job_spawned:        { icon: Repeat2,         bg: "bg-indigo-100",  color: "text-indigo-600"  },
+  payment_reminder:             { icon: CreditCard,      bg: "bg-amber-100",   color: "text-amber-600"   },};
 
 const FALLBACK: IconConfig = { icon: Bell, bg: "bg-slate-100", color: "text-slate-500" };
 

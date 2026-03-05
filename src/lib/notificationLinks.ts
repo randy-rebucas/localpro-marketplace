@@ -126,6 +126,8 @@ export function getNotificationLink(
 
     case "reminder_stale_dispute":
       if (role === "admin") return "/admin/disputes";
+      if (role === "client" && jobId) return `/client/jobs/${jobId}`;
+      if (role === "provider" && jobId) return `/provider/jobs/${jobId}`;
       return null;
 
     case "reminder_profile_incomplete":
@@ -146,6 +148,32 @@ export function getNotificationLink(
     case "consultation_stale":
       if (role === "client" && data?.consultationId) return `/client/consultations/${data.consultationId}`;
       if (role === "provider" && data?.consultationId) return `/provider/consultations/${data.consultationId}`;
+      return null;
+
+    case "escrow_auto_released":
+      if (role === "provider") return "/provider/earnings";
+      if (role === "client") return "/client/escrow";
+      return null;
+
+    case "recurring_job_spawned":
+      if (role === "client" && jobId) return `/client/jobs/${jobId}`;
+      if (role === "provider" && jobId) return `/provider/jobs/${jobId}`;
+      if (role === "provider") return "/provider/jobs";
+      return null;
+
+    case "payment_reminder":
+      if (role === "client" && jobId) return `/client/jobs/${jobId}`;
+      if (role === "client") return "/client/jobs";
+      return null;
+
+    case "admin_message":
+      if (role === "admin")    return "/admin";
+      if (role === "provider") return "/provider/dashboard";
+      if (role === "client")   return "/client/dashboard";
+      return null;
+
+    case "reminder_pending_validation":
+      if (role === "admin") return "/admin";
       return null;
 
     default:

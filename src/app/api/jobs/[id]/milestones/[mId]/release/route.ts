@@ -5,7 +5,7 @@ import { connectDB } from "@/lib/db";
 import Job from "@/models/Job";
 import Transaction from "@/models/Transaction";
 import ProviderProfile from "@/models/ProviderProfile";
-import { calculateCommission } from "@/lib/commission";
+import { calculateCommission, getCommissionRate } from "@/lib/commission";
 import { pushStatusUpdateMany } from "@/lib/events";
 import { activityRepository, transactionRepository } from "@/repositories";
 import { NotFoundError, ForbiddenError, UnprocessableError } from "@/lib/errors";
@@ -59,7 +59,7 @@ export const POST = withHandler(async (
     throw new UnprocessableError("Milestone has already been released");
   }
 
-  const { commission, netAmount } = calculateCommission(milestone.amount);
+  const { commission, netAmount } = calculateCommission(milestone.amount, getCommissionRate(job.category));
 
   // Mark the milestone as released
   job.milestones[milestoneIndex] = {
