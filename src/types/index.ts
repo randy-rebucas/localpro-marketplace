@@ -38,6 +38,7 @@ export interface IUser {
   isVerified: boolean;
   isSuspended: boolean;
   approvalStatus: "pending_approval" | "approved" | "rejected";
+  accountType?: "personal" | "business";
   avatar?: string;
   facebookId?: string;
   oauthProvider?: "facebook" | null;
@@ -618,4 +619,91 @@ export interface ICategory {
   order: number;
   createdAt: Date;
   updatedAt: Date;
+}
+
+// ─── Business Organization ────────────────────────────────────────────────────
+
+export type BusinessType = "hotel" | "company" | "other";
+export type BusinessMemberRole = "owner" | "manager" | "supervisor" | "finance";
+
+export interface IBusinessLocation {
+  _id: Types.ObjectId | string;
+  label: string;
+  address: string;
+  coordinates?: { lat: number; lng: number };
+  /** Allocated monthly budget for this location in PHP */
+  monthlyBudget: number;
+  isActive: boolean;
+  /** Budget alert threshold 0-100 (default 80) */
+  alertThreshold: number;
+  /** Pinned provider IDs for this location */
+  preferredProviderIds: (Types.ObjectId | string)[];
+}
+
+export interface IBusinessOrganization {
+  _id: Types.ObjectId | string;
+  ownerId: Types.ObjectId | string | IUser;
+  name: string;
+  type: BusinessType;
+  logo?: string | null;
+  locations: IBusinessLocation[];
+  defaultMonthlyBudget: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface IBusinessMember {
+  _id: Types.ObjectId | string;
+  orgId: Types.ObjectId | string | IBusinessOrganization;
+  userId: Types.ObjectId | string | IUser;
+  role: BusinessMemberRole;
+  /** Which location IDs this member can manage; empty = all locations */
+  locationAccess: (Types.ObjectId | string)[];
+  invitedBy: Types.ObjectId | string | IUser;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// ─── Business Analytics ───────────────────────────────────────────────────────
+
+export interface MonthlyExpenseRow {
+  /** "YYYY-MM" */
+  month: string;
+  locationId: string | null;
+  locationLabel: string;
+  totalSpend: number;
+  jobCount: number;
+  /** Spend by service category */
+  categoryBreakdown: Record<string, number>;
+  /** % change vs previous month (null for first row) */
+  momChange: number | null;
+}
+
+export interface ProviderPerformanceRow {
+  providerId: string;
+  providerName: string;
+  providerAvatar?: string | null;
+  completedJobs: number;
+  avgRating: number;
+  totalSpend: number;
+  /** % of assigned jobs with delays (started after scheduleDate) */
+  delayFrequency: number;
+  /** Number of disputes involving this provider for org jobs */
+  disputeCount: number;
+  /** 0-100 composite score: rating * completion rate / avg cost factor */
+  costEfficiencyScore: number;
+  /** Whether this provider is on the org's preferred vendor list */
+  isPreferred: boolean;
+}
+
+export interface BudgetAlertRow {
+  locationId: string;
+  locationLabel: string;
+  budgetTotal: number;
+  spentThisMonth: number;
+  pct: number;
+  /** 'ok' | 'warning' (≥threshold) | 'critical' (≥90%) */
+  status: 'ok' | 'warning' | 'critical';
+  threshold: number;
 }

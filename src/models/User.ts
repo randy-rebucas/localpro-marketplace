@@ -47,8 +47,9 @@ const UserSchema = new Schema<UserDocument>(
     },
     email: {
       type: String,
-      required: [true, "Email is required"],
+      required: false,
       unique: true,
+      sparse: true,
       lowercase: true,
       trim: true,
       match: [/^\S+@\S+\.\S+$/, "Please provide a valid email"],
@@ -76,6 +77,11 @@ const UserSchema = new Schema<UserDocument>(
       type: String,
       enum: ["pending_approval", "approved", "rejected"],
       default: "approved",
+    },
+    accountType: {
+      type: String,
+      enum: ["personal", "business"],
+      default: "personal",
     },
     avatar: { type: String, default: null },
     kycStatus: {
