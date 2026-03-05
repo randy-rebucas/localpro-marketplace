@@ -57,9 +57,9 @@ export abstract class BaseRepository<TDoc extends Document> {
   async updateMany(
     filter: FilterQuery<TDoc>,
     update: UpdateQuery<TDoc>
-  ): Promise<void> {
+  ) {
     await this.connect();
-    await this.model.updateMany(filter, update);
+    return this.model.updateMany(filter, update);
   }
 
   async count(filter: FilterQuery<TDoc>): Promise<number> {
