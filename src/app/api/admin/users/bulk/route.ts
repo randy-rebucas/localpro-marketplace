@@ -7,7 +7,7 @@ import { userRepository } from "@/repositories";
 
 const BulkSchema = z.object({
   ids: z.array(z.string().min(1)).min(1).max(200),
-  action: z.enum(["verify", "suspend", "delete"]),
+  action: z.enum(["verify", "suspend", "delete", "approve"]),
 });
 
 export const POST = withHandler(async (req: NextRequest) => {
@@ -27,6 +27,11 @@ export const POST = withHandler(async (req: NextRequest) => {
     case "verify":
       update = { isVerified: true };
       break;
+    case "approve":
+      // Only approve providers that are actually pending
+      additionalFilter = { role: "provider", approvalStatus: "pending_approval" };
+      update = { approvalStatus: "approved" };
+      break;
     case "suspend":
       // Prevent suspending other admins unless the caller is the super-admin (role=admin)
       if (admin.role !== "admin") {
@@ -41,10 +46,10 @@ export const POST = withHandler(async (req: NextRequest) => {
       break;
   }
 
-  await userRepository.updateMany(
+  const result = await userRepository.updateMany(
     { _id: { $in: ids }, ...additionalFilter } as never,
     { $set: update } as never
   );
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, affected: (result as { modifiedCount?: number })?.modifiedCount ?? ids.length });
 });

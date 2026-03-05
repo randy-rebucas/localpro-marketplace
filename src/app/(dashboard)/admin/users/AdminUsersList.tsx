@@ -10,8 +10,9 @@ import { formatDate } from "@/lib/utils";
 import UserActions from "./UserActions";
 import CreateUserModal from "./CreateUserModal";
 import ImportUsersModal from "./ImportUsersModal";
+import BulkMessageModal from "./BulkMessageModal";
 import type { IUser } from "@/types";
-import { CheckCircle2, XCircle, Clock, UserPlus, Upload, Download, Search, X, ShieldCheck, Ban, Trash2 } from "lucide-react";
+import { CheckCircle2, XCircle, Clock, UserPlus, Upload, Download, Search, X, ShieldCheck, Ban, Trash2, CheckCheck, MessageSquare } from "lucide-react";
 
 type FilterRole = "all" | "client" | "provider" | "admin";
 
@@ -104,6 +105,7 @@ export default function AdminUsersList({ users, total, page, totalPages, roleFil
 
   const [showCreate, setShowCreate] = useState(false);
   const [showImport, setShowImport] = useState(false);
+  const [showBulkMessage, setShowBulkMessage] = useState(false);
 
   // ── Search ─────────────────────────────────────────────────────────────
   const [searchDraft, setSearchDraft] = useState(searchQuery);
@@ -132,7 +134,7 @@ export default function AdminUsersList({ users, total, page, totalPages, roleFil
 
   // ── Bulk selection ─────────────────────────────────────────────────────
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [bulkLoading, setBulkLoading] = useState<"verify" | "suspend" | "delete" | null>(null);
+  const [bulkLoading, setBulkLoading] = useState<"verify" | "suspend" | "delete" | "approve" | null>(null);
 
   const allSelected = users.length > 0 && selectedIds.size === users.length;
   const someSelected = selectedIds.size > 0;
@@ -150,7 +152,7 @@ export default function AdminUsersList({ users, total, page, totalPages, roleFil
     });
   }
 
-  async function bulkAction(action: "verify" | "suspend" | "delete") {
+  async function bulkAction(action: "verify" | "suspend" | "delete" | "approve") {
     if (selectedIds.size === 0) return;
     if (action === "delete") {
       const ok = confirm(`Soft-delete ${selectedIds.size} user(s)? They will be deactivated.`);
@@ -293,6 +295,22 @@ export default function AdminUsersList({ users, total, page, totalPages, roleFil
         <div className="flex items-center gap-3 bg-primary/5 border border-primary/20 rounded-xl px-4 py-2.5">
           <span className="text-primary text-sm font-semibold">{selectedIds.size} selected</span>
           <div className="flex gap-2 ml-auto">
+            <button
+              onClick={() => setShowBulkMessage(true)}
+              disabled={!!bulkLoading}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium transition-colors disabled:opacity-50"
+            >
+              <MessageSquare size={12} />
+              Message all
+            </button>
+            <button
+              onClick={() => bulkAction("approve")}
+              disabled={!!bulkLoading}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium transition-colors disabled:opacity-50"
+            >
+              {bulkLoading === "approve" ? <span className="h-3 w-3 rounded-full border-2 border-white border-t-transparent animate-spin" /> : <CheckCheck size={12} />}
+              Approve all
+            </button>
             <button
               onClick={() => bulkAction("verify")}
               disabled={!!bulkLoading}
@@ -485,6 +503,13 @@ export default function AdminUsersList({ users, total, page, totalPages, roleFil
       </div>
 
       {/* Modals */}
+      {showBulkMessage && (
+        <BulkMessageModal
+          selectedIds={[...selectedIds]}
+          onClose={() => setShowBulkMessage(false)}
+          onSuccess={() => { setSelectedIds(new Set()); router.refresh(); }}
+        />
+      )}
       {showCreate && (
         <CreateUserModal
           onClose={() => setShowCreate(false)}
