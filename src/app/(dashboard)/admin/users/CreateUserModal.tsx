@@ -79,7 +79,7 @@ export default function CreateUserModal({ onClose, onSuccess }: Props) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!name.trim() || !email.trim() || !password) return;
+    if (!name.trim() || !password) return;
 
     setSaving(true);
     try {
@@ -155,12 +155,14 @@ export default function CreateUserModal({ onClose, onSuccess }: Props) {
 
           {/* Email */}
           <div>
-            <label className="block text-xs font-medium text-slate-700 mb-1.5">Email address</label>
+            <label className="block text-xs font-medium text-slate-700 mb-1.5">
+              Email address
+              <span className="ml-1 text-slate-400 font-normal">(optional)</span>
+            </label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              required
               placeholder="maria@example.com"
               className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
             />
@@ -310,7 +312,7 @@ export default function CreateUserModal({ onClose, onSuccess }: Props) {
               type="submit"
               size="sm"
               isLoading={saving}
-              disabled={!name.trim() || !email.trim() || password.length < 8}
+              disabled={!name.trim() || password.length < 8}
             >
               {saving ? "Creating…" : "Create user"}
             </Button>

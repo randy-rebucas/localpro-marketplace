@@ -23,7 +23,7 @@ export const GET = withHandler(async (req: NextRequest) => {
 
 const CreateUserSchema = z.object({
   name:            z.string().min(2, "Name must be at least 2 characters").max(100),
-  email:           z.string().email("Invalid email address"),
+  email:           z.string().email("Invalid email address").optional(),
   password:        z.string().min(8, "Password must be at least 8 characters").max(100),
   role:            z.enum(["client", "provider", "admin", "staff"]),
   isVerified:      z.boolean().optional().default(false),
@@ -42,8 +42,10 @@ export const POST = withHandler(async (req: NextRequest) => {
 
   const { name, email, password, role, isVerified, phone, skills, yearsExperience } = parsed.data;
 
-  const existing = await userRepository.findByEmail(email);
-  if (existing) throw new ConflictError("An account with this email already exists");
+  if (email) {
+    const existing = await userRepository.findByEmail(email);
+    if (existing) throw new ConflictError("An account with this email already exists");
+  }
 
   const approvalStatus = role === "provider" ? "pending_approval" : "approved";
 

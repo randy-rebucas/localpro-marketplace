@@ -8,6 +8,7 @@ import {
 import { fetchClient } from "@/lib/fetchClient";
 import type { IBusinessOrganization, IBusinessLocation } from "@/types";
 import { formatCurrency } from "@/lib/utils";
+import LocationAutocomplete from "@/components/shared/LocationAutocomplete";
 import toast from "react-hot-toast";
 
 interface OrgApiResponse {
@@ -227,11 +228,10 @@ export default function LocationsClient() {
               <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
                 Address *
               </label>
-              <input
-                className="input w-full"
-                placeholder="Full address"
+              <LocationAutocomplete
                 value={form.address}
-                onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))}
+                onChange={(address) => setForm((f) => ({ ...f, address }))}
+                placeholder="Start typing a full address…"
               />
             </div>
           </div>
