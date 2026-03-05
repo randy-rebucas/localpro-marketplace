@@ -154,6 +154,90 @@ export class BusinessService {
     await businessMemberRepository.deactivateMember(memberId);
   }
 
+  /** Search a client user by email — used for the invite-by-email flow. */
+  async searchUserByEmail(
+    email: string,
+    orgId: string,
+    requestingUserId: string
+  ): Promise<{ _id: string; name: string; email: string; avatar: string | null } | null> {
+    await this.requireManagerAccess(orgId, requestingUserId);
+    await connectDB();
+    const User = mongoose.model("User");
+    const user = await User.findOne({ email: email.toLowerCase().trim(), role: "client" })
+      .select("_id name email avatar")
+      .lean() as { _id: unknown; name: string; email: string; avatar?: string } | null;
+    if (!user) return null;
+    return {
+      _id: (user._id as object).toString(),
+      name: user.name,
+      email: user.email,
+      avatar: user.avatar ?? null,
+    };
+  }
+
+  /** Org-scoped activity logs for all members — for the Activity tab. */
+  async getMemberActivityLogs(
+    orgId: string,
+    requestingUserId: string,
+    page = 1,
+    limit = 20
+  ): Promise<{
+    logs: {
+      logId: string;
+      eventType: string;
+      createdAt: Date;
+      metadata: Record<string, unknown>;
+      user: { id: string; name: string; avatar: string | null } | null;
+      job: { id: string; title: string; category: string | null } | null;
+    }[];
+    total: number;
+    page: number;
+    limit: number;
+  }> {
+    await this.requireMemberAccess(orgId, requestingUserId);
+    const memberUserIds = await businessMemberRepository.getMemberUserIds(orgId);
+    const org = await businessOrganizationRepository.findById(orgId);
+    if (!org) return { logs: [], total: 0, page, limit };
+
+    await connectDB();
+    const ActivityLog = mongoose.model("ActivityLog");
+    const ownerOid = new mongoose.Types.ObjectId(org.ownerId.toString());
+    const memberOids = [
+      ...memberUserIds.map((id) => new mongoose.Types.ObjectId(id)),
+      ownerOid,
+    ];
+
+    const filter = { userId: { $in: memberOids } };
+    const [total, docs] = await Promise.all([
+      ActivityLog.countDocuments(filter),
+      ActivityLog.find(filter)
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .populate("userId", "name email avatar")
+        .populate("jobId", "title category")
+        .lean(),
+    ]);
+
+    const logs = (docs as Array<Record<string, unknown>>).map((d) => {
+      const u = d.userId as Record<string, unknown> | null;
+      const j = d.jobId as Record<string, unknown> | null;
+      return {
+        logId: (d._id as object).toString(),
+        eventType: d.eventType as string,
+        createdAt: d.createdAt as Date,
+        metadata: (d.metadata as Record<string, unknown>) ?? {},
+        user: u && typeof u === "object" && "name" in u
+          ? { id: (u._id as object).toString(), name: u.name as string, avatar: (u.avatar as string | null) ?? null }
+          : null,
+        job: j && typeof j === "object" && "title" in j
+          ? { id: (j._id as object).toString(), title: j.title as string, category: (j.category as string | null) ?? null }
+          : null,
+      };
+    });
+    return { logs, total, page, limit };
+  }
+
   // ─── Preferred Vendors ───────────────────────────────────────────────────
 
   async togglePreferredProvider(
@@ -491,7 +575,107 @@ export class BusinessService {
 
     return results;
   }
+  // ─── Filtered Job List ────────────────────────────────────────────────────
 
+  async listBusinessJobs(
+    orgId: string,
+    requestingUserId: string,
+    opts: {
+      locationId?: string;
+      status?: string;
+      category?: string;
+      providerId?: string;
+      dateFrom?: string;
+      dateTo?: string;
+      page?: number;
+      limit?: number;
+    } = {}
+  ): Promise<{ jobs: unknown[]; total: number; pages: number }> {
+    await this.requireMemberAccess(orgId, requestingUserId);
+    const memberUserIds = await businessMemberRepository.getMemberUserIds(orgId);
+    if (memberUserIds.length === 0) return { jobs: [], total: 0, pages: 0 };
+
+    await connectDB();
+    const Job = mongoose.model("Job");
+    const { locationId, status, category, providerId, dateFrom, dateTo, page = 1, limit = 20 } = opts;
+
+    const orgForLoc = locationId
+      ? (await businessOrganizationRepository.findById(orgId) as unknown as IBusinessOrganization | null)
+      : null;
+
+    const match: Record<string, unknown> = {
+      clientId: { $in: memberUserIds.map((id) => new mongoose.Types.ObjectId(id)) },
+    };
+
+    if (locationId && orgForLoc) {
+      const loc = orgForLoc.locations.find((l) => l._id.toString() === locationId);
+      if (loc) match.location = { $regex: loc.address.slice(0, 20), $options: "i" };
+    }
+    if (status) match.status = status;
+    if (category) match.category = { $regex: category, $options: "i" };
+    if (providerId) {
+      try { match.providerId = new mongoose.Types.ObjectId(providerId); } catch { /* ignore */ }
+    }
+    if (dateFrom || dateTo) {
+      const df: Record<string, Date> = {};
+      if (dateFrom) df.$gte = new Date(dateFrom);
+      if (dateTo)   df.$lte = new Date(dateTo);
+      match.createdAt = df;
+    }
+
+    const skip = (page - 1) * limit;
+    const [total, jobs] = await Promise.all([
+      Job.countDocuments(match),
+      Job.find(match)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .populate("clientId", "name avatar")
+        .populate("providerId", "name avatar")
+        .lean(),
+    ]);
+
+    return { jobs, total, pages: Math.ceil(total / limit) };
+  }
+
+  async getBusinessJobDetail(
+    orgId: string,
+    requestingUserId: string,
+    jobId: string
+  ): Promise<unknown | null> {
+    await this.requireMemberAccess(orgId, requestingUserId);
+    const memberUserIds = await businessMemberRepository.getMemberUserIds(orgId);
+    if (memberUserIds.length === 0) return null;
+
+    await connectDB();
+    const Job = mongoose.model("Job");
+    const job = await Job.findOne({
+      _id: new mongoose.Types.ObjectId(jobId),
+      clientId: { $in: memberUserIds.map((id) => new mongoose.Types.ObjectId(id)) },
+    })
+      .populate("clientId", "name avatar email")
+      .populate("providerId", "name avatar")
+      .lean();
+    return job;
+  }
+
+  async getOrgRecurringSchedules(
+    orgId: string,
+    requestingUserId: string
+  ): Promise<unknown[]> {
+    await this.requireMemberAccess(orgId, requestingUserId);
+    const memberUserIds = await businessMemberRepository.getMemberUserIds(orgId);
+    if (memberUserIds.length === 0) return [];
+
+    await connectDB();
+    const RecurringSchedule = mongoose.model("RecurringSchedule");
+    return RecurringSchedule.find({
+      clientId: { $in: memberUserIds.map((id) => new mongoose.Types.ObjectId(id)) },
+    })
+      .sort({ createdAt: -1 })
+      .populate("clientId", "name avatar")
+      .lean();
+  }
   // ─── CSV Report Data ──────────────────────────────────────────────────────
 
   async getExpenseReportRows(
@@ -562,6 +746,558 @@ export class BusinessService {
     if (!membership) {
       throw new ForbiddenError("You are not a member of this organization.");
     }
+  }
+
+  // ─── Location Detail ──────────────────────────────────────────────────────
+
+  async getLocationDetail(orgId: string, locationId: string, requestingUserId: string) {
+    await this.requireMemberAccess(orgId, requestingUserId);
+
+    const org = await businessOrganizationRepository.findById(orgId) as unknown as IBusinessOrganization | null;
+    if (!org) throw new NotFoundError("Organization not found.");
+
+    const loc = org.locations.find((l) => l._id.toString() === locationId);
+    if (!loc) throw new NotFoundError("Location not found.");
+
+    const memberUserIds = await businessMemberRepository.getMemberUserIds(orgId);
+    if (memberUserIds.length === 0) {
+      return { location: loc, kpi: { budgetUsedPct: 0, monthlySpend: 0, activeJobs: 0, completedJobs: 0, avgRating: 0 }, recentJobs: [], topProviders: [] };
+    }
+
+    await connectDB();
+    const Job         = mongoose.model("Job");
+    const Transaction = mongoose.model("Transaction");
+
+    const memberOids  = memberUserIds.map((id) => new mongoose.Types.ObjectId(id));
+    const monthStart  = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+
+    const [jobStats, monthSpend, recentJobs, providerRows] = await Promise.all([
+      Job.aggregate([
+        { $match: { clientId: { $in: memberOids } } },
+        { $group: {
+          _id: null,
+          active:    { $sum: { $cond: [{ $in: ["$status", ["open", "assigned", "in_progress"]] }, 1, 0] } },
+          completed: { $sum: { $cond: [{ $eq: ["$status", "completed"] }, 1, 0] } },
+        }},
+      ]),
+      Transaction.aggregate([
+        { $match: { payerId: { $in: memberOids }, status: "completed", createdAt: { $gte: monthStart } } },
+        { $group: { _id: null, total: { $sum: "$amount" } } },
+      ]),
+      Job.find({ clientId: { $in: memberOids } })
+        .sort({ createdAt: -1 }).limit(8)
+        .populate("providerId", "name avatar")
+        .lean(),
+      Job.aggregate([
+        { $match: { clientId: { $in: memberOids }, status: { $in: ["completed", "in_progress", "assigned"] }, providerId: { $ne: null } } },
+        {
+          $lookup: { from: "users", localField: "providerId", foreignField: "_id", as: "provider" },
+        },
+        {
+          $lookup: { from: "reviews", let: { jid: "$_id" }, pipeline: [{ $match: { $expr: { $eq: ["$jobId", "$$jid"] } } }], as: "review" },
+        },
+        { $unwind: { path: "$provider", preserveNullAndEmptyArrays: false } },
+        {
+          $group: {
+            _id: "$providerId",
+            name:          { $first: "$provider.name" },
+            avatar:        { $first: "$provider.avatar" },
+            totalJobs:     { $sum: 1 },
+            completedJobs: { $sum: { $cond: [{ $eq: ["$status", "completed"] }, 1, 0] } },
+            avgRating: {
+              $avg: { $cond: [{ $gt: [{ $size: "$review" }, 0] }, { $arrayElemAt: ["$review.rating", 0] }, null] },
+            },
+          },
+        },
+        { $sort: { totalJobs: -1 } },
+        { $limit: 5 },
+      ]),
+    ]);
+
+    const monthlySpend = (monthSpend[0]?.total ?? 0) as number;
+    const budgetUsedPct = loc.monthlyBudget > 0 ? Math.min(100, Math.round((monthlySpend / loc.monthlyBudget) * 100)) : 0;
+
+    // Average performance score from reviews on org jobs
+    const reviewRows: { avgRating: number }[] = await mongoose.model("Review").aggregate([
+      { $match: { revieweeId: { $in: memberOids } } },
+      { $group: { _id: null, avgRating: { $avg: "$rating" } } },
+    ]);
+    const avgRating = Math.round((reviewRows[0]?.avgRating ?? 0) * 10) / 10;
+
+    return {
+      location: loc,
+      kpi: {
+        budgetUsedPct,
+        monthlySpend,
+        activeJobs:    (jobStats[0]?.active ?? 0) as number,
+        completedJobs: (jobStats[0]?.completed ?? 0) as number,
+        avgRating,
+      },
+      recentJobs: (recentJobs as unknown[]).map((j: unknown) => {
+        const job = j as { _id: { toString(): string }; title?: string; category?: string; status?: string; createdAt?: Date; providerId?: { name?: string; avatar?: string } | null };
+        return {
+          id: job._id.toString(),
+          title: job.title ?? "Untitled",
+          category: job.category ?? "Other",
+          status: job.status ?? "open",
+          createdAt: job.createdAt ?? new Date(),
+          providerName: (job.providerId as { name?: string } | null)?.name ?? null,
+          providerAvatar: (job.providerId as { avatar?: string } | null)?.avatar ?? null,
+        };
+      }),
+      topProviders: (providerRows as { _id: string; name: string; avatar: string | null; totalJobs: number; completedJobs: number; avgRating: number }[]).map((r) => ({
+        id: r._id.toString(),
+        name: r.name,
+        avatar: r.avatar ?? null,
+        totalJobs: r.totalJobs,
+        completedJobs: r.completedJobs,
+        avgRating: Math.round((r.avgRating ?? 0) * 10) / 10,
+      })),
+    };
+  }
+
+  // ─── Executive Dashboard Snapshot ────────────────────────────────────────
+
+  async getDashboardSnapshot(orgId: string, requestingUserId: string) {
+    await this.requireMemberAccess(orgId, requestingUserId);
+
+    const org = await businessOrganizationRepository.findById(orgId) as unknown as IBusinessOrganization | null;
+    if (!org) throw new NotFoundError("Organization not found.");
+
+    const memberUserIds = await businessMemberRepository.getMemberUserIds(orgId);
+    if (memberUserIds.length === 0) {
+      return this._emptySnapshot(org);
+    }
+
+    await connectDB();
+    const Job        = mongoose.model("Job");
+    const Transaction= mongoose.model("Transaction");
+    const Dispute    = mongoose.model("Dispute");
+
+    const memberOids = memberUserIds.map((id) => new mongoose.Types.ObjectId(id));
+
+    // ── Month boundaries ──────────────────────────────────────────────────
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const since6     = new Date(now.getFullYear(), now.getMonth() - 5, 1); // 6 months
+
+    // ── Parallel aggregations ─────────────────────────────────────────────
+    const [
+      jobStats,
+      openDisputes,
+      monthSpendRows,
+      escrowRows,
+      trendRows,
+      providerRows,
+    ] = await Promise.all([
+      // 1. Job KPI counts
+      Job.aggregate([
+        { $match: { clientId: { $in: memberOids } } },
+        {
+          $group: {
+            _id: null,
+            active:     { $sum: { $cond: [{ $in: ["$status", ["open", "assigned", "in_progress"]] }, 1, 0] } },
+            inProgress: { $sum: { $cond: [{ $eq: ["$status", "in_progress"] }, 1, 0] } },
+          },
+        },
+      ]),
+
+      // 2. Open disputes
+      Dispute.countDocuments({ clientId: { $in: memberOids }, status: { $in: ["open", "under_review"] } }),
+
+      // 3. Current-month spend
+      Transaction.aggregate([
+        { $match: { payerId: { $in: memberOids }, status: "completed", createdAt: { $gte: monthStart } } },
+        {
+          $lookup: { from: "jobs", localField: "jobId", foreignField: "_id", as: "job" },
+        },
+        { $unwind: { path: "$job", preserveNullAndEmptyArrays: true } },
+        {
+          $group: {
+            _id: null,
+            totalSpend: { $sum: "$amount" },
+            categories: { $push: { k: { $ifNull: ["$job.category", "Other"] }, v: "$amount" } },
+          },
+        },
+      ]),
+
+      // 4. Escrow (in-flight transactions)
+      Transaction.aggregate([
+        { $match: { payerId: { $in: memberOids }, status: { $in: ["escrow", "escrowed", "pending"] } } },
+        { $group: { _id: null, total: { $sum: "$amount" } } },
+      ]),
+
+      // 5. 6-month spend trend
+      Transaction.aggregate([
+        { $match: { payerId: { $in: memberOids }, status: "completed", createdAt: { $gte: since6 } } },
+        {
+          $group: {
+            _id: { $dateToString: { format: "%Y-%m", date: "$createdAt" } },
+            spend: { $sum: "$amount" },
+          },
+        },
+        { $sort: { _id: 1 } },
+      ]),
+
+      // 6. Top 5 providers by completed jobs
+      Job.aggregate([
+        {
+          $match: {
+            clientId: { $in: memberOids },
+            status: { $in: ["completed", "in_progress", "assigned"] },
+            providerId: { $ne: null },
+          },
+        },
+        {
+          $lookup: { from: "transactions", let: { jid: "$_id" }, pipeline: [
+            { $match: { $expr: { $and: [{ $eq: ["$jobId", "$$jid"] }, { $eq: ["$status", "completed"] }] } } },
+          ], as: "txn" },
+        },
+        {
+          $lookup: { from: "users", localField: "providerId", foreignField: "_id", as: "provider" },
+        },
+        { $unwind: { path: "$provider", preserveNullAndEmptyArrays: false } },
+        {
+          $group: {
+            _id: "$providerId",
+            providerName:   { $first: "$provider.name" },
+            providerAvatar: { $first: "$provider.avatar" },
+            totalJobs:  { $sum: 1 },
+            completedJobs: { $sum: { $cond: [{ $eq: ["$status", "completed"] }, 1, 0] } },
+            totalSpend: { $sum: { $cond: [{ $gt: [{ $size: "$txn" }, 0] }, { $arrayElemAt: ["$txn.amount", 0] }, 0] } },
+          },
+        },
+        { $sort: { totalJobs: -1 } },
+        { $limit: 5 },
+      ]),
+    ]);
+
+    // ── Post-process ──────────────────────────────────────────────────────
+    const totalBudget = org.locations.reduce((s, l) => s + l.monthlyBudget, 0);
+    const monthSpend = (monthSpendRows[0]?.totalSpend ?? 0) as number;
+    const escrowBalance = (escrowRows[0]?.total ?? 0) as number;
+
+    // Category breakdown this month
+    const catEntries = (monthSpendRows[0]?.categories ?? []) as { k: string; v: number }[];
+    const categoryBreakdown: Record<string, number> = {};
+    for (const { k, v } of catEntries) {
+      categoryBreakdown[k] = (categoryBreakdown[k] ?? 0) + v;
+    }
+
+    // Spend trend (fill missing months with 0)
+    const trendMap: Record<string, number> = {};
+    for (const r of trendRows as { _id: string; spend: number }[]) trendMap[r._id] = r.spend;
+    const spendTrend: { month: string; spend: number }[] = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      spendTrend.push({ month: key, spend: trendMap[key] ?? 0 });
+    }
+
+    // Branch budget comparison
+    const branchBudget = org.locations
+      .filter((l) => l.isActive)
+      .slice(0, 8)
+      .map((l) => ({ label: l.label, budget: l.monthlyBudget }));
+
+    return {
+      kpi: {
+        activeJobs:     (jobStats[0]?.active ?? 0) as number,
+        inProgress:     (jobStats[0]?.inProgress ?? 0) as number,
+        disputesOpen:   openDisputes as number,
+        monthlySpend:   monthSpend,
+        totalBudget,
+        budgetRemaining: Math.max(0, totalBudget - monthSpend),
+        escrowBalance,
+      },
+      spendTrend,
+      categoryBreakdown,
+      topProviders: (providerRows as { _id: string; providerName: string; providerAvatar: string | null; totalJobs: number; completedJobs: number; totalSpend: number }[]).map((r) => ({
+        id: r._id.toString(),
+        name: r.providerName,
+        avatar: r.providerAvatar ?? null,
+        totalJobs: r.totalJobs,
+        completedJobs: r.completedJobs,
+        totalSpend: r.totalSpend,
+      })),
+      branchBudget,
+    };
+  }
+
+  // ─── Escrow & Payments ────────────────────────────────────────────────────
+
+  async getEscrowData(
+    orgId: string,
+    requestingUserId: string,
+    page = 1,
+    limit = 20,
+  ) {
+    await this.requireMemberAccess(orgId, requestingUserId);
+    await connectDB();
+    const org = await businessOrganizationRepository.findById(orgId);
+    if (!org) throw new NotFoundError("Organization not found");
+
+    const memberUserIds = await businessMemberRepository.getMemberUserIds(orgId);
+    const memberOids = memberUserIds.map((id) => new mongoose.Types.ObjectId(id));
+
+    const Transaction = mongoose.model("Transaction");
+    const Payment     = mongoose.model("Payment");
+    const Job         = mongoose.model("Job");
+    const User        = mongoose.model("User");
+
+    // Escrow balance — sum of in-flight transactions
+    const [escrowAgg] = await Transaction.aggregate([
+      { $match: { payerId: { $in: memberOids }, status: { $in: ["escrow", "escrowed", "pending"] } } },
+      { $group: { _id: null, total: { $sum: "$amount" } } },
+    ]);
+    const escrowBalance: number = escrowAgg?.total ?? 0;
+
+    // Pending releases — funded jobs awaiting escrow release
+    const pendingJobs = await Job.find({
+      clientId: { $in: memberOids },
+      escrowStatus: "funded",
+      status: { $in: ["in_progress", "completed", "assigned"] },
+    })
+      .sort({ updatedAt: -1 })
+      .limit(50)
+      .populate("providerId", "name avatar")
+      .lean();
+
+    const pendingReleases = pendingJobs.map((j: Record<string, unknown>) => ({
+      jobId:        (j._id as mongoose.Types.ObjectId).toString(),
+      title:        j.title as string,
+      amount:       j.budget as number,
+      status:       j.status as string,
+      escrowStatus: j.escrowStatus as string,
+      scheduleDate: j.scheduleDate as Date,
+      provider:     j.providerId
+        ? { id: ((j.providerId as Record<string, unknown>)._id as mongoose.Types.ObjectId).toString(), name: (j.providerId as Record<string, unknown>).name as string, avatar: (j.providerId as Record<string, unknown>).avatar as string | null }
+        : null,
+      milestones:   (j.milestones as unknown[]) ?? [],
+    }));
+
+    // Payment history — completed payments
+    const skip = (page - 1) * limit;
+    const [historyRows, historyTotal] = await Promise.all([
+      Payment.find({ clientId: { $in: memberOids }, status: "paid" })
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .populate("jobId", "title category")
+        .populate("providerId", "name")
+        .lean(),
+      Payment.countDocuments({ clientId: { $in: memberOids }, status: "paid" }),
+    ]);
+
+    const paymentHistory = historyRows.map((p: Record<string, unknown>) => ({
+      paymentId:   (p._id as mongoose.Types.ObjectId).toString(),
+      amount:      p.amount as number,
+      status:      p.status as string,
+      method:      (p.paymentMethodType as string | undefined) ?? "card",
+      createdAt:   p.createdAt as Date,
+      job: p.jobId
+        ? { id: ((p.jobId as Record<string, unknown>)._id as mongoose.Types.ObjectId).toString(), title: (p.jobId as Record<string, unknown>).title as string, category: (p.jobId as Record<string, unknown>).category as string }
+        : null,
+      provider: p.providerId
+        ? { id: ((p.providerId as Record<string, unknown>)._id as mongoose.Types.ObjectId).toString(), name: (p.providerId as Record<string, unknown>).name as string }
+        : null,
+    }));
+
+    return {
+      escrowBalance,
+      pendingReleases,
+      paymentHistory,
+      historyTotal,
+      historyPage:  page,
+      historyLimit: limit,
+    };
+  }
+
+  // ─── Dispute Resolution ────────────────────────────────────────────────────
+
+  async getDisputesData(
+    orgId: string,
+    requestingUserId: string,
+    page = 1,
+    limit = 20,
+    statusFilter?: string,
+  ) {
+    await this.requireMemberAccess(orgId, requestingUserId);
+    await connectDB();
+    const org = await businessOrganizationRepository.findById(orgId);
+    if (!org) throw new NotFoundError("Organization not found");
+
+    const memberUserIds = await businessMemberRepository.getMemberUserIds(orgId);
+    const memberOids = memberUserIds.map((id) => new mongoose.Types.ObjectId(id));
+
+    const Dispute = mongoose.model("Dispute");
+    const Job     = mongoose.model("Job");
+
+    // Get all member job IDs first
+    const memberJobIds = await Job.find({ clientId: { $in: memberOids } }).distinct("_id");
+
+    const statusMatch: Record<string, unknown> = statusFilter && statusFilter !== "all"
+      ? { status: statusFilter }
+      : { status: { $in: ["open", "under_review", "resolved", "closed"] } };
+
+    const filter = { jobId: { $in: memberJobIds }, ...statusMatch };
+    const skip = (page - 1) * limit;
+
+    const [rows, total] = await Promise.all([
+      Dispute.find(filter)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .populate("jobId", "title category budget escrowStatus providerId clientId")
+        .populate("raisedBy", "name avatar role")
+        .lean(),
+      Dispute.countDocuments(filter),
+    ]);
+
+    // Enrich with provider name from job
+    const disputes = await Promise.all(rows.map(async (d: Record<string, unknown>) => {
+      const job = d.jobId as Record<string, unknown> | null;
+      let providerName: string | null = null;
+      let providerAvatar: string | null = null;
+      if (job?.providerId) {
+        const User = mongoose.model("User");
+        const prov = await User.findById(job.providerId).select("name avatar").lean() as Record<string, unknown> | null;
+        providerName   = prov?.name as string ?? null;
+        providerAvatar = prov?.avatar as string ?? null;
+      }
+      // Find which branch (location) the job's client belongs to
+      // (requires explicit branch-job linking — stub as null for now)
+      const branchLabel: string | null = null;
+      void org; // org used for ownerId check via requireMemberAccess
+      return {
+        disputeId:      (d._id as mongoose.Types.ObjectId).toString(),
+        status:         d.status as string,
+        reason:         d.reason as string,
+        evidence:       (d.evidence as string[]) ?? [],
+        resolutionNotes: d.resolutionNotes as string | null,
+        createdAt:      d.createdAt as Date,
+        updatedAt:      d.updatedAt as Date,
+        job: job ? {
+          id:          ((job._id as mongoose.Types.ObjectId)).toString(),
+          title:       job.title as string,
+          category:    job.category as string,
+          budget:      job.budget as number,
+          escrowStatus: job.escrowStatus as string,
+        } : null,
+        raisedBy: d.raisedBy ? {
+          id:     (((d.raisedBy as Record<string, unknown>)._id) as mongoose.Types.ObjectId).toString(),
+          name:   (d.raisedBy as Record<string, unknown>).name as string,
+          avatar: (d.raisedBy as Record<string, unknown>).avatar as string | null,
+          role:   (d.raisedBy as Record<string, unknown>).role as string,
+        } : null,
+        provider:  providerName ? { name: providerName, avatar: providerAvatar } : null,
+        branchLabel,
+      };
+    }));
+
+    const openCount       = await Dispute.countDocuments({ jobId: { $in: memberJobIds }, status: { $in: ["open", "under_review"] } });
+    const resolvedCount   = await Dispute.countDocuments({ jobId: { $in: memberJobIds }, status: { $in: ["resolved", "closed"] } });
+
+    return { disputes, total, page, limit, openCount, resolvedCount };
+  }
+
+  async getBillingData(orgId: string, requestingUserId: string) {
+    await this.requireMemberAccess(orgId, requestingUserId);
+    await connectDB();
+    const org = await businessOrganizationRepository.findById(orgId);
+    if (!org) throw new NotFoundError("Organization not found");
+
+    const memberUserIds = await businessMemberRepository.getMemberUserIds(orgId);
+    const memberOids = memberUserIds.map((id) => new mongoose.Types.ObjectId(id));
+
+    const Transaction = mongoose.model("Transaction");
+
+    // ── Commission history – last 12 calendar months ──────────────────────────
+    const now    = new Date();
+    const from12 = new Date(now.getFullYear(), now.getMonth() - 11, 1);
+
+    const commAgg: { _id: string; gross: number; count: number }[] =
+      await Transaction.aggregate([
+        {
+          $match: {
+            payerId: { $in: memberOids },
+            status:  { $in: ["completed", "released", "settled", "paid"] },
+            createdAt: { $gte: from12 },
+          },
+        },
+        {
+          $group: {
+            _id:   { $dateToString: { format: "%Y-%m", date: "$createdAt" } },
+            gross: { $sum: "$amount" },
+            count: { $sum: 1 },
+          },
+        },
+        { $sort: { _id: 1 } },
+      ]);
+
+    const COMMISSION_RATE = 0.20;
+
+    const commissionHistory = commAgg.map((row) => ({
+      month:      row._id,
+      gross:      row.gross,
+      commission: parseFloat((row.gross * COMMISSION_RATE).toFixed(2)),
+      jobs:       row.count,
+    }));
+
+    // ── All-time totals ────────────────────────────────────────────────────────
+    const [allTimeAgg] = await Transaction.aggregate([
+      {
+        $match: {
+          payerId: { $in: memberOids },
+          status:  { $in: ["completed", "released", "settled", "paid"] },
+        },
+      },
+      { $group: { _id: null, gross: { $sum: "$amount" }, count: { $sum: 1 } } },
+    ]);
+
+    const totalGrossSpend    = allTimeAgg?.gross ?? 0;
+    const totalCommissionPaid = parseFloat((totalGrossSpend * COMMISSION_RATE).toFixed(2));
+    const totalJobsCompleted  = allTimeAgg?.count ?? 0;
+
+    // ── This-month summary ─────────────────────────────────────────────────────
+    const thisMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+    const thisMonth    = commissionHistory.find((r) => r.month === thisMonthKey);
+    const thisMonthGross      = thisMonth?.gross      ?? 0;
+    const thisMonthCommission = thisMonth?.commission ?? 0;
+
+    // ── Branch & member counts ────────────────────────────────────────────────
+    const branchCount = org.locations.filter((l) => l.isActive).length;
+    const memberCount = memberUserIds.length;
+
+    return {
+      commissionRate:       COMMISSION_RATE,
+      commissionHistory,
+      totalGrossSpend,
+      totalCommissionPaid,
+      totalJobsCompleted,
+      thisMonthGross,
+      thisMonthCommission,
+      branchCount,
+      memberCount,
+      orgName:              org.name,
+      // ── Subscription fields from DB ──────────────────────────────────────
+      plan:             (org.plan ?? "starter") as string,
+      planStatus:       (org.planStatus ?? "active") as string,
+      planActivatedAt:  org.planActivatedAt ?? null,
+      planExpiresAt:    org.planExpiresAt   ?? null,
+      pendingPlan:      org.pendingPlan     ?? null,
+    };
+  }
+
+  private _emptySnapshot(org: IBusinessOrganization) {
+    const totalBudget = org.locations.reduce((s, l) => s + l.monthlyBudget, 0);
+    return {
+      kpi: { activeJobs: 0, inProgress: 0, disputesOpen: 0, monthlySpend: 0, totalBudget, budgetRemaining: totalBudget, escrowBalance: 0 },
+      spendTrend: [] as { month: string; spend: number }[],
+      categoryBreakdown: {} as Record<string, number>,
+      topProviders: [] as { id: string; name: string; avatar: string | null; totalJobs: number; completedJobs: number; totalSpend: number }[],
+      branchBudget: org.locations.filter((l) => l.isActive).slice(0, 8).map((l) => ({ label: l.label, budget: l.monthlyBudget })),
+    };
   }
 }
 

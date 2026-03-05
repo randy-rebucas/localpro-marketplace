@@ -12,6 +12,8 @@ const LocationSchema = z.object({
   coordinates: z.object({ lat: z.number(), lng: z.number() }).optional(),
   monthlyBudget: z.number().min(0).optional(),
   alertThreshold: z.number().min(0).max(100).optional(),
+  managerId: z.string().nullable().optional(),
+  allowedCategories: z.array(z.string()).optional(),
 });
 
 const UpdateLocationSchema = z.object({
@@ -23,6 +25,8 @@ const UpdateLocationSchema = z.object({
   monthlyBudget: z.number().min(0).optional(),
   alertThreshold: z.number().min(0).max(100).optional(),
   isActive: z.boolean().optional(),
+  managerId: z.string().nullable().optional(),
+  allowedCategories: z.array(z.string()).optional(),
 });
 
 /** POST /api/business/locations — add a location to an org */

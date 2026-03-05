@@ -18,6 +18,8 @@ const LocationSubSchema = new Schema(
     isActive:      { type: Boolean, default: true },
     alertThreshold: { type: Number, default: 80, min: 0, max: 100 },
     preferredProviderIds: { type: [Schema.Types.ObjectId], ref: "User", default: [] },
+    managerId: { type: Schema.Types.ObjectId, ref: "User", default: null },
+    allowedCategories: { type: [String], default: [] },
   },
   { _id: true }
 );
@@ -44,6 +46,12 @@ const BusinessOrganizationSchema = new Schema<BusinessOrganizationDocument>(
     logo: { type: String, default: null },
     locations: { type: [LocationSubSchema], default: [] },
     defaultMonthlyBudget: { type: Number, default: 0, min: 0 },
+    plan:                 { type: String, enum: ["starter", "growth", "pro", "enterprise"], default: "starter" },
+    planStatus:           { type: String, enum: ["active", "past_due", "cancelled"], default: "active" },
+    planActivatedAt:      { type: Date, default: null },
+    planExpiresAt:        { type: Date, default: null },
+    pendingPlanSessionId: { type: String, default: null },
+    pendingPlan:          { type: String, enum: ["starter", "growth", "pro", "enterprise", null], default: null },
   },
   { timestamps: true }
 );

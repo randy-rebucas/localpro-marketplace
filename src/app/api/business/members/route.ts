@@ -19,14 +19,20 @@ const UpdateMemberSchema = z.object({
   locationAccess: z.array(z.string()).optional(),
 });
 
-/** GET /api/business/members?orgId=xxx — list members of an org */
+/** GET /api/business/members?orgId=xxx[&searchEmail=xxx] */
 export const GET = withHandler(async (req: NextRequest) => {
   const user = await requireUser();
   if (user.role !== "client") throw new ForbiddenError();
 
   const { searchParams } = new URL(req.url);
-  const orgId = searchParams.get("orgId");
+  const orgId       = searchParams.get("orgId");
+  const searchEmail = searchParams.get("searchEmail");
   if (!orgId) throw new ValidationError("orgId query param required.");
+
+  if (searchEmail) {
+    const found = await businessService.searchUserByEmail(searchEmail, orgId, user.userId);
+    return NextResponse.json({ user: found });
+  }
 
   const members = await businessService.getMembers(orgId, user.userId);
   return NextResponse.json({ members });

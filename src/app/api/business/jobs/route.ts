@@ -4,16 +4,25 @@ import { withHandler } from "@/lib/utils";
 import { ForbiddenError, ValidationError } from "@/lib/errors";
 import { businessService } from "@/services/business.service";
 
-/** GET /api/business/jobs?orgId=xxx&locationId=yyy */
+/** GET /api/business/jobs?orgId=xxx[&locationId=&status=&category=&providerId=&dateFrom=&dateTo=&page=&limit=] */
 export const GET = withHandler(async (req: NextRequest) => {
   const user = await requireUser();
   if (user.role !== "client") throw new ForbiddenError();
 
-  const { searchParams } = new URL(req.url);
-  const orgId = searchParams.get("orgId");
+  const sp = new URL(req.url).searchParams;
+  const orgId = sp.get("orgId");
   if (!orgId) throw new ValidationError("orgId query param required.");
 
-  const locationId = searchParams.get("locationId") ?? undefined;
-  const groups = await businessService.getJobsByLocation(orgId, user.userId, locationId);
-  return NextResponse.json({ groups });
+  const result = await businessService.listBusinessJobs(orgId, user.userId, {
+    locationId:  sp.get("locationId")  ?? undefined,
+    status:      sp.get("status")      ?? undefined,
+    category:    sp.get("category")    ?? undefined,
+    providerId:  sp.get("providerId")  ?? undefined,
+    dateFrom:    sp.get("dateFrom")    ?? undefined,
+    dateTo:      sp.get("dateTo")      ?? undefined,
+    page:        sp.get("page")    ? parseInt(sp.get("page")!,  10) : 1,
+    limit:       sp.get("limit")   ? parseInt(sp.get("limit")!, 10) : 20,
+  });
+
+  return NextResponse.json(result);
 });

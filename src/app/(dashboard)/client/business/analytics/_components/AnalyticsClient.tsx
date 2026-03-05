@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
+import Image from "next/image";
 import {
-  TrendingUp, Star, User, Download, Star as StarIcon,
-  CheckCircle, AlertTriangle, Briefcase, BarChart2,
+  TrendingUp, Star, User, Download,
+  CheckCircle, AlertTriangle, Briefcase, BarChart2, FileText,
 } from "lucide-react";
 import { fetchClient } from "@/lib/fetchClient";
 import type {
@@ -18,10 +19,14 @@ export default function AnalyticsClient() {
   const [providers, setProviders] = useState<ProviderPerformanceRow[]>([]);
   const [loading, setLoading]   = useState(true);
   const [months, setMonths]     = useState(12);
+  const monthsRef = useRef(12);
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [orgId, setOrgId] = useState<string>("");
+  const [compareMode, setCompareMode] = useState(false);
+  const [compareA, setCompareA] = useState("");
+  const [compareB, setCompareB] = useState("");
 
-  const load = useCallback(async (m = months) => {
+  const load = useCallback(async (m = monthsRef.current) => {
     setLoading(true);
     try {
       const orgData = await fetchClient<{ org: IBusinessOrganization | null }>("/api/business/org");
@@ -45,11 +50,12 @@ export default function AnalyticsClient() {
     } finally {
       setLoading(false);
     }
-  }, [months]);
+  }, []);
 
   useEffect(() => { load(); }, [load]);
 
   function handleMonthsChange(m: number) {
+    monthsRef.current = m;
     setMonths(m);
     load(m);
   }
@@ -128,6 +134,16 @@ export default function AnalyticsClient() {
             <option value={24}>Last 24 months</option>
           </select>
           <button
+            onClick={() => setCompareMode((v) => !v)}
+            className={`flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg border transition-colors ${
+              compareMode
+                ? "bg-primary text-white border-primary"
+                : "border-slate-200 text-slate-600 hover:bg-slate-50"
+            }`}
+          >
+            <BarChart2 className="h-4 w-4" /> Compare
+          </button>
+          <button
             onClick={handleCsvDownload}
             className="btn-secondary flex items-center gap-1.5 text-sm"
           >
@@ -154,6 +170,166 @@ export default function AnalyticsClient() {
           </div>
         ))}
       </div>
+
+      {/* ── Provider Comparison Mode ── */}
+      {compareMode && (
+        <div className="bg-white rounded-xl border border-primary/30 p-5 space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="font-semibold text-slate-800 flex items-center gap-2">
+              <BarChart2 className="h-4 w-4 text-primary" />
+              Provider Comparison
+            </h2>
+            <button
+              onClick={() => { setCompareMode(false); setCompareA(""); setCompareB(""); }}
+              className="text-xs text-slate-400 hover:text-slate-600"
+            >
+              Close
+            </button>
+          </div>
+          <div className="grid sm:grid-cols-2 gap-3">
+            {(["A", "B"] as const).map((side) => {
+              const val  = side === "A" ? compareA : compareB;
+              const setV = side === "A" ? setCompareA : setCompareB;
+              const other = side === "A" ? compareB : compareA;
+              return (
+                <div key={side}>
+                  <label className="text-xs font-medium text-slate-500 mb-1 block">
+                    Provider {side}
+                  </label>
+                  <select
+                    className="input text-sm w-full"
+                    value={val}
+                    onChange={(e) => setV(e.target.value)}
+                  >
+                    <option value="">Select provider…</option>
+                    {providers
+                      .filter((p) => p.providerId !== other)
+                      .map((p) => (
+                        <option key={p.providerId} value={p.providerId}>
+                          {p.providerName}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+              );
+            })}
+          </div>
+
+          {(() => {
+            const pA = providers.find((p) => p.providerId === compareA);
+            const pB = providers.find((p) => p.providerId === compareB);
+            if (!pA || !pB) {
+              return (
+                <p className="text-sm text-slate-400 text-center py-4">
+                  Select two providers above to compare.
+                </p>
+              );
+            }
+            const metrics: Array<{
+              label: string;
+              a: number;
+              b: number;
+              fmt: (v: number) => string;
+              higherBetter: boolean;
+              max?: number;
+            }> = [
+              { label: "Jobs Completed",  a: pA.completedJobs,          b: pB.completedJobs,          fmt: (v) => v.toString(),         higherBetter: true  },
+              { label: "Avg Rating",      a: pA.avgRating,              b: pB.avgRating,              fmt: (v) => v.toFixed(1),         higherBetter: true, max: 5   },
+              { label: "On-Time Rate",    a: 100 - pA.delayFrequency,   b: 100 - pB.delayFrequency,   fmt: (v) => `${v.toFixed(0)}%`,   higherBetter: true, max: 100 },
+              { label: "Disputes",        a: pA.disputeCount,           b: pB.disputeCount,           fmt: (v) => v.toString(),         higherBetter: false },
+              { label: "Efficiency",      a: pA.costEfficiencyScore,    b: pB.costEfficiencyScore,    fmt: (v) => v.toString(),         higherBetter: true, max: 100 },
+              { label: "Total Spend",     a: pA.totalSpend,             b: pB.totalSpend,             fmt: (v) => formatCurrency(v),    higherBetter: false },
+            ];
+            return (
+              <div className="space-y-4 pt-2 border-t border-slate-100">
+                {/* Provider name headers */}
+                <div className="flex gap-2">
+                  <div className="flex-1 flex items-center gap-2 text-xs font-semibold text-slate-700 truncate">
+                    {pA.providerAvatar ? (
+                      <Image src={pA.providerAvatar} alt="" width={24} height={24} className="h-6 w-6 rounded-full object-cover flex-shrink-0" />
+                    ) : (
+                      <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                        <User className="h-3 w-3 text-primary" />
+                      </div>
+                    )}
+                    <span className="truncate">{pA.providerName}</span>
+                  </div>
+                  <span className="text-xs text-slate-400 font-medium px-4">vs</span>
+                  <div className="flex-1 flex items-center justify-end gap-2 text-xs font-semibold text-slate-700 truncate">
+                    <span className="truncate text-right">{pB.providerName}</span>
+                    {pB.providerAvatar ? (
+                      <Image src={pB.providerAvatar} alt="" width={24} height={24} className="h-6 w-6 rounded-full object-cover flex-shrink-0" />
+                    ) : (
+                      <div className="h-6 w-6 rounded-full bg-violet-100 flex items-center justify-center flex-shrink-0">
+                        <User className="h-3 w-3 text-violet-500" />
+                      </div>
+                    )}
+                  </div>
+                </div>
+                {metrics.map(({ label, a, b, fmt, higherBetter, max }) => {
+                  const maxVal = max ?? Math.max(a, b, 1);
+                  const pctA   = Math.min(100, maxVal > 0 ? (a / maxVal) * 100 : 0);
+                  const pctB   = Math.min(100, maxVal > 0 ? (b / maxVal) * 100 : 0);
+                  const aWins  = higherBetter ? a > b : a < b;
+                  const bWins  = higherBetter ? b > a : b < a;
+                  return (
+                    <div key={label} className="space-y-1">
+                      <div className="flex justify-between items-center text-xs">
+                        <span className={`font-bold tabular-nums ${aWins ? "text-emerald-600" : "text-slate-500"}`}>
+                          {fmt(a)}
+                        </span>
+                        <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">{label}</span>
+                        <span className={`font-bold tabular-nums ${bWins ? "text-emerald-600" : "text-slate-500"}`}>
+                          {fmt(b)}
+                        </span>
+                      </div>
+                      <div className="flex gap-1 h-2.5">
+                        {/* Provider A bar (right-align) */}
+                        <div className="flex-1 bg-slate-100 rounded-l-full overflow-hidden flex justify-end">
+                          <div
+                            className={`h-full rounded-l-full transition-all duration-500 ${aWins ? "bg-primary" : "bg-slate-300"}`}
+                            style={{ width: `${pctA}%` }}
+                          />
+                        </div>
+                        <div className="w-px bg-slate-200 flex-shrink-0" />
+                        {/* Provider B bar (left-align) */}
+                        <div className="flex-1 bg-slate-100 rounded-r-full overflow-hidden">
+                          <div
+                            className={`h-full rounded-r-full transition-all duration-500 ${bWins ? "bg-violet-500" : "bg-slate-300"}`}
+                            style={{ width: `${pctB}%` }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+                {/* Winner summary */}
+                {(() => {
+                  const wins = metrics.reduce((acc, { a, b, higherBetter }) => {
+                    if (higherBetter ? a > b : a < b) acc.a++;
+                    else if (higherBetter ? b > a : b < a) acc.b++;
+                    return acc;
+                  }, { a: 0, b: 0 });
+                  const winner = wins.a > wins.b ? pA : wins.b > wins.a ? pB : null;
+                  return winner ? (
+                    <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-lg p-3">
+                      <CheckCircle className="h-4 w-4 text-emerald-600 flex-shrink-0" />
+                      <p className="text-sm text-emerald-800">
+                        <strong>{winner.providerName}</strong> leads in {wins.a > wins.b ? wins.a : wins.b} of {metrics.length} metrics.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg p-3">
+                      <AlertTriangle className="h-4 w-4 text-slate-400 flex-shrink-0" />
+                      <p className="text-sm text-slate-500">Tied — both providers are evenly matched.</p>
+                    </div>
+                  );
+                })()}
+              </div>
+            );
+          })()}
+        </div>
+      )}
 
       {/* ── Monthly expense bar chart with MoM arrows ── */}
       <div className="bg-white rounded-xl border border-slate-200 p-5">
@@ -228,7 +404,7 @@ export default function AnalyticsClient() {
                   <th className="text-right px-4 py-2.5 font-medium text-slate-600">Jobs</th>
                   <th className="text-right px-4 py-2.5 font-medium text-slate-600">Rating</th>
                   <th className="text-right px-4 py-2.5 font-medium text-slate-600">Total Spend</th>
-                  <th className="text-right px-4 py-2.5 font-medium text-slate-600">Delay %</th>
+                  <th className="text-right px-4 py-2.5 font-medium text-slate-600">On-Time</th>
                   <th className="text-right px-4 py-2.5 font-medium text-slate-600">Disputes</th>
                   <th className="text-right px-4 py-2.5 font-medium text-slate-600">Efficiency</th>
                   <th className="text-center px-4 py-2.5 font-medium text-slate-600">Preferred</th>
@@ -241,8 +417,7 @@ export default function AnalyticsClient() {
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2.5">
                         {p.providerAvatar ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={p.providerAvatar} alt="avatar"
+                          <Image src={p.providerAvatar} alt="avatar" width={32} height={32}
                             className="h-8 w-8 rounded-full object-cover flex-shrink-0" />
                         ) : (
                           <div className="h-8 w-8 rounded-full bg-slate-100 flex items-center justify-center flex-shrink-0">
@@ -272,9 +447,9 @@ export default function AnalyticsClient() {
                     <td className={`px-4 py-3 text-right font-medium ${
                       p.delayFrequency > 30 ? "text-red-500" :
                       p.delayFrequency > 10 ? "text-amber-500" :
-                      "text-slate-600"
+                      "text-emerald-600"
                     }`}>
-                      {p.delayFrequency.toFixed(0)}%
+                      {(100 - p.delayFrequency).toFixed(0)}%
                     </td>
                     <td className={`px-4 py-3 text-right font-medium ${
                       p.disputeCount > 0 ? "text-red-500" : "text-slate-400"
@@ -304,7 +479,7 @@ export default function AnalyticsClient() {
                             : "text-slate-300 hover:text-amber-400 hover:bg-amber-50"
                         }`}
                       >
-                        <StarIcon className={`h-4 w-4 ${p.isPreferred ? "fill-amber-400" : ""}`} />
+                        <Star className={`h-4 w-4 ${p.isPreferred ? "fill-amber-400" : ""}`} />
                       </button>
                     </td>
                   </tr>
@@ -313,6 +488,67 @@ export default function AnalyticsClient() {
             </table>
           </div>
         )}
+      </div>
+
+      {/* ── Download Reports ── */}
+      <div className="bg-white rounded-xl border border-slate-200 p-5 space-y-4">
+        <div>
+          <h2 className="font-semibold text-slate-800">Download Reports</h2>
+          <p className="text-xs text-slate-400 mt-0.5">
+            Export expense and performance data for accounting or procurement review.
+          </p>
+        </div>
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          {[
+            {
+              title: "Monthly Expense",
+              desc:  `Last ${months} months · All branches`,
+              href:  `/api/business/analytics/report?orgId=${orgId}&months=${months}`,
+              icon:  FileText,
+              color: "text-blue-600",    bg: "bg-blue-50",
+            },
+            {
+              title: "Per Branch",
+              desc:  "Spend breakdown by branch",
+              href:  `/api/business/analytics/report?orgId=${orgId}&months=${months}&type=branch`,
+              icon:  FileText,
+              color: "text-violet-600",  bg: "bg-violet-50",
+            },
+            {
+              title: "Per Provider",
+              desc:  "Jobs, ratings & spend per provider",
+              href:  `/api/business/analytics/report?orgId=${orgId}&months=${months}&type=providers`,
+              icon:  Download,
+              color: "text-emerald-600", bg: "bg-emerald-50",
+            },
+            {
+              title: "Per Category",
+              desc:  "Spend split by service category",
+              href:  `/api/business/analytics/report?orgId=${orgId}&months=${months}&type=categories`,
+              icon:  Download,
+              color: "text-amber-600",   bg: "bg-amber-50",
+            },
+          ].map((r) => (
+            <a
+              key={r.title}
+              href={orgId ? r.href : "#"}
+              onClick={(e) => { if (!orgId) e.preventDefault(); }}
+              className="flex items-center gap-3 p-3 rounded-xl border border-slate-200 hover:bg-slate-50 hover:border-slate-300 transition-all group"
+            >
+              <div className={`${r.bg} p-2.5 rounded-lg flex-shrink-0`}>
+                <r.icon className={`h-4 w-4 ${r.color}`} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-slate-700 leading-tight">{r.title}</p>
+                <p className="text-[11px] text-slate-400 mt-0.5">{r.desc}</p>
+              </div>
+              <Download className="h-3.5 w-3.5 text-slate-300 group-hover:text-slate-500 flex-shrink-0 transition-colors" />
+            </a>
+          ))}
+        </div>
+        <p className="text-[11px] text-slate-400">
+          Reports include completed &amp; paid jobs only. Depth follows the selected time range above.
+        </p>
       </div>
     </div>
   );

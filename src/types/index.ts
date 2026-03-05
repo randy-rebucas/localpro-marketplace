@@ -638,7 +638,14 @@ export interface IBusinessLocation {
   alertThreshold: number;
   /** Pinned provider IDs for this location */
   preferredProviderIds: (Types.ObjectId | string)[];
+  /** Assigned branch manager user ID */
+  managerId?: Types.ObjectId | string | null;
+  /** Allowed service categories for this location */
+  allowedCategories: string[];
 }
+
+export type BusinessPlan = "starter" | "growth" | "pro" | "enterprise";
+export type BusinessPlanStatus = "active" | "past_due" | "cancelled";
 
 export interface IBusinessOrganization {
   _id: Types.ObjectId | string;
@@ -648,6 +655,14 @@ export interface IBusinessOrganization {
   logo?: string | null;
   locations: IBusinessLocation[];
   defaultMonthlyBudget: number;
+  /** Subscription plan */
+  plan: BusinessPlan;
+  planStatus: BusinessPlanStatus;
+  planActivatedAt?: Date | null;
+  planExpiresAt?: Date | null;
+  /** PayMongo checkout session ID for pending upgrade */
+  pendingPlanSessionId?: string | null;
+  pendingPlan?: BusinessPlan | null;
   createdAt: Date;
   updatedAt: Date;
 }

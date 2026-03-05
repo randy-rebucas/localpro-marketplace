@@ -4,6 +4,8 @@ import { paymentService } from "@/services";
 import { checkRateLimit } from "@/lib/rateLimit";
 import { connectDB } from "@/lib/db";
 import User from "@/models/User";
+import { businessOrganizationRepository } from "@/repositories";
+import type { BusinessPlan } from "@/types";
 
 /**
  * POST /api/webhooks/paymongo
@@ -77,35 +79,54 @@ export async function POST(req: NextRequest) {
   try {
     // ── Checkout Session paid ────────────────────────────────────────────────
     if (eventType === "checkout_session.payment.paid") {
-      const sessionId = resourceData.id;
-      const paymentIntentId = resourceData.attributes.payment_intent?.id ?? "";
-      await paymentService.confirmEscrowFunding(sessionId, paymentIntentId, "checkout");
+      const metadata = resourceData.attributes.metadata ?? {};
 
-      // ── Save card payment method for future recurring auto-pay ─────────────
-      // Only cards can be charged off-session; GCash/PayMaya need a new redirect.
-      const payments = resourceData.attributes.payments ?? [];
-      const cardPayment = payments.find(
-        (p) => p.attributes.status === "paid" && p.attributes.source?.type === "card"
-      );
-      const pmId = cardPayment?.attributes.source?.id;
-      const clientId = resourceData.attributes.metadata?.clientId;
+      // ── Branch A: subscription plan upgrade ───────────────────────────────
+      if (metadata.type === "subscription" && metadata.orgId && metadata.plan) {
+        const now = new Date();
+        const expires = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+        await businessOrganizationRepository.updateById(metadata.orgId, {
+          $set: {
+            plan:                metadata.plan as BusinessPlan,
+            planStatus:          "active",
+            planActivatedAt:     now,
+            planExpiresAt:       expires,
+            pendingPlanSessionId: null,
+            pendingPlan:         null,
+          },
+        });
+        console.log(`[PAYMONGO] Subscription plan "${metadata.plan}" activated for org ${metadata.orgId}`);
 
-      if (pmId && clientId) {
-        try {
-          const { getPaymentMethodDetails } = await import("@/lib/paymongo");
-          const details = await getPaymentMethodDetails(pmId);
-          if (details) {
-            await connectDB();
-            await User.findByIdAndUpdate(clientId, {
-              savedPaymentMethodId:    details.paymentMethodId,
-              savedPaymentMethodLast4: details.last4,
-              savedPaymentMethodBrand: details.brand,
-            });
-            console.log(`[PAYMONGO] Saved card PM ${pmId} for user ${clientId}`);
+      // ── Branch B: escrow job payment ─────────────────────────────────────
+      } else {
+        const sessionId = resourceData.id;
+        const paymentIntentId = resourceData.attributes.payment_intent?.id ?? "";
+        await paymentService.confirmEscrowFunding(sessionId, paymentIntentId, "checkout");
+
+        // Save card PM for future recurring auto-pay
+        const payments = resourceData.attributes.payments ?? [];
+        const cardPayment = payments.find(
+          (p) => p.attributes.status === "paid" && p.attributes.source?.type === "card"
+        );
+        const pmId = cardPayment?.attributes.source?.id;
+        const clientId = metadata.clientId;
+
+        if (pmId && clientId) {
+          try {
+            const { getPaymentMethodDetails } = await import("@/lib/paymongo");
+            const details = await getPaymentMethodDetails(pmId);
+            if (details) {
+              await connectDB();
+              await User.findByIdAndUpdate(clientId, {
+                savedPaymentMethodId:    details.paymentMethodId,
+                savedPaymentMethodLast4: details.last4,
+                savedPaymentMethodBrand: details.brand,
+              });
+              console.log(`[PAYMONGO] Saved card PM ${pmId} for user ${clientId}`);
+            }
+          } catch (err) {
+            console.error("[PAYMONGO] Failed to save payment method:", err);
           }
-        } catch (err) {
-          // Non-critical — log and continue
-          console.error("[PAYMONGO] Failed to save payment method:", err);
         }
       }
     }
