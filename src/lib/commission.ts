@@ -8,11 +8,11 @@ export interface CommissionBreakdown {
 /**
  * Calculate platform commission on a transaction.
  * @param amount - Gross amount paid by client
- * @param rate - Commission rate as decimal (default 20%)
+ * @param rate - Commission rate as decimal (default 15%)
  */
 export function calculateCommission(
   amount: number,
-  rate = 0.2
+  rate = 0.15
 ): CommissionBreakdown {
   const commission = Math.round(amount * rate * 100) / 100;
   const netAmount = Math.round((amount - commission) * 100) / 100;

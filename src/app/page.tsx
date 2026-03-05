@@ -481,7 +481,7 @@ export default async function RootPage() {
               <ul className="space-y-1.5 text-xs text-slate-600 flex-1">
                 <li className="flex items-start gap-1.5"><CheckCircle className="h-3.5 w-3.5 text-amber-500 mt-0.5 shrink-0" />&ldquo;Top Rated&rdquo; badge + boosted ranking</li>
                 <li className="flex items-start gap-1.5"><CheckCircle className="h-3.5 w-3.5 text-amber-500 mt-0.5 shrink-0" />Featured on homepage &amp; categories</li>
-                <li className="flex items-start gap-1.5"><CheckCircle className="h-3.5 w-3.5 text-amber-500 mt-0.5 shrink-0" />Reduced commission <span className="line-through text-slate-400">20%</span> → <strong className="text-amber-700">16%</strong></li>
+                <li className="flex items-start gap-1.5"><CheckCircle className="h-3.5 w-3.5 text-amber-500 mt-0.5 shrink-0" />Reduced commission <span className="line-through text-slate-400">15%</span> → <strong className="text-amber-700">11%</strong></li>
                 <li className="flex items-start gap-1.5"><CheckCircle className="h-3.5 w-3.5 text-amber-500 mt-0.5 shrink-0" />AI-powered tools unlocked</li>
                 <li className="flex items-start gap-1.5"><CheckCircle className="h-3.5 w-3.5 text-amber-500 mt-0.5 shrink-0" />B2B &amp; bulk job access</li>
               </ul>

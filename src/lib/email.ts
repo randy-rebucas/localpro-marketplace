@@ -1,25 +1,20 @@
 /**
- * Transactional email service using Nodemailer + SMTP.
+ * Transactional email service using Resend.
  *
- * Required env vars (already in .env.local):
- *   SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM
+ * Required env vars:
+ *   RESEND_API_KEY  — from resend.com dashboard
+ *   SMTP_FROM       — sender address, e.g. "LocalPro <no-reply@localpro.asia>"
  */
 
-import nodemailer from "nodemailer";
+import { Resend } from "resend";
 import type { NotificationType } from "@/types";
 
-// ─── Transporter ──────────────────────────────────────────────────────────────
+// ─── Client ───────────────────────────────────────────────────────────────────
 
-function getTransporter() {
-  return nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: Number(process.env.SMTP_PORT ?? 587),
-    secure: Number(process.env.SMTP_PORT) === 465,
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
-    },
-  });
+function getResend() {
+  const key = process.env.RESEND_API_KEY;
+  if (!key) throw new Error("RESEND_API_KEY is not set");
+  return new Resend(key);
 }
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
@@ -237,11 +232,12 @@ export async function sendEmail(
   subject: string,
   html: string
 ): Promise<void> {
-  if (!process.env.SMTP_HOST || !process.env.SMTP_USER) return; // silently skip if not configured
+  if (!process.env.RESEND_API_KEY) return; // silently skip if not configured
 
   try {
-    const transporter = getTransporter();
-    await transporter.sendMail({ from: FROM, to, subject, html });
+    const resend = getResend();
+    const { error } = await resend.emails.send({ from: FROM, to, subject, html });
+    if (error) throw new Error(error.message);
   } catch (err) {
     console.error("[EMAIL]", err);
   }

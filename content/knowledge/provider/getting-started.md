@@ -22,7 +22,7 @@ LocalPro is a marketplace that connects skilled service providers with local cli
 
 ## Your earnings
 
-LocalPro charges a **20% platform fee** on each completed job. For example, if you quote ₱5,000, you receive ₱4,000 after the platform fee. This fee covers payment processing, platform maintenance, customer support, and dispute mediation.
+LocalPro charges a **15% platform fee** on each completed job. For example, if you quote ₱5,000, you receive ₱4,250 after the platform fee. This fee covers payment processing, platform maintenance, customer support, and dispute mediation.
 
 ## Account approval
 

@@ -76,7 +76,7 @@ export default async function AdminRevenuePage() {
         pageKey="admin-revenue"
         title="How the Revenue Dashboard works"
         steps={[
-          { icon: "💰", title: "GMV & commission", description: "Gross Merchandise Value is total job amounts processed. Commission is the 20% platform fee collected." },
+          { icon: "💰", title: "GMV & commission", description: "Gross Merchandise Value is total job amounts processed. Commission is the 15% platform fee collected." },
           { icon: "📈", title: "Monthly trends", description: "The line chart shows GMV and commission growth month-over-month to track platform health." },
           { icon: "🏆", title: "Top providers", description: "See which providers are generating the most revenue on the platform." },
           { icon: "📊", title: "Job volume", description: "The bar chart shows completed job counts per month — a leading indicator of marketplace activity." },

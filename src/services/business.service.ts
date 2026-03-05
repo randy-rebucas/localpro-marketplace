@@ -1235,7 +1235,7 @@ export class BusinessService {
         { $sort: { _id: 1 } },
       ]);
 
-    const COMMISSION_RATE = 0.20;
+    const COMMISSION_RATE = 0.15;
 
     const commissionHistory = commAgg.map((row) => ({
       month:      row._id,

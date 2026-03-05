@@ -12,14 +12,14 @@ Every time a job is completed and escrow is released, your earnings are credited
 
 ## Platform fee
 
-LocalPro charges a **20% platform fee** on each completed job. This is automatically deducted when funds are released.
+LocalPro charges a **15% platform fee** on each completed job. This is automatically deducted when funds are released.
 
 **Example:**
 - You quote ₱5,000 for a job
 - Client pays ₱5,000 into escrow
 - Job is completed and confirmed
-- Platform fee: ₱1,000 (20%)
-- **You receive: ₱4,000**
+- Platform fee: ₱750 (15%)
+- **You receive: ₱4,250**
 
 The fee covers payment processing, customer support, dispute mediation, and platform maintenance.
 
@@ -29,7 +29,7 @@ As you complete more jobs and maintain a high rating, you move through provider 
 
 | Tier | Completed Jobs | Platform Fee |
 |------|---------------|-------------|
-| Starter | 0–4 | 20% |
+| Starter | 0–4 | 15% |
 | Rising | 5–19 | 9% |
 | Pro | 20–49 | 8% |
 | Elite | 50+ | 7% |
