@@ -12,6 +12,6 @@ export function formatSchedule(dateStr: string) {
 }
 
 export function qrUrl(jobId: string) {
-  const target = `${APP_URL}/provider/marketplace?ref=${jobId}`;
+  const target = `${APP_URL}/jobs/${jobId}`;
   return `https://api.qrserver.com/v1/create-qr-code/?size=96x96&data=${encodeURIComponent(target)}&format=png&color=0d2340&bgcolor=ffffff&margin=4`;
 }

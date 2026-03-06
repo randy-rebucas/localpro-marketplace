@@ -64,7 +64,7 @@ export function JobCard({ job }: { job: BoardJob }) {
             className="rounded-lg"
             onError={() =>
               setImgSrc(
-                `https://api.qrserver.com/v1/create-qr-code/?size=96x96&data=${encodeURIComponent(APP_URL)}&format=png`
+                `https://api.qrserver.com/v1/create-qr-code/?size=96x96&data=${encodeURIComponent(url)}&format=png`
               )
             }
           />
