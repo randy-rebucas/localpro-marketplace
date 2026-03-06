@@ -1,0 +1,412 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import {
+  MapPin,
+  CalendarDays,
+  Briefcase,
+  Clock,
+  CheckCircle2,
+  ArrowLeft,
+  PhilippinePeso,
+  ListChecks,
+} from "lucide-react";
+
+import { connectDB } from "@/lib/db";
+import Job from "@/models/Job";
+import { getCurrentUser } from "@/lib/auth";
+import { ShareButtons } from "./ShareButtons";
+
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://www.localpro.asia";
+
+const PROVIDER_REGISTER_URL = `${APP_URL}/register?role=provider`;
+const LOGIN_URL = `${APP_URL}/login`;
+const BOARD_URL = `${APP_URL}/board`;
+const QR_BASE = "https://api.qrserver.com/v1/create-qr-code/?format=png&color=0d2340&bgcolor=ffffff&margin=6";
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+function formatPeso(n: number) {
+  return `₱${n.toLocaleString("en-PH")}`;
+}
+
+function formatDate(d: Date | string) {
+  return new Date(d).toLocaleDateString("en-PH", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function formatTimeAgo(d: Date | string) {
+  const ms  = Date.now() - new Date(d).getTime();
+  const m   = Math.floor(ms / 60_000);
+  if (m < 60)  return `${m}m ago`;
+  const h   = Math.floor(m / 60);
+  if (h < 24)  return `${h}h ago`;
+  return `${Math.floor(h / 24)}d ago`;
+}
+
+type JobStatus =
+  | "pending_validation" | "open" | "assigned"
+  | "in_progress" | "completed" | "disputed"
+  | "rejected" | "refunded" | "expired";
+
+const STATUS_CONFIG: Record<
+  JobStatus,
+  { label: string; badge: string; dot: string }
+> = {
+  open:                { label: "Open",             badge: "bg-emerald-500/20 text-emerald-300 border-emerald-500/40", dot: "bg-emerald-400" },
+  pending_validation:  { label: "Pending Review",   badge: "bg-yellow-500/20  text-yellow-300  border-yellow-500/40",  dot: "bg-yellow-400"  },
+  assigned:            { label: "Assigned",         badge: "bg-amber-500/20   text-amber-300   border-amber-500/40",   dot: "bg-amber-400"   },
+  in_progress:         { label: "In Progress",      badge: "bg-amber-500/20   text-amber-300   border-amber-500/40",   dot: "bg-amber-400"   },
+  completed:           { label: "Completed",        badge: "bg-blue-500/20    text-blue-300    border-blue-500/40",    dot: "bg-blue-400"    },
+  disputed:            { label: "Disputed",         badge: "bg-rose-500/20    text-rose-300    border-rose-500/40",    dot: "bg-rose-400"    },
+  rejected:            { label: "Rejected",         badge: "bg-slate-500/20   text-slate-400   border-slate-500/30",   dot: "bg-slate-400"   },
+  refunded:            { label: "Refunded",         badge: "bg-slate-500/20   text-slate-400   border-slate-500/30",   dot: "bg-slate-400"   },
+  expired:             { label: "Expired",          badge: "bg-slate-500/20   text-slate-400   border-slate-500/30",   dot: "bg-slate-400"   },
+};
+
+// ─── Data fetching ────────────────────────────────────────────────────────────
+
+interface PublicJob {
+  _id: string;
+  title: string;
+  category: string;
+  location: string;
+  budget: number;
+  scheduleDate: string;
+  description: string;
+  specialInstructions?: string;
+  status: JobStatus;
+  milestones?: { _id: string; title: string; amount: number; description?: string; status: string }[];
+  createdAt: string;
+}
+
+async function getJob(id: string): Promise<PublicJob | null> {
+  try {
+    await connectDB();
+    const doc = await Job.findById(id)
+      .select(
+        "_id title category location budget scheduleDate description specialInstructions status milestones createdAt"
+      )
+      .lean();
+    if (!doc) return null;
+    return JSON.parse(JSON.stringify(doc)) as PublicJob;
+  } catch {
+    return null;
+  }
+}
+
+// ─── Metadata ────────────────────────────────────────────────────────────────
+
+export async function generateMetadata(
+  { params }: { params: Promise<{ id: string }> }
+): Promise<Metadata> {
+  const { id } = await params;
+  const job = await getJob(id);
+  if (!job) return { title: "Job Not Found" };
+
+  const title = `${job.title} — ${job.category} | LocalPro`;
+  const description = `${job.description.slice(0, 150)}… Location: ${job.location}. Budget: ${formatPeso(job.budget)}.`;
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      url: `${APP_URL}/jobs/${id}`,
+      siteName: "LocalPro Marketplace",
+      type: "website",
+    },
+    twitter: {
+      card: "summary",
+      title,
+      description,
+    },
+  };
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
+export default async function JobDetailPage(
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+  const [job, session] = await Promise.all([getJob(id), getCurrentUser()]);
+  if (!job) notFound();
+
+  const isProvider = session?.role === "provider";
+  const pageUrl    = `${APP_URL}/jobs/${job._id}`;
+  const applyUrl   = `${APP_URL}/provider/marketplace?ref=${job._id}`;
+  const qrUrl      = `${QR_BASE}&size=160x160&data=${encodeURIComponent(applyUrl)}`;
+  const shareText  = `📌 Job Available: ${job.title} in ${job.location} — ${formatPeso(job.budget)}. Apply via LocalPro!`;
+  const isOpen     = job.status === "open";
+  const statusCfg  = STATUS_CONFIG[job.status] ?? STATUS_CONFIG.expired;
+
+  return (
+    <div className="min-h-screen bg-[#0e1f33] text-white">
+
+      {/* ── Header ──────────────────────────────────────────────────────────── */}
+      <header className="bg-[#1e3a5f] border-b border-white/10 px-4 sm:px-6 lg:px-10 py-3 flex items-center justify-between">
+        <Link
+          href={BOARD_URL}
+          className="flex items-center gap-1.5 text-sm text-blue-300 hover:text-white transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          <span className="hidden sm:inline">Back to Board</span>
+        </Link>
+
+        <Link href={APP_URL} className="flex items-center gap-1.5">
+          <span className="text-lg font-extrabold text-white tracking-tight">LocalPro</span>
+          <span className="text-xs text-blue-300 font-medium hidden sm:inline">Marketplace</span>
+        </Link>
+
+        {isProvider ? (
+          <a
+            href={applyUrl}
+            className="text-sm font-semibold px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 transition-colors text-white"
+          >
+            Apply Now
+          </a>
+        ) : (
+          <a
+            href={PROVIDER_REGISTER_URL}
+            className="text-sm font-semibold px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 transition-colors text-white"
+          >
+            Register as Provider
+          </a>
+        )}
+      </header>
+
+      {/* ── Body ─────────────────────────────────────────────────────────────── */}
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-10 py-8 flex flex-col lg:flex-row gap-6">
+
+        {/* ── Left: Job Detail ─────────────────────────────────────────────── */}
+        <article className="flex-1 min-w-0 flex flex-col gap-6">
+
+          {/* Badges row */}
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center px-3 py-1 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30 text-xs font-bold uppercase tracking-wider">
+              <Briefcase className="h-3 w-3 mr-1.5" />
+              {job.category}
+            </span>
+            <span
+              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-bold uppercase tracking-wider ${statusCfg.badge}`}
+            >
+              <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${statusCfg.dot} ${isOpen ? "animate-pulse" : ""}`} />
+              {statusCfg.label}
+            </span>
+            <span className="text-xs text-slate-500 ml-auto">
+              Posted {formatTimeAgo(job.createdAt)}
+            </span>
+          </div>
+
+          {/* Title */}
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-white leading-tight">
+            {job.title}
+          </h1>
+
+          {/* Key info grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="flex items-start gap-3 bg-white/[0.05] border border-white/10 rounded-xl p-4">
+              <MapPin className="h-5 w-5 text-blue-400 mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="text-[11px] text-slate-500 font-semibold uppercase tracking-wider mb-0.5">Location</p>
+                <p className="text-sm font-semibold text-white">{job.location}</p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3 bg-white/[0.05] border border-white/10 rounded-xl p-4">
+              <PhilippinePeso className="h-5 w-5 text-emerald-400 mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="text-[11px] text-slate-500 font-semibold uppercase tracking-wider mb-0.5">Budget</p>
+                <p className="text-lg font-extrabold text-emerald-300">{formatPeso(job.budget)}</p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3 bg-white/[0.05] border border-white/10 rounded-xl p-4">
+              <CalendarDays className="h-5 w-5 text-amber-400 mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="text-[11px] text-slate-500 font-semibold uppercase tracking-wider mb-0.5">Schedule</p>
+                <p className="text-sm font-semibold text-white">{formatDate(job.scheduleDate)}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Description */}
+          <section className="bg-white/[0.04] border border-white/[0.08] rounded-2xl p-5 sm:p-6">
+            <h2 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+              <Briefcase className="h-4 w-4" />
+              About this Job
+            </h2>
+            <p className="text-[15px] text-slate-200 leading-relaxed whitespace-pre-line">
+              {job.description}
+            </p>
+          </section>
+
+          {/* Special instructions */}
+          {job.specialInstructions && job.specialInstructions.trim().length > 0 && (
+            <section className="bg-amber-500/[0.07] border border-amber-500/20 rounded-2xl p-5">
+              <h2 className="text-sm font-bold text-amber-400 uppercase tracking-wider mb-2 flex items-center gap-2">
+                <Clock className="h-4 w-4" />
+                Special Instructions
+              </h2>
+              <p className="text-[15px] text-amber-100/80 leading-relaxed whitespace-pre-line">
+                {job.specialInstructions}
+              </p>
+            </section>
+          )}
+
+          {/* Milestones */}
+          {job.milestones && job.milestones.length > 0 && (
+            <section className="bg-white/[0.04] border border-white/[0.08] rounded-2xl p-5 sm:p-6">
+              <h2 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+                <ListChecks className="h-4 w-4" />
+                Payment Milestones
+              </h2>
+              <div className="flex flex-col gap-2">
+                {job.milestones.map((m, i) => (
+                  <div
+                    key={m._id ?? i}
+                    className="flex items-center justify-between gap-4 bg-white/[0.04] border border-white/[0.07] rounded-xl px-4 py-3"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-500/20 text-blue-300 text-xs font-bold flex items-center justify-center">
+                        {i + 1}
+                      </span>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-white truncate">{m.title}</p>
+                        {m.description && (
+                          <p className="text-xs text-slate-400 mt-0.5 line-clamp-1">{m.description}</p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <span className="text-base font-bold text-emerald-300 whitespace-nowrap">
+                        {formatPeso(m.amount)}
+                      </span>
+                      {m.status === "released" && (
+                        <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-slate-500 mt-3">
+                Payments are held in escrow and released per milestone.
+              </p>
+            </section>
+          )}
+
+          {/* Mobile-only share (below description on small screens) */}
+          <div className="bg-white/[0.04] border border-white/[0.08] rounded-2xl p-5 lg:hidden">
+            <ShareButtons url={pageUrl} text={shareText} />
+          </div>
+        </article>
+
+        {/* ── Right: Apply + QR ────────────────────────────────────────────── */}
+        <aside className="w-full lg:w-72 xl:w-80 flex-shrink-0 flex flex-col gap-4">
+
+          {/* Apply card */}
+          <div className="bg-[#1e3a5f] border border-white/10 rounded-2xl p-5 flex flex-col gap-4">
+            <div>
+              <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-1">Budget</p>
+              <p className="text-3xl font-extrabold text-emerald-300 tracking-tight">
+                {formatPeso(job.budget)}
+              </p>
+            </div>
+
+            {isOpen ? (
+              <>
+                {isProvider ? (
+                  <a
+                    href={applyUrl}
+                    className="block w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-center font-bold text-white text-sm transition-colors"
+                  >
+                    Apply Now
+                  </a>
+                ) : (
+                  <>
+                    <a
+                      href={PROVIDER_REGISTER_URL}
+                      className="block w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-center font-bold text-white text-sm transition-colors"
+                    >
+                      Apply as a Provider
+                    </a>
+                    <a
+                      href={`${LOGIN_URL}?redirect=/jobs/${job._id}`}
+                      className="block w-full py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-center font-semibold text-slate-300 text-sm transition-colors"
+                    >
+                      Log in to Apply
+                    </a>
+                  </>
+                )}
+              </>
+            ) : (
+              <div className="py-3 rounded-xl bg-slate-500/20 border border-slate-500/30 text-center text-sm font-semibold text-slate-400">
+                This job is no longer accepting applications
+              </div>
+            )}
+
+            <p className="text-[11px] text-slate-500 text-center leading-relaxed">
+              All payments are protected by LocalPro escrow. You only get paid when the client confirms completion.
+            </p>
+          </div>
+
+          {/* QR code card */}
+          <div className="bg-white/[0.04] border border-white/[0.08] rounded-2xl p-5 flex flex-col items-center gap-3">
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Scan to Apply</p>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={qrUrl}
+              alt="Scan QR code to apply"
+              width={160}
+              height={160}
+              className="rounded-xl border border-white/10 bg-white p-2"
+            />
+            <p className="text-[11px] text-slate-500 text-center">
+              Scan with your phone camera to open this job on LocalPro
+            </p>
+          </div>
+
+          {/* Desktop share */}
+          <div className="bg-white/[0.04] border border-white/[0.08] rounded-2xl p-5 hidden lg:block">
+            <ShareButtons url={pageUrl} text={shareText} />
+          </div>
+
+          {/* Posted at */}
+          <p className="text-[11px] text-slate-600 text-center">
+            Posted on {formatDate(job.createdAt)}
+          </p>
+        </aside>
+      </main>
+
+      {/* ── Footer ───────────────────────────────────────────────────────────── */}
+      <footer className="border-t border-white/[0.08] py-6 mt-8 px-4 sm:px-6">
+        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
+          <span>
+            Powered by{" "}
+            <Link href={APP_URL} className="text-blue-400 hover:text-blue-300 font-semibold">
+              LocalPro Marketplace
+            </Link>
+          </span>
+          <div className="flex items-center gap-4">
+            <Link href={BOARD_URL} className="hover:text-slate-300 transition-colors">
+              View All Jobs
+            </Link>
+            <Link href={PROVIDER_REGISTER_URL} className="hover:text-slate-300 transition-colors">
+              Become a Provider
+            </Link>
+            <Link href="/privacy" className="hover:text-slate-300 transition-colors">
+              Privacy
+            </Link>
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
+}

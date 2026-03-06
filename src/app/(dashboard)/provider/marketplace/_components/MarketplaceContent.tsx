@@ -5,7 +5,7 @@ import Category from "@/models/Category";
 import MarketplaceClient from "../MarketplaceClient";
 import type { IJob } from "@/types";
 
-export async function MarketplaceContent({ userId }: { userId: string }) {
+export async function MarketplaceContent({ userId, refJobId }: { userId: string; refJobId?: string }) {
   await connectDB();
 
   const [jobsResult, categoryDocs, providerQuotes] = await Promise.all([
@@ -23,6 +23,7 @@ export async function MarketplaceContent({ userId }: { userId: string }) {
       initialJobs={initialJobs}
       initialCategories={initialCategories}
       initialQuotedJobIds={initialQuotedJobIds}
+      refJobId={refJobId}
     />
   );
 }

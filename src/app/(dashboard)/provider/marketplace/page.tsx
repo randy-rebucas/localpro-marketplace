@@ -6,9 +6,15 @@ import { MarketplaceSkeleton } from "./_components/skeletons";
 
 export const metadata: Metadata = { title: "Marketplace" };
 
-export default async function MarketplacePage() {
+export default async function MarketplacePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ ref?: string }>;
+}) {
   const user = await getCurrentUser();
   if (!user) return null;
+
+  const { ref } = await searchParams;
 
   return (
     <div className="space-y-6">
@@ -20,7 +26,7 @@ export default async function MarketplacePage() {
       </div>
 
       <Suspense fallback={<MarketplaceSkeleton />}>
-        <MarketplaceContent userId={user.userId} />
+        <MarketplaceContent userId={user.userId} refJobId={ref} />
       </Suspense>
     </div>
   );

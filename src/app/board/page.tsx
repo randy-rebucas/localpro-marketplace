@@ -32,6 +32,7 @@ import { EstimatedEarningsWidget }    from "./components/EstimatedEarningsWidget
 import { ProviderAchievementsWidget } from "./components/ProviderAchievementsWidget";
 import { TrainingCTA }                from "./components/TrainingCTA";
 import { BottomStrip }                from "./components/BottomStrip";
+import { AchievementFeed }           from "./components/AchievementFeed";
 
 // ─── Main board ───────────────────────────────────────────────────────────────
 
@@ -310,6 +311,11 @@ export default function BoardPage() {
           <p className="text-[11px] text-slate-500 -mt-1 flex-shrink-0 uppercase tracking-widest font-medium">
             Top 5 providers this platform
           </p>
+
+          {/* Achievement feed */}
+          {data?.leaderboard.length ? (
+            <AchievementFeed entries={data.leaderboard} />
+          ) : null}
 
           <div className="flex flex-col gap-1.5 md:gap-2 flex-shrink-0">
             {data?.leaderboard.length ? (
