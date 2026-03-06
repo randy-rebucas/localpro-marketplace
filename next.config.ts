@@ -23,7 +23,7 @@ const securityHeaders = [
       "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://maps.googleapis.com https://js.paymongo.com https://www.googletagmanager.com https://vercel.live https://*.vercel.live https://va.vercel-scripts.com",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://vercel.live https://*.vercel.live",
       "font-src 'self' https://fonts.gstatic.com https://vercel.live https://*.vercel.live",
-      "img-src 'self' data: blob: https://res.cloudinary.com https://maps.googleapis.com https://maps.gstatic.com https://avatars.githubusercontent.com https://lh3.googleusercontent.com https://www.google-analytics.com https://graph.facebook.com https://platform-lookaside.fbsbx.com https://vercel.live https://*.vercel.live",
+      "img-src 'self' data: blob: https://res.cloudinary.com https://maps.googleapis.com https://maps.gstatic.com https://avatars.githubusercontent.com https://lh3.googleusercontent.com https://www.google-analytics.com https://graph.facebook.com https://platform-lookaside.fbsbx.com https://vercel.live https://*.vercel.live https://api.qrserver.com",
       "connect-src 'self' https://api.paymongo.com https://maps.googleapis.com https://www.google-analytics.com https://analytics.google.com https://stats.g.doubleclick.net https://vitals.vercel-insights.com https://vercel.live https://*.vercel.live https://va.vercel-scripts.com",
       "frame-src https://js.paymongo.com https://checkout.paymongo.com https://www.googletagmanager.com https://vercel.live https://*.vercel.live",
     ].join("; "),
