@@ -16,6 +16,7 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import Job from "@/models/Job";
 import ProviderProfile from "@/models/ProviderProfile";
+import AppSetting from "@/models/AppSetting";
 import { announcementRepository } from "@/repositories";
 
 export const dynamic = "force-dynamic";
@@ -24,7 +25,12 @@ export async function GET() {
   try {
     await connectDB();
 
-    const [jobs, providerDocs, announcements, openCount, completedCount] =
+    const [
+      jobs, providerDocs, announcements, openCount, completedCount,
+      activityFeedSetting, earningsWidgetSetting, categoryDemandSetting, achievementsWidgetSetting,
+      urgentJobsSetting, trainingCtaSetting,
+      marketplaceStatsSetting, priceGuideSetting, businessCtaSetting, partnersSetting, jobAlertsSetting,
+    ] =
       await Promise.all([
         // Open jobs — newest first, capped at 20
         Job.find({ status: "open" })
@@ -47,6 +53,18 @@ export async function GET() {
         // Stats
         Job.countDocuments({ status: "open" }),
         Job.countDocuments({ status: "completed" }),
+        // Feature flags
+        AppSetting.findOne({ key: "board.activityFeed" }).lean(),
+        AppSetting.findOne({ key: "board.earningsWidget" }).lean(),
+        AppSetting.findOne({ key: "board.categoryDemand" }).lean(),
+        AppSetting.findOne({ key: "board.achievementsWidget" }).lean(),
+        AppSetting.findOne({ key: "board.urgentJobs" }).lean(),
+        AppSetting.findOne({ key: "board.trainingCta" }).lean(),
+        AppSetting.findOne({ key: "board.marketplaceStats" }).lean(),
+        AppSetting.findOne({ key: "board.priceGuide" }).lean(),
+        AppSetting.findOne({ key: "board.businessCta" }).lean(),
+        AppSetting.findOne({ key: "board.partners" }).lean(),
+        AppSetting.findOne({ key: "board.jobAlerts" }).lean(),
       ]);
 
     const leaderboard = providerDocs.map((p, idx) => {
@@ -84,6 +102,19 @@ export async function GET() {
         openJobs: openCount,
         completedJobs: completedCount,
         topProviders: leaderboard.length,
+      },
+      features: {
+        activityFeed: activityFeedSetting?.value === true,
+        earningsWidget: earningsWidgetSetting?.value === true,
+        categoryDemand: categoryDemandSetting?.value === true,
+        achievementsWidget: achievementsWidgetSetting?.value === true,
+        urgentJobs: urgentJobsSetting?.value === true,
+        trainingCta: trainingCtaSetting?.value === true,
+        marketplaceStats: marketplaceStatsSetting?.value === true,
+        priceGuide: priceGuideSetting?.value === true,
+        businessCta: businessCtaSetting?.value === true,
+        partners: partnersSetting?.value === true,
+        jobAlerts: jobAlertsSetting?.value === true,
       },
       generatedAt: new Date().toISOString(),
     });

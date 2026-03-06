@@ -40,6 +40,7 @@ import {
   Wallet,
   UserPlus,
   PieChart,
+  Settings,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/authStore";
@@ -177,6 +178,12 @@ const navGroups: Partial<Record<UserRole, NavGroup[]>> = {
         { label: "Announcements",  href: "/admin/announcements",  icon: <Megaphone  className="h-5 w-5" />, capability: "__admin_only__" },
         { label: "Knowledge Base", href: "/admin/knowledge",      icon: <BookOpen   className="h-5 w-5" />, capability: "__admin_only__" },
         { label: "Notifications",  href: "/admin/notifications",  icon: <Bell       className="h-5 w-5" />, capability: null },
+      ],
+    },
+    {
+      heading: "Platform",
+      items: [
+        { label: "App Settings", href: "/admin/settings", icon: <Settings className="h-5 w-5" />, capability: "__admin_only__" },
       ],
     },
   ],
