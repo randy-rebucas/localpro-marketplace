@@ -333,12 +333,12 @@ export default function BoardPage() {
   }
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden select-none">
+    <div className="flex flex-col min-h-screen h-screen overflow-x-hidden overflow-y-auto select-none bg-[#14243a]">
 
       {/* ── Header ─────────────────────────────────────────────────────── */}
-      <header className="flex-shrink-0 bg-[#1e3a5f] border-b border-white/10 px-6 py-3 flex items-center justify-between gap-4">
+      <header className="flex-shrink-0 bg-[#1e3a5f] border-b border-white/10 px-4 md:px-6 py-2.5 md:py-3 flex flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-4">
         {/* Brand */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 md:gap-4 w-full md:w-auto">
           <div>
             <div className="flex items-baseline gap-1.5">
               <span className="text-xl font-extrabold text-white tracking-tight">LocalPro</span>
@@ -356,14 +356,14 @@ export default function BoardPage() {
         </div>
 
         {/* Stats strip */}
-        <div className="hidden lg:flex items-center gap-6">
+        <div className="hidden md:flex items-center gap-4 lg:gap-6 w-full md:w-auto justify-end">
           <StatPill label="Open Jobs" value={data?.stats.openJobs ?? 0} color="text-emerald-300" />
           <StatPill label="Completed" value={data?.stats.completedJobs ?? 0} color="text-blue-300" />
           <StatPill label="Top Providers" value={data?.stats.topProviders ?? 0} color="text-amber-300" />
         </div>
 
         {/* Clock + status */}
-        <div className="flex items-center gap-4 flex-shrink-0">
+        <div className="flex items-center gap-2 md:gap-4 flex-shrink-0 w-full md:w-auto justify-end">
           {/* Online indicator */}
           <span
             title={online ? "Live" : "Connection lost"}
@@ -385,7 +385,7 @@ export default function BoardPage() {
 
       {/* ── Error banner ────────────────────────────────────────────────── */}
       {error && (
-        <div className="flex-shrink-0 bg-red-800/50 border-b border-red-600 px-6 py-2 flex items-center justify-between">
+        <div className="flex-shrink-0 bg-red-800/50 border-b border-red-600 px-4 md:px-6 py-2 flex flex-col md:flex-row items-center justify-between gap-2">
           <p className="text-sm text-red-200">Connection error — showing last known data.</p>
           <button
             onClick={() => fetchData()}
@@ -397,13 +397,13 @@ export default function BoardPage() {
       )}
 
       {/* ── Main content ─────────────────────────────────────────────────── */}
-      <main className="flex-1 overflow-hidden flex gap-0 min-h-0">
+      <main className="flex-1 overflow-y-auto flex flex-col md:flex-row gap-0 min-h-0">
 
         {/* ── Left: Job listings ─────────────────────────────────────────── */}
-        <section className="flex flex-col flex-1 min-w-0 border-r border-white/10 p-4 gap-3">
+        <section className="flex flex-col flex-1 min-w-0 border-b md:border-b-0 md:border-r border-white/10 p-2 sm:p-3 md:p-4 gap-2 md:gap-3 overflow-visible md:overflow-hidden">
           {/* Section header */}
-          <div className="flex items-center justify-between flex-shrink-0">
-            <div className="flex items-center gap-2">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between flex-shrink-0 gap-2">
+            <div className="flex items-center gap-1.5 md:gap-2">
               <Briefcase className="h-5 w-5 text-blue-400" />
               <h2 className="text-base font-bold text-white uppercase tracking-wider">
                 Jobs Available
@@ -417,10 +417,11 @@ export default function BoardPage() {
 
             {/* Pagination controls */}
             {totalJobPages > 1 && (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 mt-2 sm:mt-0">
                 <button
                   onClick={() => setJobPage((p) => (p - 1 + totalJobPages) % totalJobPages)}
                   className="p-1 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
+                  aria-label="Previous jobs page"
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </button>
@@ -430,6 +431,7 @@ export default function BoardPage() {
                 <button
                   onClick={() => setJobPage((p) => (p + 1) % totalJobPages)}
                   className="p-1 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
+                  aria-label="Next jobs page"
                 >
                   <ChevronRight className="h-4 w-4" />
                 </button>
@@ -439,14 +441,14 @@ export default function BoardPage() {
 
           {/* Job cards grid */}
           {data && visibleJobs.length > 0 ? (
-            <div className="flex-1 grid grid-cols-2 gap-3 content-start overflow-hidden">
+            <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2 md:gap-3 content-start overflow-hidden">
               {visibleJobs.map((job) => (
                 <JobCard key={job._id} job={job} />
               ))}
             </div>
           ) : (
-            <div className="flex-1 flex flex-col items-center justify-center gap-3 text-center">
-              <Cpu className="h-12 w-12 text-slate-600" />
+            <div className="flex-1 flex flex-col items-center justify-center gap-2 md:gap-3 text-center min-h-[200px]">
+              <Cpu className="h-10 w-10 md:h-12 md:w-12 text-slate-600" />
               <p className="text-slate-400 text-sm">No open jobs at the moment.</p>
               <p className="text-slate-500 text-xs">Check back soon — new jobs are posted regularly.</p>
             </div>
@@ -454,14 +456,15 @@ export default function BoardPage() {
 
           {/* Page dots */}
           {totalJobPages > 1 && (
-            <div className="flex-shrink-0 flex items-center justify-center gap-1.5 pt-1">
+            <div className="flex-shrink-0 flex items-center justify-center gap-1 pt-1">
               {Array.from({ length: totalJobPages }).map((_, i) => (
                 <button
                   key={i}
                   onClick={() => setJobPage(i)}
-                  className={`rounded-full transition-all ${
+                  className={`rounded-full transition-all focus:outline-none focus:ring-2 focus:ring-blue-400 ${
                     i === jobPage ? "w-4 h-1.5 bg-blue-400" : "w-1.5 h-1.5 bg-white/20"
                   }`}
+                  aria-label={`Go to jobs page ${i + 1}`}
                 />
               ))}
             </div>
@@ -469,10 +472,10 @@ export default function BoardPage() {
         </section>
 
         {/* ── Right: Leaderboard ─────────────────────────────────────────── */}
-        <aside className="w-72 xl:w-80 flex-shrink-0 flex flex-col p-4 gap-3">
+        <aside className="w-full md:w-72 xl:w-80 flex-shrink-0 flex flex-col p-2 sm:p-3 md:p-4 gap-2 md:gap-3 border-t md:border-t-0 md:border-l-0 md:border-l border-white/10 overflow-visible md:overflow-hidden">
 
           {/* Leaderboard section */}
-          <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="flex items-center gap-1.5 md:gap-2 flex-shrink-0">
             <Trophy className="h-5 w-5 text-amber-400" />
             <h2 className="text-base font-bold text-white uppercase tracking-wider">
               Provider Leaderboard
@@ -482,7 +485,7 @@ export default function BoardPage() {
             Top 5 providers this platform
           </p>
 
-          <div className="flex flex-col gap-2 flex-shrink-0">
+          <div className="flex flex-col gap-1.5 md:gap-2 flex-shrink-0">
             {data?.leaderboard.length ? (
               data.leaderboard.map((entry) => (
                 <LeaderboardCard key={entry._id} entry={entry} />
@@ -498,33 +501,33 @@ export default function BoardPage() {
           <div className="border-t border-white/10 my-1 flex-shrink-0" />
 
           {/* Call-to-action QR */}
-          <div className="flex-1 flex flex-col items-center justify-center text-center gap-4 rounded-2xl border border-blue-400/20 p-5 bg-gradient-to-b from-blue-900/40 to-[#0d2340]/80 relative overflow-hidden">
+          <div className="flex-1 flex flex-col items-center justify-center text-center gap-2 md:gap-4 rounded-2xl border border-blue-400/20 p-3 md:p-5 bg-gradient-to-b from-blue-900/40 to-[#0d2340]/80 relative overflow-hidden mt-2 md:mt-0">
             {/* subtle glow ring behind the QR */}
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div className="w-40 h-40 rounded-full bg-blue-500/10 blur-2xl" />
+              <div className="w-32 h-32 md:w-40 md:h-40 rounded-full bg-blue-500/10 blur-2xl" />
             </div>
 
             {/* Badge */}
-            <span className="relative z-10 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/20 border border-blue-400/30 text-[11px] font-bold text-blue-300 uppercase tracking-widest">
+            <span className="relative z-10 inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-blue-500/20 border border-blue-400/30 text-[10px] md:text-[11px] font-bold text-blue-300 uppercase tracking-widest">
               <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
               Now Hiring
             </span>
 
             {/* QR frame */}
-            <div className="relative z-10 bg-white rounded-2xl p-2.5 shadow-[0_0_32px_rgba(59,130,246,0.25)]">
+            <div className="relative z-10 bg-white rounded-2xl p-2 shadow-[0_0_24px_rgba(59,130,246,0.18)]">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={`https://api.qrserver.com/v1/create-qr-code/?size=130x130&data=${encodeURIComponent(PROVIDER_SIGNUP_URL)}&format=png&color=0d2340&bgcolor=ffffff&margin=6`}
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=110x110&data=${encodeURIComponent(PROVIDER_SIGNUP_URL)}&format=png&color=0d2340&bgcolor=ffffff&margin=6`}
                 alt="Scan to become a provider"
-                width={130}
-                height={130}
+                width={110}
+                height={110}
                 className="rounded-xl block"
               />
             </div>
 
             {/* Text */}
-            <div className="relative z-10 space-y-1">
-              <p className="text-base font-extrabold text-white tracking-tight leading-snug">
+            <div className="relative z-10 space-y-0.5 md:space-y-1">
+              <p className="text-sm md:text-base font-extrabold text-white tracking-tight leading-snug">
                 Become a Provider
               </p>
               <p className="text-xs text-blue-300 font-medium leading-relaxed">
@@ -533,8 +536,8 @@ export default function BoardPage() {
             </div>
 
             {/* URL pill */}
-            <div className="relative z-10 w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2">
-              <p className="text-[10px] text-slate-400 font-mono tracking-tight break-all">
+            <div className="relative z-10 w-full bg-white/5 border border-white/10 rounded-xl px-2.5 py-1.5">
+              <p className="text-[9px] md:text-[10px] text-slate-400 font-mono tracking-tight break-all">
                 {APP_URL}/register
               </p>
             </div>
