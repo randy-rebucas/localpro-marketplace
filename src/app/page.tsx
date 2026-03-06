@@ -10,7 +10,7 @@ import Link from "next/link";
 import { CheckCircle, Briefcase, Star, Shield, ArrowRight, MapPin, Users, TrendingUp, Lock, Zap } from "lucide-react";
 import Image from "next/image";
 import { Suspense } from "react";
-import { formatRelativeTime } from "@/lib/utils";
+import { formatRelativeTime, formatPHP } from "@/lib/utils";
 
 // ── Async data sections (deferred behind Suspense) ────────────────────────────
 
@@ -237,6 +237,80 @@ function TopProvidersSkeleton() {
   );
 }
 
+async function LatestJobsSection() {
+  await connectDB();
+  const jobs = await Job.find({ status: "open" })
+    .sort({ createdAt: -1 })
+    .limit(6)
+    .select("title category location budget scheduleDate createdAt")
+    .lean();
+
+  if (!jobs.length) return null;
+
+  return (
+    <section className="max-w-6xl mx-auto px-4 py-12 sm:py-20">
+      <div className="flex items-end justify-between mb-8 sm:mb-10">
+        <div>
+          <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-2">Latest Open Jobs</h2>
+          <p className="text-slate-500 text-sm">Real jobs posted by clients — apply now before they&apos;re filled.</p>
+        </div>
+        <Link href="/board" className="text-sm font-medium text-primary hover:underline hidden sm:block shrink-0">
+          View job board →
+        </Link>
+      </div>
+      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+        {jobs.map((j) => {
+          const job = j as unknown as { _id: string; title: string; category: string; location: string; budget: number; scheduleDate: Date; createdAt: Date };
+          return (
+            <Link
+              key={String(job._id)}
+              href={`/jobs/${job._id}`}
+              className="group bg-white rounded-2xl border border-slate-200 shadow-card hover:shadow-card-hover hover:-translate-y-0.5 transition-all p-5 flex flex-col gap-3"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-primary/70 mb-1">{job.category}</p>
+                  <h3 className="font-semibold text-slate-900 text-sm leading-snug group-hover:text-primary transition-colors line-clamp-2">{job.title}</h3>
+                </div>
+                <span className="inline-flex items-center gap-1 bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold px-2 py-0.5 rounded-full shrink-0">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  Open
+                </span>
+              </div>
+              <div className="flex flex-col gap-1.5 text-xs text-slate-500">
+                <span className="flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5 text-slate-400 shrink-0" />{job.location}</span>
+                <span className="flex items-center gap-1.5"><Briefcase className="h-3.5 w-3.5 text-slate-400 shrink-0" /><span className="font-medium text-slate-700">{formatPHP(job.budget)}</span></span>
+              </div>
+              <p className="text-[10px] text-slate-400 mt-auto">Posted {formatRelativeTime(job.createdAt)}</p>
+            </Link>
+          );
+        })}
+      </div>
+      <div className="mt-6 text-center sm:hidden">
+        <Link href="/board" className="text-sm font-medium text-primary hover:underline">View job board →</Link>
+      </div>
+    </section>
+  );
+}
+
+function LatestJobsSkeleton() {
+  return (
+    <section className="max-w-6xl mx-auto px-4 py-12 sm:py-20 animate-pulse">
+      <div className="flex items-end justify-between mb-8 sm:mb-10">
+        <div>
+          <div className="h-8 w-52 bg-slate-200 rounded-lg mb-2" />
+          <div className="h-4 w-72 bg-slate-100 rounded" />
+        </div>
+      </div>
+      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+        {[...Array(6)].map((_, i) => (
+          <div key={i} className="h-36 rounded-2xl bg-slate-100 border border-slate-200" />
+        ))}
+      </div>
+    </section>
+  );
+}
+
 async function StatsStrip() {
   await connectDB();
   const completedCount = await Job.countDocuments({ status: "completed" });
@@ -297,6 +371,7 @@ export default async function RootPage() {
             </span>
           </Link>
           <nav className="flex items-center gap-2">
+            <Link href="/board"    className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors px-3 py-1.5 rounded-lg hover:bg-slate-100">Job Board</Link>
             <Link href="/login"    className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors px-3 py-1.5 rounded-lg hover:bg-slate-100">Log in</Link>
             <Link href="/register" className="btn-primary text-sm shadow-sm">Get started →</Link>
           </nav>
@@ -353,6 +428,11 @@ export default async function RootPage() {
       {/* ── Stats strip ── */}
       <Suspense fallback={<div className="h-24 border-y border-slate-100 bg-slate-50/70 animate-pulse" />}>
         <StatsStrip />
+      </Suspense>
+
+      {/* ── Latest open jobs — deferred ── */}
+      <Suspense fallback={<LatestJobsSkeleton />}>
+        <LatestJobsSection />
       </Suspense>
 
       {/* ── Categories — deferred ── */}
@@ -595,6 +675,7 @@ export default async function RootPage() {
                 <ul className="space-y-2 text-sm">
                   <li><Link href="/register?role=client"   className="hover:text-white transition-colors">Post a Job</Link></li>
                   <li><Link href="/register?role=provider" className="hover:text-white transition-colors">Become a Provider</Link></li>
+                  <li><Link href="/board"                  className="hover:text-white transition-colors">Job Board</Link></li>
                   <li><Link href="/login"                  className="hover:text-white transition-colors">Log in</Link></li>
                   <li><Link href="/register"               className="hover:text-white transition-colors">Sign up</Link></li>
                 </ul>
