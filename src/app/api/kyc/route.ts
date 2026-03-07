@@ -2,9 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
-import { connectDB } from "@/lib/db";
 import { ValidationError } from "@/lib/errors";
-import User from "@/models/User";
 import { userRepository, notificationRepository } from "@/repositories";
 import { pushNotification } from "@/lib/events";
 
@@ -25,20 +23,12 @@ export const POST = withHandler(async (req: NextRequest) => {
   const parsed = SubmitKycSchema.safeParse(body);
   if (!parsed.success) throw new ValidationError(parsed.error.errors[0].message);
 
-  await connectDB();
+  const documents = parsed.data.documents.map((d) => ({
+    ...d,
+    uploadedAt: new Date(),
+  }));
 
-  const updatedUser = await User.findByIdAndUpdate(
-    user.userId,
-    {
-      kycStatus: "pending",
-      kycDocuments: parsed.data.documents.map((d) => ({
-        ...d,
-        uploadedAt: new Date(),
-      })),
-      kycRejectionReason: null,
-    },
-    { new: true }
-  ).select("name role").lean() as { name: string; role: string } | null;
+  const updatedUser = await userRepository.submitKyc(user.userId, documents);
 
   // Notify all admins and staff about the new KYC submission (fire-and-forget)
   (async () => {
@@ -68,11 +58,8 @@ export const POST = withHandler(async (req: NextRequest) => {
 /** GET /api/kyc — get own KYC status */
 export const GET = withHandler(async () => {
   const user = await requireUser();
-  await connectDB();
 
-  const u = await User.findById(user.userId)
-    .select("kycStatus kycDocuments kycRejectionReason")
-    .lean() as { kycStatus?: string; kycDocuments?: unknown[]; kycRejectionReason?: string } | null;
+  const u = await userRepository.getKycStatus(user.userId);
 
   return NextResponse.json({
     kycStatus: u?.kycStatus ?? "none",

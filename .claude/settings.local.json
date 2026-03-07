@@ -56,7 +56,8 @@
       "Bash(find \"c:\\\\Users\\\\corew\\\\localpro-marketplace\\\\src\\\\app\\\\\\(dashboard\\)\\\\provider\" -type d)",
       "Bash(pnpm add web-push)",
       "Bash(pnpm add -D @types/web-push)",
-      "Bash(ls c:/Users/corew/localpro-marketplace/src/app/manifest*)"
+      "Bash(ls c:/Users/corew/localpro-marketplace/src/app/manifest*)",
+      "Bash(ls c:/Users/corew/localpro-marketplace/src/repositories/*.ts)"
     ]
   }
 }

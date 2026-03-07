@@ -16,21 +16,29 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import Job from "@/models/Job";
 import ProviderProfile from "@/models/ProviderProfile";
-import AppSetting from "@/models/AppSetting";
-import { announcementRepository } from "@/repositories";
+import { announcementRepository, appSettingRepository } from "@/repositories";
 
 export const dynamic = "force-dynamic";
+
+const BOARD_FEATURE_KEYS = [
+  "board.activityFeed",
+  "board.earningsWidget",
+  "board.categoryDemand",
+  "board.achievementsWidget",
+  "board.urgentJobs",
+  "board.trainingCta",
+  "board.marketplaceStats",
+  "board.priceGuide",
+  "board.businessCta",
+  "board.partners",
+  "board.jobAlerts",
+] as const;
 
 export async function GET() {
   try {
     await connectDB();
 
-    const [
-      jobs, providerDocs, announcements, openCount, completedCount,
-      activityFeedSetting, earningsWidgetSetting, categoryDemandSetting, achievementsWidgetSetting,
-      urgentJobsSetting, trainingCtaSetting,
-      marketplaceStatsSetting, priceGuideSetting, businessCtaSetting, partnersSetting, jobAlertsSetting,
-    ] =
+    const [jobs, providerDocs, announcements, openCount, completedCount, features] =
       await Promise.all([
         // Open jobs — newest first, capped at 20
         Job.find({ status: "open" })
@@ -53,18 +61,9 @@ export async function GET() {
         // Stats
         Job.countDocuments({ status: "open" }),
         Job.countDocuments({ status: "completed" }),
-        // Feature flags
-        AppSetting.findOne({ key: "board.activityFeed" }).lean(),
-        AppSetting.findOne({ key: "board.earningsWidget" }).lean(),
-        AppSetting.findOne({ key: "board.categoryDemand" }).lean(),
-        AppSetting.findOne({ key: "board.achievementsWidget" }).lean(),
-        AppSetting.findOne({ key: "board.urgentJobs" }).lean(),
-        AppSetting.findOne({ key: "board.trainingCta" }).lean(),
-        AppSetting.findOne({ key: "board.marketplaceStats" }).lean(),
-        AppSetting.findOne({ key: "board.priceGuide" }).lean(),
-        AppSetting.findOne({ key: "board.businessCta" }).lean(),
-        AppSetting.findOne({ key: "board.partners" }).lean(),
-        AppSetting.findOne({ key: "board.jobAlerts" }).lean(),
+
+        // All board feature flags in one query
+        appSettingRepository.findByKeys([...BOARD_FEATURE_KEYS]),
       ]);
 
     const leaderboard = providerDocs.map((p, idx) => {
@@ -104,17 +103,17 @@ export async function GET() {
         topProviders: leaderboard.length,
       },
       features: {
-        activityFeed: activityFeedSetting?.value === true,
-        earningsWidget: earningsWidgetSetting?.value === true,
-        categoryDemand: categoryDemandSetting?.value === true,
-        achievementsWidget: achievementsWidgetSetting?.value === true,
-        urgentJobs: urgentJobsSetting?.value === true,
-        trainingCta: trainingCtaSetting?.value === true,
-        marketplaceStats: marketplaceStatsSetting?.value === true,
-        priceGuide: priceGuideSetting?.value === true,
-        businessCta: businessCtaSetting?.value === true,
-        partners: partnersSetting?.value === true,
-        jobAlerts: jobAlertsSetting?.value === true,
+        activityFeed:      features["board.activityFeed"] === true,
+        earningsWidget:    features["board.earningsWidget"] === true,
+        categoryDemand:    features["board.categoryDemand"] === true,
+        achievementsWidget: features["board.achievementsWidget"] === true,
+        urgentJobs:        features["board.urgentJobs"] === true,
+        trainingCta:       features["board.trainingCta"] === true,
+        marketplaceStats:  features["board.marketplaceStats"] === true,
+        priceGuide:        features["board.priceGuide"] === true,
+        businessCta:       features["board.businessCta"] === true,
+        partners:          features["board.partners"] === true,
+        jobAlerts:         features["board.jobAlerts"] === true,
       },
       generatedAt: new Date().toISOString(),
     });

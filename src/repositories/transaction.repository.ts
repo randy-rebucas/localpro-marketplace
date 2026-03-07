@@ -115,6 +115,31 @@ export class TransactionRepository extends BaseRepository<TransactionDocument> {
     return map;
   }
 
+  /**
+   * Paginated transaction list scoped to a single user (payer or payee).
+   * Admins pass an empty filter to see all transactions.
+   */
+  async findPaginatedForUser(
+    filter: Record<string, unknown>,
+    page: number,
+    limit: number
+  ): Promise<{ data: unknown[]; total: number }> {
+    await this.connect();
+    const skip = (page - 1) * limit;
+    const [data, total] = await Promise.all([
+      Transaction.find(filter)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .populate("jobId", "title")
+        .populate("payerId", "name")
+        .populate("payeeId", "name")
+        .lean(),
+      Transaction.countDocuments(filter),
+    ]);
+    return { data, total };
+  }
+
   /** Returns the first transaction record for the given job (if any). */
   async findOneByJobId(jobId: string): Promise<TransactionDocument | null> {
     return this.findOne({ jobId } as never);

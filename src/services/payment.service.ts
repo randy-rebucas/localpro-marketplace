@@ -42,6 +42,12 @@ export class PaymentService {
     const check = canTransitionEscrow(job, "funded");
     if (!check.allowed) throw new UnprocessableError(check.reason!);
 
+    if (overrideAmount !== undefined && overrideAmount > job.budget * 1.2) {
+      throw new UnprocessableError(
+        "Override amount cannot exceed 120% of the job budget"
+      );
+    }
+
     const amount = overrideAmount ?? job.budget;
 
     // ── Development fallback (no PayMongo key set) ─────────────────────────

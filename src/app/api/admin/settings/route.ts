@@ -6,47 +6,23 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { connectDB } from "@/lib/db";
 import { requireUser, requireRole } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
-import AppSetting from "@/models/AppSetting";
+import { appSettingRepository } from "@/repositories";
 
 export const GET = withHandler(async () => {
   const user = await requireUser();
   requireRole(user, "admin", "staff");
 
-  await connectDB();
-  const settings = await AppSetting.find().lean();
-  return NextResponse.json(
-    settings.reduce<Record<string, unknown>>((acc, s) => {
-      acc[s.key] = s.value;
-      return acc;
-    }, {})
-  );
+  const settings = await appSettingRepository.findAllAsMap();
+  return NextResponse.json(settings);
 });
 
 export const PATCH = withHandler(async (req: NextRequest) => {
   const user = await requireUser();
   requireRole(user, "admin");
 
-  await connectDB();
   const body: Record<string, unknown> = await req.json();
-
-  const ops = Object.entries(body).map(([key, value]) =>
-    AppSetting.findOneAndUpdate(
-      { key },
-      { value, updatedBy: user.userId },
-      { upsert: true, new: true }
-    )
-  );
-
-  await Promise.all(ops);
-
-  const updated = await AppSetting.find().lean();
-  return NextResponse.json(
-    updated.reduce<Record<string, unknown>>((acc, s) => {
-      acc[s.key] = s.value;
-      return acc;
-    }, {})
-  );
+  const updated = await appSettingRepository.upsertMany(body, user.userId);
+  return NextResponse.json(updated);
 });

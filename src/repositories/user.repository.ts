@@ -290,6 +290,48 @@ export class UserRepository extends BaseRepository<UserDocument> {
       ?.pushSubscriptions ?? [];
   }
 
+  // ─── KYC ─────────────────────────────────────────────────────────────────
+
+  async submitKyc(
+    userId: string,
+    documents: { type: string; url: string; uploadedAt: Date }[]
+  ): Promise<{ name: string; role: string } | null> {
+    await this.connect();
+    return User.findByIdAndUpdate(
+      userId,
+      { kycStatus: "pending", kycDocuments: documents, kycRejectionReason: null },
+      { new: true }
+    )
+      .select("name role")
+      .lean() as unknown as { name: string; role: string } | null;
+  }
+
+  async getKycStatus(
+    userId: string
+  ): Promise<{ kycStatus: string; kycDocuments: unknown[]; kycRejectionReason: string | null } | null> {
+    await this.connect();
+    return User.findById(userId)
+      .select("kycStatus kycDocuments kycRejectionReason")
+      .lean() as unknown as { kycStatus: string; kycDocuments: unknown[]; kycRejectionReason: string | null } | null;
+  }
+
+  // ─── Fraud / Risk ─────────────────────────────────────────────────────────
+
+  async findSuspiciousUsers(limit = 100): Promise<unknown[]> {
+    await this.connect();
+    return User.find({
+      $or: [
+        { fraudFlags: { $exists: true, $not: { $size: 0 } } },
+        { flaggedJobCount: { $gte: 2 } },
+      ],
+      isDeleted: { $ne: true },
+    })
+      .select("name email role kycStatus isVerified isSuspended flaggedJobCount fraudFlags createdAt")
+      .sort({ flaggedJobCount: -1, createdAt: -1 })
+      .limit(limit)
+      .lean();
+  }
+
   // ─── Duplicate Detection ──────────────────────────────────────────────────
 
   /**

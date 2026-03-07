@@ -1,3 +1,4 @@
+export { appSettingRepository } from "./appSetting.repository";
 export { userRepository } from "./user.repository";
 export { jobRepository } from "./job.repository";
 export { quoteRepository } from "./quote.repository";

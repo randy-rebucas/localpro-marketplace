@@ -7,8 +7,7 @@ import type { NextRequest } from "next/server";
  * so you can test cron routes locally with: Authorization: Bearer dev-cron-secret
  */
 export function verifyCronSecret(req: NextRequest): boolean {
-  const secret = process.env.CRON_SECRET
-    ?? (process.env.NODE_ENV === "development" ? "dev-cron-secret" : "");
+  const secret = process.env.CRON_SECRET ?? "";
   if (!secret) return false;
   return req.headers.get("authorization") === `Bearer ${secret}`;
 }
