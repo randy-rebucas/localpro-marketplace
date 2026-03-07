@@ -53,6 +53,18 @@ export class QuoteRepository extends BaseRepository<QuoteDocument> {
       .lean() as never;
   }
 
+  /**
+   * Reject all quotes (accepted or pending) from a specific provider for a job.
+   * Called when a provider is withdrawn or force-removed from a job.
+   */
+  async rejectByProvider(jobId: string, providerId: string): Promise<void> {
+    await this.connect();
+    await Quote.updateMany(
+      { jobId, providerId, status: { $in: ["pending", "accepted"] } },
+      { status: "rejected" }
+    );
+  }
+
   /** Pending quote counts grouped by jobId. Accepts ObjectId or string values. */
   async countPendingByJobIds(jobIds: unknown[]): Promise<{ _id: unknown; count: number }[]> {
     await this.connect();

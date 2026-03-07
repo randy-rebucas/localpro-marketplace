@@ -3,13 +3,13 @@ import { z } from "zod";
 import { requireUser, requireRole } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { ValidationError, NotFoundError, UnprocessableError } from "@/lib/errors";
-import { jobRepository, transactionRepository, activityRepository, notificationRepository } from "@/repositories";
+import { jobRepository, transactionRepository, activityRepository, notificationRepository, quoteRepository } from "@/repositories";
 import { calculateCommission, getCommissionRate } from "@/lib/commission";
 import { pushStatusUpdateMany, pushNotification } from "@/lib/events";
 import type { IJob } from "@/types";
 
 const OverrideSchema = z.object({
-  action: z.enum(["release", "refund"]),
+  action: z.enum(["release", "refund", "reopen"]),
   reason: z.string().min(5, "Reason must be at least 5 characters"),
 });
 
@@ -35,6 +35,52 @@ export const POST = withHandler(async (
 
   if (job.escrowStatus !== "funded") {
     throw new UnprocessableError("Escrow must be in 'funded' state to override");
+  }
+
+  if (action === "reopen") {
+    // Re-open the job to the board. Escrow stays "funded" so the client does
+    // NOT need to pay again when a new provider accepts the job.
+    const previousProviderId = job.providerId?.toString();
+    job.status = "open";
+    (job as unknown as { providerId: null }).providerId = null;
+    await jobDoc.save();
+
+    const clientNote = await notificationRepository.create({
+      userId: job.clientId.toString(),
+      type: "job_update" as never,
+      title: "Job re-opened by admin",
+      message: `Your job has been re-opened by an admin and is now visible to new providers. Reason: ${reason}`,
+      data: { jobId: id },
+    });
+    pushNotification(job.clientId.toString(), clientNote);
+
+    if (previousProviderId) {
+      const providerNote = await notificationRepository.create({
+        userId: previousProviderId,
+        type: "job_update" as never,
+        title: "Job re-assigned by admin",
+        message: `You have been unassigned from a job by an admin. Reason: ${reason}`,
+        data: { jobId: id },
+      });
+      pushNotification(previousProviderId, providerNote);
+    }
+
+    // Reject the displaced provider's quote so it no longer appears accepted
+    if (previousProviderId) {
+      await quoteRepository.rejectByProvider(id, previousProviderId);
+    }
+
+    await activityRepository.log({
+      userId: user.userId,
+      eventType: "escrow_released",
+      jobId: id,
+      metadata: { adminOverride: true, action: "reopen", reason },
+    });
+
+    const affected = [job.clientId.toString(), previousProviderId].filter(Boolean) as string[];
+    pushStatusUpdateMany(affected, { entity: "job", id, status: "open" });
+
+    return NextResponse.json({ message: "Job re-opened successfully" });
   }
 
   if (action === "release") {
@@ -113,5 +159,5 @@ export const POST = withHandler(async (
     status: action === "release" ? "completed" : "refunded",
   });
 
-  return NextResponse.json({ message: `Escrow ${action}d successfully` });
+  return NextResponse.json({ message: `Escrow ${action === "release" ? "released" : "refunded"} successfully` });
 });

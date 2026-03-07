@@ -7,6 +7,7 @@ import Button from "@/components/ui/Button";
 import Modal from "@/components/ui/Modal";
 import {
   CheckCircle2,
+  XCircle,
   MapPin,
   Calendar,
   Clock,
@@ -86,14 +87,14 @@ interface QuoteForm { proposedAmount: string; timeline: string; message: string;
 interface MarketplaceClientProps {
   initialJobs: IJob[];
   initialCategories: string[];
-  initialQuotedJobIds: string[];
+  initialQuotedJobStatuses: Record<string, string>;
   refJobId?: string;
 }
 
 export default function MarketplaceClient({
   initialJobs,
   initialCategories,
-  initialQuotedJobIds,
+  initialQuotedJobStatuses,
   refJobId,
 }: MarketplaceClientProps) {
   const [jobs, setJobs] = useState<IJob[]>(initialJobs);
@@ -106,7 +107,7 @@ export default function MarketplaceClient({
   const [quoteModal, setQuoteModal] = useState<{ open: boolean; job: IJob | null }>({ open: false, job: null });
   const [quoteForm, setQuoteForm] = useState<QuoteForm>({ proposedAmount: "", timeline: "", message: "" });
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [quotedJobIds, setQuotedJobIds] = useState<Set<string>>(new Set(initialQuotedJobIds));
+  const [quotedJobStatuses, setQuotedJobStatuses] = useState<Record<string, string>>(initialQuotedJobStatuses);
   const [categories] = useState<string[]>(initialCategories);
   const [isGeneratingQuoteMsg, setIsGeneratingQuoteMsg] = useState(false);
   const [minBudget, setMinBudget] = useState("");
@@ -230,7 +231,7 @@ export default function MarketplaceClient({
       const data = await res.json();
       if (!res.ok) {
         if (data.error === "You have already submitted a quote for this job") {
-          setQuotedJobIds((prev) => new Set(prev).add(quoteModal.job!._id.toString()));
+          setQuotedJobStatuses((prev) => ({ ...prev, [quoteModal.job!._id.toString()]: "pending" }));
           setQuoteModal({ open: false, job: null });
           toast.error("You've already quoted this job");
         } else {
@@ -239,7 +240,7 @@ export default function MarketplaceClient({
         return;
       }
       toast.success("Quote submitted!");
-      setQuotedJobIds((prev) => new Set(prev).add(quoteModal.job!._id.toString()));
+      setQuotedJobStatuses((prev) => ({ ...prev, [quoteModal.job!._id.toString()]: "pending" }));
       setQuoteModal({ open: false, job: null });
       setQuoteForm({ proposedAmount: "", timeline: "", message: "" });
     } catch {
@@ -569,7 +570,8 @@ export default function MarketplaceClient({
         <div className="grid sm:grid-cols-2 gap-4">
           {paginated.map((job) => {
             const id = job._id.toString();
-            const quoted = quotedJobIds.has(id);
+            const quoteStatus = quotedJobStatuses[id] as "pending" | "accepted" | "rejected" | undefined;
+            const quoted = !!quoteStatus;
             const expanded = expandedId === id;
             const isLong = job.description.length > 120;
 
@@ -580,6 +582,10 @@ export default function MarketplaceClient({
                 className={`bg-white rounded-xl border shadow-card flex flex-col transition-shadow hover:shadow-card-hover ${
                   refJobId === id
                     ? "border-blue-400 ring-2 ring-blue-300/60"
+                    : quoteStatus === "rejected"
+                    ? "border-red-200"
+                    : quoteStatus === "accepted"
+                    ? "border-blue-200"
                     : quoted
                     ? "border-emerald-200"
                     : "border-slate-200"
@@ -587,7 +593,13 @@ export default function MarketplaceClient({
               >
                 {/* Top strip */}
                 <div className={`flex items-center justify-between px-5 py-3 border-b text-xs ${
-                  quoted ? "border-emerald-100 bg-emerald-50/40" : "border-slate-100 bg-slate-50/60"
+                  quoteStatus === "rejected"
+                    ? "border-red-100 bg-red-50/40"
+                    : quoteStatus === "accepted"
+                    ? "border-blue-100 bg-blue-50/40"
+                    : quoted
+                    ? "border-emerald-100 bg-emerald-50/40"
+                    : "border-slate-100 bg-slate-50/60"
                 }`}>
                   <span className="inline-flex items-center gap-1.5 font-medium text-slate-500">
                     <Briefcase className="h-3 w-3" />
@@ -699,7 +711,17 @@ export default function MarketplaceClient({
                   <span className="text-xs text-slate-400 tabular-nums">
                     Budget: <span className="font-semibold text-slate-700">{formatCurrency(job.budget)}</span>
                   </span>
-                  {quoted ? (
+                  {quoteStatus === "rejected" ? (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-50 text-red-600 text-xs font-medium border border-red-200">
+                      <XCircle className="h-3.5 w-3.5" />
+                      Quote Rejected
+                    </span>
+                  ) : quoteStatus === "accepted" ? (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-50 text-blue-700 text-xs font-medium border border-blue-200">
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                      Quote Accepted
+                    </span>
+                  ) : quoted ? (
                     <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-700 text-xs font-medium border border-emerald-200">
                       <CheckCircle2 className="h-3.5 w-3.5" />
                       Quote Sent

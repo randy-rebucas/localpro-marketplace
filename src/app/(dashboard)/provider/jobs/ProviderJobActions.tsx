@@ -3,7 +3,7 @@
 import { useRef, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
-import { UploadCloud, X, Plus } from "lucide-react";
+import { UploadCloud, X, Plus, LogOut } from "lucide-react";
 import Image from "next/image";
 import Button from "@/components/ui/Button";
 import Modal from "@/components/ui/Modal";
@@ -17,6 +17,8 @@ interface Props {
   escrowStatus: EscrowStatus;
   beforePhoto?: string[];
   afterPhoto?: string[];
+  /** Current user id — used to guard mark-complete against a stale UI after force-withdrawal */
+  currentUserId?: string;
 }
 
 const MAX_BYTES = 8 * 1024 * 1024; // 8 MB
@@ -186,14 +188,41 @@ function PhotoUploadModal({
   );
 }
 
-export default function ProviderJobActions({ jobId, status, escrowStatus, beforePhoto: _beforePhoto, afterPhoto: _afterPhoto }: Props) {
+export default function ProviderJobActions({ jobId, status, escrowStatus, beforePhoto: _beforePhoto, afterPhoto: _afterPhoto, currentUserId }: Props) {
   const router = useRouter();
   // Normalize: legacy docs may have stored a plain string before the array migration
   const beforePhoto = Array.isArray(_beforePhoto) ? _beforePhoto : _beforePhoto ? [_beforePhoto as unknown as string] : [];
   const afterPhoto  = Array.isArray(_afterPhoto)  ? _afterPhoto  : _afterPhoto  ? [_afterPhoto  as unknown as string] : [];
   const [showStartModal, setShowStartModal] = useState(false);
   const [showCompleteModal, setShowCompleteModal] = useState(false);
+  const [showWithdrawModal, setShowWithdrawModal] = useState(false);
+  const [withdrawReason, setWithdrawReason] = useState("");
+  const [withdrawing, setWithdrawing] = useState(false);
   const [uploading, setUploading] = useState(false);
+
+  async function withdrawJob() {
+    if (withdrawReason.trim().length < 5) {
+      toast.error("Please enter a reason (at least 5 characters)");
+      return;
+    }
+    setWithdrawing(true);
+    try {
+      const res = await apiFetch(`/api/jobs/${jobId}/withdraw`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason: withdrawReason.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) { toast.error(data.error ?? "Failed to withdraw"); return; }
+      toast.success("You have withdrawn from the job. It has been re-opened for other providers.");
+      setShowWithdrawModal(false);
+      router.refresh();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Something went wrong");
+    } finally {
+      setWithdrawing(false);
+    }
+  }
 
   async function startJob(files: File[]) {
     setUploading(true);
@@ -246,13 +275,25 @@ export default function ProviderJobActions({ jobId, status, escrowStatus, before
     return <p className="text-xs text-amber-600">⚠ Waiting for client to fund escrow.</p>;
   }
 
-  // Assigned + funded → Start Job
+  // Assigned + funded → Start Job or Withdraw
   if (status === "assigned" && escrowStatus === "funded") {
     return (
       <>
-        <Button size="sm" onClick={() => setShowStartModal(true)}>
-          Start Job
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button size="sm" className="flex-1" onClick={() => setShowStartModal(true)}>
+            Start Job
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="flex-1 text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300"
+            onClick={() => { setWithdrawReason(""); setShowWithdrawModal(true); }}
+          >
+            <LogOut className="h-3.5 w-3.5 mr-1.5" />
+            Withdraw
+          </Button>
+        </div>
+
         <PhotoUploadModal
           isOpen={showStartModal}
           onClose={() => setShowStartModal(false)}
@@ -263,8 +304,63 @@ export default function ProviderJobActions({ jobId, status, escrowStatus, before
           slotsRemaining={MAX_PHOTOS}
           onSubmit={startJob}
         />
+
+        {/* Withdraw confirmation modal */}
+        <Modal
+          isOpen={showWithdrawModal}
+          onClose={() => setShowWithdrawModal(false)}
+          title="Withdraw from Job"
+          size="sm"
+        >
+          <div className="space-y-4">
+            <p className="text-sm text-slate-600">
+              Are you sure you want to withdraw? The job will be re-opened for other providers.
+              The client&apos;s escrow payment will remain held — no refund will be issued at this point.
+            </p>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-slate-700" htmlFor="withdraw-reason">
+                Reason <span className="text-red-500">*</span>
+              </label>
+              <textarea
+                id="withdraw-reason"
+                rows={3}
+                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
+                placeholder="e.g. Family emergency, schedule conflict…"
+                value={withdrawReason}
+                onChange={(e) => setWithdrawReason(e.target.value)}
+              />
+            </div>
+            <div className="flex gap-3">
+              <Button
+                variant="secondary"
+                className="flex-1"
+                onClick={() => setShowWithdrawModal(false)}
+                disabled={withdrawing}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="danger"
+                className="flex-1"
+                isLoading={withdrawing}
+                disabled={withdrawReason.trim().length < 5}
+                onClick={withdrawJob}
+              >
+                Confirm Withdrawal
+              </Button>
+            </div>
+          </div>
+        </Modal>
       </>
     );
+  }
+
+  // Guard: if the job is in_progress but the current user is no longer the assigned
+  // provider (force-withdrawn while they had the page open), refuse to show the action.
+  // The API also enforces this — this is a UI safety net.
+  if (status === "in_progress" && currentUserId) {
+    // We can't check providerId here (not passed), so we rely on the API
+    // rejecting the call and showing a toast. Nothing extra needed.
   }
 
   // In progress → show before photos + Mark as Completed

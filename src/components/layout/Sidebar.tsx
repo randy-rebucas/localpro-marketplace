@@ -149,6 +149,7 @@ const navGroups: Partial<Record<UserRole, NavGroup[]>> = {
     {
       heading: "Operations",
       items: [
+        { label: "All Jobs",       href: "/admin/all-jobs",  icon: <Briefcase     className="h-5 w-5" />, capability: "manage_jobs" },
         { label: "Validate Jobs",  href: "/admin/jobs",      icon: <CheckCircle   className="h-5 w-5" />, capability: "manage_jobs" },
         { label: "Fraud Monitor",   href: "/admin/fraud",     icon: <ShieldAlert   className="h-5 w-5" />, capability: "manage_jobs" },
         { label: "KYC Review",     href: "/admin/kyc",       icon: <ShieldCheck   className="h-5 w-5" />, capability: "manage_kyc" },

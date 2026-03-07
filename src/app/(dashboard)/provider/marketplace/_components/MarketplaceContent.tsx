@@ -16,13 +16,16 @@ export async function MarketplaceContent({ userId, refJobId }: { userId: string;
 
   const initialJobs = JSON.parse(JSON.stringify(jobsResult.data)) as IJob[];
   const initialCategories = ["All", ...(categoryDocs as { name: string }[]).map((c) => c.name)];
-  const initialQuotedJobIds = providerQuotes.map((q) => q.jobId.toString());
+  const initialQuotedJobStatuses: Record<string, string> = {};
+  providerQuotes.forEach((q) => {
+    initialQuotedJobStatuses[q.jobId.toString()] = q.status;
+  });
 
   return (
     <MarketplaceClient
       initialJobs={initialJobs}
       initialCategories={initialCategories}
-      initialQuotedJobIds={initialQuotedJobIds}
+      initialQuotedJobStatuses={initialQuotedJobStatuses}
       refJobId={refJobId}
     />
   );

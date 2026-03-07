@@ -6,6 +6,7 @@ import { JobStatusBadge, EscrowBadge } from "@/components/ui/Badge";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import AdminJobActions from "../AdminJobActions";
 import AdminEscrowOverride from "@/components/shared/AdminEscrowOverride";
+import AdminForceWithdraw from "@/components/shared/AdminForceWithdraw";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, ClipboardList, ShieldAlert, Gavel, ImageIcon } from "lucide-react";
@@ -88,6 +89,11 @@ export default async function AdminJobDetailPage({
         <JobStatusBadge status={j.status} />
         <EscrowBadge status={j.escrowStatus} />
         <AdminEscrowOverride jobId={j._id.toString()} escrowStatus={j.escrowStatus} />
+        <AdminForceWithdraw
+          jobId={j._id.toString()}
+          status={j.status}
+          providerName={j.providerId?.name}
+        />
       </div>
 
       {/* ── Validation Steps ── */}

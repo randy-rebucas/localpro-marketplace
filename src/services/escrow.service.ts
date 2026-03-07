@@ -3,6 +3,7 @@ import {
   transactionRepository,
   activityRepository,
   providerProfileRepository,
+  quoteRepository,
 } from "@/repositories";
 import { canTransition, canTransitionEscrow } from "@/lib/jobLifecycle";
 import { pushStatusUpdateMany } from "@/lib/events";
@@ -187,6 +188,68 @@ export class EscrowService {
     pushStatusUpdateMany(
       [job.clientId.toString(), job.providerId?.toString()].filter(Boolean) as string[],
       { entity: "job", id: job._id!.toString(), escrowStatus: "released" }
+    );
+
+    return { job };
+  }
+
+  /**
+   * Allows a provider to withdraw from an assigned (but not yet started) job.
+   * The job reverts to "open" so it re-appears on the board. Escrow stays
+   * "funded" — the client does NOT need to pay again.
+   */
+  async withdrawJob(user: TokenPayload, jobId: string, reason: string) {
+    const jobDoc = await jobRepository.getDocById(jobId);
+    if (!jobDoc) throw new NotFoundError("Job");
+
+    const job = jobDoc as unknown as IJob & {
+      providerId: { toString(): string } | null;
+      clientId: { toString(): string };
+      save(): Promise<void>;
+    };
+
+    // Only the assigned provider may withdraw
+    if (job.providerId?.toString() !== user.userId) throw new ForbiddenError();
+
+    // Only allowed when job is still in "assigned" state (before start)
+    const check = canTransition(job as unknown as IJob, "open");
+    if (!check.allowed) {
+      throw new UnprocessableError(
+        "Can only withdraw from a job that has not been started yet"
+      );
+    }
+
+    const previousProviderId = job.providerId.toString();
+
+    // Revert to open — clear provider assignment
+    job.status = "open";
+    job.providerId = null;
+    await jobDoc.save();
+
+    // Reject the provider's accepted/pending quote so it no longer shows as accepted
+    await quoteRepository.rejectByProvider(job._id!.toString(), previousProviderId);
+
+    await activityRepository.log({
+      userId: user.userId,
+      eventType: "job_started", // reuse closest event; extend ActivityLog events if needed
+      jobId: job._id!.toString(),
+      metadata: { action: "provider_withdrawal", reason },
+    });
+
+    // Notify the client
+    const { notificationService } = await import("@/services/notification.service");
+    await notificationService.push({
+      userId: job.clientId.toString(),
+      type: "job_update" as never,
+      title: "Provider withdrew from your job",
+      message: `Your provider could not proceed with the job. It has been re-opened and is now accepting new providers.`,
+      data: { jobId: job._id!.toString() },
+    });
+
+    // Push realtime update to both parties
+    pushStatusUpdateMany(
+      [job.clientId.toString(), previousProviderId],
+      { entity: "job", id: job._id!.toString(), status: "open" }
     );
 
     return { job };
