@@ -56,8 +56,6 @@ const BusinessOrganizationSchema = new Schema<BusinessOrganizationDocument>(
   { timestamps: true }
 );
 
-BusinessOrganizationSchema.index({ ownerId: 1 });
-
 const BusinessOrganization: Model<BusinessOrganizationDocument> =
   mongoose.models.BusinessOrganization ??
   mongoose.model<BusinessOrganizationDocument>(

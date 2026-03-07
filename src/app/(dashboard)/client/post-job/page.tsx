@@ -4,16 +4,24 @@ import { categoryRepository } from "@/repositories/category.repository";
 import PostJobClient from "./_components/PostJobClient";
 import type { ICategory } from "@/types";
 import type { CategoryDocument } from "@/models/Category";
+import type { FormData } from "./_components/types";
 
 export default async function PostJobPage({
   searchParams,
 }: {
-  searchParams: Promise<{ category?: string }>;
+  searchParams: Promise<{
+    category?: string;
+    title?: string;
+    description?: string;
+    budget?: string;
+    location?: string;
+    specialInstructions?: string;
+  }>;
 }) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
-  const { category: categoryParam } = await searchParams;
+  const { category: categoryParam, title, description, budget, location, specialInstructions } = await searchParams;
 
   const rawCategories = await categoryRepository.findActive();
 
@@ -29,10 +37,19 @@ export default async function PostJobPage({
     updatedAt: c.updatedAt,
   }));
 
-  // Resolve the initial category name from the query param (case-insensitive)
-  const initialCategory = categoryParam
+  // Resolve category name (case-insensitive)
+  const resolvedCategory = categoryParam
     ? (categories.find((c) => c.name.toLowerCase() === categoryParam.toLowerCase())?.name ?? categoryParam)
     : "";
 
-  return <PostJobClient categories={categories} initialCategory={initialCategory} />;
+  const initialData: Partial<FormData> = {
+    ...(resolvedCategory          && { category: resolvedCategory }),
+    ...(title                     && { title }),
+    ...(description               && { description }),
+    ...(budget                    && { budget }),
+    ...(location                  && { location }),
+    ...(specialInstructions       && { specialInstructions }),
+  };
+
+  return <PostJobClient categories={categories} initialData={initialData} />;
 }

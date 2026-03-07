@@ -4,7 +4,7 @@ import { jobRepository } from "@/repositories/job.repository";
 import { JobStatusBadge, EscrowBadge } from "@/components/ui/Badge";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import Link from "next/link";
-import { ChevronRight, MapPin, User, Briefcase } from "lucide-react";
+import { ChevronRight, MapPin, ArrowRight, CalendarDays } from "lucide-react";
 import type { JobStatus } from "@/types";
 
 export const metadata: Metadata = { title: "All Jobs" };
@@ -66,11 +66,18 @@ export default async function AdminAllJobsPage({
     budget: number;
     status: JobStatus;
     escrowStatus: string;
-    scheduleDate: Date;
+    scheduleDate?: Date | null;
     createdAt: Date;
     clientId: { name: string; email: string };
     providerId?: { name: string; email: string } | null;
   }[];
+
+  // Left-border accent for statuses that need attention
+  const urgentStatuses = new Set<JobStatus>(["disputed", "pending_validation"]);
+  const accentClass: Partial<Record<JobStatus, string>> = {
+    disputed: "border-l-4 border-l-red-400",
+    pending_validation: "border-l-4 border-l-amber-400",
+  };
 
   function buildUrl(params: Record<string, string | undefined>) {
     const sp = new URLSearchParams();
@@ -82,62 +89,71 @@ export default async function AdminAllJobsPage({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
+      {/* Header */}
       <div>
         <h2 className="text-2xl font-bold text-slate-900">All Jobs</h2>
         <p className="text-slate-500 text-sm mt-0.5">
-          {result.total} job{result.total !== 1 ? "s" : ""} total
+          {result.total.toLocaleString()} job{result.total !== 1 ? "s" : ""}
           {status ? ` · filtered by "${STATUS_LABELS[status as JobStatus] ?? status}"` : ""}
+          {q ? ` · "${q}"` : ""}
         </p>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-wrap gap-2 items-center">
-        <form method="GET" action="/admin/all-jobs" className="flex gap-2 w-full sm:w-auto">
-          {status && <input type="hidden" name="status" value={status} />}
-          <input
-            type="search"
-            name="q"
-            defaultValue={q}
-            placeholder="Search by title…"
-            className="input flex-1 sm:w-56 text-sm py-1.5"
-          />
-          <button type="submit" className="btn-primary py-1.5 px-3 text-sm">
-            Search
-          </button>
-        </form>
+      {/* Search */}
+      <form method="GET" action="/admin/all-jobs" className="flex gap-2">
+        {status && <input type="hidden" name="status" value={status} />}
+        <input
+          type="search"
+          name="q"
+          defaultValue={q}
+          placeholder="Search by title…"
+          className="input flex-1 max-w-sm text-sm py-1.5"
+        />
+        <button type="submit" className="btn-primary py-1.5 px-4 text-sm">
+          Search
+        </button>
+        {(q || status) && (
+          <Link href="/admin/all-jobs" className="btn-secondary py-1.5 px-3 text-sm">
+            Clear
+          </Link>
+        )}
+      </form>
 
-        <div className="flex flex-wrap gap-1.5">
+      {/* Status filter chips */}
+      <div className="flex flex-wrap gap-1.5">
+        <Link
+          href={buildUrl({ q })}
+          className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+            !status
+              ? "bg-primary text-white border-primary"
+              : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
+          }`}
+        >
+          All
+        </Link>
+        {ALL_STATUSES.map((s) => (
           <Link
-            href={buildUrl({ q })}
+            key={s}
+            href={buildUrl({ status: s, q })}
             className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
-              !status
+              status === s
                 ? "bg-primary text-white border-primary"
                 : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
             }`}
           >
-            All
+            {STATUS_LABELS[s]}
           </Link>
-          {ALL_STATUSES.map((s) => (
-            <Link
-              key={s}
-              href={buildUrl({ status: s, q })}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
-                status === s
-                  ? "bg-primary text-white border-primary"
-                  : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
-              }`}
-            >
-              {STATUS_LABELS[s]}
-            </Link>
-          ))}
-        </div>
+        ))}
       </div>
 
-      {/* List */}
+      {/* Job list */}
       {jobs.length === 0 ? (
-        <div className="bg-white rounded-xl border border-slate-200 p-12 text-center text-slate-400 text-sm">
-          No jobs found.
+        <div className="bg-white rounded-xl border border-slate-200 p-16 text-center">
+          <p className="text-slate-400 text-sm">No jobs match your filters.</p>
+          <Link href="/admin/all-jobs" className="mt-3 inline-block text-xs text-primary hover:underline">
+            Clear filters
+          </Link>
         </div>
       ) : (
         <div className="bg-white rounded-xl border border-slate-200 shadow-card overflow-hidden divide-y divide-slate-100">
@@ -145,38 +161,58 @@ export default async function AdminAllJobsPage({
             <Link
               key={job._id.toString()}
               href={`/admin/jobs/${job._id.toString()}`}
-              className="flex items-start gap-4 px-5 py-4 hover:bg-slate-50 transition-colors group"
+              className={`flex items-center gap-4 px-5 py-3.5 hover:bg-slate-50 transition-colors group ${
+                urgentStatuses.has(job.status) ? (accentClass[job.status] ?? "") : ""
+              }`}
             >
-              <div className="flex-1 min-w-0 space-y-1.5">
-                <p className="font-semibold text-slate-900 group-hover:text-primary transition-colors text-sm truncate">
+              {/* Main content */}
+              <div className="flex-1 min-w-0 space-y-1">
+                <p
+                  title={job.title}
+                  className="font-semibold text-slate-900 group-hover:text-primary transition-colors text-sm truncate"
+                >
                   {job.title}
                 </p>
-                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-400">
+
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-slate-400">
                   <span className="bg-slate-100 text-slate-600 rounded px-2 py-0.5 font-medium">
                     {job.category}
                   </span>
                   <span className="flex items-center gap-1">
-                    <MapPin className="h-3 w-3" /> {job.location}
+                    <MapPin className="h-3 w-3 flex-shrink-0" />
+                    {job.location}
                   </span>
-                  <span className="flex items-center gap-1">
-                    <User className="h-3 w-3" /> {job.clientId.name}
+                  {/* Client → Provider */}
+                  <span className="flex items-center gap-1.5">
+                    <span className="text-slate-600">{job.clientId.name}</span>
+                    {job.providerId && (
+                      <>
+                        <ArrowRight className="h-3 w-3 text-slate-300 flex-shrink-0" />
+                        <span className="text-slate-600">{job.providerId.name}</span>
+                      </>
+                    )}
                   </span>
-                  {job.providerId && (
-                    <span className="flex items-center gap-1">
-                      <Briefcase className="h-3 w-3" /> {job.providerId.name}
-                    </span>
-                  )}
                 </div>
-                <div className="flex flex-wrap gap-2 pt-0.5">
+
+                <div className="flex flex-wrap gap-1.5 pt-0.5">
                   <JobStatusBadge status={job.status} />
                   <EscrowBadge status={job.escrowStatus as never} />
                 </div>
               </div>
-              <div className="text-right flex-shrink-0 space-y-1">
+
+              {/* Right: budget + dates */}
+              <div className="text-right flex-shrink-0 space-y-0.5 min-w-[90px]">
                 <p className="font-bold text-slate-900 text-sm">{formatCurrency(job.budget)}</p>
-                <p className="text-xs text-slate-400">{formatDate(job.scheduleDate)}</p>
+                <p className="text-xs text-slate-400">{formatDate(job.createdAt)}</p>
+                {job.scheduleDate && (
+                  <p className="text-[11px] text-slate-400 flex items-center justify-end gap-1">
+                    <CalendarDays className="h-3 w-3" />
+                    {formatDate(job.scheduleDate)}
+                  </p>
+                )}
               </div>
-              <ChevronRight className="h-4 w-4 text-slate-300 group-hover:text-primary transition-colors flex-shrink-0 mt-1" />
+
+              <ChevronRight className="h-4 w-4 text-slate-300 group-hover:text-primary transition-colors flex-shrink-0" />
             </Link>
           ))}
         </div>

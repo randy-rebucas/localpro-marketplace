@@ -7,6 +7,7 @@ import Button from "@/components/ui/Button";
 import Card, { CardBody, CardFooter } from "@/components/ui/Card";
 import { apiFetch } from "@/lib/fetchClient";
 import PageGuide from "@/components/shared/PageGuide";
+import { Copy } from "lucide-react";
 import type { ICategory } from "@/types";
 
 import type { FormData, BudgetHint } from "./types";
@@ -26,22 +27,32 @@ const STEP_SUBTITLES = [
   "Double-check everything before sending to providers.",
 ];
 
-function makeInitial(initialCategory: string): FormData {
-  return { title: "", category: initialCategory, description: "", budget: "", location: "", scheduleDate: "", specialInstructions: "" };
+function makeInitial(data: Partial<FormData> = {}): FormData {
+  return {
+    title: "",
+    category: "",
+    description: "",
+    budget: "",
+    location: "",
+    scheduleDate: "",
+    specialInstructions: "",
+    ...data,
+  };
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
 interface Props {
   categories: ICategory[];
-  initialCategory: string;
+  initialData?: Partial<FormData>;
 }
 
-export default function PostJobClient({ categories, initialCategory }: Props) {
+export default function PostJobClient({ categories, initialData }: Props) {
   const router = useRouter();
+  const isPrefilled = !!(initialData && Object.values(initialData).some(Boolean));
 
   const [step, setStep]     = useState(0);
-  const [form, setForm]     = useState<FormData>(() => makeInitial(initialCategory));
+  const [form, setForm]     = useState<FormData>(() => makeInitial(initialData));
   const [errors, setErrors] = useState<Partial<FormData>>({});
 
   const [isSubmitting, setIsSubmitting]             = useState(false);
@@ -253,10 +264,23 @@ export default function PostJobClient({ categories, initialCategory }: Props) {
         ]}
       />
 
+      {/* Pre-fill notice */}
+      {isPrefilled && (
+        <div className="flex items-center gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm">
+          <Copy className="h-4 w-4 text-blue-500 flex-shrink-0" />
+          <p className="text-blue-800">
+            <span className="font-medium">Pre-filled from a similar job.</span>{" "}
+            Review and adjust each field before submitting.
+          </p>
+        </div>
+      )}
+
       {/* Page header */}
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-900">Post a Job</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900">
+            {isPrefilled ? "Post Similar Job" : "Post a Job"}
+          </h1>
           <p className="text-sm text-slate-500 mt-0.5 hidden sm:block">{STEP_SUBTITLES[step]}</p>
         </div>
         <span className="flex-shrink-0 text-xs font-semibold text-slate-500 bg-slate-100 px-3 py-1 rounded-full whitespace-nowrap">

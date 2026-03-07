@@ -11,7 +11,7 @@ import RealtimeRefresher from "@/components/shared/RealtimeRefresher";
 import BundleSuggestion from "@/components/shared/BundleSuggestion";
 import Link from "next/link";
 import { Suspense } from "react";
-import { AlertCircle, ChevronLeft } from "lucide-react";
+import { AlertCircle, ChevronLeft, Copy } from "lucide-react";
 import { StatusBanner }        from "./_components/StatusBanner";
 import { JobDetailCard }       from "./_components/JobDetailCard";
 import { JobProgressBar, JobServiceChecklist } from "./_components/JobTimeline";
@@ -106,6 +106,21 @@ export default async function JobDetailPage({
           </p>
         </div>
         <div className="flex flex-wrap justify-end gap-2 flex-shrink-0 pt-1">
+          {/* Post Similar Job */}
+          <Link
+            href={`/client/post-job?${new URLSearchParams({
+              title: job.title,
+              category: job.category,
+              description: job.description,
+              budget: String(job.budget),
+              location: job.location,
+              ...(job.specialInstructions ? { specialInstructions: job.specialInstructions } : {}),
+            }).toString()}`}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 shadow-sm hover:bg-slate-50 transition-colors"
+          >
+            <Copy className="h-3.5 w-3.5" />
+            Post Similar
+          </Link>
           <JobStatusBadge status={job.status} />
           <EscrowBadge status={job.escrowStatus} />
           {job.riskScore > 0 && (
