@@ -228,7 +228,7 @@ export default function UserDetailView({ user, providerProfile }: Props) {
       const data = await res.json();
       if (!res.ok) { toast.error(data.error ?? "Failed to impersonate"); return; }
       toast.success(`Now impersonating ${user.name}`);
-      router.push(data.redirectTo ?? "/provider/dashboard");
+      router.push(data.redirectTo ?? "/dashboard");
     } catch { toast.error("Something went wrong"); }
     finally { setLoadingImpersonate(false); }
   }

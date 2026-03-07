@@ -33,7 +33,15 @@ export const POST = withHandler(async (
   // Generate a dummy refresh token (not persisted — impersonation sessions cannot be refreshed)
   const refreshToken = signRefreshToken(targetId);
 
-  const response = NextResponse.json({ ok: true, redirectTo: "/dashboard" });
+  const ROLE_DASHBOARD: Record<string, string> = {
+    provider: "/provider/dashboard",
+    client:   "/client/dashboard",
+    admin:    "/admin/dashboard",
+    staff:    "/admin/dashboard",
+  };
+  const redirectTo = ROLE_DASHBOARD[target.role as string] ?? "/dashboard";
+
+  const response = NextResponse.json({ ok: true, redirectTo });
   setAuthCookies(response, accessToken, refreshToken);
 
   // Save the admin's original access token so we can restore it on exit
