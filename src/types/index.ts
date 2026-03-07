@@ -75,7 +75,8 @@ export type JobStatus =
   | "disputed"
   | "rejected"
   | "refunded"
-  | "expired";
+  | "expired"
+  | "cancelled";
 
 export type EscrowStatus = "not_funded" | "funded" | "released" | "refunded";
 
@@ -217,7 +218,8 @@ export type ActivityEventType =
   | "consultation_stale_accepted"
   | "recurring_created"
   | "recurring_cancelled"
-  | "recurring_job_spawned";
+  | "recurring_job_spawned"
+  | "job_cancelled";
 
 export interface IActivityLog {
   _id: Types.ObjectId | string;
@@ -365,7 +367,9 @@ export type NotificationType =
   | "consultation_stale"
   | "recurring_job_spawned"
   | "payment_reminder"
-  | "admin_message";
+  | "admin_message"
+  | "wallet_credited"
+  | "wallet_withdrawal_update";
 
 export interface INotification {
   _id: Types.ObjectId | string;
@@ -516,6 +520,52 @@ export interface IPayout {
   accountName: string;
   notes?: string;
   processedAt?: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// ─── Wallet ───────────────────────────────────────────────────────────────────
+
+export interface IWallet {
+  _id: Types.ObjectId | string;
+  userId: Types.ObjectId | string | IUser;
+  balance: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export type WalletTxType =
+  | "refund_credit"
+  | "escrow_payment"
+  | "withdrawal"
+  | "withdrawal_reversed"
+  | "admin_credit"
+  | "admin_debit";
+
+export interface IWalletTransaction {
+  _id: Types.ObjectId | string;
+  userId: Types.ObjectId | string | IUser;
+  type: WalletTxType;
+  amount: number;
+  balanceAfter: number;
+  description: string;
+  jobId?: Types.ObjectId | string | null;
+  refId?: string | null;
+  createdAt: Date;
+}
+
+export type WalletWithdrawalStatus = "pending" | "processing" | "completed" | "rejected";
+
+export interface IWalletWithdrawal {
+  _id: Types.ObjectId | string;
+  userId: Types.ObjectId | string | IUser;
+  amount: number;
+  status: WalletWithdrawalStatus;
+  bankName: string;
+  accountNumber: string;
+  accountName: string;
+  notes?: string | null;
+  processedAt?: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }

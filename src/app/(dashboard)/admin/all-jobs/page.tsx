@@ -19,6 +19,7 @@ const ALL_STATUSES: JobStatus[] = [
   "refunded",
   "rejected",
   "expired",
+  "cancelled",
 ];
 
 const STATUS_LABELS: Record<JobStatus, string> = {
@@ -31,6 +32,7 @@ const STATUS_LABELS: Record<JobStatus, string> = {
   refunded: "Refunded",
   rejected: "Rejected",
   expired: "Expired",
+  cancelled: "Cancelled",
 };
 
 export default async function AdminAllJobsPage({

@@ -40,6 +40,7 @@ const ActivityLogSchema = new Schema<ActivityLogDocument>(
         "recurring_created",
         "recurring_cancelled",
         "recurring_job_spawned",
+        "job_cancelled",
       ] as ActivityEventType[],
       required: true,
     },

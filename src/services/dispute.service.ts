@@ -126,12 +126,16 @@ export class DisputeService {
         job.status = "refunded";
         await transactionRepository.setPending(job._id!.toString(), "refunded");
 
-        // Issue PayMongo refund if applicable
-        const { paymentService } = await import("@/services/payment.service");
-        await paymentService.refundEscrow(
-          job._id!.toString(),
-          "requested_by_customer"
+        // Credit the client's platform wallet (faster than PayMongo reversal)
+        const { walletService } = await import("@/services/wallet.service");
+        const { paymentRepository } = await import("@/repositories");
+        await walletService.credit(
+          job.clientId.toString(),
+          (job as unknown as { budget: number }).budget,
+          `Refund for disputed job (dispute resolved in your favour)`,
+          { jobId: job._id!.toString(), silent: true }
         );
+        await paymentRepository.markRefundedByJobId(job._id!.toString());
       }
       await jobDoc.save();
 

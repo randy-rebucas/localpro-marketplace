@@ -33,6 +33,7 @@ const TABS: { label: string; value: JobStatus | "all" }[] = [
   { label: "Rejected",     value: "rejected" },
   { label: "Refunded",     value: "refunded" },
   { label: "Expired",      value: "expired" },
+  { label: "Cancelled",    value: "cancelled" },
 ];
 
 /* ─── Progress lifecycle ──────────────────────────────────────── */
@@ -49,6 +50,7 @@ const STATUS_STEP: Record<JobStatus | "all", number> = {
   rejected: 2,
   refunded: 3,
   expired: 2,
+  cancelled: 0,
 };
 
 /* ─── Left-border accent per status ──────────────────────────── */
@@ -62,6 +64,7 @@ const STATUS_BORDER: Record<JobStatus, string> = {
   rejected:           "border-l-slate-300",
   refunded:           "border-l-teal-400",
   expired:            "border-l-slate-300",
+  cancelled:          "border-l-slate-300",
 };
 
 const STATUS_DOT: Record<JobStatus, string> = {
@@ -74,6 +77,7 @@ const STATUS_DOT: Record<JobStatus, string> = {
   rejected:           "bg-slate-300",
   refunded:           "bg-teal-400",
   expired:            "bg-slate-300",
+  cancelled:          "bg-slate-300",
 };
 
 /* ─── Friendly empty-tab messages ────────────────────────────── */

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import Button from "@/components/ui/Button";
@@ -8,7 +8,7 @@ import { apiFetch } from "@/lib/fetchClient";
 import Modal from "@/components/ui/Modal";
 import { calculateCommission, getCommissionRate } from "@/lib/commission";
 import { formatCurrency } from "@/lib/utils";
-import { ShieldCheck, Info } from "lucide-react";
+import { ShieldCheck, Info, AlertTriangle, Wallet } from "lucide-react";
 import type { JobStatus, EscrowStatus } from "@/types";
 
 interface Props {
@@ -24,8 +24,12 @@ interface Props {
 export default function JobActionButtons({ jobId, status, escrowStatus, budget, acceptedAmount, fundedAmount, category }: Props) {
   const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
+  const [walletBalance, setWalletBalance] = useState<number | null>(null);
   const [showFundModal, setShowFundModal] = useState(false);
+  const [showWalletModal, setShowWalletModal] = useState(false);
   const [showReleaseModal, setShowReleaseModal] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
 
   // Satisfaction checklist — all three must be ticked before release is allowed
   const [checkWorkCompleted,     setCheckWorkCompleted]     = useState(false);
@@ -52,9 +56,37 @@ export default function JobActionButtons({ jobId, status, escrowStatus, budget, 
   const breakdown = useMemo(() => calculateCommission(parsedAmount || budget, commissionRate), [parsedAmount, budget, commissionRate]);
   const releaseBreakdown = useMemo(() => calculateCommission(fundedAmount ?? budget, commissionRate), [fundedAmount, budget, commissionRate]);
 
+  useEffect(() => {
+    apiFetch("/api/wallet")
+      .then((r) => r.json())
+      .then((d) => setWalletBalance(d.balance ?? 0))
+      .catch(() => setWalletBalance(0));
+  }, []);
+
   function openFundModal() {
     setAmountInput(String(acceptedAmount ?? budget));
     setShowFundModal(true);
+  }
+
+  async function fundFromWallet() {
+    const amount = acceptedAmount ?? budget;
+    setLoading("wallet");
+    setShowWalletModal(false);
+    try {
+      const res = await apiFetch(`/api/jobs/${jobId}/fund-wallet`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount }),
+      });
+      const data = await res.json();
+      if (!res.ok) { toast.error(data.error ?? "Failed to fund from wallet"); return; }
+      toast.success(data.message ?? "Escrow funded from wallet");
+      router.refresh();
+    } catch {
+      toast.error("Something went wrong");
+    } finally {
+      setLoading(null);
+    }
   }
 
   async function fundEscrow() {
@@ -105,16 +137,54 @@ export default function JobActionButtons({ jobId, status, escrowStatus, budget, 
     }
   }
 
+  async function cancelJob() {
+    if (!cancelReason.trim() || cancelReason.trim().length < 5) {
+      toast.error("Please provide a reason for cancellation");
+      return;
+    }
+    setLoading("cancel");
+    setShowCancelModal(false);
+    try {
+      const res = await apiFetch(`/api/jobs/${jobId}/cancel`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason: cancelReason.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) { toast.error(data.error ?? "Failed to cancel job"); return; }
+      toast.success(data.message ?? "Job cancelled");
+      router.refresh();
+    } catch {
+      toast.error("Something went wrong");
+    } finally {
+      setLoading(null);
+      setCancelReason("");
+    }
+  }
+
   return (
     <>
       <div className="flex flex-wrap gap-3">
         {status === "assigned" && escrowStatus === "not_funded" && (
-          <Button
-            isLoading={loading === "fund"}
-            onClick={openFundModal}
-          >
-            Fund Escrow
-          </Button>
+          <>
+            <Button
+              isLoading={loading === "fund"}
+              onClick={openFundModal}
+            >
+              Fund Escrow
+            </Button>
+            {walletBalance !== null && walletBalance >= (acceptedAmount ?? budget) && (
+              <Button
+                variant="secondary"
+                isLoading={loading === "wallet"}
+                onClick={() => setShowWalletModal(true)}
+                className="flex items-center gap-1.5 border-violet-200 text-violet-700 hover:bg-violet-50"
+              >
+                <Wallet className="h-4 w-4" />
+                Pay from Wallet ({formatCurrency(walletBalance)})
+              </Button>
+            )}
+          </>
         )}
 
         {status === "completed" && escrowStatus === "funded" && (
@@ -125,7 +195,109 @@ export default function JobActionButtons({ jobId, status, escrowStatus, budget, 
             Approve &amp; Release Payment
           </Button>
         )}
+
+        {/* Close Job — allowed on open or assigned (before work starts) */}
+        {(status === "open" || status === "assigned") && (
+          <Button
+            variant="secondary"
+            isLoading={loading === "cancel"}
+            onClick={() => { setCancelReason(""); setShowCancelModal(true); }}
+            className="border-red-200 text-red-600 hover:bg-red-50"
+          >
+            Close Job
+          </Button>
+        )}
       </div>
+
+      {/* Cancel / Close Job Modal */}
+      <Modal
+        isOpen={showCancelModal}
+        onClose={() => setShowCancelModal(false)}
+        title="Close Job"
+        size="sm"
+      >
+        <div className="p-6 space-y-4">
+          <div className="flex items-start gap-2.5 rounded-lg bg-red-50 border border-red-200 px-4 py-3">
+            <AlertTriangle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
+            <div className="text-sm text-red-800">
+              <p className="font-semibold mb-0.5">Are you sure you want to close this job?</p>
+              {escrowStatus === "funded" ? (
+                <p className="text-xs text-red-600">Escrow is currently funded — your payment will be refunded when you close the job.</p>
+              ) : status === "assigned" ? (
+                <p className="text-xs text-red-600">A provider has already been assigned. They will be notified.</p>
+              ) : (
+                <p className="text-xs text-red-600">All pending quotes will be rejected and the job will be removed from the marketplace.</p>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <label className="label block mb-1">Reason for closing</label>
+            <textarea
+              className="input w-full min-h-[80px] resize-none"
+              placeholder="e.g. Found another provider externally, no longer need the service…"
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+            />
+          </div>
+
+          <div className="flex gap-3 pt-1">
+            <Button
+              variant="secondary"
+              className="flex-1"
+              onClick={() => setShowCancelModal(false)}
+              disabled={loading === "cancel"}
+            >
+              Keep Job
+            </Button>
+            <Button
+              className="flex-1 bg-red-600 hover:bg-red-700 focus:ring-red-500"
+              isLoading={loading === "cancel"}
+              disabled={cancelReason.trim().length < 5}
+              onClick={cancelJob}
+            >
+              Confirm Close
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Pay from Wallet Confirmation Modal */}
+      <Modal
+        isOpen={showWalletModal}
+        onClose={() => setShowWalletModal(false)}
+        title="Pay from Wallet"
+        size="sm"
+      >
+        <div className="p-6 space-y-4">
+          <div className="flex items-center gap-2.5 rounded-lg bg-violet-50 border border-violet-200 px-4 py-3">
+            <Wallet className="h-5 w-5 text-violet-600 flex-shrink-0" />
+            <div className="text-sm font-medium text-violet-800">
+              <p>Your wallet balance: <span className="font-bold">{formatCurrency(walletBalance ?? 0)}</span></p>
+              <p className="text-xs font-normal text-violet-600 mt-0.5">
+                {formatCurrency(acceptedAmount ?? budget)} will be deducted to fund escrow for this job.
+              </p>
+            </div>
+          </div>
+          <div className="flex gap-3 pt-1">
+            <Button
+              variant="secondary"
+              className="flex-1"
+              onClick={() => setShowWalletModal(false)}
+              disabled={loading === "wallet"}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="flex-1 bg-violet-600 hover:bg-violet-700 focus:ring-violet-500"
+              isLoading={loading === "wallet"}
+              onClick={fundFromWallet}
+            >
+              Confirm
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Release Payment Confirmation Modal */}
       <Modal

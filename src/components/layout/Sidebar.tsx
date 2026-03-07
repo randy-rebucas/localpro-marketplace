@@ -75,6 +75,7 @@ const navGroups: Partial<Record<UserRole, NavGroup[]>> = {
         { label: "Consultations",        href: "/client/consultations", icon: <Eye     className="h-5 w-5" /> },
         { label: "Recurring Bookings",    href: "/client/recurring",      icon: <Repeat2 className="h-5 w-5" /> },
         { label: "Escrow",                href: "/client/escrow",         icon: <Lock    className="h-5 w-5" /> },
+        { label: "Wallet",                href: "/client/wallet",         icon: <Wallet  className="h-5 w-5" /> },
         { label: "Favorites",  href: "/client/favorites", icon: <Heart          className="h-5 w-5" /> },
         { label: "Reviews",    href: "/client/reviews",   icon: <Star           className="h-5 w-5" /> },
       ],
@@ -162,6 +163,7 @@ const navGroups: Partial<Record<UserRole, NavGroup[]>> = {
       items: [
         { label: "Revenue", href: "/admin/revenue", icon: <TrendingUp className="h-5 w-5" />, capability: "view_revenue" },
         { label: "Payouts", href: "/admin/payouts", icon: <Banknote   className="h-5 w-5" />, capability: "manage_payouts" },
+        { label: "Wallet Withdrawals", href: "/admin/wallet", icon: <Wallet className="h-5 w-5" />, capability: "manage_payouts" },
       ],
     },
     {

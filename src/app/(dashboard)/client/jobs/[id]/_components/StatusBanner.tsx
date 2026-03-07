@@ -56,6 +56,12 @@ const BANNERS: Partial<Record<JobStatus, BannerConfig>> = {
     body: "This job was rejected after review. Please contact support if you believe this was an error, or post a new job with updated details.",
     className: "bg-slate-50 border-slate-200",
   },
+  cancelled: {
+    icon: <Ban className="h-5 w-5 text-slate-400 flex-shrink-0 mt-0.5" />,
+    title: "Job cancelled",
+    body: "You closed this job. Any held escrow has been refunded. You can post a new job at any time.",
+    className: "bg-slate-50 border-slate-200",
+  },
   refunded: {
     icon: <RefreshCcw className="h-5 w-5 text-teal-500 flex-shrink-0 mt-0.5" />,
     title: "Escrow refunded",

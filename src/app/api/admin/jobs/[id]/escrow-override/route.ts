@@ -127,18 +127,28 @@ export const POST = withHandler(async (
       pushNotification(job.providerId.toString(), providerNote);
     }
   } else {
-    // refund
+    // refund — credit client wallet instead of reversing via PayMongo
     job.escrowStatus = "refunded";
     job.status = "refunded";
     await jobDoc.save();
 
     await transactionRepository.updateManyByJobId(id, { $set: { status: "refunded" } });
 
+    const { walletService } = await import("@/services/wallet.service");
+    const { paymentRepository } = await import("@/repositories");
+    await walletService.credit(
+      job.clientId.toString(),
+      (job as unknown as { budget: number }).budget,
+      `Admin escrow refund — Job #${id.slice(-6)}`,
+      { jobId: id, silent: true }
+    );
+    await paymentRepository.markRefundedByJobId(id);
+
     const clientNote = await notificationRepository.create({
       userId: job.clientId.toString(),
       type: "payment_confirmed",
-      title: "Escrow refunded by admin",
-      message: `Your escrow payment has been refunded by admin. Reason: ${reason}`,
+      title: "Escrow refunded to your wallet",
+      message: `Your escrow payment has been refunded to your platform wallet by admin. Reason: ${reason}`,
       data: { jobId: id },
     });
     pushNotification(job.clientId.toString(), clientNote);

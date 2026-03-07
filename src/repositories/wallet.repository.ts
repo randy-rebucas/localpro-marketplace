@@ -1,0 +1,145 @@
+import mongoose from "mongoose";
+import Wallet from "@/models/Wallet";
+import type { WalletDocument } from "@/models/Wallet";
+import WalletTransaction from "@/models/WalletTransaction";
+import type { WalletTransactionDocument, WalletTxType } from "@/models/WalletTransaction";
+import WalletWithdrawal from "@/models/WalletWithdrawal";
+import type { WalletWithdrawalDocument, WalletWithdrawalStatus } from "@/models/WalletWithdrawal";
+import { connectDB } from "@/lib/db";
+
+export class WalletRepository {
+  // ── Balance ──────────────────────────────────────────────────────────────
+
+  async findOrCreate(userId: string): Promise<WalletDocument> {
+    await connectDB();
+    const doc = await Wallet.findOneAndUpdate(
+      { userId: new mongoose.Types.ObjectId(userId) },
+      { $setOnInsert: { userId: new mongoose.Types.ObjectId(userId), balance: 0 } },
+      { upsert: true, new: true }
+    ).lean() as unknown as WalletDocument;
+    return doc;
+  }
+
+  async getBalance(userId: string): Promise<number> {
+    await connectDB();
+    const doc = await Wallet.findOne({ userId: new mongoose.Types.ObjectId(userId) }).lean();
+    return (doc as { balance?: number } | null)?.balance ?? 0;
+  }
+
+  /**
+   * Atomically updates balance and records a wallet transaction.
+   * Uses $inc so concurrent operations can't double-credit/debit.
+   * Returns the new balance.
+   */
+  async applyTransaction(
+    userId: string,
+    delta: number,           // positive = credit, negative = debit
+    type: WalletTxType,
+    description: string,
+    opts?: { jobId?: string; refId?: string }
+  ): Promise<{ newBalance: number; txDoc: WalletTransactionDocument }> {
+    await connectDB();
+
+    const updated = await Wallet.findOneAndUpdate(
+      { userId: new mongoose.Types.ObjectId(userId) },
+      {
+        $inc: { balance: delta },
+        $setOnInsert: { userId: new mongoose.Types.ObjectId(userId) },
+      },
+      { upsert: true, new: true }
+    ).lean() as { balance: number };
+
+    const newBalance = updated.balance;
+
+    const txDoc = await WalletTransaction.create({
+      userId:       new mongoose.Types.ObjectId(userId),
+      type,
+      amount:       Math.abs(delta),
+      balanceAfter: newBalance,
+      description,
+      jobId:  opts?.jobId  ? new mongoose.Types.ObjectId(opts.jobId)  : null,
+      refId:  opts?.refId  ?? null,
+    }) as unknown as WalletTransactionDocument;
+
+    return { newBalance, txDoc };
+  }
+
+  // ── Transactions history ──────────────────────────────────────────────────
+
+  async listTransactions(userId: string, limit = 50): Promise<WalletTransactionDocument[]> {
+    await connectDB();
+    return WalletTransaction.find({ userId: new mongoose.Types.ObjectId(userId) })
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .lean() as unknown as WalletTransactionDocument[];
+  }
+
+  // ── Withdrawals ───────────────────────────────────────────────────────────
+
+  async createWithdrawal(data: {
+    userId: string;
+    amount: number;
+    bankName: string;
+    accountNumber: string;
+    accountName: string;
+  }): Promise<WalletWithdrawalDocument> {
+    await connectDB();
+    return WalletWithdrawal.create({
+      userId: new mongoose.Types.ObjectId(data.userId),
+      amount: data.amount,
+      status: "pending",
+      bankName:      data.bankName,
+      accountNumber: data.accountNumber,
+      accountName:   data.accountName,
+    }) as unknown as WalletWithdrawalDocument;
+  }
+
+  async listWithdrawals(userId: string): Promise<WalletWithdrawalDocument[]> {
+    await connectDB();
+    return WalletWithdrawal.find({ userId: new mongoose.Types.ObjectId(userId) })
+      .sort({ createdAt: -1 })
+      .lean() as unknown as WalletWithdrawalDocument[];
+  }
+
+  async findWithdrawalById(id: string): Promise<WalletWithdrawalDocument | null> {
+    await connectDB();
+    return WalletWithdrawal.findById(id).lean() as unknown as WalletWithdrawalDocument | null;
+  }
+
+  async updateWithdrawalStatus(
+    id: string,
+    status: WalletWithdrawalStatus,
+    notes?: string
+  ): Promise<WalletWithdrawalDocument | null> {
+    await connectDB();
+    const update: Record<string, unknown> = { status };
+    if (notes !== undefined) update.notes = notes;
+    if (status === "processing" || status === "completed") update.processedAt = new Date();
+    return WalletWithdrawal.findByIdAndUpdate(id, update, { new: true }).lean() as unknown as WalletWithdrawalDocument | null;
+  }
+
+  // Admin: all pending withdrawal requests
+  async listAllWithdrawals(): Promise<WalletWithdrawalDocument[]> {
+    await connectDB();
+    return WalletWithdrawal.find({})
+      .sort({ createdAt: -1 })
+      .populate("userId", "name email")
+      .lean() as unknown as WalletWithdrawalDocument[];
+  }
+
+  async sumPendingWithdrawals(userId: string): Promise<number> {
+    await connectDB();
+    const result = await WalletWithdrawal.aggregate([
+      {
+        $match: {
+          userId: new mongoose.Types.ObjectId(userId),
+          status: { $in: ["pending", "processing"] },
+        },
+      },
+      { $group: { _id: null, total: { $sum: "$amount" } } },
+    ]);
+    return result[0]?.total ?? 0;
+  }
+}
+
+export const walletRepository = new WalletRepository();

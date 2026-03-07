@@ -68,6 +68,15 @@ export class PaymentRepository extends BaseRepository<PaymentDocument> {
     ).lean() as unknown as PaymentDocument | null;
   }
 
+  /** Mark a payment as refunded by job id (wallet-refund path — no PayMongo refundId). */
+  async markRefundedByJobId(jobId: string): Promise<void> {
+    await this.connect();
+    await Payment.updateOne(
+      { jobId: new Types.ObjectId(jobId), status: "paid" },
+      { $set: { status: "refunded" } }
+    );
+  }
+
   /** Batch fetch: returns a jobId → amount map for all paid payments in the given job ID list. */
   async findAmountsByJobIds(jobIds: string[]): Promise<Map<string, number>> {
     if (jobIds.length === 0) return new Map();
