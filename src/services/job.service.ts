@@ -6,6 +6,7 @@ import type { TokenPayload } from "@/lib/auth";
 import type { PaginatedJobs } from "@/repositories/job.repository";
 import { connectDB } from "@/lib/db";
 import User from "@/models/User";
+import { getAppSetting } from "@/lib/appSettings";
 
 export interface CreateJobInput {
   title: string;
@@ -68,6 +69,24 @@ export class JobService {
   }
 
   async createJob(user: TokenPayload, input: CreateJobInput) {
+    // ── Platform-wide settings enforcement ─────────────────────────────────
+    const [kycRequired, maxActive] = await Promise.all([
+      getAppSetting("platform.kycRequired", false),
+      getAppSetting("limits.maxActiveJobsPerClient", 10),
+    ]);
+
+    if (kycRequired) {
+      const kycDoc = await User.findById(user.userId).select("kycStatus").lean() as { kycStatus?: string } | null;
+      if (kycDoc?.kycStatus !== "approved") {
+        throw new UnprocessableError("Identity verification (KYC) is required to post jobs");
+      }
+    }
+
+    const activeCount = await jobRepository.countActiveForClient(user.userId);
+    if (activeCount >= (maxActive as number)) {
+      throw new UnprocessableError(`You cannot have more than ${maxActive} active jobs at once`);
+    }
+
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const todayCount = await jobRepository.countByClientSince(user.userId, today);

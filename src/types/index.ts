@@ -25,6 +25,34 @@ export interface IAddress {
   coordinates?: { lat: number; lng: number };
 }
 
+export interface IUserPreferences {
+  /** Receive email notifications for job/quote updates */
+  emailNotifications: boolean;
+  /** Receive browser push notifications */
+  pushNotifications: boolean;
+  /** Receive SMS notifications */
+  smsNotifications: boolean;
+  /** Receive marketing/promotional emails */
+  marketingEmails: boolean;
+  /** Real-time message notifications */
+  messageNotifications: boolean;
+  /** For providers: show profile in search results */
+  profileVisible: boolean;
+  // ── Provider-only ──────────────────────────────────────────────
+  /** Alert when new jobs matching skills are posted */
+  newJobAlerts: boolean;
+  /** Remind before submitted quotes expire */
+  quoteExpiryReminders: boolean;
+  /** Alert when directly invited to bid on a job */
+  jobInviteAlerts: boolean;
+  /** Alert when a client leaves a review */
+  reviewAlerts: boolean;
+  /** Allow clients to book instantly without waiting for manual acceptance */
+  instantBooking: boolean;
+  /** Auto-send a quote read-receipt to client when you open their job */
+  autoReadReceipt: boolean;
+}
+
 // ─── Upload ───────────────────────────────────────────────────────────────────
 
 export type UploadFolder = "jobs/before" | "jobs/after" | "avatars" | "kyc" | "misc";
@@ -58,6 +86,7 @@ export interface IUser {
   savedPaymentMethodId?: string | null;
   savedPaymentMethodLast4?: string | null;
   savedPaymentMethodBrand?: string | null;
+  preferences?: IUserPreferences;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -154,6 +183,8 @@ export interface IQuote {
   sitePhotos?: string[];
   message: string;
   status: QuoteStatus;
+  /** Timestamp after which the quote is considered expired (set from platform limits.quoteValidityDays). */
+  expiresAt?: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }

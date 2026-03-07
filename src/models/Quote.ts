@@ -53,6 +53,7 @@ const QuoteSchema = new Schema<QuoteDocument>(
       enum: ["pending", "accepted", "rejected"],
       default: "pending",
     },
+    expiresAt: { type: Date, default: null, index: true },
   },
   { timestamps: true }
 );

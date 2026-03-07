@@ -92,6 +92,12 @@ export class QuoteRepository extends BaseRepository<QuoteDocument> {
       { $group: { _id: "$jobId", count: { $sum: 1 } } },
     ]);
   }
+
+  /** Total number of quotes (any status) submitted for a job. */
+  async countForJob(jobId: string): Promise<number> {
+    await this.connect();
+    return Quote.countDocuments({ jobId: new Types.ObjectId(jobId) });
+  }
 }
 
 export const quoteRepository = new QuoteRepository();

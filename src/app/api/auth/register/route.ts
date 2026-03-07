@@ -3,7 +3,8 @@ import { z } from "zod";
 import { authService } from "@/services";
 import { setAuthCookies } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
-import { ValidationError } from "@/lib/errors";
+import { ValidationError, UnprocessableError } from "@/lib/errors";
+import { getAppSetting } from "@/lib/appSettings";
 
 const RegisterSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters").max(100),
@@ -20,6 +21,14 @@ const RegisterSchema = z.object({
 });
 
 export const POST = withHandler(async (req: NextRequest) => {
+  // ── Platform gate ────────────────────────────────────────────────────
+  const [maintenance, registrationsOpen] = await Promise.all([
+    getAppSetting("platform.maintenanceMode", false),
+    getAppSetting("platform.newRegistrations", true),
+  ]);
+  if (maintenance) throw new UnprocessableError("Platform is under maintenance. Please try again later.");
+  if (!registrationsOpen) throw new UnprocessableError("New registrations are currently disabled.");
+
   const body = await req.json();
   const parsed = RegisterSchema.safeParse(body);
   if (!parsed.success) throw new ValidationError(parsed.error.errors[0].message);

@@ -100,6 +100,7 @@ const navGroups: Partial<Record<UserRole, NavGroup[]>> = {
         { label: "Rewards",       href: "/client/rewards",        icon: <Gift className="h-5 w-5" /> },
         { label: "My Profile",    href: "/client/profile",        icon: <User className="h-5 w-5" /> },
         { label: "Notifications", href: "/client/notifications",  icon: <Bell className="h-5 w-5" /> },
+        { label: "Settings",      href: "/client/settings",       icon: <Settings className="h-5 w-5" /> },
       ],
     },
   ],
@@ -138,6 +139,7 @@ const navGroups: Partial<Record<UserRole, NavGroup[]>> = {
       items: [
         { label: "My Profile",    href: "/provider/profile",        icon: <User className="h-5 w-5" /> },
         { label: "Notifications", href: "/provider/notifications",  icon: <Bell className="h-5 w-5" /> },
+        { label: "Settings",      href: "/provider/settings",       icon: <Settings className="h-5 w-5" /> },
       ],
     },
   ],

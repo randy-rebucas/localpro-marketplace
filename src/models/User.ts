@@ -138,6 +138,25 @@ const UserSchema = new Schema<UserDocument>(
     savedPaymentMethodId:   { type: String, default: null },
     savedPaymentMethodLast4: { type: String, default: null },
     savedPaymentMethodBrand: { type: String, default: null },
+    // User-level preferences
+    preferences: {
+      type: new Schema({
+        emailNotifications:   { type: Boolean, default: true },
+        pushNotifications:    { type: Boolean, default: true },
+        smsNotifications:     { type: Boolean, default: false },
+        marketingEmails:      { type: Boolean, default: false },
+        messageNotifications: { type: Boolean, default: true },
+        profileVisible:       { type: Boolean, default: true },
+        // provider-only
+        newJobAlerts:         { type: Boolean, default: true },
+        quoteExpiryReminders: { type: Boolean, default: true },
+        jobInviteAlerts:      { type: Boolean, default: true },
+        reviewAlerts:         { type: Boolean, default: true },
+        instantBooking:       { type: Boolean, default: false },
+        autoReadReceipt:      { type: Boolean, default: false },
+      }, { _id: false }),
+      default: () => ({}),
+    },
   },
   {
     timestamps: true,

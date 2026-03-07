@@ -4,6 +4,7 @@ import {
   activityRepository,
   userRepository,
 } from "@/repositories";
+import { getAppSetting } from "@/lib/appSettings";
 import { pushStatusUpdate, pushStatusUpdateMany } from "@/lib/events";
 import {
   NotFoundError,
@@ -45,7 +46,21 @@ export class QuoteService {
     const existing = await quoteRepository.findPendingByProvider(input.jobId, user.userId);
     if (existing) throw new ConflictError("You have already submitted a quote for this job");
 
-    const quote = await quoteRepository.create({ ...input, providerId: user.userId });
+    // ── Platform limits enforcement ─────────────────────────────────────────
+    const [maxQuotes, validityDays] = await Promise.all([
+      getAppSetting("limits.maxQuotesPerJob", 5),
+      getAppSetting("limits.quoteValidityDays", 7),
+    ]);
+
+    const quoteCount = await quoteRepository.countForJob(input.jobId);
+    if (quoteCount >= (maxQuotes as number)) {
+      throw new UnprocessableError(`This job has reached the maximum number of quotes (${maxQuotes})`);
+    }
+
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + (validityDays as number));
+
+    const quote = await quoteRepository.create({ ...input, providerId: user.userId, expiresAt });
 
     await activityRepository.log({
       userId: user.userId,

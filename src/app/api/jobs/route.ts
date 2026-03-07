@@ -3,7 +3,8 @@ import { z } from "zod";
 import { jobService } from "@/services";
 import { requireUser } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
-import { ValidationError, ForbiddenError } from "@/lib/errors";
+import { ValidationError, ForbiddenError, UnprocessableError } from "@/lib/errors";
+import { getAppSetting } from "@/lib/appSettings";
 
 const JOB_STATUSES = [
   "pending_validation", "open", "assigned", "in_progress",
@@ -53,9 +54,19 @@ export const POST = withHandler(async (req: NextRequest) => {
   const user = await requireUser();
   if (user.role !== "client") throw new ForbiddenError("Only clients can post jobs");
 
+  // ── Platform gate ────────────────────────────────────────────────────
+  const [maintenance, minBudget] = await Promise.all([
+    getAppSetting("platform.maintenanceMode", false),
+    getAppSetting("payments.minJobBudget", 500),
+  ]);
+  if (maintenance) throw new UnprocessableError("Platform is under maintenance. Please try again later.");
+
   const body = await req.json();
   const parsed = CreateJobSchema.safeParse(body);
   if (!parsed.success) throw new ValidationError(parsed.error.errors[0].message);
+  if (parsed.data.budget < (minBudget as number)) {
+    throw new ValidationError(`Job budget must be at least ₱${(minBudget as number).toLocaleString()}`);
+  }
 
   const job = await jobService.createJob(user, parsed.data);
   return NextResponse.json(job, { status: 201 });
