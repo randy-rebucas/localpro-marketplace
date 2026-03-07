@@ -121,6 +121,23 @@ const JobSchema = new Schema<JobDocument>(
       ref: "RecurringSchedule",
       default: null,
     },
+    // ── PESO fields ──────────────────────────────────────────────
+    jobSource: {
+      type: String,
+      enum: ["private", "peso", "lgu"],
+      default: "private",
+    },
+    jobTags: {
+      type: [String],
+      enum: ["peso", "lgu_project", "gov_program", "emergency", "internship"],
+      default: [],
+    },
+    pesoPostedBy: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+    isPriority: { type: Boolean, default: false },
   },
   {
     timestamps: true,

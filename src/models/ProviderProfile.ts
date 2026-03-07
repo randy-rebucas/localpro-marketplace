@@ -72,6 +72,39 @@ const ProviderProfileSchema = new Schema<ProviderProfileDocument>(
     avgResponseTimeHours: { type: Number, default: 0, min: 0 },
     serviceAreas: { type: [ServiceAreaSubSchema], default: [] },
     isLocalProCertified: { type: Boolean, default: false },
+    // ── PESO fields ──────────────────────────────────────────────
+    barangay: { type: String, trim: true, default: null },
+    certifications: {
+      type: [
+        new Schema(
+          {
+            title:          { type: String, required: true, trim: true },
+            issuer:         { type: String, required: true, trim: true },
+            issuedAt:       { type: Date, required: true },
+            expiresAt:      { type: Date, default: null },
+            verifiedByPeso: { type: Boolean, default: false },
+          },
+          { _id: false }
+        ),
+      ],
+      default: [],
+    },
+    pesoVerificationTags: {
+      type: [String],
+      enum: ["peso_registered", "lgu_resident", "peso_recommended"],
+      default: [],
+    },
+    pesoReferredBy: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+    livelihoodProgram: { type: String, trim: true, default: null },
+    accountSubtype: {
+      type: String,
+      enum: ["standard", "youth", "cooperative"],
+      default: "standard",
+    },
   },
   { timestamps: true }
 );

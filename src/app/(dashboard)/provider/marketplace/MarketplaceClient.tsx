@@ -189,6 +189,10 @@ export default function MarketplaceClient({
     }
 
     list.sort((a, b) => {
+      // Priority PESO jobs always float to the top
+      if (a.isPriority && !b.isPriority) return -1;
+      if (!a.isPriority && b.isPriority) return 1;
+
       if (sort === "newest")      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
       if (sort === "oldest")      return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
       if (sort === "budget_desc") return b.budget - a.budget;
@@ -698,6 +702,26 @@ export default function MarketplaceClient({
                     {isVerifiedClient && (
                       <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-semibold text-[10px] flex-shrink-0" title="Verified client">
                         <ShieldCheck className="h-2.5 w-2.5" />Verified
+                      </span>
+                    )}
+                    {job.isPriority && (
+                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700 font-semibold text-[10px] flex-shrink-0">
+                        ★ Priority
+                      </span>
+                    )}
+                    {job.jobTags?.includes("peso") && (
+                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-sky-100 text-sky-700 font-semibold text-[10px] flex-shrink-0">
+                        🏛️ PESO
+                      </span>
+                    )}
+                    {job.jobTags?.includes("lgu_project") && (
+                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-indigo-100 text-indigo-700 font-semibold text-[10px] flex-shrink-0">
+                        LGU
+                      </span>
+                    )}
+                    {job.jobTags?.includes("emergency") && (
+                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-red-100 text-red-700 font-semibold text-[10px] flex-shrink-0">
+                        🚨 Emergency
                       </span>
                     )}
                   </div>

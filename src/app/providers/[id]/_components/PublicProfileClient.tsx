@@ -33,6 +33,10 @@ export interface ProviderProfileData {
   serviceAreas?: ServiceArea[];
   schedule?: Record<string, WorkSlot>;
   isLocalProCertified?: boolean;
+  pesoVerificationTags?: string[];
+  pesoReferredBy?: string | null;
+  certifications?: { title: string; issuer: string; issuedAt: string }[];
+  barangay?: string | null;
   breakdown?: {
     quality: number; professionalism: number;
     punctuality: number; communication: number; count: number;
@@ -287,6 +291,26 @@ export default function PublicProfileClient({
                       🎖️ LocalPro Certified
                     </span>
                   )}
+                  {profile.pesoReferredBy && (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded bg-blue-100 text-blue-700 border border-blue-200 whitespace-nowrap">
+                      🏛️ Referred by PESO
+                    </span>
+                  )}
+                  {profile.pesoVerificationTags?.includes("peso_registered") && (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded bg-sky-100 text-sky-700 border border-sky-200 whitespace-nowrap">
+                      ✓ PESO Registered
+                    </span>
+                  )}
+                  {profile.pesoVerificationTags?.includes("lgu_resident") && (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded bg-emerald-100 text-emerald-700 border border-emerald-200 whitespace-nowrap">
+                      ✓ LGU Resident Verified
+                    </span>
+                  )}
+                  {profile.pesoVerificationTags?.includes("peso_recommended") && (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded bg-violet-100 text-violet-700 border border-violet-200 whitespace-nowrap">
+                      ⭐ PESO Recommended
+                    </span>
+                  )}
                   {profile.userId.kycStatus === "approved" && (
                     <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded bg-teal-100 text-teal-700 border border-teal-200 whitespace-nowrap">
                       <ShieldCheck className="h-3 w-3" /> KYC Verified
@@ -421,6 +445,28 @@ export default function PublicProfileClient({
                     <li key={i} className="flex items-start gap-2 text-sm text-slate-600">
                       <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-primary flex-shrink-0" />
                       {exp}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {(profile.certifications?.length ?? 0) > 0 && (
+              <div className="bg-white rounded-xl border border-slate-200 p-5">
+                <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
+                  <ShieldCheck className="h-4 w-4 text-blue-500" /> Certifications & Training
+                </h3>
+                <ul className="space-y-2">
+                  {profile.certifications?.map((cert, i) => (
+                    <li key={i} className="flex items-start gap-2 text-sm text-slate-600">
+                      <span className="mt-0.5 text-blue-500">✔</span>
+                      <span>
+                        <span className="font-medium text-slate-700">{cert.title}</span>
+                        <span className="text-slate-400"> · {cert.issuer}</span>
+                        {cert.issuedAt && (
+                          <span className="text-slate-400"> · {new Date(cert.issuedAt).getFullYear()}</span>
+                        )}
+                      </span>
                     </li>
                   ))}
                 </ul>

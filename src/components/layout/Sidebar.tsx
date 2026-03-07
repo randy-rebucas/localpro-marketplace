@@ -40,6 +40,11 @@ import {
   Settings,
   ChevronRight,
   PanelLeftClose,
+  Handshake,
+  GraduationCap,
+  UsersRound,
+  Zap,
+  FileBarChart,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/authStore";
@@ -152,9 +157,59 @@ const navGroups: Partial<Record<UserRole, NavGroup[]>> = {
       ],
     },
     {
+      heading: "Partners",
+      items: [
+        { label: "PESO Partners", href: "/admin/partners", icon: <Handshake className="h-4.5 w-4.5" />, capability: "manage_users" },
+      ],
+    },
+    {
       heading: "Platform",
       items: [
         { label: "App Settings", href: "/admin/settings", icon: <Settings className="h-4.5 w-4.5" />, capability: "__admin_only__" },
+      ],
+    },
+  ],
+  peso: [
+    {
+      items: [
+        { label: "Dashboard", href: "/peso/dashboard", icon: <LayoutDashboard className="h-4.5 w-4.5" /> },
+      ],
+    },
+    {
+      heading: "Workforce",
+      items: [
+        { label: "Workforce Registry",    href: "/peso/workforce",     icon: <Users          className="h-4.5 w-4.5" /> },
+        { label: "Provider Verification", href: "/peso/verification",  icon: <ShieldCheck    className="h-4.5 w-4.5" /> },
+        { label: "Referrals",             href: "/peso/referrals",     icon: <UserCog        className="h-4.5 w-4.5" /> },
+        { label: "Bulk Onboarding",       href: "/peso/onboarding",    icon: <ScrollText     className="h-4.5 w-4.5" /> },
+        { label: "My Office",             href: "/peso/officers",      icon: <Building2      className="h-4.5 w-4.5" /> },
+      ],
+    },
+    {
+      heading: "Programs",
+      items: [
+        { label: "Training & Certs",  href: "/peso/training",  icon: <GraduationCap className="h-4.5 w-4.5" /> },
+        { label: "Livelihood Groups", href: "/peso/groups",    icon: <UsersRound    className="h-4.5 w-4.5" /> },
+        { label: "Emergency",         href: "/peso/emergency", icon: <Zap           className="h-4.5 w-4.5" /> },
+      ],
+    },
+    {
+      heading: "Job Board",
+      items: [
+        { label: "PESO Jobs",  href: "/peso/jobs",     icon: <Briefcase  className="h-4.5 w-4.5" /> },
+        { label: "Post a Job", href: "/peso/jobs/new", icon: <PlusCircle className="h-4.5 w-4.5" /> },
+      ],
+    },
+    {
+      heading: "Reports",
+      items: [
+        { label: "Analytics", href: "/peso/reports", icon: <FileBarChart className="h-4.5 w-4.5" /> },
+      ],
+    },
+    {
+      heading: "Admin",
+      items: [
+        { label: "Settings", href: "/peso/settings", icon: <Settings className="h-4.5 w-4.5" /> },
       ],
     },
   ],
@@ -188,6 +243,7 @@ const ROLE_COLORS: Record<string, string> = {
   provider: "bg-emerald-500/20 text-emerald-300",
   admin:    "bg-violet-500/20 text-violet-300",
   staff:    "bg-amber-500/20 text-amber-300",
+  peso:     "bg-blue-500/20 text-blue-300",
 };
 
 const ROLE_AVATAR_BG: Record<string, string> = {
@@ -195,6 +251,7 @@ const ROLE_AVATAR_BG: Record<string, string> = {
   provider: "bg-violet-600",
   admin:    "bg-amber-600",
   staff:    "bg-teal-600",
+  peso:     "bg-blue-700",
 };
 
 interface SidebarProps {

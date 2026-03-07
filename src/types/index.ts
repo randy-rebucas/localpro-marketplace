@@ -2,7 +2,7 @@ import type { Types } from "mongoose";
 
 // ─── User ─────────────────────────────────────────────────────────────────────
 
-export type UserRole = "client" | "provider" | "admin" | "staff";
+export type UserRole = "client" | "provider" | "admin" | "staff" | "peso";
 
 export type StaffCapability =
   | "manage_jobs"
@@ -149,6 +149,15 @@ export interface IJob {
   milestones?: IMilestone[];
   /** Non-null when this job was auto-spawned by a recurring schedule */
   recurringScheduleId?: Types.ObjectId | string | null;
+  // ── PESO fields ────────────────────────────────────────────────
+  /** Who posted this job: private client, PESO office, or LGU */
+  jobSource?: "private" | "peso" | "lgu";
+  /** Tags for government / PESO job classification */
+  jobTags?: JobTag[];
+  /** PESO officer user ID who posted the job */
+  pesoPostedBy?: Types.ObjectId | string | IUser | null;
+  /** Priority jobs are pinned to the top of the provider marketplace */
+  isPriority?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -475,6 +484,33 @@ export interface IMessage {
   createdAt: Date;
 }
 
+// ─── PESO Partner Types ───────────────────────────────────────────────────────
+
+export type PesoVerificationTag = "peso_registered" | "lgu_resident" | "peso_recommended";
+
+export type JobTag = "peso" | "lgu_project" | "gov_program" | "emergency" | "internship";
+
+export interface IPesoCertification {
+  title: string;
+  issuer: string;
+  issuedAt: Date | string;
+  expiresAt?: Date | string | null;
+  verifiedByPeso?: boolean;
+}
+
+export interface IPesoOffice {
+  _id: Types.ObjectId | string;
+  officeName: string;
+  municipality: string;
+  region: string;
+  contactEmail: string;
+  headOfficerId: Types.ObjectId | string | IUser;
+  officerIds: (Types.ObjectId | string | IUser)[];
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 // ─── ProviderProfile ──────────────────────────────────────────────────────────
 
 export type AvailabilityStatus = "available" | "busy" | "unavailable";
@@ -536,6 +572,19 @@ export interface IProviderProfile {
   avgResponseTimeHours: number;
   /** Manually awarded by admin after vetting — shows LocalPro Certified badge */
   isLocalProCertified?: boolean;
+  // ── PESO fields ────────────────────────────────────────────────
+  /** Barangay where the provider is based */
+  barangay?: string;
+  /** TESDA/PESO certifications and training completions */
+  certifications?: IPesoCertification[];
+  /** PESO-assigned verification tags */
+  pesoVerificationTags?: PesoVerificationTag[];
+  /** User ID of the PESO officer who referred this provider */
+  pesoReferredBy?: string;
+  /** Livelihood program this provider belongs to (e.g. DOLE Kabuhayan) */
+  livelihoodProgram?: string;
+  /** Account subtype for categorising youth or cooperative providers */
+  accountSubtype?: "standard" | "youth" | "cooperative";
   createdAt: Date;
   updatedAt: Date;
 }
