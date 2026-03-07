@@ -222,6 +222,26 @@ export class JobRepository extends BaseRepository<JobDocument> {
       .lean() as never;
   }
 
+  /** Jobs scheduled for today (midnight → midnight) that the provider is assigned to. */
+  async findTodayForProvider(providerId: string): Promise<Array<{
+    _id: unknown; title: string; category: string; scheduleDate: Date;
+    status: JobStatus; location: string;
+  }>> {
+    await this.connect();
+    const now = new Date();
+    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const endOfDay   = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+    return Job.find({
+      providerId: new Types.ObjectId(providerId),
+      status: { $in: ["assigned", "in_progress"] },
+      scheduleDate: { $gte: startOfDay, $lt: endOfDay },
+    })
+      .select("title category scheduleDate status location")
+      .sort({ scheduleDate: 1 })
+      .limit(5)
+      .lean() as never;
+  }
+
   /** Jobs for the provider calendar — schedule-relevant fields only, sorted by scheduleDate. */
   async findCalendarJobsForProvider(providerId: string): Promise<Array<{
     _id: unknown; title: string; category: string; scheduleDate: Date;

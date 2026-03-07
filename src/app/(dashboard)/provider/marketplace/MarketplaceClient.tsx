@@ -25,6 +25,9 @@ import {
   Share2,
   Copy,
   Check,
+  Zap,
+  ShieldCheck,
+  MessageCircle,
 } from "lucide-react";
 import type { IJob } from "@/types";
 import { apiFetch } from "@/lib/fetchClient";
@@ -82,19 +85,28 @@ const SORT_OPTIONS: { value: SortKey; label: string }[] = [
   { value: "budget_asc",  label: "Budget: Low → High" },
 ];
 
-interface QuoteForm { proposedAmount: string; timeline: string; message: string; }
+interface QuoteForm {
+  price: string;
+  timeline: string;
+  sitePhotos: string[];
+  message: string;
+}
 
 interface MarketplaceClientProps {
   initialJobs: IJob[];
   initialCategories: string[];
   initialQuotedJobStatuses: Record<string, string>;
+  quoteCounts?: Record<string, number>;
   refJobId?: string;
 }
+
+const URGENCY_HOURS = 48;
 
 export default function MarketplaceClient({
   initialJobs,
   initialCategories,
   initialQuotedJobStatuses,
+  quoteCounts = {},
   refJobId,
 }: MarketplaceClientProps) {
   const [jobs, setJobs] = useState<IJob[]>(initialJobs);
@@ -105,7 +117,9 @@ export default function MarketplaceClient({
   const [sort, setSort] = useState<SortKey>("newest");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [quoteModal, setQuoteModal] = useState<{ open: boolean; job: IJob | null }>({ open: false, job: null });
-  const [quoteForm, setQuoteForm] = useState<QuoteForm>({ proposedAmount: "", timeline: "", message: "" });
+  const [quoteForm, setQuoteForm] = useState<QuoteForm>({
+    price: "", timeline: "", sitePhotos: [], message: "",
+  });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [quotedJobStatuses, setQuotedJobStatuses] = useState<Record<string, string>>(initialQuotedJobStatuses);
   const [categories] = useState<string[]>(initialCategories);
@@ -116,6 +130,8 @@ export default function MarketplaceClient({
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [shareJobId, setShareJobId] = useState<string | null>(null);
   const [copiedJobId, setCopiedJobId] = useState<string | null>(null);
+  const [filterUrgent, setFilterUrgent] = useState(false);
+  const [filterVerified, setFilterVerified] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
 
   const debouncedSearch = useDebounce(search);
@@ -160,6 +176,18 @@ export default function MarketplaceClient({
     if (min !== null && !isNaN(min)) list = list.filter((j) => j.budget >= min);
     if (max !== null && !isNaN(max)) list = list.filter((j) => j.budget <= max);
 
+    if (filterUrgent) {
+      const cutoff = Date.now() + URGENCY_HOURS * 60 * 60 * 1000;
+      list = list.filter((j) => j.scheduleDate && new Date(j.scheduleDate).getTime() <= cutoff);
+    }
+
+    if (filterVerified) {
+      list = list.filter((j) => {
+        const client = j.clientId as { isVerified?: boolean } | string;
+        return typeof client === "object" && client.isVerified === true;
+      });
+    }
+
     list.sort((a, b) => {
       if (sort === "newest")      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
       if (sort === "oldest")      return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
@@ -169,10 +197,10 @@ export default function MarketplaceClient({
     });
 
     return list;
-  }, [jobs, category, debouncedSearch, sort, minBudget, maxBudget]);
+  }, [jobs, category, debouncedSearch, sort, minBudget, maxBudget, filterUrgent, filterVerified]);
 
   // Reset to page 1 whenever filters change
-  useEffect(() => { setPage(1); }, [debouncedSearch, category, sort, minBudget, maxBudget]);
+  useEffect(() => { setPage(1); }, [debouncedSearch, category, sort, minBudget, maxBudget, filterUrgent, filterVerified]);
 
   // If a refJobId is provided (from /jobs/:id "Apply Now"), jump to that job
   const refHandled = useRef(false);
@@ -197,22 +225,23 @@ export default function MarketplaceClient({
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  const hasFilters = category !== "All" || search.trim() !== "" || minBudget !== "" || maxBudget !== "";
+  const hasFilters = category !== "All" || search.trim() !== "" || minBudget !== "" || maxBudget !== "" || filterUrgent || filterVerified;
 
   function clearFilters() {
     setCategory("All");
     setSearch("");
     setMinBudget("");
     setMaxBudget("");
+    setFilterUrgent(false);
+    setFilterVerified(false);
     setPage(1);
     searchRef.current?.focus();
   }
 
   async function submitQuote() {
     if (!quoteModal.job) return;
-    if (!quoteForm.proposedAmount || isNaN(Number(quoteForm.proposedAmount))) {
-      toast.error("Please enter a valid amount"); return;
-    }
+    const total = parseFloat(quoteForm.price) || 0;
+    if (total <= 0) { toast.error("Please enter a price"); return; }
     if (!quoteForm.timeline.trim()) { toast.error("Timeline is required"); return; }
     if (quoteForm.message.length < 20) { toast.error("Message must be at least 20 characters"); return; }
 
@@ -223,8 +252,9 @@ export default function MarketplaceClient({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           jobId: quoteModal.job._id,
-          proposedAmount: Number(quoteForm.proposedAmount),
+          proposedAmount: total,
           timeline: quoteForm.timeline,
+          sitePhotos: quoteForm.sitePhotos,
           message: quoteForm.message,
         }),
       });
@@ -242,7 +272,7 @@ export default function MarketplaceClient({
       toast.success("Quote submitted!");
       setQuotedJobStatuses((prev) => ({ ...prev, [quoteModal.job!._id.toString()]: "pending" }));
       setQuoteModal({ open: false, job: null });
-      setQuoteForm({ proposedAmount: "", timeline: "", message: "" });
+      setQuoteForm({ price: "", timeline: "", sitePhotos: [], message: "" });
     } catch {
       toast.error("Something went wrong");
     } finally {
@@ -291,7 +321,7 @@ export default function MarketplaceClient({
   }
 
   function openQuoteModal(job: IJob) {
-    setQuoteForm({ proposedAmount: "", timeline: "", message: "" });
+    setQuoteForm({ price: "", timeline: "", sitePhotos: [], message: "" });
     setQuoteModal({ open: true, job });
   }
 
@@ -384,12 +414,12 @@ export default function MarketplaceClient({
           {/* Category */}
           <div>
             <label className="text-xs font-medium text-slate-500 mb-1.5 block">Category</label>
-            <div className="flex flex-col gap-1">
+            <div className="flex flex-col gap-1 max-h-52 overflow-y-auto pr-1">
               {categories.map((c) => (
                 <button
                   key={c}
                   onClick={() => setCategory(c)}
-                  className={`flex items-center justify-between w-full text-left px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                  className={`flex items-center justify-between w-full text-left px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex-shrink-0 ${
                     category === c
                       ? "bg-primary/10 text-primary"
                       : "text-slate-600 hover:bg-slate-50"
@@ -400,6 +430,35 @@ export default function MarketplaceClient({
                 </button>
               ))}
             </div>
+          </div>
+
+          {/* Quick toggles */}
+          <div className="border-t border-slate-100 pt-4 space-y-2">
+            <label className="text-xs font-medium text-slate-500 mb-1.5 block">Quick filters</label>
+            <button
+              onClick={() => setFilterUrgent((v) => !v)}
+              className={`flex items-center gap-2 w-full px-3 py-2 rounded-lg border text-xs font-medium transition-colors ${
+                filterUrgent
+                  ? "bg-amber-50 border-amber-300 text-amber-700"
+                  : "border-slate-200 text-slate-600 hover:bg-slate-50"
+              }`}
+            >
+              <Zap className="h-3.5 w-3.5 flex-shrink-0" />
+              Urgent (within 48 h)
+              {filterUrgent && <div className="ml-auto h-1.5 w-1.5 rounded-full bg-amber-500" />}
+            </button>
+            <button
+              onClick={() => setFilterVerified((v) => !v)}
+              className={`flex items-center gap-2 w-full px-3 py-2 rounded-lg border text-xs font-medium transition-colors ${
+                filterVerified
+                  ? "bg-emerald-50 border-emerald-300 text-emerald-700"
+                  : "border-slate-200 text-slate-600 hover:bg-slate-50"
+              }`}
+            >
+              <ShieldCheck className="h-3.5 w-3.5 flex-shrink-0" />
+              Verified clients only
+              {filterVerified && <div className="ml-auto h-1.5 w-1.5 rounded-full bg-emerald-500" />}
+            </button>
           </div>
         </div>
       </aside>
@@ -500,7 +559,7 @@ export default function MarketplaceClient({
           {/* Category */}
           <div>
             <label className="text-xs font-medium text-slate-500 mb-1.5 block">Category</label>
-            <div className="grid grid-cols-2 gap-1">
+            <div className="grid grid-cols-2 gap-1 max-h-40 overflow-y-auto pr-0.5">
               {categories.map((c) => (
                 <button
                   key={c}
@@ -514,6 +573,25 @@ export default function MarketplaceClient({
                 </button>
               ))}
             </div>
+          </div>
+          {/* Quick toggles */}
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => setFilterUrgent((v) => !v)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors ${
+                filterUrgent ? "bg-amber-50 border-amber-300 text-amber-700" : "border-slate-200 text-slate-600 hover:bg-slate-50"
+              }`}
+            >
+              <Zap className="h-3.5 w-3.5" />Urgent
+            </button>
+            <button
+              onClick={() => setFilterVerified((v) => !v)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors ${
+                filterVerified ? "bg-emerald-50 border-emerald-300 text-emerald-700" : "border-slate-200 text-slate-600 hover:bg-slate-50"
+              }`}
+            >
+              <ShieldCheck className="h-3.5 w-3.5" />Verified clients
+            </button>
           </div>
         </div>
       )}
@@ -574,6 +652,12 @@ export default function MarketplaceClient({
             const quoted = !!quoteStatus;
             const expanded = expandedId === id;
             const isLong = job.description.length > 120;
+            const isUrgent = job.scheduleDate &&
+              new Date(job.scheduleDate).getTime() <= Date.now() + URGENCY_HOURS * 60 * 60 * 1000 &&
+              new Date(job.scheduleDate).getTime() >= Date.now();
+            const client = job.clientId as { isVerified?: boolean; name?: string } | string;
+            const isVerifiedClient = typeof client === "object" && client.isVerified === true;
+            const jobQuoteCount = quoteCounts[id] ?? 0;
 
             return (
               <div
@@ -601,11 +685,23 @@ export default function MarketplaceClient({
                     ? "border-emerald-100 bg-emerald-50/40"
                     : "border-slate-100 bg-slate-50/60"
                 }`}>
-                  <span className="inline-flex items-center gap-1.5 font-medium text-slate-500">
-                    <Briefcase className="h-3 w-3" />
-                    {job.category}
-                  </span>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                    <span className="inline-flex items-center gap-1.5 font-medium text-slate-500 truncate">
+                      <Briefcase className="h-3 w-3 flex-shrink-0" />
+                      {job.category}
+                    </span>
+                    {isUrgent && (
+                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 font-semibold text-[10px] flex-shrink-0">
+                        <Zap className="h-2.5 w-2.5" />Urgent
+                      </span>
+                    )}
+                    {isVerifiedClient && (
+                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-semibold text-[10px] flex-shrink-0" title="Verified client">
+                        <ShieldCheck className="h-2.5 w-2.5" />Verified
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
                     <span className="font-bold text-slate-900 text-sm tabular-nums">{formatCurrency(job.budget)}</span>
                     <button
                       onClick={() => setShareJobId(shareJobId === id ? null : id)}
@@ -679,6 +775,12 @@ export default function MarketplaceClient({
                     <span className="flex items-center gap-1">
                       <Clock className="h-3 w-3 flex-shrink-0" />Posted {formatRelativeTime(job.createdAt)}
                     </span>
+                    {jobQuoteCount > 0 && (
+                      <span className="flex items-center gap-1 text-slate-400">
+                        <MessageCircle className="h-3 w-3 flex-shrink-0" />
+                        {jobQuoteCount} quote{jobQuoteCount !== 1 ? "s" : ""}
+                      </span>
+                    )}
                   </div>
 
                   <div>
@@ -708,9 +810,14 @@ export default function MarketplaceClient({
 
                 {/* Footer */}
                 <div className="px-5 py-3 border-t border-slate-100 flex items-center justify-between gap-2">
-                  <span className="text-xs text-slate-400 tabular-nums">
-                    Budget: <span className="font-semibold text-slate-700">{formatCurrency(job.budget)}</span>
-                  </span>
+                  <a
+                    href={`/provider/messages?jobId=${id}`}
+                    className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-primary transition-colors"
+                    title="Ask a question about this job"
+                  >
+                    <MessageCircle className="h-3.5 w-3.5" />
+                    Ask question
+                  </a>
                   {quoteStatus === "rejected" ? (
                     <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-50 text-red-600 text-xs font-medium border border-red-200">
                       <XCircle className="h-3.5 w-3.5" />
@@ -763,52 +870,64 @@ export default function MarketplaceClient({
       </div>{/* end right column */}
     </div>{/* end flex layout */}
 
-      {/* Quote modal */}
-      <Modal isOpen={quoteModal.open} onClose={() => setQuoteModal({ open: false, job: null })} title="Submit a Quote">
-        <div className="space-y-4">
+      {/* Quote Builder modal */}
+      <Modal isOpen={quoteModal.open} onClose={() => setQuoteModal({ open: false, job: null })} title="Quote Builder">
+        <div className="space-y-5">
+
           {/* Job summary */}
-          <div className="bg-slate-50 rounded-lg px-4 py-3 space-y-1.5">
-            <p className="text-xs text-slate-500">Job</p>
-            <p className="text-sm font-semibold text-slate-900">{quoteModal.job?.title}</p>
+          <div className="bg-slate-50 rounded-lg px-4 py-3 space-y-1">
+            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Job</p>
+            <p className="text-sm font-semibold text-slate-900 leading-snug">{quoteModal.job?.title}</p>
             <p className="text-xs text-slate-500">
-              Client budget:{" "}
-              <span className="font-medium text-slate-700">{formatCurrency(quoteModal.job?.budget ?? 0)}</span>
+              Client budget: <span className="font-semibold text-slate-700">{formatCurrency(quoteModal.job?.budget ?? 0)}</span>
             </p>
             {quoteModal.job?.beforePhoto && quoteModal.job.beforePhoto.length > 0 && (
-              <div className="pt-1">
-                <PhotoStrip urls={quoteModal.job.beforePhoto} label="Attachments" />
+              <div className="pt-1"><PhotoStrip urls={quoteModal.job.beforePhoto} label="Attachments" /></div>
+            )}
+          </div>
+
+          {/* ── Pricing ── */}
+          <div>
+            <label className="label block mb-1 text-xs">Price <span className="text-red-400">*</span></label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">₱</span>
+              <input
+                type="number" min="0"
+                className="input w-full pl-7 text-sm"
+                placeholder="0"
+                value={quoteForm.price}
+                onChange={(e) => setQuoteForm((f) => ({ ...f, price: e.target.value }))}
+              />
+            </div>
+            {(parseFloat(quoteForm.price) || 0) > 0 && (
+              <div className="mt-2 flex items-center justify-between bg-primary/5 rounded-lg px-3 py-2">
+                <span className="text-xs text-slate-500">Quote amount</span>
+                <span className="text-sm font-bold text-primary tabular-nums">
+                  {formatCurrency(parseFloat(quoteForm.price) || 0)}
+                </span>
               </div>
             )}
           </div>
 
+          {/* ── Timeline ── */}
           <div>
-            <label className="label block mb-1">Your Proposed Amount</label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-medium">₱</span>
-              <input
-                type="number"
-                min="1"
-                className="input w-full pl-7"
-                placeholder="e.g. 1500"
-                value={quoteForm.proposedAmount}
-                onChange={(e) => setQuoteForm((f) => ({ ...f, proposedAmount: e.target.value }))}
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="label block mb-1">Timeline</label>
+            <label className="label block mb-1 text-xs">Timeline <span className="text-red-400">*</span></label>
             <input
-              className="input w-full"
-              placeholder="e.g. 2-3 hours, 1 day"
+              className="input w-full text-sm"
+              placeholder="e.g. 2–3 hours, 1 day, 3 days"
               value={quoteForm.timeline}
               onChange={(e) => setQuoteForm((f) => ({ ...f, timeline: e.target.value }))}
             />
           </div>
 
+
+
+
+
+          {/* ── Message to client ── */}
           <div>
             <div className="flex items-center justify-between mb-1">
-              <label className="label">Message to Client</label>
+              <label className="label text-xs">Message to Client <span className="text-red-400">*</span></label>
               <button
                 type="button"
                 onClick={generateQuoteMessage}
@@ -816,11 +935,11 @@ export default function MarketplaceClient({
                 className="inline-flex items-center gap-1.5 rounded-lg border border-violet-200 bg-violet-50 px-2.5 py-1 text-xs font-medium text-violet-700 hover:bg-violet-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 <Sparkles className={`h-3.5 w-3.5 ${isGeneratingQuoteMsg ? "animate-pulse" : ""}`} />
-                {isGeneratingQuoteMsg ? "Generating…" : "Generate with AI"}
+                {isGeneratingQuoteMsg ? "Generating…" : "AI Generate"}
               </button>
             </div>
             <textarea
-              className="input w-full min-h-[100px] resize-none"
+              className="input w-full min-h-[90px] resize-none text-sm"
               placeholder="Introduce yourself and explain your approach…"
               value={quoteForm.message}
               onChange={(e) => setQuoteForm((f) => ({ ...f, message: e.target.value }))}
@@ -831,7 +950,8 @@ export default function MarketplaceClient({
             </p>
           </div>
 
-          <div className="flex gap-3 justify-end pt-1">
+          {/* Actions */}
+          <div className="flex gap-3 justify-end">
             <Button variant="secondary" onClick={() => setQuoteModal({ open: false, job: null })}>Cancel</Button>
             <Button isLoading={isSubmitting} onClick={submitQuote}>Submit Quote</Button>
           </div>

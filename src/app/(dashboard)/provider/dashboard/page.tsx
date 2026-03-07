@@ -3,7 +3,6 @@ import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import {
-  HeaderSkeleton,
   KpiSkeleton,
   RecentActivitySkeleton,
   SidebarSkeleton,
@@ -12,6 +11,9 @@ import { DashboardKpis } from "./_components/DashboardKpis";
 import { RecentActivity } from "./_components/RecentActivity";
 import { TierWidget } from "./_components/TierWidget";
 import { QuickActions } from "./_components/QuickActions";
+import { TodaySchedule } from "./_components/TodaySchedule";
+import { DashboardHeader } from "./_components/DashboardHeader";
+import DashboardCustomizer from "./_components/DashboardCustomizer";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
@@ -20,24 +22,33 @@ export default async function ProviderDashboardPage() {
   if (!user) redirect("/login");
 
   return (
-    <div className="space-y-6">
-      <Suspense fallback={<><HeaderSkeleton /><KpiSkeleton /></>}>
-        <DashboardKpis userId={user.userId} />
-      </Suspense>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-        <div className="lg:col-span-2">
-          <Suspense fallback={<RecentActivitySkeleton />}>
-            <RecentActivity userId={user.userId} />
-          </Suspense>
-        </div>
-        <div className="space-y-4">
-          <Suspense fallback={<SidebarSkeleton />}>
-            <TierWidget userId={user.userId} />
-          </Suspense>
-          <QuickActions />
-        </div>
-      </div>
-    </div>
+    <DashboardCustomizer
+      header={
+        <Suspense fallback={<div className="h-14 rounded-xl bg-slate-100 animate-pulse" />}>
+          <DashboardHeader userId={user.userId} />
+        </Suspense>
+      }
+      kpis={
+        <Suspense fallback={<KpiSkeleton />}>
+          <DashboardKpis userId={user.userId} />
+        </Suspense>
+      }
+      activity={
+        <Suspense fallback={<RecentActivitySkeleton />}>
+          <RecentActivity userId={user.userId} />
+        </Suspense>
+      }
+      tier={
+        <Suspense fallback={<SidebarSkeleton />}>
+          <TierWidget userId={user.userId} />
+        </Suspense>
+      }
+      schedule={
+        <Suspense fallback={<div className="h-40 rounded-xl bg-slate-100 animate-pulse" />}>
+          <TodaySchedule userId={user.userId} />
+        </Suspense>
+      }
+      actions={<QuickActions />}
+    />
   );
 }

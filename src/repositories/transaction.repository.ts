@@ -150,6 +150,28 @@ export class TransactionRepository extends BaseRepository<TransactionDocument> {
     await this.updateMany({ jobId } as never, update as never);
   }
 
+  /** Sum of net escrow amounts sitting in pending (funded but not released) state for a provider. */
+  async sumPendingByPayee(payeeId: string): Promise<number> {
+    await this.connect();
+    const [result] = await Transaction.aggregate<{ total: number }>([
+      { $match: { payeeId: new Types.ObjectId(payeeId), status: "pending" } },
+      { $group: { _id: null, total: { $sum: "$netAmount" } } },
+    ]);
+    return result?.total ?? 0;
+  }
+
+  /** Net earnings for the current calendar month only. */
+  async sumCurrentMonthByPayee(payeeId: string): Promise<number> {
+    await this.connect();
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), 1);
+    const [result] = await Transaction.aggregate<{ net: number }>([
+      { $match: { payeeId: new Types.ObjectId(payeeId), status: "completed", createdAt: { $gte: start } } },
+      { $group: { _id: null, net: { $sum: "$netAmount" } } },
+    ]);
+    return result?.net ?? 0;
+  }
+
   /** Per-job funded amounts for all pending transactions where the provider is the payee.
    *  Returns a jobId → { gross, net } map. */
   async findFundedByPayee(payeeId: string): Promise<Map<string, { gross: number; net: number }>> {

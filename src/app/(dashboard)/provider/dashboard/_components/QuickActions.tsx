@@ -1,18 +1,24 @@
 import Link from "next/link";
-import { Store, Briefcase, MessageSquare, User, Star } from "lucide-react";
+import { Store, Briefcase, MessageSquare, User, Star, Wallet, FileText } from "lucide-react";
 
 const ACTIONS = [
   {
     href: "/provider/marketplace",
     icon: Store,
     label: "Marketplace",
-    description: "Browse available jobs",
+    description: "Browse & submit quotes",
   },
   {
     href: "/provider/jobs",
     icon: Briefcase,
     label: "My Jobs",
     description: "Track your work",
+  },
+  {
+    href: "/provider/earnings",
+    icon: Wallet,
+    label: "Withdraw Earnings",
+    description: "Request a payout",
   },
   {
     href: "/provider/messages",

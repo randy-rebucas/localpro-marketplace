@@ -1,38 +1,35 @@
 import { jobRepository } from "@/repositories/job.repository";
 import { transactionRepository } from "@/repositories/transaction.repository";
 import { reviewRepository } from "@/repositories/review.repository";
-import { userRepository } from "@/repositories/user.repository";
 import { providerProfileRepository } from "@/repositories/providerProfile.repository";
+import { quoteRepository } from "@/repositories/quote.repository";
 import KpiCard from "@/components/ui/KpiCard";
 import { formatCurrency } from "@/lib/utils";
-import Link from "next/link";
 import {
   CircleDollarSign, Briefcase, Star, TrendingUp, Zap,
-  Trophy, CalendarDays, TriangleAlert,
+  TriangleAlert, ShieldCheck, FileText,
 } from "lucide-react";
 
 export async function DashboardKpis({ userId }: { userId: string }) {
-  const [activeJobs, earnings, ratingSummary, streak, userDoc, profileDoc] =
+  const [activeJobs, earnings, ratingSummary, profileDoc, pendingQuotes, escrowPending, monthlyNet] =
     await Promise.all([
       jobRepository.countActiveForProvider(userId),
       transactionRepository.sumCompletedByPayee(userId),
       reviewRepository.getProviderRatingSummary(userId),
-      reviewRepository.getFiveStarStreak(userId),
-      userRepository.findById(userId) as Promise<{ name?: string } | null>,
       providerProfileRepository.findByUserId(userId) as Promise<{
         completionRate?: number;
         completedJobCount?: number;
         avgResponseTimeHours?: number;
       } | null>,
+      quoteRepository.countPendingByProvider(userId),
+      transactionRepository.sumPendingByPayee(userId),
+      transactionRepository.sumCurrentMonthByPayee(userId),
     ]);
 
-  const firstName = userDoc?.name?.split(" ")[0] ?? "there";
   const { avgRating, count: reviewCount } = ratingSummary;
   const completionRate = profileDoc?.completionRate ?? 100;
   const completedJobCount = profileDoc?.completedJobCount ?? 0;
   const avgResponseTimeHours = profileDoc?.avgResponseTimeHours ?? 0;
-
-  const isTopPro = completedJobCount >= 50 && avgRating >= 4.5 && completionRate >= 90;
 
   const showPerfWarning =
     (avgRating > 0 && avgRating < 3.5) ||
@@ -49,47 +46,8 @@ export async function DashboardKpis({ userId }: { userId: string }) {
     : avgResponseTimeHours < 24 ? 85
     : 70;
 
-  const now = new Date();
-  const dateLabel = now.toLocaleDateString("en-US", {
-    weekday: "long", month: "long", day: "numeric",
-  });
-
   return (
     <>
-      {/* Header row */}
-      <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest flex items-center gap-1 mb-0.5">
-            <CalendarDays className="h-3.5 w-3.5" />
-            {dateLabel}
-          </p>
-          <div className="flex items-center gap-2.5 flex-wrap">
-            <h1 className="text-xl sm:text-2xl font-bold text-slate-900">
-              Welcome back, <span className="text-primary">{firstName}</span>!
-            </h1>
-            {isTopPro && (
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-200">
-                <Trophy className="h-3 w-3" /> Top Pro
-              </span>
-            )}
-            {streak >= 3 && (
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-orange-100 text-orange-800 border border-orange-200">
-                🔥 {streak}-Star Streak
-              </span>
-            )}
-            {avgResponseTimeHours > 0 && avgResponseTimeHours <= 2 && (
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 border border-blue-200">
-                <Zap className="h-3 w-3" /> Fast Responder
-              </span>
-            )}
-          </div>
-          <p className="hidden sm:block text-sm text-slate-500 mt-0.5">Here&apos;s your performance overview.</p>
-        </div>
-        <Link href="/provider/marketplace" className="btn-primary flex-shrink-0">
-          Browse Jobs
-        </Link>
-      </div>
-
       {/* Performance warning */}
       {showPerfWarning && (
         <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3.5">
@@ -103,14 +61,36 @@ export async function DashboardKpis({ userId }: { userId: string }) {
         </div>
       )}
 
-      {/* KPI cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+      {/* KPI cards — row 1: financials */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <KpiCard
+          title="This Month"
+          value={formatCurrency(monthlyNet)}
+          subtitle="Net earnings (current month)"
+          icon={<CircleDollarSign className="h-5 w-5" />}
+        />
         <KpiCard
           title="Total Earnings"
           value={formatCurrency(earnings.net)}
-          subtitle="After platform commission"
+          subtitle="All-time net after commission"
           icon={<CircleDollarSign className="h-5 w-5" />}
         />
+        <KpiCard
+          title="Escrow Pending"
+          value={formatCurrency(escrowPending)}
+          subtitle="Funded, awaiting release"
+          icon={<ShieldCheck className="h-5 w-5" />}
+        />
+        <KpiCard
+          title="Pending Quotes"
+          value={pendingQuotes}
+          subtitle={pendingQuotes === 1 ? "Awaiting client decision" : "Awaiting client decisions"}
+          icon={<FileText className="h-5 w-5" />}
+        />
+      </div>
+
+      {/* KPI cards — row 2: performance */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <KpiCard
           title="Active Jobs"
           value={activeJobs}

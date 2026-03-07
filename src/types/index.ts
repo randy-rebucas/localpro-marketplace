@@ -128,14 +128,47 @@ export interface IJob {
 
 export type QuoteStatus = "pending" | "accepted" | "rejected";
 
+export interface IQuoteMilestone {
+  description: string;
+  amount: number;
+}
+
 export interface IQuote {
   _id: Types.ObjectId | string;
   jobId: Types.ObjectId | string | IJob;
   providerId: Types.ObjectId | string | IUser;
+  /** Total proposed price (laborCost + materialsCost when itemised, or direct entry) */
   proposedAmount: number;
+  /** Itemised: labour portion */
+  laborCost?: number;
+  /** Itemised: materials portion */
+  materialsCost?: number;
   timeline: string;
+  /** Payment milestones attached to this quote */
+  milestones?: IQuoteMilestone[];
+  /** Additional notes / scope clarification */
+  notes?: string;
+  /** URL of attached proposal document */
+  proposalDocUrl?: string;
+  /** Site-inspection photo URLs */
+  sitePhotos?: string[];
   message: string;
   status: QuoteStatus;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// ─── QuoteTemplate ────────────────────────────────────────────────────────────
+
+export interface IQuoteTemplate {
+  _id: Types.ObjectId | string;
+  providerId: Types.ObjectId | string | IUser;
+  name: string;
+  laborCost?: number;
+  materialsCost?: number;
+  timeline: string;
+  milestones?: IQuoteMilestone[];
+  notes?: string;
   createdAt: Date;
   updatedAt: Date;
 }

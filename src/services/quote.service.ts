@@ -16,7 +16,13 @@ import type { TokenPayload } from "@/lib/auth";
 export interface CreateQuoteInput {
   jobId: string;
   proposedAmount: number;
+  laborCost?: number | null;
+  materialsCost?: number | null;
   timeline: string;
+  milestones?: { description: string; amount: number }[];
+  notes?: string | null;
+  proposalDocUrl?: string | null;
+  sitePhotos?: string[];
   message: string;
 }
 

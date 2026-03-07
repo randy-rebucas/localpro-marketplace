@@ -1,5 +1,6 @@
 import Quote from "@/models/Quote";
 import type { QuoteDocument } from "@/models/Quote";
+import { Types } from "mongoose";
 import { BaseRepository } from "./base.repository";
 
 export class QuoteRepository extends BaseRepository<QuoteDocument> {
@@ -75,6 +76,12 @@ export class QuoteRepository extends BaseRepository<QuoteDocument> {
       { jobId, status: { $in: ["pending", "accepted"] } },
       { status: "rejected" }
     );
+  }
+
+  /** Count of pending quotes submitted by a specific provider across all jobs. */
+  async countPendingByProvider(providerId: string): Promise<number> {
+    await this.connect();
+    return Quote.countDocuments({ providerId: new Types.ObjectId(providerId), status: "pending" });
   }
 
   /** Pending quote counts grouped by jobId. Accepts ObjectId or string values. */
