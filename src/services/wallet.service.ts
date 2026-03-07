@@ -15,7 +15,8 @@ import { activityRepository, notificationRepository, jobRepository, transactionR
 import { pushNotification, pushStatusUpdateMany } from "@/lib/events";
 import { UnprocessableError, ForbiddenError, NotFoundError } from "@/lib/errors";
 import { canTransitionEscrow } from "@/lib/jobLifecycle";
-import { calculateCommission, getDbCommissionRate } from "@/lib/commission";
+import { calculateCommission } from "@/lib/commission";
+import { getDbCommissionRate } from "@/lib/serverCommission";
 import type { TokenPayload } from "@/lib/auth";
 import type { IJob } from "@/types";
 

@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import {
   LayoutDashboard,
   PlusCircle,
@@ -12,7 +14,6 @@ import {
   Store,
   Briefcase,
   CircleDollarSign,
-  User,
   BarChart3,
   CheckCircle,
   AlertTriangle,
@@ -23,7 +24,6 @@ import {
   X,
   Banknote,
   Heart,
-  MessageSquare,
   Headphones,
   CalendarDays,
   TrendingUp,
@@ -32,15 +32,14 @@ import {
   ScrollText,
   Megaphone,
   BookOpen,
-  Gift,
   Eye,
   ShieldAlert,
   Repeat2,
   Building2,
   Wallet,
-  UserPlus,
-  PieChart,
   Settings,
+  ChevronRight,
+  PanelLeftClose,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/authStore";
@@ -51,7 +50,7 @@ interface NavItem {
   label: string;
   href: string;
   icon: React.ReactNode;
-  /** null = always visible for all roles; string = capability key required; "__admin_only__" = hidden for staff */
+  /** null = always visible; string = capability required; "__admin_only__" = hidden for staff */
   capability?: string | null;
 }
 
@@ -64,131 +63,98 @@ const navGroups: Partial<Record<UserRole, NavGroup[]>> = {
   client: [
     {
       items: [
-        { label: "Dashboard",  href: "/client/dashboard", icon: <LayoutDashboard className="h-5 w-5" /> },
+        { label: "Dashboard",  href: "/client/dashboard", icon: <LayoutDashboard className="h-4.5 w-4.5" /> },
       ],
     },
     {
       heading: "Jobs",
       items: [
-        { label: "Post a Job", href: "/client/post-job",  icon: <PlusCircle    className="h-5 w-5" /> },
-        { label: "My Jobs",    href: "/client/jobs",      icon: <ClipboardList  className="h-5 w-5" /> },
-        { label: "Consultations",        href: "/client/consultations", icon: <Eye     className="h-5 w-5" /> },
-        { label: "Recurring Bookings",    href: "/client/recurring",      icon: <Repeat2 className="h-5 w-5" /> },
-        { label: "Escrow",                href: "/client/escrow",         icon: <Lock    className="h-5 w-5" /> },
-        { label: "Wallet",                href: "/client/wallet",         icon: <Wallet  className="h-5 w-5" /> },
-        { label: "Favorites",  href: "/client/favorites", icon: <Heart          className="h-5 w-5" /> },
-        { label: "Reviews",    href: "/client/reviews",   icon: <Star           className="h-5 w-5" /> },
-      ],
-    },
-    {
-      heading: "Communication",
-      items: [
-        { label: "Messages",        href: "/client/messages",   icon: <MessageSquare className="h-5 w-5" /> },
-        { label: "Support",         href: "/client/support",    icon: <Headphones    className="h-5 w-5" /> },
-        { label: "Knowledge Base",  href: "/client/knowledge",  icon: <BookOpen      className="h-5 w-5" /> },
+        { label: "Post a Job",         href: "/client/post-job",       icon: <PlusCircle    className="h-4.5 w-4.5" /> },
+        { label: "My Jobs",            href: "/client/jobs",           icon: <ClipboardList className="h-4.5 w-4.5" /> },
+        { label: "Consultations",      href: "/client/consultations",  icon: <Eye           className="h-4.5 w-4.5" /> },
+        { label: "Recurring Bookings", href: "/client/recurring",      icon: <Repeat2       className="h-4.5 w-4.5" /> },
+        { label: "Escrow",             href: "/client/escrow",         icon: <Lock          className="h-4.5 w-4.5" /> },
+        { label: "Wallet",             href: "/client/wallet",         icon: <Wallet        className="h-4.5 w-4.5" /> },
+        { label: "Favorites",          href: "/client/favorites",      icon: <Heart         className="h-4.5 w-4.5" /> },
+        { label: "Reviews",            href: "/client/reviews",        icon: <Star          className="h-4.5 w-4.5" /> },
       ],
     },
     {
       heading: "Business",
       items: [
-        { label: "Business Hub",    href: "/client/business",            icon: <Building2  className="h-5 w-5" /> }
-      ],
-    },
-    {
-      heading: "Account",
-      items: [
-        { label: "Rewards",       href: "/client/rewards",        icon: <Gift className="h-5 w-5" /> },
-        { label: "My Profile",    href: "/client/profile",        icon: <User className="h-5 w-5" /> },
-        { label: "Notifications", href: "/client/notifications",  icon: <Bell className="h-5 w-5" /> },
-        { label: "Settings",      href: "/client/settings",       icon: <Settings className="h-5 w-5" /> },
+        { label: "Business Hub", href: "/client/business", icon: <Building2 className="h-4.5 w-4.5" /> },
       ],
     },
   ],
   provider: [
     {
       items: [
-        { label: "Dashboard",   href: "/provider/dashboard",  icon: <LayoutDashboard  className="h-5 w-5" /> },
+        { label: "Dashboard", href: "/provider/dashboard", icon: <LayoutDashboard className="h-4.5 w-4.5" /> },
       ],
     },
     {
       heading: "Work",
       items: [
-        { label: "Marketplace", href: "/provider/marketplace", icon: <Store        className="h-5 w-5" /> },
-        { label: "Active Jobs", href: "/provider/jobs",        icon: <Briefcase    className="h-5 w-5" /> },
-        { label: "Consultations", href: "/provider/consultations", icon: <Eye className="h-5 w-5" /> },
-        { label: "Calendar",    href: "/provider/calendar",    icon: <CalendarDays className="h-5 w-5" /> },
+        { label: "Marketplace",   href: "/provider/marketplace",   icon: <Store        className="h-4.5 w-4.5" /> },
+        { label: "Active Jobs",   href: "/provider/jobs",          icon: <Briefcase    className="h-4.5 w-4.5" /> },
+        { label: "Consultations", href: "/provider/consultations", icon: <Eye          className="h-4.5 w-4.5" /> },
+        { label: "Calendar",      href: "/provider/calendar",      icon: <CalendarDays className="h-4.5 w-4.5" /> },
       ],
     },
     {
       heading: "Finance",
       items: [
-        { label: "Earnings",    href: "/provider/earnings",   icon: <CircleDollarSign className="h-5 w-5" /> },
-        { label: "Payouts",     href: "/provider/payouts",    icon: <Banknote         className="h-5 w-5" /> },
-      ],
-    },
-    {
-      heading: "Communication",
-      items: [
-        { label: "Messages",        href: "/provider/messages",   icon: <MessageSquare className="h-5 w-5" /> },
-        { label: "Support",         href: "/provider/support",    icon: <Headphones    className="h-5 w-5" /> },
-        { label: "Knowledge Base",  href: "/provider/knowledge",  icon: <BookOpen      className="h-5 w-5" /> },
-      ],
-    },
-    {
-      heading: "Account",
-      items: [
-        { label: "My Profile",    href: "/provider/profile",        icon: <User className="h-5 w-5" /> },
-        { label: "Notifications", href: "/provider/notifications",  icon: <Bell className="h-5 w-5" /> },
-        { label: "Settings",      href: "/provider/settings",       icon: <Settings className="h-5 w-5" /> },
+        { label: "Earnings", href: "/provider/earnings", icon: <CircleDollarSign className="h-4.5 w-4.5" /> },
+        { label: "Payouts",  href: "/provider/payouts",  icon: <Banknote         className="h-4.5 w-4.5" /> },
       ],
     },
   ],
   admin: [
     {
       items: [
-        { label: "Dashboard",  href: "/admin/dashboard", icon: <BarChart3 className="h-5 w-5" />, capability: null },
+        { label: "Dashboard", href: "/admin/dashboard", icon: <BarChart3 className="h-4.5 w-4.5" />, capability: null },
       ],
     },
     {
       heading: "Operations",
       items: [
-        { label: "All Jobs",       href: "/admin/all-jobs",  icon: <Briefcase     className="h-5 w-5" />, capability: "manage_jobs" },
-        { label: "Validate Jobs",  href: "/admin/jobs",      icon: <CheckCircle   className="h-5 w-5" />, capability: "manage_jobs" },
-        { label: "Fraud Monitor",   href: "/admin/fraud",     icon: <ShieldAlert   className="h-5 w-5" />, capability: "manage_jobs" },
-        { label: "KYC Review",     href: "/admin/kyc",       icon: <ShieldCheck   className="h-5 w-5" />, capability: "manage_kyc" },
-        { label: "Disputes",       href: "/admin/disputes",  icon: <AlertTriangle className="h-5 w-5" />, capability: "manage_disputes" },
-        { label: "Activity Logs",  href: "/admin/logs",      icon: <ScrollText    className="h-5 w-5" />, capability: "__admin_only__" },
+        { label: "All Jobs",      href: "/admin/all-jobs", icon: <Briefcase     className="h-4.5 w-4.5" />, capability: "manage_jobs" },
+        { label: "Validate Jobs", href: "/admin/jobs",     icon: <CheckCircle   className="h-4.5 w-4.5" />, capability: "manage_jobs" },
+        { label: "Fraud Monitor", href: "/admin/fraud",    icon: <ShieldAlert   className="h-4.5 w-4.5" />, capability: "manage_jobs" },
+        { label: "KYC Review",    href: "/admin/kyc",      icon: <ShieldCheck   className="h-4.5 w-4.5" />, capability: "manage_kyc" },
+        { label: "Disputes",      href: "/admin/disputes", icon: <AlertTriangle className="h-4.5 w-4.5" />, capability: "manage_disputes" },
+        { label: "Activity Logs", href: "/admin/logs",     icon: <ScrollText    className="h-4.5 w-4.5" />, capability: "__admin_only__" },
       ],
     },
     {
       heading: "Finance",
       items: [
-        { label: "Revenue", href: "/admin/revenue", icon: <TrendingUp className="h-5 w-5" />, capability: "view_revenue" },
-        { label: "Payouts", href: "/admin/payouts", icon: <Banknote   className="h-5 w-5" />, capability: "manage_payouts" },
-        { label: "Wallet Withdrawals", href: "/admin/wallet", icon: <Wallet className="h-5 w-5" />, capability: "manage_payouts" },
+        { label: "Revenue",             href: "/admin/revenue",  icon: <TrendingUp className="h-4.5 w-4.5" />, capability: "view_revenue" },
+        { label: "Payouts",             href: "/admin/payouts",  icon: <Banknote   className="h-4.5 w-4.5" />, capability: "manage_payouts" },
+        { label: "Wallet Withdrawals",  href: "/admin/wallet",   icon: <Wallet     className="h-4.5 w-4.5" />, capability: "manage_payouts" },
       ],
     },
     {
       heading: "Users",
       items: [
-        { label: "Users",      href: "/admin/users",      icon: <Users   className="h-5 w-5" />, capability: "manage_users" },
-        { label: "Staff",      href: "/admin/staff",      icon: <UserCog className="h-5 w-5" />, capability: "__admin_only__" },
-        { label: "Categories", href: "/admin/categories", icon: <Tag     className="h-5 w-5" />, capability: "manage_categories" },
+        { label: "Users",      href: "/admin/users",      icon: <Users   className="h-4.5 w-4.5" />, capability: "manage_users" },
+        { label: "Staff",      href: "/admin/staff",      icon: <UserCog className="h-4.5 w-4.5" />, capability: "__admin_only__" },
+        { label: "Categories", href: "/admin/categories", icon: <Tag     className="h-4.5 w-4.5" />, capability: "manage_categories" },
       ],
     },
     {
       heading: "Communication",
       items: [
-        { label: "Support Inbox",  href: "/admin/support",        icon: <Headphones className="h-5 w-5" />, capability: "manage_support" },
-        { label: "Announcements",  href: "/admin/announcements",  icon: <Megaphone  className="h-5 w-5" />, capability: "__admin_only__" },
-        { label: "Knowledge Base", href: "/admin/knowledge",      icon: <BookOpen   className="h-5 w-5" />, capability: "__admin_only__" },
-        { label: "Notifications",  href: "/admin/notifications",  icon: <Bell       className="h-5 w-5" />, capability: null },
+        { label: "Support Inbox",  href: "/admin/support",       icon: <Headphones className="h-4.5 w-4.5" />, capability: "manage_support" },
+        { label: "Announcements",  href: "/admin/announcements", icon: <Megaphone  className="h-4.5 w-4.5" />, capability: "__admin_only__" },
+        { label: "Knowledge Base", href: "/admin/knowledge",     icon: <BookOpen   className="h-4.5 w-4.5" />, capability: "__admin_only__" },
+        { label: "Notifications",  href: "/admin/notifications", icon: <Bell       className="h-4.5 w-4.5" />, capability: null },
       ],
     },
     {
       heading: "Platform",
       items: [
-        { label: "App Settings", href: "/admin/settings", icon: <Settings className="h-5 w-5" />, capability: "__admin_only__" },
+        { label: "App Settings", href: "/admin/settings", icon: <Settings className="h-4.5 w-4.5" />, capability: "__admin_only__" },
       ],
     },
   ],
@@ -208,6 +174,29 @@ function filterForStaff(groups: NavGroup[], capabilities: string[]): NavGroup[] 
     .filter((group) => group.items.length > 0);
 }
 
+/** Generates a 1–2 letter avatar from a display name. */
+function getInitials(name?: string | null): string {
+  if (!name) return "?";
+  const parts = name.trim().split(/\s+/);
+  return parts.length >= 2
+    ? `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase()
+    : parts[0].slice(0, 2).toUpperCase();
+}
+
+const ROLE_COLORS: Record<string, string> = {
+  client:   "bg-sky-500/20 text-sky-300",
+  provider: "bg-emerald-500/20 text-emerald-300",
+  admin:    "bg-violet-500/20 text-violet-300",
+  staff:    "bg-amber-500/20 text-amber-300",
+};
+
+const ROLE_AVATAR_BG: Record<string, string> = {
+  client:   "bg-blue-600",
+  provider: "bg-violet-600",
+  admin:    "bg-amber-600",
+  staff:    "bg-teal-600",
+};
+
 interface SidebarProps {
   role: UserRole;
   capabilities?: string[];
@@ -220,7 +209,26 @@ export default function Sidebar({ role, capabilities, isOpen, onClose }: Sidebar
   const router = useRouter();
   const { logout, user } = useAuthStore();
 
-  // Staff shares the admin nav structure but filtered by capabilities
+  // ── Collapsed state (desktop) — persisted in localStorage ──────────────────
+  const STORAGE_KEY = "sidebar_collapsed";
+  const [collapsed, setCollapsed] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    try {
+      setCollapsed(localStorage.getItem(STORAGE_KEY) === "true");
+    } catch {
+      // localStorage unavailable (SSR / private browsing)
+    }
+  }, []);
+
+  function toggleCollapsed() {
+    const next = !collapsed;
+    setCollapsed(next);
+    try { localStorage.setItem(STORAGE_KEY, String(next)); } catch { /* noop */ }
+  }
+
   const sourceRole = role === "staff" ? "admin" : role;
   const rawGroups = navGroups[sourceRole] ?? [];
   const baseGroups =
@@ -228,13 +236,10 @@ export default function Sidebar({ role, capabilities, isOpen, onClose }: Sidebar
       ? filterForStaff(rawGroups, capabilities)
       : rawGroups;
 
-  // Hide the Business nav group unless the client has a business account type
   const groups =
     role === "client" && user?.accountType !== "business"
       ? baseGroups.filter((g) => g.heading !== "Business")
       : baseGroups;
-
-  const portalLabel = role === "staff" ? "staff portal" : `${role} portal`;
 
   async function handleLogout() {
     await logout();
@@ -242,12 +247,19 @@ export default function Sidebar({ role, capabilities, isOpen, onClose }: Sidebar
     router.push("/login");
   }
 
+  const initials = getInitials(user?.name);
+  const roleBadgeClass = ROLE_COLORS[role] ?? "bg-white/10 text-primary-300";
+  const avatarBg = ROLE_AVATAR_BG[role] ?? "bg-primary";
+
+  // Don't apply collapsed width until client has read localStorage (avoids flash)
+  const isCollapsed = mounted && collapsed;
+
   return (
     <>
       {/* Mobile backdrop */}
       {isOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          className="fixed inset-0 bg-black/60 z-40 md:hidden backdrop-blur-sm"
           onClick={onClose}
           aria-hidden="true"
         />
@@ -255,83 +267,186 @@ export default function Sidebar({ role, capabilities, isOpen, onClose }: Sidebar
 
       <aside
         className={cn(
-          "w-64 bg-primary-950 flex flex-col h-full flex-shrink-0",
-          // Mobile: fixed drawer that slides in/out
-          "fixed inset-y-0 left-0 z-50 transition-transform duration-300 md:relative md:translate-x-0",
-          isOpen ? "translate-x-0" : "-translate-x-full"
+          "bg-primary-950 flex flex-col h-full flex-shrink-0 border-r border-slate-700/50",
+          "fixed inset-y-0 left-0 z-50 transition-all duration-300 ease-in-out md:relative md:translate-x-0",
+          isOpen ? "translate-x-0" : "-translate-x-full",
+          isCollapsed ? "w-[68px]" : "w-64"
         )}
       >
-      {/* Brand */}
-      <div className="flex items-center justify-between px-6 py-5 border-b border-white/10">
-        <div className="flex items-center gap-3">
-          <div className="flex-shrink-0 w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-            <MapPin className="w-5 h-5 text-white" />
-          </div>
-          <span className="text-lg font-bold">
-            <span className="text-primary-300">Local</span><span className="text-brand-400">Pro</span>
-          </span>
+        {/* ── Brand ──────────────────────────────────────────────────────── */}
+        <div className={cn(
+          "flex items-center border-b border-slate-700/50 transition-all duration-300",
+          isCollapsed ? "justify-center px-0 py-4" : "justify-between px-5 py-4"
+        )}>
+          {isCollapsed ? (
+            <button
+              onClick={toggleCollapsed}
+              title="Expand sidebar"
+              className="hidden md:flex flex-shrink-0 w-8 h-8 bg-primary rounded-lg items-center justify-center shadow-sm hover:bg-primary/80 transition-colors"
+            >
+              <MapPin className="w-4 h-4 text-white" />
+            </button>
+          ) : (
+            <>
+              <div className="flex items-center gap-2.5">
+                <div className="flex-shrink-0 w-8 h-8 bg-primary rounded-lg flex items-center justify-center shadow-sm">
+                  <MapPin className="w-4 h-4 text-white" />
+                </div>
+                <span className="text-[17px] font-bold tracking-tight">
+                  <span className="text-primary-200">Local</span><span className="text-brand-400">Pro</span>
+                </span>
+              </div>
+              <div className="flex items-center gap-1">
+                {/* Collapse toggle — desktop only */}
+                <button
+                  onClick={toggleCollapsed}
+                  title="Collapse sidebar"
+                  className="hidden md:flex p-1.5 rounded-md text-primary-400 hover:text-white hover:bg-white/10 transition-colors"
+                  aria-label="Collapse sidebar"
+                >
+                  <PanelLeftClose className="h-4 w-4" />
+                </button>
+                {/* Mobile close */}
+                <button
+                  onClick={onClose}
+                  className="md:hidden p-1.5 rounded-md text-primary-400 hover:text-white hover:bg-white/10 transition-colors"
+                  aria-label="Close menu"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            </>
+          )}
         </div>
-        {/* Close button — mobile only */}
-        <button
-          onClick={onClose}
-          className="md:hidden p-1 text-primary-300 hover:text-white transition-colors rounded"
-          aria-label="Close menu"
-        >
-          <X className="h-5 w-5" />
-        </button>
-      </div>
 
-      {/* Role badge */}
-      <div className="px-6 pt-4 pb-2">
-        <span className="text-xs font-medium text-primary-400 uppercase tracking-wider">
-          {portalLabel}
-        </span>
-      </div>
-
-      {/* Nav */}
-      <nav className="flex-1 px-3 pb-4 sidebar-scroll overflow-y-auto">
-        {groups.map((group, gi) => (
-          <div key={gi} className={gi > 0 ? "mt-4" : ""}>
-            {group.heading && (
-              <p className="px-3 mb-1 text-[10px] font-semibold uppercase tracking-widest text-primary-500">
-                {group.heading}
-              </p>
-            )}
-            <div className="space-y-0.5">
-              {group.items.map((item) => {
-                const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    onClick={onClose}
-                    className={cn(
-                      "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
-                      isActive
-                        ? "bg-primary text-white"
-                        : "text-primary-300 hover:bg-white/10 hover:text-white"
-                    )}
-                  >
-                    {item.icon}
-                    {item.label}
-                  </Link>
-                );
-              })}
+        {/* ── User card ──────────────────────────────────────────────────── */}
+        <div className={cn("pt-3 pb-2 transition-all duration-300", isCollapsed ? "px-2" : "px-3")}>
+          {isCollapsed ? (
+            <Link
+              href={`/${sourceRole}/profile`}
+              onClick={onClose}
+              title={user?.name ?? "Profile"}
+              className="flex items-center justify-center w-full"
+            >
+              <div className="w-9 h-9 rounded-lg overflow-hidden flex-shrink-0 ring-2 ring-white/10">
+                {user?.avatar ? (
+                  <Image src={user.avatar} alt={user.name || "Avatar"} width={36} height={36} className="w-9 h-9 object-cover" />
+                ) : (
+                  <div className={`w-9 h-9 flex items-center justify-center text-xs font-bold text-white select-none ${avatarBg}`}>
+                    {initials}
+                  </div>
+                )}
+              </div>
+            </Link>
+          ) : (
+            <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-white/5 border border-slate-700/50">
+              <div className="flex-shrink-0 w-8 h-8 rounded-lg overflow-hidden ring-1 ring-white/10">
+                {user?.avatar ? (
+                  <Image src={user.avatar} alt={user.name || "Avatar"} width={32} height={32} className="w-8 h-8 object-cover" />
+                ) : (
+                  <div className={`w-8 h-8 flex items-center justify-center text-xs font-bold text-white select-none ${avatarBg}`}>
+                    {initials}
+                  </div>
+                )}
+              </div>
+              <div className="min-w-0 flex-1 overflow-hidden">
+                <p className="text-sm font-semibold text-white truncate leading-tight">
+                  {user?.name ?? "—"}
+                </p>
+                <span className={cn("inline-block mt-0.5 text-[10px] font-semibold px-1.5 py-0.5 rounded-md uppercase tracking-wide", roleBadgeClass)}>
+                  {role}
+                </span>
+              </div>
+              <Link
+                href={`/${sourceRole}/profile`}
+                onClick={onClose}
+                className="flex-shrink-0 p-1 rounded-md text-primary-400 hover:text-white hover:bg-white/10 transition-colors"
+                aria-label="Go to profile"
+              >
+                <ChevronRight className="h-3.5 w-3.5" />
+              </Link>
             </div>
-          </div>
-        ))}
-      </nav>
+          )}
+        </div>
 
-      {/* Sign out */}
-      <div className="px-3 py-4 border-t border-white/10">
-        <button
-          onClick={handleLogout}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-primary-300 hover:bg-white/10 hover:text-white transition-colors"
-        >
-          <LogOut className="h-5 w-5" />
-          Sign out
-        </button>
-      </div>
+        {/* ── Nav ────────────────────────────────────────────────────────── */}
+        <nav className={cn(
+          "flex-1 pt-1 pb-4 sidebar-scroll overflow-y-auto space-y-5 transition-all duration-300",
+          isCollapsed ? "px-2" : "px-3"
+        )}>
+          {groups.map((group, gi) => (
+            <div key={gi}>
+              {/* Group heading — only in expanded mode */}
+              {!isCollapsed && group.heading && (
+                <p className="px-3 mb-1 text-[10px] font-semibold uppercase tracking-widest text-primary-500/80 select-none">
+                  {group.heading}
+                </p>
+              )}
+              {/* Divider between groups in collapsed mode */}
+              {isCollapsed && gi > 0 && (
+                <div className="border-t border-slate-700/40 mb-2" />
+              )}
+              <div className="space-y-0.5">
+                {group.items.map((item) => {
+                  const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={onClose}
+                      title={isCollapsed ? item.label : undefined}
+                      className={cn(
+                        "group flex items-center rounded-lg text-sm font-medium transition-all duration-150 relative",
+                        isCollapsed
+                          ? "justify-center w-full px-0 py-2.5"
+                          : "gap-3 pl-3 pr-2 py-2",
+                        isActive
+                          ? "bg-white/10 text-white"
+                          : "text-primary-300/80 hover:bg-white/6 hover:text-white"
+                      )}
+                    >
+                      {/* Left accent bar — only expanded */}
+                      {!isCollapsed && (
+                        <span
+                          className={cn(
+                            "absolute left-0 inset-y-1.5 w-0.5 rounded-full transition-all duration-150",
+                            isActive ? "bg-primary-300 opacity-100" : "opacity-0 group-hover:opacity-40 bg-primary-400"
+                          )}
+                        />
+                      )}
+                      <span className={cn(
+                        "flex-shrink-0 transition-colors duration-150",
+                        isActive ? "text-primary-200" : "text-primary-400/70 group-hover:text-primary-300"
+                      )}>
+                        {item.icon}
+                      </span>
+                      {!isCollapsed && <span className="truncate">{item.label}</span>}
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </nav>
+
+        {/* ── Collapse toggle (desktop only) + Sign out ──────────────────── */}
+        <div className={cn(
+          "pb-4 pt-2 border-t border-slate-700/50 space-y-0.5 transition-all duration-300",
+          isCollapsed ? "px-2" : "px-3"
+        )}>
+          {/* Sign out */}
+          <button
+            onClick={handleLogout}
+            title={isCollapsed ? "Sign out" : undefined}
+            className={cn(
+              "group w-full rounded-lg text-sm font-medium text-primary-300/80 hover:bg-red-500/10 hover:text-red-300 transition-all duration-150",
+              isCollapsed ? "flex justify-center px-0 py-2.5" : "flex items-center gap-3 pl-3 pr-2 py-2"
+            )}
+          >
+            <LogOut className="h-4 w-4 flex-shrink-0 transition-colors group-hover:text-red-400" />
+            {!isCollapsed && <span>Sign out</span>}
+          </button>
+        </div>
       </aside>
     </>
   );

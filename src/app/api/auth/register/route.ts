@@ -5,6 +5,7 @@ import { setAuthCookies } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { ValidationError, UnprocessableError } from "@/lib/errors";
 import { getAppSetting } from "@/lib/appSettings";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 const RegisterSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters").max(100),
@@ -20,7 +21,29 @@ const RegisterSchema = z.object({
   referralCode: z.string().max(12).optional(),
 });
 
+// 5 registrations per 15 minutes per IP
+const REGISTER_LIMIT = { windowMs: 15 * 60_000, max: 5 };
+
 export const POST = withHandler(async (req: NextRequest) => {
+  // ── Per-IP rate limit ──────────────────────────────────────────────────
+  const ip =
+    req.headers.get("x-forwarded-for")?.split(",")[0].trim() ??
+    req.headers.get("x-real-ip") ??
+    "unknown";
+  const rl = checkRateLimit(`register:${ip}`, REGISTER_LIMIT);
+  if (!rl.ok) {
+    return new Response(
+      JSON.stringify({ error: "Too many registration attempts. Please try again later." }),
+      {
+        status: 429,
+        headers: {
+          "Content-Type": "application/json",
+          "Retry-After": String(Math.ceil((rl.resetAt - Date.now()) / 1000)),
+        },
+      }
+    );
+  }
+
   // ── Platform gate ────────────────────────────────────────────────────
   const [maintenance, registrationsOpen] = await Promise.all([
     getAppSetting("platform.maintenanceMode", false),

@@ -1,5 +1,3 @@
-import { getAppSettings } from "@/lib/appSettings";
-
 export interface CommissionBreakdown {
   gross: number;
   commission: number;
@@ -58,18 +56,3 @@ export function calculateCommission(
   return { gross: amount, commission, netAmount, rate };
 }
 
-/**
- * Async version: reads base and high-value commission rates from app settings
- * (stored as whole-number percentages, e.g. 15 → 0.15).
- * Falls back to the hardcoded constants when DB values are absent.
- */
-export async function getDbCommissionRate(category?: string | null): Promise<number> {
-  const settings = await getAppSettings({
-    "payments.baseCommissionRate": 15 as number,
-    "payments.highCommissionRate": 20 as number,
-  });
-  const baseRate = (settings["payments.baseCommissionRate"] as number) / 100;
-  const highRate = (settings["payments.highCommissionRate"] as number) / 100;
-  if (category && HIGH_VALUE_CATEGORIES.has(category)) return highRate;
-  return baseRate;
-}

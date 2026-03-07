@@ -2,9 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import { requireUser } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
-import { ValidationError } from "@/lib/errors";
+import { ValidationError, UnprocessableError } from "@/lib/errors";
 
-const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+function getClient() {
+  if (!process.env.OPENAI_API_KEY) throw new UnprocessableError("AI features are not configured");
+  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+}
 
 export const POST = withHandler(async (req: NextRequest) => {
   await requireUser();
@@ -13,6 +16,10 @@ export const POST = withHandler(async (req: NextRequest) => {
   if (!title || typeof title !== "string" || title.trim().length < 3) {
     throw new ValidationError("A job title is required to generate a description.");
   }
+  if (title.trim().length > 200) {
+    throw new ValidationError("Job title must not exceed 200 characters.");
+  }
+  const client = getClient();
 
   const categoryHint = category ? ` in the ${category} category` : "";
 

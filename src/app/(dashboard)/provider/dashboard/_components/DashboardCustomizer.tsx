@@ -106,7 +106,7 @@ export default function DashboardCustomizer({ header, kpis, activity, tier, sche
       {/* ── Floating customize button ── */}
       <button
         onClick={() => setPanelOpen(true)}
-        className="fixed bottom-6 right-6 z-40 inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-white border border-slate-200 shadow-lg text-sm font-medium text-slate-600 hover:bg-slate-50 hover:border-slate-300 hover:shadow-xl transition-all active:scale-95"
+        className="fixed bottom-20 right-6 z-40 inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-white border border-slate-200 shadow-lg text-sm font-medium text-slate-600 hover:bg-slate-50 hover:border-slate-300 hover:shadow-xl transition-all active:scale-95"
       >
         <Settings className="h-4 w-4" />
         Customize

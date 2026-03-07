@@ -9,6 +9,18 @@
 import { Resend } from "resend";
 import type { NotificationType } from "@/types";
 
+// ─── HTML encoding ────────────────────────────────────────────────────────────
+
+/** Encode a string so it is safe to embed inside HTML text or attribute nodes. */
+function escHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 // ─── Client ───────────────────────────────────────────────────────────────────
 
 function getResend() {
@@ -23,12 +35,13 @@ const FROM = process.env.SMTP_FROM ?? "LocalPro <no-reply@localpro.app>";
 // ─── Base layout ──────────────────────────────────────────────────────────────
 
 function baseTemplate(title: string, bodyHtml: string, ctaUrl?: string, ctaLabel?: string) {
+  const safeTitle = escHtml(title);
   return `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>${title}</title>
+  <title>${safeTitle}</title>
 </head>
 <body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
   <table width="100%" cellpadding="0" cellspacing="0" style="padding:40px 0">
@@ -44,7 +57,7 @@ function baseTemplate(title: string, bodyHtml: string, ctaUrl?: string, ctaLabel
         <!-- Body -->
         <tr>
           <td style="padding:32px">
-            <h2 style="margin:0 0 20px;color:#0f172a;font-size:20px;font-weight:600">${title}</h2>
+            <h2 style="margin:0 0 20px;color:#0f172a;font-size:20px;font-weight:600">${safeTitle}</h2>
             ${bodyHtml}
             ${ctaUrl && ctaLabel ? `
             <div style="margin-top:28px">
@@ -70,7 +83,7 @@ function baseTemplate(title: string, bodyHtml: string, ctaUrl?: string, ctaLabel
 const p = (text: string) =>
   `<p style="color:#334155;font-size:15px;line-height:1.6;margin:0 0 12px">${text}</p>`;
 
-const greeting = (name: string) => p(`Hi <strong>${name}</strong>,`);
+const greeting = (name: string) => p(`Hi <strong>${escHtml(name)}</strong>,`);
 
 function amountBox(amount: number, label?: string) {
   return `<div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:16px;margin:20px 0">
@@ -98,7 +111,7 @@ export function baseMarketingTemplate(subject: string, recipientName: string, bo
   const paragraphs = bodyText
     .split("\n")
     .filter(Boolean)
-    .map((line) => `<p style="color:#334155;font-size:15px;line-height:1.7;margin:0 0 12px">${line}</p>`)
+    .map((line) => `<p style="color:#334155;font-size:15px;line-height:1.7;margin:0 0 12px">${escHtml(line)}</p>`)
     .join("");
 
   return baseTemplate(
@@ -142,7 +155,7 @@ function renderEmailContent(ctx: EmailContext): RenderedEmail {
   const jobUrl = data?.jobId
     ? `${APP_URL}/${recipientRole === "provider" ? "provider" : "client"}/jobs/${data.jobId}`
     : undefined;
-  const jTitle = data?.jobTitle ? `<strong>${data.jobTitle}</strong>` : "your job";
+  const jTitle = data?.jobTitle ? `<strong>${escHtml(data.jobTitle)}</strong>` : "your job";
   const amt = data?.amount ?? data?.estimateAmount;
 
   switch (ctx.type) {
@@ -589,7 +602,7 @@ function renderEmailContent(ctx: EmailContext): RenderedEmail {
           + ctx.message
             .split("\n")
             .filter(Boolean)
-            .map((line) => p(line))
+            .map((line) => p(escHtml(line)))
             .join(""),
       };
 

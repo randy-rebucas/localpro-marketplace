@@ -13,7 +13,8 @@ import {
 } from "@/lib/paymongo";
 import { connectDB } from "@/lib/db";
 import User from "@/models/User";
-import { calculateCommission, getDbCommissionRate } from "@/lib/commission";
+import { calculateCommission } from "@/lib/commission";
+import { getDbCommissionRate } from "@/lib/serverCommission";
 import { canTransitionEscrow } from "@/lib/jobLifecycle";
 import {
   NotFoundError,

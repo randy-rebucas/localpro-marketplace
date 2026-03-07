@@ -2,11 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import { requireUser } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
-import { ValidationError, ForbiddenError } from "@/lib/errors";
+import { ValidationError, ForbiddenError, UnprocessableError } from "@/lib/errors";
 import { loyaltyRepository } from "@/repositories";
 import { getClientTier } from "@/lib/loyalty";
 
-const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+function getClient() {
+  if (!process.env.OPENAI_API_KEY) throw new UnprocessableError("AI features are not configured");
+  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+}
 
 export const POST = withHandler(async (req: NextRequest) => {
   const user = await requireUser();
@@ -22,10 +25,14 @@ export const POST = withHandler(async (req: NextRequest) => {
   if (!title || typeof title !== "string" || title.trim().length < 3) {
     throw new ValidationError("A consultation title is required to generate a description.");
   }
+  if (title.trim().length > 200) {
+    throw new ValidationError("Consultation title must not exceed 200 characters.");
+  }
 
   const typeLabel =
     type === "site_inspection" ? "site inspection (in-person visit)" : "remote chat-based assessment";
 
+  const client = getClient();
   const completion = await client.chat.completions.create({
     model: "gpt-4o-mini",
     max_tokens: 220,

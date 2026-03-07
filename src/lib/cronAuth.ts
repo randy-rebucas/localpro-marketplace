@@ -3,8 +3,8 @@ import type { NextRequest } from "next/server";
 /**
  * Verifies the Vercel Cron auth header.
  * Vercel injects: Authorization: Bearer <CRON_SECRET>
- * Falls back to "dev-cron-secret" in development when CRON_SECRET is unset,
- * so you can test cron routes locally with: Authorization: Bearer dev-cron-secret
+ * Returns false (denies) when CRON_SECRET is not set.
+ * To test locally: set CRON_SECRET in .env.local and pass the same value in the Authorization header.
  */
 export function verifyCronSecret(req: NextRequest): boolean {
   const secret = process.env.CRON_SECRET ?? "";

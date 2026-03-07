@@ -236,8 +236,8 @@ export class AuthService {
   }
 
   async resetPassword(token: string, newPassword: string): Promise<void> {
-    if (newPassword.length < 8) {
-      throw new ValidationError("Password must be at least 8 characters");
+    if (newPassword.length < 8 || !/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(newPassword)) {
+      throw new ValidationError("Password must be at least 8 characters and contain uppercase, lowercase, and a number");
     }
 
     const user = await userRepository.findByResetToken(token);
