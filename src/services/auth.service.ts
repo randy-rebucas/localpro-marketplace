@@ -1,6 +1,6 @@
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
-import { userRepository } from "@/repositories";
+import { userRepository, notificationRepository } from "@/repositories";
 import {
   signAccessToken,
   signRefreshToken,
@@ -17,6 +17,7 @@ import {
   sendVerificationEmail,
   sendPasswordResetEmail,
 } from "@/lib/email";
+import { pushNotification } from "@/lib/events";
 import type { UserRole } from "@/types";
 
 export interface RegisterInput {
@@ -85,6 +86,30 @@ export class AuthService {
       } catch {
         // Non-critical
       }
+    }
+
+    // Notify all admins and staff about the new pending provider (fire-and-forget)
+    if (input.role === "provider") {
+      (async () => {
+        try {
+          const staffList = await userRepository.findAdminsAndStaff();
+          await Promise.all(
+            staffList.map(async (admin) => {
+              const adminId = admin._id.toString();
+              const note = await notificationRepository.create({
+                userId: adminId,
+                type: "new_provider_signup",
+                title: "New Provider Application",
+                message: `${user.name} has registered as a provider and is awaiting approval.`,
+                data: { providerId: userId },
+              });
+              pushNotification(adminId, note);
+            })
+          );
+        } catch (err) {
+          console.error("[AUTH] Failed to notify admins of new provider:", err);
+        }
+      })();
     }
 
     const accessToken = signAccessToken(userId, user.role as UserRole);

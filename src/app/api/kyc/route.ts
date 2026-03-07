@@ -5,11 +5,13 @@ import { withHandler } from "@/lib/utils";
 import { connectDB } from "@/lib/db";
 import { ValidationError } from "@/lib/errors";
 import User from "@/models/User";
+import { userRepository, notificationRepository } from "@/repositories";
+import { pushNotification } from "@/lib/events";
 
 const SubmitKycSchema = z.object({
   documents: z.array(
     z.object({
-      type: z.enum(["government_id", "business_permit", "selfie_with_id", "other"]),
+      type: z.enum(["government_id", "tesda_certificate", "business_permit", "selfie_with_id", "other"]),
       url: z.string().url("Invalid document URL"),
     })
   ).min(1, "At least one document is required"),
@@ -25,14 +27,40 @@ export const POST = withHandler(async (req: NextRequest) => {
 
   await connectDB();
 
-  await User.findByIdAndUpdate(user.userId, {
-    kycStatus: "pending",
-    kycDocuments: parsed.data.documents.map((d) => ({
-      ...d,
-      uploadedAt: new Date(),
-    })),
-    kycRejectionReason: null,
-  });
+  const updatedUser = await User.findByIdAndUpdate(
+    user.userId,
+    {
+      kycStatus: "pending",
+      kycDocuments: parsed.data.documents.map((d) => ({
+        ...d,
+        uploadedAt: new Date(),
+      })),
+      kycRejectionReason: null,
+    },
+    { new: true }
+  ).select("name role").lean() as { name: string; role: string } | null;
+
+  // Notify all admins and staff about the new KYC submission (fire-and-forget)
+  (async () => {
+    try {
+      const staffList = await userRepository.findAdminsAndStaff();
+      await Promise.all(
+        staffList.map(async (admin) => {
+          const adminId = admin._id.toString();
+          const note = await notificationRepository.create({
+            userId: adminId,
+            type: "kyc_submitted",
+            title: "New KYC Submission",
+            message: `${updatedUser?.name ?? "A user"} has submitted identity documents for review.`,
+            data: { submittedBy: user.userId },
+          });
+          pushNotification(adminId, note);
+        })
+      );
+    } catch (err) {
+      console.error("[KYC] Failed to notify admins:", err);
+    }
+  })();
 
   return NextResponse.json({ message: "KYC documents submitted for review" });
 });

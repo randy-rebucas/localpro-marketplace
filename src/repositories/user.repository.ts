@@ -145,6 +145,14 @@ export class UserRepository extends BaseRepository<UserDocument> {
     return User.findOne({ role: "admin" }).select("_id").lean() as never;
   }
 
+  /** Returns all admin and staff user IDs. Used for broadcasting internal notifications. */
+  async findAdminsAndStaff(): Promise<{ _id: { toString(): string } }[]> {
+    await this.connect();
+    return User.find({ role: { $in: ["admin", "staff"] } })
+      .select("_id")
+      .lean() as never;
+  }
+
   /** Batch fetch users by an array of IDs. Returns name, email, role fields. */
   async findByIds(
     ids: string[]

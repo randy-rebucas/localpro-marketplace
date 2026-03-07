@@ -8,6 +8,7 @@ import { apiFetch } from "@/lib/fetchClient";
 
 const DOC_TYPES = [
   { value: "government_id", label: "Government-issued ID (UMID, Passport, Driver's License)" },
+  { value: "tesda_certificate", label: "TESDA Certificate / NC Certificate" },
   { value: "business_permit", label: "Business Permit / DTI Registration" },
   { value: "selfie_with_id", label: "Selfie with ID" },
   { value: "other", label: "Other Document" },

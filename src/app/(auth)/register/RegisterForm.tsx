@@ -72,7 +72,9 @@ export default function RegisterForm() {
 
       setUser(data.user);
       toast.success("Account created successfully!");
-      router.push(`/${data.user.role}/dashboard`);
+      // Providers go through the onboarding wizard first to set skills, service area and upload documents
+      const destination = data.user.role === "provider" ? "/provider/onboarding" : `/${data.user.role}/dashboard`;
+      router.push(destination);
     } catch {
       toast.error("Something went wrong. Please try again.");
     } finally {
