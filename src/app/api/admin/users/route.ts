@@ -25,12 +25,19 @@ const CreateUserSchema = z.object({
   name:            z.string().min(2, "Name must be at least 2 characters").max(100),
   email:           z.string().email("Invalid email address").optional(),
   password:        z.string().min(8, "Password must be at least 8 characters").max(100),
-  role:            z.enum(["client", "provider", "admin", "staff"]),
+  role:            z.enum(["client", "provider", "admin", "staff", "peso"]),
   isVerified:      z.boolean().optional().default(false),
   // Provider-only optional fields
   phone:           z.string().max(30).optional(),
   skills:          z.array(z.string().min(1).max(60)).max(20).optional(),
   yearsExperience: z.number().int().min(0).max(60).optional(),
+  // PESO-only: office details (required when role = peso)
+  pesoOffice: z.object({
+    officeName:   z.string().min(2).max(200),
+    municipality: z.string().min(2).max(100),
+    region:       z.string().min(2).max(100),
+    contactEmail: z.string().email(),
+  }).optional(),
 });
 
 export const POST = withHandler(async (req: NextRequest) => {
@@ -40,7 +47,11 @@ export const POST = withHandler(async (req: NextRequest) => {
   const parsed = CreateUserSchema.safeParse(await req.json());
   if (!parsed.success) throw new ValidationError(parsed.error.errors[0].message);
 
-  const { name, email, password, role, isVerified, phone, skills, yearsExperience } = parsed.data;
+  const { name, email, password, role, isVerified, phone, skills, yearsExperience, pesoOffice } = parsed.data;
+
+  if (role === "peso" && !pesoOffice) {
+    throw new ValidationError("PESO office details are required when creating a PESO officer");
+  }
 
   if (email) {
     const existing = await userRepository.findByEmail(email);
@@ -59,11 +70,24 @@ export const POST = withHandler(async (req: NextRequest) => {
     ...(phone ? { phone } : {}),
   });
 
+  const userId = created._id!.toString();
+
   // Seed a ProviderProfile with any supplied details
   if (role === "provider") {
-    await providerProfileRepository.upsert(created._id!.toString(), {
+    await providerProfileRepository.upsert(userId, {
       ...(skills?.length ? { skills } : {}),
       ...(yearsExperience !== undefined ? { yearsExperience } : {}),
+    });
+  }
+
+  // Create PESO office with this user as the head officer
+  if (role === "peso" && pesoOffice) {
+    const PesoOffice = (await import("@/models/PesoOffice")).default;
+    await PesoOffice.create({
+      ...pesoOffice,
+      headOfficerId: userId,
+      officerIds: [],
+      isActive: true,
     });
   }
 

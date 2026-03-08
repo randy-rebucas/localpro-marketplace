@@ -62,7 +62,7 @@ const UserSchema = new Schema<UserDocument>(
     },
     role: {
       type: String,
-      enum: ["client", "provider", "admin", "staff"],
+      enum: ["client", "provider", "admin", "staff", "peso"],
       required: true,
     },
     isVerified: {

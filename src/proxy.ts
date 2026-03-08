@@ -6,7 +6,7 @@ const ACCESS_SECRET = new TextEncoder().encode(process.env.JWT_SECRET);
 
 interface TokenPayload {
   userId: string;
-  role: "client" | "provider" | "admin" | "staff";
+  role: "client" | "provider" | "admin" | "staff" | "peso";
   capabilities?: string[];
 }
 
@@ -14,6 +14,7 @@ const ROLE_PREFIXES: Record<string, string> = {
   "/client": "client",
   "/provider": "provider",
   "/admin": "admin",
+  "/peso": "peso",
 };
 
 const AUTH_PAGES = ["/login", "/register", "/forgot-password", "/verify-email", "/reset-password"];
@@ -109,6 +110,7 @@ export const config = {
     "/client/:path*",
     "/provider/:path*",
     "/admin/:path*",
+    "/peso/:path*",
     "/login",
     "/register",
     "/forgot-password",

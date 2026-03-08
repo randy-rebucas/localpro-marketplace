@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { MapPin, CalendarDays, Briefcase, Copy, Check, Share2 } from "lucide-react";
+import { MapPin, CalendarDays, Briefcase, Copy, Check, Share2, Zap, Tag } from "lucide-react";
 import { formatPeso, formatSchedule, qrUrl } from "../utils";
 import { APP_URL } from "../constants";
 import type { BoardJob } from "../types";
@@ -33,6 +33,27 @@ function ShareBtn({ href, label, color, children }: ShareBtnProps) {
     </a>
   );
 }
+
+const JOB_TAG_LABELS: Record<string, string> = {
+  peso:        "PESO",
+  lgu_project: "LGU Project",
+  gov_program: "Gov't Program",
+  emergency:   "Emergency",
+  internship:  "Internship",
+};
+
+const JOB_TAG_COLORS: Record<string, string> = {
+  peso:        "bg-blue-500/20 text-blue-300 border-blue-500/30",
+  lgu_project: "bg-emerald-500/20 text-emerald-300 border-emerald-500/30",
+  gov_program: "bg-violet-500/20 text-violet-300 border-violet-500/30",
+  emergency:   "bg-red-500/20 text-red-300 border-red-500/30",
+  internship:  "bg-amber-500/20 text-amber-300 border-amber-500/30",
+};
+
+const SOURCE_LABELS: Record<string, string> = {
+  peso: "PESO",
+  lgu:  "LGU",
+};
 
 export function JobCard({ job }: { job: BoardJob }) {
   const [imgSrc, setImgSrc] = useState(() => qrUrl(job._id));
@@ -73,28 +94,31 @@ export function JobCard({ job }: { job: BoardJob }) {
 
         {/* Details */}
         <div className="min-w-0 flex-1">
-          <span className="inline-block px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 text-xs font-semibold uppercase tracking-wider mb-1.5">
-            {job.category}
-          </span>
-          <p className="text-base font-bold text-white leading-snug line-clamp-2 mb-2">{job.title}</p>
-          <div className="flex items-center gap-1 text-sm text-slate-300 mb-1.5">
-            <MapPin className="h-3.5 w-3.5 text-blue-400 flex-shrink-0" />
-            <span className="truncate">{job.location}</span>
+          {/* Badges row */}
+          <div className="flex items-center flex-wrap gap-1.5 mb-1.5">
+            <span className="inline-block px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 text-xs font-semibold uppercase tracking-wider">
+              {job.category}
+            </span>
+            {job.isPriority && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-500/20 text-red-300 border border-red-500/30 text-xs font-semibold">
+                <Zap className="h-2.5 w-2.5" />
+                Priority
+              </span>
+            )}
+            {job.jobSource && job.jobSource !== "private" && (
+              <span className="inline-block px-2 py-0.5 rounded-full bg-violet-500/20 text-violet-300 border border-violet-500/30 text-xs font-semibold">
+                {SOURCE_LABELS[job.jobSource] ?? job.jobSource.toUpperCase()}
+              </span>
+            )}
           </div>
-          <div className="flex items-center gap-1 text-sm text-slate-300 mb-3">
-            <CalendarDays className="h-3.5 w-3.5 text-blue-400 flex-shrink-0" />
-            <span>{formatSchedule(job.scheduleDate)}</span>
-          </div>
-          <div className="flex items-center justify-between">
-            <div className="inline-flex items-center gap-1.5 bg-emerald-500/20 border border-emerald-500/30 rounded-lg px-3 py-1.5">
-              <Briefcase className="h-4 w-4 text-emerald-400" />
-              <span className="text-base font-bold text-emerald-300">{formatPeso(job.budget)}</span>
-            </div>
+
+          <div className="flex items-start justify-between gap-2 mb-2">
+            <p className="text-base font-bold text-white leading-snug line-clamp-2 flex-1">{job.title}</p>
             <button
               onClick={() => setShowShare((v) => !v)}
               aria-label="Share job"
               title="Share this job"
-              className={`p-1.5 rounded-lg transition-all ${
+              className={`flex-shrink-0 p-1.5 rounded-lg transition-all ${
                 showShare
                   ? "bg-blue-500/25 text-blue-300 ring-1 ring-blue-400/30"
                   : "text-slate-600 hover:text-slate-300 hover:bg-white/10"
@@ -103,6 +127,40 @@ export function JobCard({ job }: { job: BoardJob }) {
               <Share2 className="h-4 w-4" />
             </button>
           </div>
+
+          <div className="flex items-center gap-1 text-sm text-slate-300 mb-1.5">
+            <MapPin className="h-3.5 w-3.5 text-blue-400 flex-shrink-0" />
+            <span className="truncate">{job.location}</span>
+          </div>
+
+          {/* Schedule (left) + Budget (right) */}
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <div className="flex items-center gap-1 text-sm text-slate-300 min-w-0">
+              <CalendarDays className="h-3.5 w-3.5 text-blue-400 flex-shrink-0" />
+              <span className="truncate">{formatSchedule(job.scheduleDate)}</span>
+            </div>
+            <div className="inline-flex items-center gap-1 bg-emerald-500/20 border border-emerald-500/30 rounded-lg px-2.5 py-1 flex-shrink-0">
+              <Briefcase className="h-3.5 w-3.5 text-emerald-400" />
+              <span className="text-sm font-bold text-emerald-300">{formatPeso(job.budget)}</span>
+            </div>
+          </div>
+
+          {/* Job tags */}
+          {job.jobTags && job.jobTags.length > 0 && (
+            <div className="flex items-center flex-wrap gap-1">
+              <Tag className="h-2.5 w-2.5 text-slate-500 flex-shrink-0" />
+              {job.jobTags.map((tag) => (
+                <span
+                  key={tag}
+                  className={`inline-block px-1.5 py-0.5 rounded border text-[10px] font-semibold ${
+                    JOB_TAG_COLORS[tag] ?? "bg-white/10 text-slate-400 border-white/10"
+                  }`}
+                >
+                  {JOB_TAG_LABELS[tag] ?? tag}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
