@@ -14,6 +14,10 @@ export interface BoardJob {
   budget: number;
   scheduleDate: string;
   createdAt: string;
+  jobSource?: "private" | "peso" | "lgu";
+  jobTags?: string[];
+  isPriority?: boolean;
+  pesoPostedBy?: string | null;
 }
 
 export interface LeaderboardEntry {

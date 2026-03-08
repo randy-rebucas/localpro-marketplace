@@ -1,3 +1,4 @@
+import mongoose, { type PipelineStage } from "mongoose";
 import { connectDB } from "@/lib/db";
 import User from "@/models/User";
 import Job from "@/models/Job";
@@ -12,6 +13,15 @@ export interface EmploymentStats {
   completedJobs: number;
   totalIncomeGenerated: number;
   avgProviderIncome: number;
+}
+
+export const PESO_JOB_TAGS = ["peso", "lgu_project", "gov_program", "emergency", "internship"] as const;
+
+export interface OfficeReportData {
+  stats: EmploymentStats;
+  tagBreakdown: { tag: string; count: number }[];
+  topSkills: { skill: string; count: number }[];
+  topCategories: { category: string; count: number }[];
 }
 
 export interface WorkforceRegistryFilters {
@@ -111,6 +121,109 @@ export class PesoRepository {
     return result;
   }
 
+  /**
+   * Office-scoped report stats.
+   * Only counts providers referred by this office and jobs posted by this office
+   * that carry a PESO-programme tag (peso | lgu_project | gov_program | emergency | internship).
+   */
+  async getOfficeReportStats(
+    officerIds: string[],
+    limit = 10
+  ): Promise<OfficeReportData> {
+    await this.connect();
+
+    const now          = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const oids         = officerIds.map((id) => new mongoose.Types.ObjectId(id));
+
+    // Scoped filters
+    const jobFilter      = { pesoPostedBy: { $in: oids }, jobTags: { $in: PESO_JOB_TAGS as unknown as string[] } };
+    const providerFilter = { pesoReferredBy: { $in: oids } };
+
+    const [
+      totalProviders,
+      newProvidersThisMonth,
+      activeJobs,
+      completedJobs,
+      tagBreakdown,
+      topSkills,
+      topCategories,
+      incomeAgg,
+    ] = await Promise.all([
+      ProviderProfile.countDocuments(providerFilter),
+
+      ProviderProfile.countDocuments({ ...providerFilter, createdAt: { $gte: startOfMonth } }),
+
+      Job.countDocuments({ ...jobFilter, status: { $in: ["open", "assigned", "in_progress"] } }),
+
+      Job.countDocuments({ ...jobFilter, status: "completed" }),
+
+      // Jobs per PESO tag
+      Job.aggregate([
+        { $match: { pesoPostedBy: { $in: oids }, jobTags: { $in: PESO_JOB_TAGS as unknown as string[] } } },
+        { $unwind: "$jobTags" },
+        { $match: { jobTags: { $in: PESO_JOB_TAGS as unknown as string[] } } },
+        { $group: { _id: "$jobTags", count: { $sum: 1 } } },
+        { $sort: { count: -1 } },
+        { $project: { tag: "$_id", count: 1, _id: 0 } },
+      ]),
+
+      // Top skills from PESO-referred providers
+      ProviderProfile.aggregate([
+        { $match: providerFilter },
+        { $unwind: "$skills" },
+        { $group: { _id: "$skills", count: { $sum: 1 } } },
+        { $sort: { count: -1 } },
+        { $limit: limit },
+        { $project: { skill: "$_id", count: 1, _id: 0 } },
+      ]),
+
+      // Top categories from PESO-posted jobs
+      Job.aggregate([
+        { $match: jobFilter },
+        { $group: { _id: "$category", count: { $sum: 1 } } },
+        { $sort: { count: -1 } },
+        { $limit: limit },
+        { $project: { category: "$_id", count: 1, _id: 0 } },
+      ]),
+
+      // Income from transactions linked to PESO-completed jobs
+      Job.aggregate([
+        { $match: { ...jobFilter, status: "completed" } },
+        {
+          $lookup: {
+            from: "transactions",
+            localField: "_id",
+            foreignField: "jobId",
+            as: "tx",
+          },
+        },
+        { $unwind: "$tx" },
+        { $match: { "tx.status": "completed" } },
+        { $group: { _id: null, total: { $sum: "$tx.netAmount" } } },
+      ]),
+    ]);
+
+    const totalIncomeGenerated = incomeAgg[0]?.total ?? 0;
+    const avgProviderIncome    = totalProviders > 0
+      ? Math.round(totalIncomeGenerated / totalProviders)
+      : 0;
+
+    return {
+      stats: {
+        totalProviders,
+        newProvidersThisMonth,
+        activeJobs,
+        completedJobs,
+        totalIncomeGenerated,
+        avgProviderIncome,
+      },
+      tagBreakdown,
+      topSkills,
+      topCategories,
+    };
+  }
+
   async getProviderRegistry(
     filters: WorkforceRegistryFilters = {}
   ): Promise<{ data: WorkforceRegistryEntry[]; total: number; page: number; limit: number; totalPages: number }> {
@@ -125,7 +238,7 @@ export class PesoRepository {
     if (verificationTag) profileMatch.pesoVerificationTags = verificationTag;
     if (minRating !== undefined) profileMatch.avgRating = { $gte: minRating };
 
-    const pipeline: object[] = [
+    const pipeline: PipelineStage[] = [
       { $match: profileMatch },
       {
         $lookup: {

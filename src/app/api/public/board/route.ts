@@ -44,7 +44,7 @@ export async function GET() {
         Job.find({ status: "open" })
           .sort({ createdAt: -1 })
           .limit(20)
-          .select("_id title category location budget scheduleDate createdAt")
+          .select("_id title category location budget scheduleDate createdAt jobSource jobTags isPriority pesoPostedBy")
           .lean(),
 
         // Top 5 providers by lifetime completed jobs
@@ -89,6 +89,10 @@ export async function GET() {
         budget: j.budget,
         scheduleDate: j.scheduleDate,
         createdAt: j.createdAt,
+        jobSource: j.jobSource ?? "private",
+        jobTags: j.jobTags ?? [],
+        isPriority: j.isPriority ?? false,
+        pesoPostedBy: j.pesoPostedBy?.toString() ?? null,
       })),
       leaderboard,
       announcements: announcements.map((a) => ({

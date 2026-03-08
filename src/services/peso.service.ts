@@ -41,12 +41,28 @@ export interface BulkOnboardRow {
 
 export class PesoService {
   async getDashboardStats(officerId: string) {
-    const [stats, topSkills, topCategories] = await Promise.all([
-      pesoRepository.getEmploymentStats(),
-      pesoRepository.getTopSkills(8),
-      pesoRepository.getTopCategories(8),
-    ]);
-    return { ...stats, topSkills, topCategories };
+    const office = await pesoRepository.findOfficeByOfficerId(officerId);
+    if (!office) throw new NotFoundError("PESO office");
+
+    // Collect all officer IDs (head + staff) — same logic as getReports
+    const rawHead = office.headOfficerId as unknown as Record<string, unknown> | string | null;
+    const headId  = rawHead && typeof rawHead === "object" ? String(rawHead._id) : String(rawHead ?? "");
+    const staffIds = ((office.officerIds ?? []) as unknown[]).map((o) => {
+      if (o && typeof o === "object") return String((o as Record<string, unknown>)._id ?? o);
+      return String(o);
+    });
+    const officerIds = [...new Set([headId, ...staffIds].filter(Boolean))];
+
+    const data = await pesoRepository.getOfficeReportStats(officerIds);
+
+    return {
+      ...data.stats,
+      topSkills:    data.topSkills,
+      topCategories: data.topCategories,
+      officeName:   office.officeName,
+      municipality: office.municipality,
+      region:       office.region,
+    };
   }
 
   async getWorkforceRegistry(filters: WorkforceRegistryFilters) {
@@ -119,9 +135,9 @@ export class PesoService {
     const resetToken = crypto.randomBytes(32).toString("hex");
     const userDoc = await userRepository.getDocByIdWithPassword(userId);
     if (userDoc) {
-      (userDoc as Record<string, unknown>).resetPasswordToken = resetToken;
-      (userDoc as Record<string, unknown>).resetPasswordTokenExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-      await (userDoc as { save(): Promise<void> }).save();
+      (userDoc as unknown as Record<string, unknown>).resetPasswordToken = resetToken;
+      (userDoc as unknown as Record<string, unknown>).resetPasswordTokenExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+      await userDoc.save();
     }
 
     const activationUrl = `${APP_URL}/reset-password?token=${resetToken}`;
@@ -187,9 +203,9 @@ export class PesoService {
         const resetToken = crypto.randomBytes(32).toString("hex");
         const userDoc = await userRepository.getDocByIdWithPassword(userId);
         if (userDoc) {
-          (userDoc as Record<string, unknown>).resetPasswordToken = resetToken;
-          (userDoc as Record<string, unknown>).resetPasswordTokenExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-          await (userDoc as { save(): Promise<void> }).save();
+          (userDoc as unknown as Record<string, unknown>).resetPasswordToken = resetToken;
+          (userDoc as unknown as Record<string, unknown>).resetPasswordTokenExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+          await userDoc.save();
         }
 
         const activationUrl = `${APP_URL}/reset-password?token=${resetToken}`;
@@ -262,9 +278,9 @@ export class PesoService {
     const resetToken = crypto.randomBytes(32).toString("hex");
     const userDoc = await userRepository.getDocByIdWithPassword(userId);
     if (userDoc) {
-      (userDoc as Record<string, unknown>).resetPasswordToken = resetToken;
-      (userDoc as Record<string, unknown>).resetPasswordTokenExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-      await (userDoc as { save(): Promise<void> }).save();
+      (userDoc as unknown as Record<string, unknown>).resetPasswordToken = resetToken;
+      (userDoc as unknown as Record<string, unknown>).resetPasswordTokenExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+      await userDoc.save();
     }
 
     const activationUrl = `${APP_URL}/reset-password?token=${resetToken}`;
@@ -355,12 +371,26 @@ export class PesoService {
   // ── Reports ───────────────────────────────────────────────────────────────
 
   async getReports(officerId: string) {
-    const [stats, topSkills, topCategories] = await Promise.all([
-      pesoRepository.getEmploymentStats(),
-      pesoRepository.getTopSkills(10),
-      pesoRepository.getTopCategories(10),
-    ]);
-    return { stats, topSkills, topCategories };
+    // Resolve the PESO office so we can scope data to all officers in this office
+    const office = await pesoRepository.findOfficeByOfficerId(officerId);
+    if (!office) throw new NotFoundError("PESO office");
+
+    // Collect all officer IDs (head + staff)
+    const rawHead = office.headOfficerId as unknown as Record<string, unknown> | string | null;
+    const headId  = rawHead && typeof rawHead === "object" ? String(rawHead._id) : String(rawHead ?? "");
+    const staffIds = ((office.officerIds ?? []) as unknown[]).map((o) => {
+      if (o && typeof o === "object") return String((o as Record<string, unknown>)._id ?? o);
+      return String(o);
+    });
+    const officerIds = [...new Set([headId, ...staffIds].filter(Boolean))];
+
+    const data = await pesoRepository.getOfficeReportStats(officerIds);
+    return {
+      ...data,
+      officeName:   office.officeName,
+      municipality: office.municipality,
+      region:       office.region,
+    };
   }
 
   // ── Office settings ───────────────────────────────────────────────────────
@@ -373,14 +403,34 @@ export class PesoService {
 
   async updateOfficeSettings(officerId: string, data: {
     officeName?: string;
+    officeType?: "city" | "municipal" | "provincial" | null;
     municipality?: string;
+    province?: string | null;
     region?: string;
+    zipCode?: string | null;
     contactEmail?: string;
+    contactPhone?: string | null;
+    contactMobile?: string | null;
+    address?: string | null;
+    website?: string | null;
+    isActive?: boolean;
   }) {
     const office = await pesoRepository.findOfficeByHeadOfficer(officerId);
     if (!office) throw new ForbiddenError("Only the head officer can update office settings");
 
     const updated = await pesoRepository.updateOffice(String(office._id), data);
+    if (!updated) throw new NotFoundError("PESO office");
+    return updated;
+  }
+
+  async updateOfficeLogo(officerId: string, logoUrl: string) {
+    const office = await pesoRepository.findOfficeByHeadOfficer(officerId);
+    if (!office) throw new ForbiddenError("Only the head officer can update the office logo");
+
+    // empty string means remove
+    const updated = await pesoRepository.updateOffice(String(office._id), {
+      logoUrl: logoUrl || null,
+    });
     if (!updated) throw new NotFoundError("PESO office");
     return updated;
   }

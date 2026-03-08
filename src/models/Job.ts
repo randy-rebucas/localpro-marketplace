@@ -37,7 +37,7 @@ const JobSchema = new Schema<JobDocument>(
     budget: {
       type: Number,
       required: [true, "Budget is required"],
-      min: [1, "Budget must be at least ₱1"],
+      min: [0, "Budget cannot be negative"],
     },
     status: {
       type: String,

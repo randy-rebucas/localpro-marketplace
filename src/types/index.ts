@@ -55,7 +55,7 @@ export interface IUserPreferences {
 
 // ─── Upload ───────────────────────────────────────────────────────────────────
 
-export type UploadFolder = "jobs/before" | "jobs/after" | "avatars" | "kyc" | "misc";
+export type UploadFolder = "jobs/before" | "jobs/after" | "avatars" | "kyc" | "misc" | "peso/logos";
 
 export interface IUser {
   _id: Types.ObjectId | string;
@@ -498,12 +498,22 @@ export interface IPesoCertification {
   verifiedByPeso?: boolean;
 }
 
+export type PesoOfficeType = "city" | "municipal" | "provincial";
+
 export interface IPesoOffice {
   _id: Types.ObjectId | string;
   officeName: string;
+  officeType?: PesoOfficeType;
   municipality: string;
+  province?: string;
   region: string;
+  zipCode?: string;
   contactEmail: string;
+  contactPhone?: string;
+  contactMobile?: string;
+  address?: string;
+  website?: string;
+  logoUrl?: string;
   headOfficerId: Types.ObjectId | string | IUser;
   officerIds: (Types.ObjectId | string | IUser)[];
   isActive: boolean;
