@@ -41,6 +41,14 @@ const TransactionSchema = new Schema<TransactionDocument>(
       enum: ["pending", "completed", "refunded"],
       default: "pending",
     },
+    currency: { type: String, default: "PHP" },
+    commissionRate: { type: Number, default: null },
+    chargeType: {
+      type: String,
+      enum: ["job_escrow", "milestone_release", "partial_release", "recurring"],
+      default: "job_escrow",
+    },
+    ledgerJournalId: { type: String, default: null },
   },
   { timestamps: { createdAt: true, updatedAt: false } }
 );

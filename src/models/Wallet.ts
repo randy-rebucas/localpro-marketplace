@@ -3,6 +3,8 @@ import mongoose, { Schema, Document, Model } from "mongoose";
 export interface IWalletDoc {
   userId: mongoose.Types.ObjectId;
   balance: number;
+  reservedAmount: number;
+  currency: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -24,6 +26,14 @@ const WalletSchema = new Schema<WalletDocument>(
       default: 0,
       min: 0,
     },
+    /** Amount locked for in-flight withdrawals — prevents double-spend */
+    reservedAmount: {
+      type: Number,
+      required: true,
+      default: 0,
+      min: 0,
+    },
+    currency: { type: String, default: "PHP" },
   },
   { timestamps: true }
 );

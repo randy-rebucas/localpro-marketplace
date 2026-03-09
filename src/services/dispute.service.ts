@@ -5,6 +5,7 @@ import {
   activityRepository,
   notificationRepository,
 } from "@/repositories";
+import { ledgerService } from "@/services/ledger.service";
 import { pushNotification, pushStatusUpdateMany } from "@/lib/events";
 import { NotFoundError, ForbiddenError, UnprocessableError } from "@/lib/errors";
 import type { TokenPayload } from "@/lib/auth";
@@ -121,7 +122,27 @@ export class DisputeService {
         job.escrowStatus = "released";
         job.status = "completed";
         await transactionRepository.setPending(job._id!.toString(), "completed");
+
+        // Post ledger: dispute resolved in provider's favour
+        try {
+          const tx = await transactionRepository.findOneByJobId(job._id!.toString());
+          if (tx) {
+            const t = tx as unknown as { netAmount: number };
+            await ledgerService.postDisputeReleaseToProvider(
+              {
+                journalId: `dispute-release-${disputeId}`,
+                entityType: "dispute",
+                entityId: disputeId,
+                clientId: job.clientId.toString(),
+                providerId: job.providerId?.toString(),
+                initiatedBy: adminUserId,
+              },
+              t.netAmount
+            );
+          }
+        } catch { /* non-critical */ }
       } else {
+        const budget = (job as unknown as { budget: number }).budget;
         job.escrowStatus = "refunded";
         job.status = "refunded";
         await transactionRepository.setPending(job._id!.toString(), "refunded");
@@ -131,11 +152,30 @@ export class DisputeService {
         const { paymentRepository } = await import("@/repositories");
         await walletService.credit(
           job.clientId.toString(),
-          (job as unknown as { budget: number }).budget,
+          budget,
           `Refund for disputed job (dispute resolved in your favour)`,
           { jobId: job._id!.toString(), silent: true }
         );
         await paymentRepository.markRefundedByJobId(job._id!.toString());
+
+        // Post ledger: dispute refund to client
+        try {
+          const tx = await transactionRepository.findOneByJobId(job._id!.toString());
+          if (tx) {
+            const t = tx as unknown as { amount: number; commission: number; netAmount: number };
+            await ledgerService.postDisputeRefund(
+              {
+                journalId: `dispute-refund-${disputeId}`,
+                entityType: "dispute",
+                entityId: disputeId,
+                clientId: job.clientId.toString(),
+                providerId: job.providerId?.toString(),
+                initiatedBy: adminUserId,
+              },
+              t.amount, t.commission, t.netAmount
+            );
+          }
+        } catch { /* non-critical */ }
       }
       await jobDoc.save();
 

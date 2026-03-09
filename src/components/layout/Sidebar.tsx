@@ -45,6 +45,8 @@ import {
   UsersRound,
   Zap,
   FileBarChart,
+  Scale,
+  Database,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/authStore";
@@ -134,9 +136,10 @@ const navGroups: Partial<Record<UserRole, NavGroup[]>> = {
     {
       heading: "Finance",
       items: [
-        { label: "Revenue",             href: "/admin/revenue",  icon: <TrendingUp className="h-4.5 w-4.5" />, capability: "view_revenue" },
-        { label: "Payouts",             href: "/admin/payouts",  icon: <Banknote   className="h-4.5 w-4.5" />, capability: "manage_payouts" },
-        { label: "Wallet Withdrawals",  href: "/admin/wallet",   icon: <Wallet     className="h-4.5 w-4.5" />, capability: "manage_payouts" },
+        { label: "Revenue",             href: "/admin/revenue",     icon: <TrendingUp className="h-4.5 w-4.5" />, capability: "view_revenue" },
+        { label: "Accounting",          href: "/admin/accounting",  icon: <Scale      className="h-4.5 w-4.5" />, capability: "view_revenue" },
+        { label: "Payouts",             href: "/admin/payouts",     icon: <Banknote   className="h-4.5 w-4.5" />, capability: "manage_payouts" },
+        { label: "Wallet Withdrawals",  href: "/admin/wallet",      icon: <Wallet     className="h-4.5 w-4.5" />, capability: "manage_payouts" },
       ],
     },
     {
@@ -165,7 +168,8 @@ const navGroups: Partial<Record<UserRole, NavGroup[]>> = {
     {
       heading: "Platform",
       items: [
-        { label: "App Settings", href: "/admin/settings", icon: <Settings className="h-4.5 w-4.5" />, capability: "__admin_only__" },
+        { label: "App Settings", href: "/admin/settings", icon: <Settings  className="h-4.5 w-4.5" />, capability: "__admin_only__" },
+        { label: "Database",     href: "/admin/database", icon: <Database  className="h-4.5 w-4.5" />, capability: "__admin_only__" },
       ],
     },
   ],

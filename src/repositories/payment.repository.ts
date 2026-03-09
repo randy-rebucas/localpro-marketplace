@@ -77,6 +77,19 @@ export class PaymentRepository extends BaseRepository<PaymentDocument> {
     );
   }
 
+  /** Update arbitrary fields on a payment record by paymentIntentId. */
+  async updateByPaymentIntentId(
+    paymentIntentId: string,
+    update: Record<string, unknown>
+  ): Promise<PaymentDocument | null> {
+    await this.connect();
+    return Payment.findOneAndUpdate(
+      { paymentIntentId },
+      { $set: update },
+      { new: true }
+    ).lean() as unknown as PaymentDocument | null;
+  }
+
   /** Batch fetch: returns a jobId → amount map for all paid payments in the given job ID list. */
   async findAmountsByJobIds(jobIds: string[]): Promise<Map<string, number>> {
     if (jobIds.length === 0) return new Map();

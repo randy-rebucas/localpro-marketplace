@@ -4,6 +4,7 @@ import {
   transactionRepository,
   activityRepository,
 } from "@/repositories";
+import { ledgerService } from "@/services/ledger.service";
 import {
   createCheckoutSession,
   getCheckoutSession,
@@ -56,8 +57,9 @@ export class PaymentService {
       job.escrowStatus = "funded";
       await jobDoc.save();
 
-      const { commission, netAmount } = calculateCommission(amount, await getDbCommissionRate(job.category));
-      await transactionRepository.create({
+      const rate = await getDbCommissionRate(job.category);
+      const { commission, netAmount } = calculateCommission(amount, rate);
+      const tx = await transactionRepository.create({
         jobId: job._id,
         payerId: user.userId,
         payeeId: job.providerId,
@@ -65,7 +67,24 @@ export class PaymentService {
         commission,
         netAmount,
         status: "pending",
+        currency: "PHP",
+        commissionRate: rate,
+        chargeType: "job_escrow",
       });
+
+      const journalId = `escrow-fund-${job._id!.toString()}`;
+      await ledgerService.postEscrowFundedGateway(
+        {
+          journalId,
+          entityType: "job",
+          entityId: job._id!.toString(),
+          clientId: user.userId,
+          providerId: job.providerId?.toString(),
+          initiatedBy: user.userId,
+        },
+        amount, commission, netAmount
+      );
+      await transactionRepository.updateById((tx as { _id: { toString(): string } })._id.toString(), { ledgerJournalId: journalId });
 
       await activityRepository.log({
         userId: user.userId,
@@ -204,8 +223,9 @@ export class PaymentService {
     job.escrowStatus = "funded";
     await jobDoc.save();
 
-    const { commission, netAmount } = calculateCommission(p.amount, await getDbCommissionRate(job.category));
-    await transactionRepository.create({
+    const rate = await getDbCommissionRate(job.category);
+    const { commission, netAmount } = calculateCommission(p.amount, rate);
+    const tx = await transactionRepository.create({
       jobId: p.jobId,
       payerId: p.clientId,
       payeeId: p.providerId,
@@ -213,7 +233,26 @@ export class PaymentService {
       commission,
       netAmount,
       status: "pending",
+      currency: "PHP",
+      commissionRate: rate,
+      chargeType: "job_escrow",
     });
+
+    const journalId = `escrow-fund-${p.jobId.toString()}`;
+    await ledgerService.postEscrowFundedGateway(
+      {
+        journalId,
+        entityType: "job",
+        entityId: p.jobId.toString(),
+        clientId: p.clientId.toString(),
+        providerId: p.providerId?.toString(),
+        initiatedBy: p.clientId.toString(),
+      },
+      p.amount, commission, netAmount
+    );
+    await transactionRepository.updateById((tx as { _id: { toString(): string } })._id.toString(), { ledgerJournalId: journalId });
+    // Mark payment with confirmedAt timestamp
+    await paymentRepository.updateByPaymentIntentId(paymentIntentId, { confirmedAt: new Date() });
 
     await activityRepository.log({
       userId: p.clientId.toString(),
@@ -282,9 +321,10 @@ export class PaymentService {
     job.escrowStatus = "funded";
     await jobDoc.save();
 
-    const { commission, netAmount } = calculateCommission(job.budget, await getDbCommissionRate(job.category));
+    const rate = await getDbCommissionRate(job.category);
+    const { commission, netAmount } = calculateCommission(job.budget, rate);
     await connectDB();
-    await transactionRepository.create({
+    const tx = await transactionRepository.create({
       jobId: job._id,
       payerId: clientId,
       payeeId: job.providerId,
@@ -292,7 +332,26 @@ export class PaymentService {
       commission,
       netAmount,
       status: "pending",
+      currency: "PHP",
+      commissionRate: rate,
+      chargeType: "recurring",
     });
+
+    try {
+      const journalId = `escrow-fund-${job._id!.toString()}`;
+      await ledgerService.postEscrowFundedGateway(
+        {
+          journalId,
+          entityType: "job",
+          entityId: job._id!.toString(),
+          clientId,
+          providerId: job.providerId?.toString(),
+          initiatedBy: clientId,
+        },
+        job.budget, commission, netAmount
+      );
+      await transactionRepository.updateById((tx as { _id: { toString(): string } })._id.toString(), { ledgerJournalId: journalId });
+    } catch { /* non-critical */ }
 
     await activityRepository.log({
       userId: clientId,

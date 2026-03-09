@@ -19,14 +19,24 @@ const PaymentSchema = new Schema<PaymentDocument>(
       default: "awaiting_payment",
     },
     paymentMethodType: { type: String, default: null },
-    paymentId: { type: String, default: null },
-    refundId: { type: String, default: null },
+    paymentId:      { type: String, default: null },
+    refundId:       { type: String, default: null },
+    confirmedAt:    { type: Date,   default: null },
+    refundedAt:     { type: Date,   default: null },
+    /** PayMongo webhook event ID for idempotency */
+    webhookEventId: { type: String, default: null, sparse: true },
   },
   { timestamps: true }
 );
 
 PaymentSchema.index({ clientId: 1, status: 1 });
 PaymentSchema.index({ status: 1, createdAt: -1 });
+PaymentSchema.index({ webhookEventId: 1 }, { sparse: true });
+// Prevent duplicate awaiting_payment records for the same job + client
+PaymentSchema.index(
+  { jobId: 1, clientId: 1, status: 1 },
+  { unique: true, partialFilterExpression: { status: "awaiting_payment" } }
+);
 
 const Payment: Model<PaymentDocument> =
   mongoose.models.Payment ??

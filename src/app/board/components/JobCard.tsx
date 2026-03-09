@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { MapPin, CalendarDays, Briefcase, Copy, Check, Share2, Zap, Tag } from "lucide-react";
-import { formatPeso, formatSchedule, qrUrl } from "../utils";
+import { formatPeso, formatSchedule, qrDataForJob } from "../utils";
 import { APP_URL } from "../constants";
 import type { BoardJob } from "../types";
 
@@ -56,7 +56,8 @@ const SOURCE_LABELS: Record<string, string> = {
 };
 
 export function JobCard({ job }: { job: BoardJob }) {
-  const [imgSrc, setImgSrc] = useState(() => qrUrl(job._id));
+  const qr = qrDataForJob(job._id, job.jobSource);
+  const [imgSrc, setImgSrc] = useState(qr.src);
   const [copied, setCopied] = useState(false);
   const [showShare, setShowShare] = useState(false);
 
@@ -75,22 +76,30 @@ export function JobCard({ job }: { job: BoardJob }) {
       {/* Top row: QR + details */}
       <div className="flex gap-3">
         {/* QR code */}
-        <div className="flex-shrink-0 bg-white rounded-xl p-1.5 self-start">
+        <a
+          href={qr.href}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex-shrink-0 bg-white rounded-xl p-1.5 self-start block hover:opacity-90 transition-opacity"
+          title={qr.label === "SCAN TO VIEW" ? "View job details" : "Apply for this job"}
+        >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={imgSrc}
-            alt="Scan to apply"
+            alt={qr.label}
             width={96}
             height={96}
             className="rounded-lg"
             onError={() =>
               setImgSrc(
-                `https://api.qrserver.com/v1/create-qr-code/?size=96x96&data=${encodeURIComponent(url)}&format=png`
+                `https://api.qrserver.com/v1/create-qr-code/?size=96x96&data=${encodeURIComponent(qr.href)}&format=png`
               )
             }
           />
-          <p className="text-[11px] text-slate-400 text-center mt-1 font-medium">SCAN TO APPLY</p>
-        </div>
+          <p className={`text-[11px] text-center mt-1 font-medium ${
+            qr.label === "SCAN TO VIEW" ? "text-blue-400" : "text-slate-400"
+          }`}>{qr.label}</p>
+        </a>
 
         {/* Details */}
         <div className="min-w-0 flex-1">
