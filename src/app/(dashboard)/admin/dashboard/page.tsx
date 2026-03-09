@@ -5,25 +5,51 @@ import { jobRepository } from "@/repositories/job.repository";
 import { transactionRepository } from "@/repositories/transaction.repository";
 import { disputeRepository } from "@/repositories/dispute.repository";
 import { userRepository } from "@/repositories/user.repository";
+import { activityRepository } from "@/repositories/activity.repository";
 import KpiCard from "@/components/ui/KpiCard";
 import { formatCurrency } from "@/lib/utils";
 import AdminJobsChart from "./AdminJobsChart";
+import AdminRevenueChart from "./AdminRevenueChart";
 import Link from "next/link";
-import { CircleDollarSign, BarChart3, Lock, AlertTriangle, ClipboardCheck, Users, ShieldAlert } from "lucide-react";
+import {
+  CircleDollarSign, BarChart3, Lock, AlertTriangle, ClipboardCheck,
+  Users, ShieldAlert, ShieldCheck, TrendingUp, Activity,
+  Briefcase, FileText, Flag, CreditCard, ChevronRight,
+} from "lucide-react";
 import PageGuide from "@/components/shared/PageGuide";
 import type { JobStatus } from "@/types";
 
 export const metadata: Metadata = { title: "Admin Dashboard" };
 
+// ─── Data ─────────────────────────────────────────────────────────────────────
 
 async function getAdminStats() {
-  const [jobStatusCounts, txnTotals, escrowBalance, openDisputes, totalUsers] = await Promise.all([
+  const sixMonthsAgo = new Date();
+  sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+
+  const startOfMonth = new Date();
+  startOfMonth.setDate(1);
+  startOfMonth.setHours(0, 0, 0, 0);
+
+  const [
+    jobStatusCounts,
+    txnTotals,
+    escrowBalance,
+    openDisputes,
+    userStats,
+    activityCounts,
+    monthlyRevenue,
+  ] = await Promise.all([
     jobRepository.countByStatus(),
     transactionRepository.getAdminTotals(),
     jobRepository.sumFundedEscrowBalance(),
     disputeRepository.countOpen(),
-    userRepository.count({}),
+    userRepository.getUserStats(startOfMonth),
+    activityRepository.countRecent(),
+    transactionRepository.getMonthlyRevenue(sixMonthsAgo),
   ]);
+
+  const { totalUsers, pendingKyc, newUsersSince: newUsersThisMonth } = userStats;
 
   const jobsByStatus = Object.fromEntries(
     jobStatusCounts.map((s) => [s._id, s.count])
@@ -31,18 +57,35 @@ async function getAdminStats() {
 
   const { gmv: totalGMV, commission: totalCommission } = txnTotals;
   const activeJobs =
-    (jobsByStatus.open ?? 0) + (jobsByStatus.assigned ?? 0) + (jobsByStatus.in_progress ?? 0);
-  const pendingJobs = jobsByStatus.pending_validation ?? 0;
+    (jobsByStatus.open ?? 0) + (jobsByStatus.assigned ?? 0) + (jobsByStatus["in_progress" as JobStatus] ?? 0);
+  const pendingJobs = jobsByStatus["pending_validation" as JobStatus] ?? 0;
+
+  // Format monthly revenue for chart (fill gaps so every month appears)
+  const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const revenueChartData = monthlyRevenue.map((r) => ({
+    label: `${MONTHS[r._id.month - 1]} ${String(r._id.year).slice(2)}`,
+    gmv: r.gmv,
+    commission: r.commission,
+  }));
 
   return {
     totalGMV, totalCommission, escrowBalance, activeJobs,
     openDisputes, totalUsers, jobsByStatus, pendingJobs,
+    pendingKyc, newUsersThisMonth, activityCounts,
+    revenueChartData,
   };
 }
 
+// ─── Skeleton ─────────────────────────────────────────────────────────────────
+
 function AdminDashboardSkeleton() {
   return (
-    <div className="space-y-4 animate-pulse">
+    <div className="space-y-5 animate-pulse">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {[...Array(4)].map((_, i) => (
+          <div key={i} className="h-10 bg-slate-100 rounded-xl" />
+        ))}
+      </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div className="h-20 bg-amber-50 rounded-xl border border-amber-100" />
         <div className="h-20 bg-red-50 rounded-xl border border-red-100" />
@@ -53,10 +96,10 @@ function AdminDashboardSkeleton() {
         ))}
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-2 h-72 bg-white rounded-xl border border-slate-200" />
-        <div className="space-y-4">
+        <div className="lg:col-span-2 h-64 bg-white rounded-xl border border-slate-200" />
+        <div className="space-y-3">
           {[...Array(3)].map((_, i) => (
-            <div key={i} className="h-20 bg-white rounded-xl border border-slate-200" />
+            <div key={i} className="h-[72px] bg-white rounded-xl border border-slate-200" />
           ))}
         </div>
       </div>
@@ -64,9 +107,67 @@ function AdminDashboardSkeleton() {
   );
 }
 
+// ─── Quick action card ────────────────────────────────────────────────────────
+
+function QuickAction({
+  href, icon, label, count, countColor = "slate",
+}: {
+  href: string;
+  icon: React.ReactNode;
+  label: string;
+  count?: number;
+  countColor?: "amber" | "red" | "rose" | "indigo" | "slate";
+}) {
+  const colorMap = {
+    amber:  "bg-amber-100 text-amber-700",
+    red:    "bg-red-100 text-red-700",
+    rose:   "bg-rose-100 text-rose-700",
+    indigo: "bg-indigo-100 text-indigo-700",
+    slate:  "bg-slate-100 text-slate-600",
+  };
+
+  return (
+    <Link
+      href={href}
+      className="group flex items-center justify-between px-4 py-3 bg-white rounded-xl border border-slate-200 shadow-card hover:border-primary/30 hover:shadow-card-hover transition-all"
+    >
+      <div className="flex items-center gap-3">
+        <div className="w-8 h-8 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-500 group-hover:text-primary group-hover:bg-primary/5 transition-colors">
+          {icon}
+        </div>
+        <span className="text-sm font-medium text-slate-700 group-hover:text-primary transition-colors">{label}</span>
+      </div>
+      <div className="flex items-center gap-2">
+        {count !== undefined && count > 0 && (
+          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${colorMap[countColor]}`}>
+            {count}
+          </span>
+        )}
+        <ChevronRight className="h-3.5 w-3.5 text-slate-300 group-hover:text-primary transition-colors" />
+      </div>
+    </Link>
+  );
+}
+
+// ─── Stat pill ────────────────────────────────────────────────────────────────
+
+function StatPill({ icon, label, value, href }: {
+  icon: React.ReactNode; label: string; value: string | number; href?: string;
+}) {
+  const inner = (
+    <div className="flex items-center gap-2 px-3 py-2 bg-white rounded-xl border border-slate-200 shadow-card hover:border-primary/20 transition-colors">
+      <span className="text-slate-400">{icon}</span>
+      <span className="text-xs text-slate-500">{label}</span>
+      <span className="text-xs font-bold text-slate-800 ml-auto">{value}</span>
+    </div>
+  );
+  return href ? <Link href={href}>{inner}</Link> : inner;
+}
+
+// ─── Dashboard content ────────────────────────────────────────────────────────
+
 async function AdminDashboardContent({
-  capabilities,
-  isAdmin,
+  capabilities, isAdmin,
 }: {
   capabilities: string[];
   isAdmin: boolean;
@@ -74,43 +175,56 @@ async function AdminDashboardContent({
   const can = (cap: string) => isAdmin || capabilities.includes(cap);
   const stats = await getAdminStats();
 
-  const chartData = Object.entries(stats.jobsByStatus).map(([status, count]) => ({
+  const jobsChartData = Object.entries(stats.jobsByStatus).map(([status, count]) => ({
     status: status.replace("_", " "),
     count,
   }));
 
   const kpis = [
     can("view_revenue") && (
-      <KpiCard key="gmv" title="Total GMV" value={formatCurrency(stats.totalGMV)} subtitle="Gross marketplace volume"
+      <KpiCard key="gmv" title="Total GMV" value={formatCurrency(stats.totalGMV)}
+        subtitle="Gross marketplace volume"
         icon={<CircleDollarSign className="h-6 w-6" />}
       />
     ),
     can("view_revenue") && (
-      <KpiCard key="commission" title="Commission" value={formatCurrency(stats.totalCommission)} subtitle="Platform revenue"
+      <KpiCard key="commission" title="Commission" value={formatCurrency(stats.totalCommission)}
+        subtitle="Platform revenue"
         icon={<BarChart3 className="h-6 w-6" />}
       />
     ),
     can("view_revenue") && (
-      <KpiCard key="escrow" title="Escrow Balance" value={formatCurrency(stats.escrowBalance)} subtitle="Currently locked"
+      <KpiCard key="escrow" title="Escrow Balance" value={formatCurrency(stats.escrowBalance)}
+        subtitle="Currently locked"
         icon={<Lock className="h-6 w-6" />}
       />
     ),
     can("manage_disputes") && (
-      <KpiCard key="disputes" title="Open Disputes" value={stats.openDisputes} subtitle={`${stats.activeJobs} active jobs`}
+      <KpiCard key="disputes" title="Open Disputes" value={stats.openDisputes}
+        subtitle={`${stats.activeJobs} active jobs`}
         icon={<AlertTriangle className="h-6 w-6" />}
       />
     ),
   ].filter(Boolean);
 
   const showBanners =
-    (can("manage_jobs") && stats.pendingJobs > 0) ||
-    (can("manage_disputes") && stats.openDisputes > 0);
+    (can("manage_jobs")     && stats.pendingJobs   > 0) ||
+    (can("manage_disputes") && stats.openDisputes  > 0) ||
+    (can("manage_kyc")      && stats.pendingKyc    > 0);
 
   return (
     <>
-      {/* Attention banners */}
+      {/* ── Stat pills row ──────────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <StatPill icon={<Users className="h-3.5 w-3.5" />}      label="Total users"       value={stats.totalUsers.toLocaleString()}         href="/admin/users" />
+        <StatPill icon={<Briefcase className="h-3.5 w-3.5" />}  label="Active jobs"       value={stats.activeJobs.toLocaleString()} />
+        <StatPill icon={<TrendingUp className="h-3.5 w-3.5" />} label="New users/month"   value={stats.newUsersThisMonth.toLocaleString()} />
+        <StatPill icon={<Activity className="h-3.5 w-3.5" />}   label="Activity today"    value={stats.activityCounts.today.toLocaleString()} />
+      </div>
+
+      {/* ── Attention banners ──────────────────────────────────────────── */}
       {showBanners && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {can("manage_jobs") && stats.pendingJobs > 0 && (
             <Link href="/admin/jobs" className="group bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-center justify-between hover:bg-amber-100 transition-colors">
               <div className="flex items-center gap-3">
@@ -139,65 +253,110 @@ async function AdminDashboardContent({
               <span className="text-red-600 text-sm font-medium group-hover:underline">Resolve →</span>
             </Link>
           )}
+          {can("manage_kyc") && stats.pendingKyc > 0 && (
+            <Link href="/admin/kyc" className="group bg-indigo-50 border border-indigo-200 rounded-xl p-4 flex items-center justify-between hover:bg-indigo-100 transition-colors">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-indigo-200 flex items-center justify-center flex-shrink-0">
+                  <ShieldCheck className="h-5 w-5 text-indigo-700" />
+                </div>
+                <div>
+                  <p className="font-semibold text-indigo-800 text-sm">{stats.pendingKyc} KYC submission{stats.pendingKyc !== 1 ? "s" : ""} pending</p>
+                  <p className="text-indigo-600 text-xs mt-0.5">Identity verification queue</p>
+                </div>
+              </div>
+              <span className="text-indigo-600 text-sm font-medium group-hover:underline">Review →</span>
+            </Link>
+          )}
         </div>
       )}
 
-      {/* KPI Grid — only rendered if at least one card is visible */}
+      {/* ── KPI cards ─────────────────────────────────────────────────────── */}
       {kpis.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {kpis}
         </div>
       )}
 
-      {/* Chart + quick stats */}
+      {/* ── Charts + quick actions ───────────────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+
+        {/* Chart panel */}
         {can("manage_jobs") && (
-          <div className="lg:col-span-2 bg-white rounded-xl border border-slate-200 shadow-card p-6">
-            <h3 className="font-semibold text-slate-900 mb-4">Jobs by Status</h3>
-            <AdminJobsChart data={chartData} />
+          <div className="lg:col-span-2 bg-white rounded-xl border border-slate-200 shadow-card p-5">
+            {/* Tab toggle */}
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold text-slate-900 text-sm">Platform Insights</h3>
+            </div>
+            <div className="space-y-5">
+              <div>
+                <p className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-2">Jobs by Status</p>
+                <AdminJobsChart data={jobsChartData} />
+              </div>
+              {can("view_revenue") && stats.revenueChartData.length > 0 && (
+                <div>
+                  <p className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-2">Revenue Trend — last 6 months</p>
+                  <AdminRevenueChart data={stats.revenueChartData} />
+                </div>
+              )}
+            </div>
           </div>
         )}
-        <div className={`space-y-4 ${!can("manage_jobs") ? "lg:col-span-3 grid grid-cols-1 sm:grid-cols-3 gap-4 !space-y-0" : ""}`}>
-          {can("manage_users") && (
-            <Link href="/admin/users" className="block bg-white rounded-xl border border-slate-200 shadow-card p-5 hover:border-primary/30 hover:shadow-card-hover transition-all">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-violet-100 flex items-center justify-center">
+
+        {/* Right column: counters + quick actions */}
+        <div className="space-y-3">
+          {/* Counters */}
+          <div className="grid grid-cols-3 gap-2">
+            {can("manage_users") && (
+              <Link
+                href="/admin/users"
+                className="col-span-3 flex items-center gap-3 bg-white rounded-xl border border-slate-200 shadow-card p-4 hover:border-primary/30 hover:shadow-card-hover transition-all"
+              >
+                <div className="w-9 h-9 rounded-xl bg-violet-100 flex items-center justify-center">
                   <Users className="h-5 w-5 text-violet-600" />
                 </div>
-                <div>
-                  <p className="text-2xl font-bold text-slate-900">{stats.totalUsers}</p>
+                <div className="flex-1">
+                  <p className="text-xl font-bold text-slate-900">{stats.totalUsers.toLocaleString()}</p>
                   <p className="text-xs text-slate-500">Total users</p>
                 </div>
-              </div>
-            </Link>
-          )}
-          <div className="bg-white rounded-xl border border-slate-200 shadow-card p-5">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
-                <BarChart3 className="h-5 w-5 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-slate-900">{stats.activeJobs}</p>
-                <p className="text-xs text-slate-500">Active jobs</p>
-              </div>
+                <div className="text-right">
+                  <p className="text-xs font-semibold text-green-600">+{stats.newUsersThisMonth} this month</p>
+                </div>
+              </Link>
+            )}
+            <div className="bg-white rounded-xl border border-slate-200 shadow-card p-3 text-center">
+              <p className="text-xl font-bold text-slate-900">{stats.activeJobs}</p>
+              <p className="text-[11px] text-slate-500 mt-0.5">Active</p>
+            </div>
+            <div className="bg-white rounded-xl border border-slate-200 shadow-card p-3 text-center">
+              <p className="text-xl font-bold text-slate-900">{stats.jobsByStatus.completed ?? 0}</p>
+              <p className="text-[11px] text-slate-500 mt-0.5">Completed</p>
+            </div>
+            <div className="bg-white rounded-xl border border-slate-200 shadow-card p-3 text-center">
+              <p className="text-xl font-bold text-slate-900">{stats.activityCounts.week}</p>
+              <p className="text-[11px] text-slate-500 mt-0.5">Events/wk</p>
             </div>
           </div>
-          <div className="bg-white rounded-xl border border-slate-200 shadow-card p-5">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-green-100 flex items-center justify-center">
-                <Lock className="h-5 w-5 text-green-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-slate-900">{stats.jobsByStatus.completed ?? 0}</p>
-                <p className="text-xs text-slate-500">Completed jobs</p>
-              </div>
-            </div>
+
+          {/* Quick navigation */}
+          <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-1 pt-1">Quick access</p>
+          <div className="space-y-1.5">
+            {can("manage_jobs")     && <QuickAction href="/admin/all-jobs"  icon={<Briefcase className="h-4 w-4" />}  label="All Jobs"         count={stats.pendingJobs} countColor="amber" />}
+            {can("manage_users")    && <QuickAction href="/admin/users"     icon={<Users className="h-4 w-4" />}      label="Users" />}
+            {can("manage_disputes") && <QuickAction href="/admin/disputes"  icon={<ShieldAlert className="h-4 w-4" />} label="Disputes"        count={stats.openDisputes} countColor="red" />}
+            {can("manage_kyc")      && <QuickAction href="/admin/kyc"       icon={<ShieldCheck className="h-4 w-4" />} label="KYC Review"       count={stats.pendingKyc} countColor="indigo" />}
+            {can("view_revenue")    && <QuickAction href="/admin/revenue"   icon={<TrendingUp className="h-4 w-4" />}  label="Revenue" />}
+            {can("manage_payouts")  && <QuickAction href="/admin/payouts"   icon={<CreditCard className="h-4 w-4" />}  label="Payouts" />}
+            {(isAdmin || can("view_logs")) && <QuickAction href="/admin/activity"  icon={<Activity className="h-4 w-4" />}  label="Activity Log" />}
+            {isAdmin                && <QuickAction href="/admin/fraud"     icon={<Flag className="h-4 w-4" />}        label="Fraud Monitor" />}
+            {isAdmin                && <QuickAction href="/admin/announcements" icon={<FileText className="h-4 w-4" />} label="Announcements" />}
           </div>
         </div>
       </div>
     </>
   );
 }
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default async function AdminDashboardPage() {
   const user = await getCurrentUser();
@@ -207,15 +366,15 @@ export default async function AdminDashboardPage() {
   const isAdmin = user.role === "admin";
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <PageGuide
         pageKey="admin-dashboard"
         title="How the Admin Dashboard works"
         steps={[
-          { icon: "📊", title: "Platform KPIs", description: "Monitor real-time GMV, commission earned, escrow balance, and total active users at a glance." },
-          { icon: "⚠️", title: "Action alerts", description: "Pending validations and open disputes are highlighted at the top — address these first." },
-          { icon: "📈", title: "Job pipeline", description: "The chart shows job volume by status so you can spot bottlenecks in the marketplace." },
-          { icon: "🔗", title: "Quick navigation", description: "Jump to Users, Jobs, Disputes, Revenue, Payouts, or KYC directly from this overview." },
+          { icon: "📊", title: "Platform KPIs",    description: "Monitor real-time GMV, commission earned, escrow balance, and total active users at a glance." },
+          { icon: "⚠️", title: "Action alerts",    description: "Pending validations, open disputes, and KYC submissions needing review are highlighted at the top." },
+          { icon: "📈", title: "Job & revenue",    description: "The charts show job volume by status and monthly revenue trend so you can spot bottlenecks and growth." },
+          { icon: "🔗", title: "Quick navigation", description: "Jump to Users, Jobs, Disputes, Revenue, Payouts, KYC, or Fraud directly from the right-side panel." },
         ]}
       />
       <div>

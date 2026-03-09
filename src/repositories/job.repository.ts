@@ -4,9 +4,19 @@ import type { JobDocument } from "@/models/Job";
 import type { JobStatus, EscrowStatus } from "@/types";
 import { BaseRepository } from "./base.repository";
 
+export type JobSortOption = "newest" | "oldest" | "budget_desc" | "budget_asc";
+
+const SORT_MAP: Record<JobSortOption, Record<string, 1 | -1>> = {
+  newest:      { createdAt: -1 },
+  oldest:      { createdAt:  1 },
+  budget_desc: { budget: -1 },
+  budget_asc:  { budget:  1 },
+};
+
 export interface JobPaginationOptions {
   page?: number;
   limit?: number;
+  sort?: JobSortOption;
 }
 
 export interface PaginatedJobs {
@@ -24,14 +34,14 @@ export class JobRepository extends BaseRepository<JobDocument> {
 
   async findPaginated(
     filter: FilterQuery<JobDocument>,
-    { page = 1, limit = 20 }: JobPaginationOptions = {}
+    { page = 1, limit = 20, sort = "newest" }: JobPaginationOptions = {}
   ): Promise<PaginatedJobs> {
     await this.connect();
     const skip = (page - 1) * limit;
 
     const [data, total] = await Promise.all([
       Job.find(filter)
-        .sort({ createdAt: -1 })
+        .sort(SORT_MAP[sort])
         .skip(skip)
         .limit(limit)
         .populate("clientId", "name email")

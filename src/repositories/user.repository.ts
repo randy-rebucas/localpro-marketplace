@@ -2,6 +2,15 @@ import User from "@/models/User";
 import type { UserDocument, PushSubscriptionRecord } from "@/models/User";
 import { BaseRepository } from "./base.repository";
 
+export type UserSortOption = "newest" | "oldest" | "name_asc" | "name_desc";
+
+const USER_SORT_MAP: Record<UserSortOption, Record<string, 1 | -1>> = {
+  newest:    { createdAt: -1 },
+  oldest:    { createdAt:  1 },
+  name_asc:  { name:       1 },
+  name_desc: { name:      -1 },
+};
+
 export class UserRepository extends BaseRepository<UserDocument> {
   constructor() {
     super(User);
@@ -57,7 +66,8 @@ export class UserRepository extends BaseRepository<UserDocument> {
   async findPaginated(
     filter: Record<string, unknown> = {},
     page: number,
-    limit: number
+    limit: number,
+    sort: UserSortOption = "newest"
   ): Promise<{ users: UserDocument[]; total: number }> {
     await this.connect();
     // Always exclude soft-deleted users from paginated admin listing
@@ -65,13 +75,36 @@ export class UserRepository extends BaseRepository<UserDocument> {
     const [users, total] = await Promise.all([
       User.find(safeFilter)
         .select("-password")
-        .sort({ createdAt: -1 })
+        .sort(USER_SORT_MAP[sort])
         .skip((page - 1) * limit)
         .limit(limit)
         .lean() as unknown as Promise<UserDocument[]>,
       User.countDocuments(safeFilter),
     ]);
     return { users, total };
+  }
+
+  /** Aggregate counts useful for admin dashboards/banners.
+   * @param since  Optional date — when supplied, also returns `newUsersThisMonth`
+   *               (count of users created on or after this date).
+   */
+  async getUserStats(since?: Date): Promise<{
+    suspended: number;
+    pendingProviders: number;
+    pendingKyc: number;
+    newUsersSince: number;
+    totalUsers: number;
+  }> {
+    await this.connect();
+    const base = { isDeleted: { $ne: true } };
+    const [suspended, pendingProviders, pendingKyc, newUsersSince, totalUsers] = await Promise.all([
+      User.countDocuments({ ...base, isSuspended: true }),
+      User.countDocuments({ ...base, role: "provider", approvalStatus: "pending_approval" }),
+      User.countDocuments({ ...base, kycStatus: "pending" }),
+      since ? User.countDocuments({ ...base, createdAt: { $gte: since } }) : Promise.resolve(0),
+      User.countDocuments(base),
+    ]);
+    return { suspended, pendingProviders, pendingKyc, newUsersSince, totalUsers };
   }
 
   async updateUser(

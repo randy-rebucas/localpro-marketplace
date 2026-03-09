@@ -12,40 +12,50 @@ import CreateUserModal from "./CreateUserModal";
 import ImportUsersModal from "./ImportUsersModal";
 import BulkMessageModal from "./BulkMessageModal";
 import type { IUser } from "@/types";
-import { CheckCircle2, XCircle, Clock, UserPlus, Upload, Download, Search, X, ShieldCheck, Ban, Trash2, CheckCheck, MessageSquare } from "lucide-react";
+import type { UserSortOption } from "@/repositories/user.repository";
+import {
+  CheckCircle2, XCircle, Clock, UserPlus, Upload, Download, Search, X,
+  ShieldCheck, Ban, Trash2, CheckCheck, MessageSquare, ArrowUpDown,
+  AlertTriangle, ShieldAlert, Users, UserX,
+} from "lucide-react";
 
 type FilterRole = "all" | "client" | "provider" | "admin";
+type KycFilter  = "all" | "none" | "pending" | "approved" | "rejected";
+
+interface UserStats {
+  suspended: number;
+  pendingProviders: number;
+  pendingKyc: number;
+}
 
 interface Props {
   users: IUser[];
   total: number;
   page: number;
   totalPages: number;
+  limit: number;
+  sort: UserSortOption;
   /** Active role filter, derived from the URL by the server component. */
   roleFilter: FilterRole;
+  kycFilter: KycFilter;
   /** Active keyword search, derived from the URL by the server component. */
   searchQuery: string;
+  userStats: UserStats;
 }
 
 // ─── Completeness helpers ─────────────────────────────────────────────────────
 
 interface CompletenessItem { label: string; done: boolean }
 
-function getCompleteness(u: IUser): { items: CompletenessItem[]; score: number; pct: number } {
-  // Base items available on IUser for both roles — mirrors the profile checklists.
-  // Provider-specific fields (bio, skills, hourly rate, service areas, schedule)
-  // live on IProviderProfile and are not available here.
-  const base: CompletenessItem[] = [
+function getCompleteness(u: IUser): { items: CompletenessItem[]; pct: number } {
+  const items: CompletenessItem[] = [
     { label: "Profile photo",  done: !!u.avatar },
     { label: "KYC submitted",  done: !!u.kycStatus && u.kycStatus !== "none" },
     { label: "KYC approved",   done: u.kycStatus === "approved" },
     { label: "Phone number",   done: !!u.phone },
     { label: "Address saved",  done: (u.addresses?.length ?? 0) > 0 },
   ];
-
-  const items = base;
-  const score = items.filter((i) => i.done).length;
-  return { items, score, pct: Math.round((score / items.length) * 100) };
+  return { items, pct: Math.round((items.filter((i) => i.done).length / items.length) * 100) };
 }
 
 function completenessColor(pct: number) {
@@ -58,21 +68,14 @@ function completenessColor(pct: number) {
 function CompletenessCell({ u }: { u: IUser }) {
   const { items, pct } = getCompleteness(u);
   const c = completenessColor(pct);
-
   return (
     <div className="group relative">
-      {/* Bar + score */}
       <div className="flex items-center gap-2">
         <div className="h-1.5 w-24 rounded-full bg-slate-100 overflow-hidden">
-          <div
-            className={`h-full rounded-full transition-all ${c.bar}`}
-            style={{ width: `${pct}%` }}
-          />
+          <div className={`h-full rounded-full transition-all ${c.bar}`} style={{ width: `${pct}%` }} />
         </div>
         <span className={`text-xs font-semibold tabular-nums ${c.text}`}>{pct}%</span>
       </div>
-
-      {/* Hover tooltip */}
       <div className={`pointer-events-none absolute left-0 top-6 z-20 hidden group-hover:flex flex-col gap-1 min-w-[180px] rounded-xl border border-slate-200 ${c.bg} px-3 py-2.5 shadow-lg`}>
         {items.map((item) => (
           <div key={item.label} className="flex items-center gap-1.5 text-xs">
@@ -99,51 +102,89 @@ const APPROVAL_COLOR: Record<string, string> = {
   rejected:         "bg-red-100 text-red-700",
 };
 
-export default function AdminUsersList({ users, total, page, totalPages, roleFilter, searchQuery }: Props) {
-  const router = useRouter();
+const SORT_LABELS: Record<UserSortOption, string> = {
+  newest:    "Newest first",
+  oldest:    "Oldest first",
+  name_asc:  "Name A → Z",
+  name_desc: "Name Z → A",
+};
+
+// ─── Numbered pagination helper ───────────────────────────────────────────────
+
+function pageNumbers(current: number, total: number): (number | "...")[] {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+  const pages: (number | "...")[] = [1];
+  if (current > 3) pages.push("...");
+  for (let p = Math.max(2, current - 1); p <= Math.min(total - 1, current + 1); p++) pages.push(p);
+  if (current < total - 2) pages.push("...");
+  pages.push(total);
+  return pages;
+}
+
+export default function AdminUsersList({
+  users, total, page, totalPages, limit, sort,
+  roleFilter, kycFilter, searchQuery, userStats,
+}: Props) {
+  const router   = useRouter();
   const pathname = usePathname();
 
-  const [showCreate, setShowCreate] = useState(false);
-  const [showImport, setShowImport] = useState(false);
+  const [showCreate,      setShowCreate]      = useState(false);
+  const [showImport,      setShowImport]      = useState(false);
   const [showBulkMessage, setShowBulkMessage] = useState(false);
 
   // ── Search ─────────────────────────────────────────────────────────────
   const [searchDraft, setSearchDraft] = useState(searchQuery);
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  /** Build a URL preserving all active filters, overriding any supplied overrides. */
+  const buildUrl = useCallback(
+    (overrides: Record<string, string | number | null>) => {
+      const p = new URLSearchParams();
+      const get = (key: string, fallback: string) =>
+        key in overrides ? String(overrides[key] ?? "") : fallback;
+
+      const r   = get("role",   roleFilter  !== "all" ? roleFilter  : "");
+      const kyc = get("kyc",    kycFilter   !== "all" ? kycFilter   : "");
+      const s   = get("search", searchDraft.trim());
+      const srt = get("sort",   sort        !== "newest" ? sort     : "");
+      const lim = get("limit",  limit       !== 50   ? String(limit) : "");
+      const pg  = get("page",   "1");
+
+      if (r)   p.set("role",   r);
+      if (kyc) p.set("kyc",    kyc);
+      if (s)   p.set("search", s);
+      if (srt) p.set("sort",   srt);
+      if (lim) p.set("limit",  lim);
+      if (pg !== "1") p.set("page", pg);
+      return `${pathname}?${p.toString()}`;
+    },
+    [pathname, roleFilter, kycFilter, sort, limit, searchDraft]
+  );
+
   const pushSearch = useCallback((val: string) => {
     if (searchTimer.current) clearTimeout(searchTimer.current);
     searchTimer.current = setTimeout(() => {
-      const params = new URLSearchParams();
-      if (roleFilter !== "all") params.set("role", roleFilter);
-      if (val.trim()) params.set("search", val.trim());
-      params.set("page", "1");
-      router.push(`${pathname}?${params.toString()}`);
+      router.push(buildUrl({ search: val.trim() || null, page: "1" }));
     }, 350);
-  }, [pathname, roleFilter, router]);
+  }, [buildUrl, router]);
 
   function handleSearchChange(e: React.ChangeEvent<HTMLInputElement>) {
     setSearchDraft(e.target.value);
     pushSearch(e.target.value);
   }
-
-  function clearSearch() {
-    setSearchDraft("");
-    pushSearch("");
-  }
+  function clearSearch() { setSearchDraft(""); pushSearch(""); }
 
   // ── Bulk selection ─────────────────────────────────────────────────────
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkLoading, setBulkLoading] = useState<"verify" | "suspend" | "delete" | "approve" | null>(null);
 
-  const allSelected = users.length > 0 && selectedIds.size === users.length;
+  const allSelected  = users.length > 0 && selectedIds.size === users.length;
   const someSelected = selectedIds.size > 0;
 
   function toggleAll() {
     if (allSelected) setSelectedIds(new Set());
     else setSelectedIds(new Set(users.map((u) => u._id.toString())));
   }
-
   function toggleOne(id: string) {
     setSelectedIds((prev) => {
       const next = new Set(prev);
@@ -154,10 +195,7 @@ export default function AdminUsersList({ users, total, page, totalPages, roleFil
 
   async function bulkAction(action: "verify" | "suspend" | "delete" | "approve") {
     if (selectedIds.size === 0) return;
-    if (action === "delete") {
-      const ok = confirm(`Soft-delete ${selectedIds.size} user(s)? They will be deactivated.`);
-      if (!ok) return;
-    }
+    if (action === "delete" && !confirm(`Soft-delete ${selectedIds.size} user(s)? They will be deactivated.`)) return;
     setBulkLoading(action);
     try {
       const res = await apiFetch("/api/admin/users/bulk", {
@@ -177,48 +215,96 @@ export default function AdminUsersList({ users, total, page, totalPages, roleFil
     }
   }
 
-  // Server already filtered by role — no client-side re-filter needed.
-  // useMemo prevents recomputing on unrelated re-renders.
   const pendingCount = useMemo(
     () => users.filter((u) => u.role === "provider" && u.approvalStatus === "pending_approval").length,
     [users]
   );
 
-  const TABS: { label: string; value: FilterRole }[] = [
+  const ROLE_TABS: { label: string; value: FilterRole }[] = [
     { label: "All",       value: "all"      },
     { label: "Clients",   value: "client"   },
     { label: "Providers", value: "provider" },
     { label: "Admins",    value: "admin"    },
   ];
 
-  /** Navigate to a new role filter, resetting to page 1. */
-  function handleRoleChange(role: FilterRole) {
-    const params = new URLSearchParams();
-    if (role !== "all") params.set("role", role);
-    if (searchDraft.trim()) params.set("search", searchDraft.trim());
-    params.set("page", "1");
-    router.push(`${pathname}?${params.toString()}`);
-  }
+  const KYC_TABS: { label: string; value: KycFilter }[] = [
+    { label: "All KYC",  value: "all"      },
+    { label: "Pending",  value: "pending"  },
+    { label: "Approved", value: "approved" },
+    { label: "Rejected", value: "rejected" },
+    { label: "None",     value: "none"     },
+  ];
 
-  /** Build a pagination URL that preserves the current role filter and search. */
-  function pageUrl(p: number) {
-    const params = new URLSearchParams();
-    if (roleFilter !== "all") params.set("role", roleFilter);
-    if (searchDraft.trim()) params.set("search", searchDraft.trim());
-    params.set("page", String(p));
-    return `${pathname}?${params.toString()}`;
-  }
+  const pagination = pageNumbers(page, totalPages);
 
   return (
     <div className="space-y-4">
-      {/* Toolbar: role tabs + action buttons */}
+
+      {/* ── Stat pills ─────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <button
+          onClick={() => router.push(buildUrl({ role: null, kyc: null, search: null, page: "1" }))}
+          className="flex items-center gap-2.5 px-3 py-2 bg-white rounded-xl border border-slate-200 shadow-card hover:border-primary/20 transition-colors text-left"
+        >
+          <Users className="h-4 w-4 text-slate-400 flex-shrink-0" />
+          <div>
+            <p className="text-sm font-bold text-slate-900">{total.toLocaleString()}</p>
+            <p className="text-[11px] text-slate-500">In filter</p>
+          </div>
+        </button>
+        <button
+          onClick={() => router.push(buildUrl({ role: null, kyc: null, search: null, page: "1",
+            ...(roleFilter !== "provider" ? { role: "provider" } : {}) }))}
+          className={`flex items-center gap-2.5 px-3 py-2 bg-white rounded-xl border shadow-card hover:border-amber-200 transition-colors text-left ${
+            userStats.pendingProviders > 0 ? "border-amber-200 bg-amber-50" : "border-slate-200"
+          }`}
+        >
+          <AlertTriangle className={`h-4 w-4 flex-shrink-0 ${userStats.pendingProviders > 0 ? "text-amber-500" : "text-slate-300"}`} />
+          <div>
+            <p className={`text-sm font-bold ${userStats.pendingProviders > 0 ? "text-amber-700" : "text-slate-900"}`}>
+              {userStats.pendingProviders}
+            </p>
+            <p className="text-[11px] text-slate-500">Pending approval</p>
+          </div>
+        </button>
+        <button
+          onClick={() => router.push(buildUrl({ kyc: "pending", page: "1" }))}
+          className={`flex items-center gap-2.5 px-3 py-2 bg-white rounded-xl border shadow-card hover:border-indigo-200 transition-colors text-left ${
+            userStats.pendingKyc > 0 ? "border-indigo-200 bg-indigo-50" : "border-slate-200"
+          }`}
+        >
+          <ShieldCheck className={`h-4 w-4 flex-shrink-0 ${userStats.pendingKyc > 0 ? "text-indigo-500" : "text-slate-300"}`} />
+          <div>
+            <p className={`text-sm font-bold ${userStats.pendingKyc > 0 ? "text-indigo-700" : "text-slate-900"}`}>
+              {userStats.pendingKyc}
+            </p>
+            <p className="text-[11px] text-slate-500">KYC pending</p>
+          </div>
+        </button>
+        <button
+          onClick={() => router.push(buildUrl({ role: null, kyc: null, search: null, page: "1" }))}
+          className={`flex items-center gap-2.5 px-3 py-2 bg-white rounded-xl border shadow-card hover:border-red-200 transition-colors text-left ${
+            userStats.suspended > 0 ? "border-red-200 bg-red-50" : "border-slate-200"
+          }`}
+        >
+          <UserX className={`h-4 w-4 flex-shrink-0 ${userStats.suspended > 0 ? "text-red-500" : "text-slate-300"}`} />
+          <div>
+            <p className={`text-sm font-bold ${userStats.suspended > 0 ? "text-red-700" : "text-slate-900"}`}>
+              {userStats.suspended}
+            </p>
+            <p className="text-[11px] text-slate-500">Suspended</p>
+          </div>
+        </button>
+      </div>
+
+      {/* ── Toolbar ────────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
         {/* Role filter tabs */}
         <div className="flex gap-1 bg-slate-100 p-1 rounded-xl w-fit">
-          {TABS.map((tab) => (
+          {ROLE_TABS.map((tab) => (
             <button
               key={tab.value}
-              onClick={() => handleRoleChange(tab.value)}
+              onClick={() => router.push(buildUrl({ role: tab.value !== "all" ? tab.value : null, page: "1" }))}
               className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                 roleFilter === tab.value
                   ? "bg-white text-slate-900 shadow-sm"
@@ -235,7 +321,7 @@ export default function AdminUsersList({ users, total, page, totalPages, roleFil
           ))}
         </div>
 
-        {/* Search + action buttons */}
+        {/* Search + sort + action buttons */}
         <div className="flex items-center gap-2 flex-wrap">
           <div className="relative">
             <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
@@ -252,112 +338,128 @@ export default function AdminUsersList({ users, total, page, totalPages, roleFil
               </button>
             )}
           </div>
+
+          {/* Sort */}
+          <div className="relative">
+            <ArrowUpDown size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+            <select
+              value={sort}
+              onChange={(e) => router.push(buildUrl({ sort: e.target.value, page: "1" }))}
+              className="pl-7 pr-6 py-1.5 rounded-lg border border-slate-200 text-xs bg-white appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/30"
+            >
+              {(Object.keys(SORT_LABELS) as UserSortOption[]).map((k) => (
+                <option key={k} value={k}>{SORT_LABELS[k]}</option>
+              ))}
+            </select>
+          </div>
+
           <a
             href={`/api/admin/users/export?${new URLSearchParams([
               ...(roleFilter !== "all" ? [["role", roleFilter]] : []),
-              ...(searchDraft.trim() ? [["search", searchDraft.trim()]] : []),
+              ...(searchDraft.trim()  ? [["search", searchDraft.trim()]] : []),
             ]).toString()}`}
             download
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition-colors"
             title={`Export ${roleFilter === "all" ? "all" : roleFilter} users as CSV`}
           >
-            <Download className="h-3.5 w-3.5" />
-            Export CSV
+            <Download className="h-3.5 w-3.5" />Export CSV
           </a>
-          <button
-            type="button"
-            onClick={() => setShowImport(true)}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition-colors"
-          >
-            <Upload className="h-3.5 w-3.5" />
-            Import CSV
+          <button type="button" onClick={() => setShowImport(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition-colors">
+            <Upload className="h-3.5 w-3.5" />Import CSV
           </button>
-          <button
-            type="button"
-            onClick={() => setShowCreate(true)}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-white text-xs font-medium hover:bg-primary/90 transition-colors"
-          >
-            <UserPlus className="h-3.5 w-3.5" />
-            Create user
+          <button type="button" onClick={() => setShowCreate(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-white text-xs font-medium hover:bg-primary/90 transition-colors">
+            <UserPlus className="h-3.5 w-3.5" />Create user
           </button>
         </div>
       </div>
 
-      {/* Pending approval banner */}
+      {/* ── KYC filter tabs ───────────────────────────────────────────── */}
+      <div className="flex items-center gap-1.5 flex-wrap">
+        <ShieldAlert className="h-3.5 w-3.5 text-slate-400" />
+        {KYC_TABS.map((tab) => (
+          <button
+            key={tab.value}
+            onClick={() => router.push(buildUrl({ kyc: tab.value !== "all" ? tab.value : null, page: "1" }))}
+            className={`px-3 py-1 rounded-full text-xs font-medium border transition-all ${
+              kycFilter === tab.value
+                ? "bg-primary text-white border-primary"
+                : "bg-white border-slate-200 text-slate-500 hover:border-slate-300"
+            }`}
+          >
+            {tab.label}
+            {tab.value === "pending" && userStats.pendingKyc > 0 && (
+              <span className="ml-1 text-[10px] font-bold">
+                ({userStats.pendingKyc})
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {/* ── Pending approval banner ────────────────────────────────────── */}
       {pendingCount > 0 && (
-        <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-center gap-2 text-amber-800 text-sm">
-          <span className="font-semibold">{pendingCount}</span> provider{pendingCount !== 1 ? "s" : ""} awaiting approval — scroll down to review.
+        <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-center justify-between gap-2 text-amber-800 text-sm">
+          <span>
+            <span className="font-semibold">{pendingCount}</span> provider{pendingCount !== 1 ? "s" : ""} on this page awaiting approval.
+          </span>
+          <button
+            onClick={() => router.push(buildUrl({ role: "provider", page: "1" }))}
+            className="text-xs font-medium text-amber-700 hover:underline flex-shrink-0"
+          >
+            Show only pending →
+          </button>
         </div>
       )}
 
-      {/* Bulk action toolbar */}
+      {/* ── Bulk action toolbar ────────────────────────────────────────── */}
       {someSelected && (
         <div className="flex items-center gap-3 bg-primary/5 border border-primary/20 rounded-xl px-4 py-2.5">
           <span className="text-primary text-sm font-semibold">{selectedIds.size} selected</span>
-          <div className="flex gap-2 ml-auto">
-            <button
-              onClick={() => setShowBulkMessage(true)}
-              disabled={!!bulkLoading}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium transition-colors disabled:opacity-50"
-            >
-              <MessageSquare size={12} />
-              Message all
+          <div className="flex gap-2 ml-auto flex-wrap">
+            <button onClick={() => setShowBulkMessage(true)} disabled={!!bulkLoading}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium transition-colors disabled:opacity-50">
+              <MessageSquare size={12} />Message all
             </button>
-            <button
-              onClick={() => bulkAction("approve")}
-              disabled={!!bulkLoading}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium transition-colors disabled:opacity-50"
-            >
+            <button onClick={() => bulkAction("approve")} disabled={!!bulkLoading}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium transition-colors disabled:opacity-50">
               {bulkLoading === "approve" ? <span className="h-3 w-3 rounded-full border-2 border-white border-t-transparent animate-spin" /> : <CheckCheck size={12} />}
               Approve all
             </button>
-            <button
-              onClick={() => bulkAction("verify")}
-              disabled={!!bulkLoading}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium transition-colors disabled:opacity-50"
-            >
+            <button onClick={() => bulkAction("verify")} disabled={!!bulkLoading}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium transition-colors disabled:opacity-50">
               {bulkLoading === "verify" ? <span className="h-3 w-3 rounded-full border-2 border-white border-t-transparent animate-spin" /> : <ShieldCheck size={12} />}
               Verify all
             </button>
-            <button
-              onClick={() => bulkAction("suspend")}
-              disabled={!!bulkLoading}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-xs font-medium transition-colors disabled:opacity-50"
-            >
+            <button onClick={() => bulkAction("suspend")} disabled={!!bulkLoading}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-xs font-medium transition-colors disabled:opacity-50">
               {bulkLoading === "suspend" ? <span className="h-3 w-3 rounded-full border-2 border-white border-t-transparent animate-spin" /> : <Ban size={12} />}
               Suspend all
             </button>
-            <button
-              onClick={() => bulkAction("delete")}
-              disabled={!!bulkLoading}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-medium transition-colors disabled:opacity-50"
-            >
+            <button onClick={() => bulkAction("delete")} disabled={!!bulkLoading}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-medium transition-colors disabled:opacity-50">
               {bulkLoading === "delete" ? <span className="h-3 w-3 rounded-full border-2 border-white border-t-transparent animate-spin" /> : <Trash2 size={12} />}
               Delete all
             </button>
-            <button
-              onClick={() => setSelectedIds(new Set())}
-              className="px-2.5 py-1.5 rounded-lg text-slate-500 hover:bg-slate-100 text-xs"
-            >
+            <button onClick={() => setSelectedIds(new Set())}
+              className="px-2.5 py-1.5 rounded-lg text-slate-500 hover:bg-slate-100 text-xs">
               Clear
             </button>
           </div>
         </div>
       )}
 
+      {/* ── Table ─────────────────────────────────────────────────────── */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-slate-100 bg-slate-50/50">
                 <th className="px-4 py-3 w-10">
-                  <input
-                    type="checkbox"
-                    checked={allSelected}
-                    onChange={toggleAll}
+                  <input type="checkbox" checked={allSelected} onChange={toggleAll}
                     className="rounded border-slate-300 text-primary focus:ring-primary/30"
-                    aria-label="Select all"
-                  />
+                    aria-label="Select all" />
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-slate-500">User</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-slate-500">Role</th>
@@ -371,36 +473,29 @@ export default function AdminUsersList({ users, total, page, totalPages, roleFil
               {users.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-6 py-10 text-center text-slate-400 text-sm">
-                    No {roleFilter === "all" ? "" : roleFilter} users{searchQuery ? ` matching "${searchQuery}"` : ""} found.
+                    No {roleFilter === "all" ? "" : roleFilter} users
+                    {searchQuery ? ` matching "${searchQuery}"` : ""} found.
                   </td>
                 </tr>
               ) : users.map((u) => {
-                // Guard: filter out empty words before taking first char
-                const initials = u.name
-                  .split(" ").filter(Boolean).map((w: string) => w[0]).join("").slice(0, 2).toUpperCase() || "?";
+                const initials = u.name.split(" ").filter(Boolean).map((w: string) => w[0]).join("").slice(0, 2).toUpperCase() || "?";
                 const approvalStatus = u.approvalStatus ?? "approved";
                 const isPendingProvider = u.role === "provider" && approvalStatus === "pending_approval";
                 const uid = u._id.toString();
                 const isSelected = selectedIds.has(uid);
                 return (
-                  <tr
-                    key={uid}
-                    className={`hover:bg-slate-50/50 transition-colors ${isPendingProvider ? "bg-amber-50/30 border-l-2 border-amber-400" : ""} ${isSelected ? "bg-primary/5" : ""}`}
+                  <tr key={uid}
+                    className={`hover:bg-slate-50/50 transition-colors ${
+                      isPendingProvider ? "bg-amber-50/30 border-l-2 border-amber-400" : ""
+                    } ${isSelected ? "bg-primary/5" : ""}`}
                   >
-                    {/* Checkbox */}
                     <td className="px-4 py-3.5">
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={() => toggleOne(uid)}
+                      <input type="checkbox" checked={isSelected} onChange={() => toggleOne(uid)}
                         className="rounded border-slate-300 text-primary focus:ring-primary/30"
-                        aria-label={`Select ${u.name}`}
-                      />
+                        aria-label={`Select ${u.name}`} />
                     </td>
-                    {/* User */}
                     <td className="px-6 py-3.5">
                       <div className="flex items-center gap-3">
-                        {/* Avatar — photo if available, initials fallback */}
                         <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 overflow-hidden">
                           {u.avatar
                             ? <Image src={u.avatar} alt={u.name} width={32} height={32} className="object-cover w-full h-full" />
@@ -412,15 +507,9 @@ export default function AdminUsersList({ users, total, page, totalPages, roleFil
                         </div>
                       </div>
                     </td>
-
-                    {/* Role */}
                     <td className="px-6 py-3.5">
-                      <span className={`badge capitalize ${ROLE_COLOR[u.role] ?? "bg-slate-100 text-slate-600"}`}>
-                        {u.role}
-                      </span>
+                      <span className={`badge capitalize ${ROLE_COLOR[u.role] ?? "bg-slate-100 text-slate-600"}`}>{u.role}</span>
                     </td>
-
-                    {/* Status — approval + verification + suspension */}
                     <td className="px-6 py-3.5">
                       <div className="flex flex-col gap-1">
                         {u.isSuspended
@@ -440,38 +529,23 @@ export default function AdminUsersList({ users, total, page, totalPages, roleFil
                         }
                       </div>
                     </td>
-
-                    {/* Profile completeness */}
-                    <td className="px-6 py-3.5">
-                      <CompletenessCell u={u} />
-                    </td>
-
-                    {/* Joined */}
+                    <td className="px-6 py-3.5"><CompletenessCell u={u} /></td>
                     <td className="px-6 py-3.5">
                       <div className="flex items-center gap-1 text-xs text-slate-400">
-                        <Clock size={11} className="flex-shrink-0" />
-                        {formatDate(u.createdAt)}
+                        <Clock size={11} className="flex-shrink-0" />{formatDate(u.createdAt)}
                       </div>
                     </td>
-
-                    {/* Actions */}
                     <td className="px-6 py-3.5">
                       <div className="flex flex-wrap items-center gap-1.5">
-                        <Link
-                          href={`/admin/users/${uid}`}
-                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
-                        >
+                        <Link href={`/admin/users/${uid}`}
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors">
                           View
                         </Link>
                         <UserActions
-                          userId={uid}
-                          userName={u.name}
-                          role={u.role}
-                          isVerified={u.isVerified}
-                          isSuspended={u.isSuspended}
+                          userId={uid} userName={u.name} role={u.role}
+                          isVerified={u.isVerified} isSuspended={u.isSuspended}
                           approvalStatus={approvalStatus}
-                          email={u.email}
-                          phone={u.phone ?? undefined}
+                          email={u.email} phone={u.phone ?? undefined}
                         />
                       </div>
                     </td>
@@ -482,19 +556,45 @@ export default function AdminUsersList({ users, total, page, totalPages, roleFil
           </table>
         </div>
 
-        {/* Pagination footer */}
+        {/* ── Pagination footer ─────────────────────────────────────── */}
         {totalPages > 1 && (
-          <div className="px-6 py-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-            <span>Showing page {page} of {totalPages} ({total} total users)</span>
-            <div className="flex gap-2">
+          <div className="px-4 py-3 border-t border-slate-100 flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex items-center gap-2 text-xs text-slate-500">
+              <span>Page {page} of {totalPages} · {total.toLocaleString()} users</span>
+              <span className="text-slate-300">·</span>
+              <span>Per page:</span>
+              {([25, 50, 100] as const).map((l) => (
+                <button key={l}
+                  onClick={() => router.push(buildUrl({ limit: l, page: "1" }))}
+                  className={`px-2 py-0.5 rounded text-xs font-semibold transition-colors ${
+                    limit === l ? "bg-primary text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                  }`}
+                >{l}</button>
+              ))}
+            </div>
+            <div className="flex gap-1 items-center">
               {page > 1 && (
-                <Link href={pageUrl(page - 1)} className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 transition-colors font-medium">
-                  Previous
+                <Link href={buildUrl({ page: page - 1 })}
+                  className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 transition-colors text-xs font-medium">
+                  ← Prev
                 </Link>
               )}
+              {pagination.map((p, i) =>
+                p === "..." ? (
+                  <span key={`ellipsis-${i}`} className="px-1.5 text-slate-400 text-xs">…</span>
+                ) : (
+                  <Link key={p} href={buildUrl({ page: p })}
+                    className={`w-8 h-8 flex items-center justify-center rounded-lg text-xs font-medium transition-colors ${
+                      p === page ? "bg-primary text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                    }`}>
+                    {p}
+                  </Link>
+                )
+              )}
               {page < totalPages && (
-                <Link href={pageUrl(page + 1)} className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 transition-colors font-medium">
-                  Next
+                <Link href={buildUrl({ page: page + 1 })}
+                  className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 transition-colors text-xs font-medium">
+                  Next →
                 </Link>
               )}
             </div>
@@ -502,7 +602,7 @@ export default function AdminUsersList({ users, total, page, totalPages, roleFil
         )}
       </div>
 
-      {/* Modals */}
+      {/* ── Modals ────────────────────────────────────────────────────── */}
       {showBulkMessage && (
         <BulkMessageModal
           selectedIds={[...selectedIds]}
@@ -510,18 +610,8 @@ export default function AdminUsersList({ users, total, page, totalPages, roleFil
           onSuccess={() => { setSelectedIds(new Set()); router.refresh(); }}
         />
       )}
-      {showCreate && (
-        <CreateUserModal
-          onClose={() => setShowCreate(false)}
-          onSuccess={() => router.refresh()}
-        />
-      )}
-      {showImport && (
-        <ImportUsersModal
-          onClose={() => setShowImport(false)}
-          onSuccess={() => router.refresh()}
-        />
-      )}
+      {showCreate && <CreateUserModal onClose={() => setShowCreate(false)} onSuccess={() => router.refresh()} />}
+      {showImport && <ImportUsersModal onClose={() => setShowImport(false)} onSuccess={() => router.refresh()} />}
     </div>
   );
 }

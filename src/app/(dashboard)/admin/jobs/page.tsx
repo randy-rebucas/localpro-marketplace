@@ -1,39 +1,33 @@
 import type { Metadata } from "next";
 import { getCurrentUser } from "@/lib/auth";
 import { jobRepository } from "@/repositories/job.repository";
-import { formatCurrency, formatDate } from "@/lib/utils";
-import AdminJobActions from "./AdminJobActions";
 import RealtimeRefresher from "@/components/shared/RealtimeRefresher";
 import PageGuide from "@/components/shared/PageGuide";
-import { MapPin, Calendar, User, ChevronRight } from "lucide-react";
-import Link from "next/link";
+import AdminJobsClient, { type SerializedJob } from "./AdminJobsClient";
 
 export const metadata: Metadata = { title: "Manage Jobs" };
-
-
-function RiskBadge({ score }: { score: number }) {
-  if (score > 60) return (
-    <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full bg-red-100 text-red-700">
-      <span className="w-1.5 h-1.5 rounded-full bg-red-500 inline-block" />High Risk · {score}
-    </span>
-  );
-  if (score > 30) return (
-    <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-100 text-amber-700">
-      <span className="w-1.5 h-1.5 rounded-full bg-amber-500 inline-block" />Med Risk · {score}
-    </span>
-  );
-  return (
-    <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full bg-green-100 text-green-700">
-      <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block" />Low Risk · {score}
-    </span>
-  );
-}
 
 export default async function AdminJobsPage() {
   const user = await getCurrentUser();
   if (!user || (user.role !== "admin" && user.role !== "staff")) return null;
 
-  const jobs = await jobRepository.findPendingValidation();
+  const raw = await jobRepository.findPendingValidation();
+
+  const jobs: SerializedJob[] = raw.map((j) => ({
+    id:                  String(j._id),
+    title:               j.title,
+    description:         j.description,
+    category:            j.category,
+    location:            j.location,
+    budget:              j.budget,
+    scheduleDate:        j.scheduleDate instanceof Date ? j.scheduleDate.toISOString() : String(j.scheduleDate),
+    riskScore:           j.riskScore,
+    fraudFlags:          j.fraudFlags ?? [],
+    recurringScheduleId: j.recurringScheduleId ?? null,
+    createdAt:           j.createdAt instanceof Date ? j.createdAt.toISOString() : String(j.createdAt),
+    clientName:          j.clientId.name,
+    clientEmail:         j.clientId.email,
+  }));
 
   return (
     <div className="space-y-6">
@@ -41,10 +35,10 @@ export default async function AdminJobsPage() {
         pageKey="admin-jobs"
         title="How Job Validation works"
         steps={[
-          { icon: "📋", title: "Review pending jobs", description: "Clients submit jobs that require admin review before becoming visible to providers in the marketplace." },
-          { icon: "🚨", title: "Check risk score", description: "Each job has an automated risk score (Low/Med/High). High-risk jobs need closer scrutiny." },
-          { icon: "✅", title: "Approve to publish", description: "Approving makes the job live and notifies eligible providers. Review all details before approving." },
-          { icon: "❌", title: "Reject with reason", description: "Rejecting sends the client a notification with your reason so they can correct and resubmit." },
+          { icon: "📋", title: "Review pending jobs",  description: "Clients submit jobs that require admin review before becoming visible to providers in the marketplace." },
+          { icon: "🚨", title: "Check risk score",      description: "Each job has an automated risk score (Low/Med/High). High-risk jobs need closer scrutiny." },
+          { icon: "✅", title: "Approve to publish",    description: "Approving makes the job live and notifies eligible providers. Review all details before approving." },
+          { icon: "❌", title: "Reject with reason",    description: "Rejecting sends the client a notification with your reason so they can correct and resubmit." },
         ]}
       />
       <RealtimeRefresher entity="job" />
@@ -54,70 +48,7 @@ export default async function AdminJobsPage() {
           {jobs.length} job{jobs.length !== 1 ? "s" : ""} pending review
         </p>
       </div>
-
-      {jobs.length === 0 ? (
-        <div className="bg-white rounded-xl border border-slate-200 p-12 text-center text-slate-400 text-sm">
-          No jobs pending validation.
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {jobs.map((job) => (
-            <div key={String(job._id)} className="bg-white rounded-xl border border-slate-200 shadow-card overflow-hidden">
-              {/* Card header with risk color strip */}
-              <div className={`h-1 w-full ${job.riskScore > 60 ? "bg-red-400" : job.riskScore > 30 ? "bg-amber-400" : "bg-green-400"}`} />
-              <div className="p-6">
-                <div className="flex items-start justify-between gap-4 mb-3">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start gap-3">
-                      <div>
-                        <Link
-                          href={`/admin/jobs/${String(job._id)}`}
-                          className="font-semibold text-slate-900 hover:text-primary transition-colors"
-                        >
-                          {job.title}
-                        </Link>
-                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5 text-xs text-slate-400">
-                          <span className="inline-block bg-slate-100 text-slate-600 rounded px-2 py-0.5 font-medium">{job.category}</span>
-                          {job.recurringScheduleId && (
-                            <span className="inline-flex items-center gap-1 bg-violet-100 text-violet-700 rounded px-2 py-0.5 font-medium">
-                              🔁 Recurring
-                            </span>
-                          )}
-                          <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{job.location}</span>
-                          <span className="flex items-center gap-1"><User className="h-3 w-3" />{job.clientId.name}</span>
-                          <span className="flex items-center gap-1"><Calendar className="h-3 w-3" />Submitted {formatDate(job.createdAt)}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="text-right flex-shrink-0 space-y-1.5">
-                    <p className="text-xl font-bold text-slate-900">{formatCurrency(job.budget)}</p>
-                    <p className="text-xs text-slate-400">Scheduled {formatDate(job.scheduleDate)}</p>
-                    <RiskBadge score={job.riskScore} />
-                  </div>
-                </div>
-
-                <div className="bg-slate-50 rounded-lg p-3 mb-4 text-sm text-slate-700 line-clamp-3">
-                  {job.description}
-                </div>
-
-                {/* Quick actions + link to full detail */}
-                <div className="flex items-center gap-3">
-                  <div className="flex-1">
-                    <AdminJobActions jobId={String(job._id)} riskScore={job.riskScore} />
-                  </div>
-                  <Link
-                    href={`/admin/jobs/${String(job._id)}`}
-                    className="flex items-center gap-1 text-xs text-slate-400 hover:text-primary transition-colors whitespace-nowrap"
-                  >
-                    Full details <ChevronRight className="h-3.5 w-3.5" />
-                  </Link>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+      <AdminJobsClient jobs={jobs} />
     </div>
   );
 }

@@ -1,62 +1,80 @@
 import type { Metadata } from "next";
 import { getCurrentUser } from "@/lib/auth";
 import { jobRepository } from "@/repositories/job.repository";
+import type { JobSortOption } from "@/repositories/job.repository";
 import { JobStatusBadge, EscrowBadge } from "@/components/ui/Badge";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import Link from "next/link";
-import { ChevronRight, MapPin, ArrowRight, CalendarDays } from "lucide-react";
+import {
+  ChevronRight, MapPin, ArrowRight, CalendarDays,
+  AlertTriangle, ShieldAlert, Search, SlidersHorizontal,
+} from "lucide-react";
 import type { JobStatus } from "@/types";
 
 export const metadata: Metadata = { title: "All Jobs" };
 
 const ALL_STATUSES: JobStatus[] = [
-  "pending_validation",
-  "open",
-  "assigned",
-  "in_progress",
-  "completed",
-  "disputed",
-  "refunded",
-  "rejected",
-  "expired",
-  "cancelled",
+  "pending_validation", "open", "assigned", "in_progress", "completed",
+  "disputed", "refunded", "rejected", "expired", "cancelled",
 ];
 
 const STATUS_LABELS: Record<JobStatus, string> = {
   pending_validation: "Pending",
-  open: "Open",
-  assigned: "Assigned",
-  in_progress: "In Progress",
-  completed: "Completed",
-  disputed: "Disputed",
-  refunded: "Refunded",
-  rejected: "Rejected",
-  expired: "Expired",
-  cancelled: "Cancelled",
+  open:               "Open",
+  assigned:           "Assigned",
+  in_progress:        "In Progress",
+  completed:          "Completed",
+  disputed:           "Disputed",
+  refunded:           "Refunded",
+  rejected:           "Rejected",
+  expired:            "Expired",
+  cancelled:          "Cancelled",
 };
+
+const URGENT_STATUSES = new Set<JobStatus>(["disputed", "pending_validation"]);
+const ACCENT_CLASS: Partial<Record<JobStatus, string>> = {
+  disputed:           "border-l-4 border-l-red-400",
+  pending_validation: "border-l-4 border-l-amber-400",
+};
+
+const SORT_OPTIONS: { value: JobSortOption; label: string }[] = [
+  { value: "newest",      label: "Newest first" },
+  { value: "oldest",      label: "Oldest first" },
+  { value: "budget_desc", label: "Budget ↓" },
+  { value: "budget_asc",  label: "Budget ↑" },
+];
+
+const LIMIT_OPTIONS = [20, 50, 100];
 
 export default async function AdminAllJobsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; page?: string; q?: string }>;
+  searchParams: Promise<{ status?: string; page?: string; q?: string; sort?: string; limit?: string }>;
 }) {
   const user = await getCurrentUser();
   if (!user || (user.role !== "admin" && user.role !== "staff")) return null;
 
-  const { status, page: pageStr, q } = await searchParams;
-  const page = Math.max(1, parseInt(pageStr ?? "1", 10));
-  const limit = 20;
+  const { status, page: pageStr, q, sort: sortParam, limit: limitParam } = await searchParams;
+
+  const page   = Math.max(1, parseInt(pageStr  ?? "1",  10));
+  const limit  = LIMIT_OPTIONS.includes(parseInt(limitParam ?? "20", 10)) ? parseInt(limitParam!, 10) : 20;
+  const sort   = (SORT_OPTIONS.map((s) => s.value) as string[]).includes(sortParam ?? "") ? (sortParam as JobSortOption) : "newest";
 
   const filter: Record<string, unknown> = {};
-  if (status && ALL_STATUSES.includes(status as JobStatus)) {
-    filter.status = status;
-  }
+  if (status && ALL_STATUSES.includes(status as JobStatus)) filter.status = status;
   if (q?.trim()) {
     const escaped = q.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     filter.title = { $regex: escaped, $options: "i" };
   }
 
-  const result = await jobRepository.findPaginated(filter as never, { page, limit });
+  // Parallel: paginated results + global status counts
+  const [result, statusCounts] = await Promise.all([
+    jobRepository.findPaginated(filter as never, { page, limit, sort }),
+    jobRepository.countByStatus(),
+  ]);
+
+  const countMap = Object.fromEntries(statusCounts.map((r) => [r._id, r.count]));
+  const totalAll = Object.values(countMap).reduce((a, b) => a + b, 0);
 
   const jobs = result.data as unknown as {
     _id: { toString(): string };
@@ -72,84 +90,182 @@ export default async function AdminAllJobsPage({
     providerId?: { name: string; email: string } | null;
   }[];
 
-  // Left-border accent for statuses that need attention
-  const urgentStatuses = new Set<JobStatus>(["disputed", "pending_validation"]);
-  const accentClass: Partial<Record<JobStatus, string>> = {
-    disputed: "border-l-4 border-l-red-400",
-    pending_validation: "border-l-4 border-l-amber-400",
-  };
-
   function buildUrl(params: Record<string, string | undefined>) {
     const sp = new URLSearchParams();
-    if (params.status) sp.set("status", params.status);
-    if (params.page && params.page !== "1") sp.set("page", params.page);
-    if (params.q) sp.set("q", params.q);
+    if (params.status)                                     sp.set("status", params.status);
+    if (params.page && params.page !== "1")                sp.set("page",   params.page);
+    if (params.q)                                          sp.set("q",      params.q);
+    if (params.sort && params.sort !== "newest")           sp.set("sort",   params.sort);
+    if (params.limit && params.limit !== "20")             sp.set("limit",  params.limit);
     const str = sp.toString();
     return `/admin/all-jobs${str ? `?${str}` : ""}`;
   }
 
+  // Numbered pagination window
+  function pageNumbers(current: number, total: number): (number | "...")[] {
+    if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+    const delta = 2;
+    const range: number[] = [];
+    for (let i = Math.max(2, current - delta); i <= Math.min(total - 1, current + delta); i++) range.push(i);
+    const pages: (number | "...")[] = [1];
+    if (range[0] > 2) pages.push("...");
+    pages.push(...range);
+    if (range[range.length - 1] < total - 1) pages.push("...");
+    pages.push(total);
+    return pages;
+  }
+
+  const nDisputed   = countMap["disputed"]           ?? 0;
+  const nPending    = countMap["pending_validation"]  ?? 0;
+  const hasUrgent   = nDisputed > 0 || nPending > 0;
+  const isFiltered  = !!status || !!q?.trim();
+
   return (
     <div className="space-y-5">
-      {/* Header */}
-      <div>
-        <h2 className="text-2xl font-bold text-slate-900">All Jobs</h2>
-        <p className="text-slate-500 text-sm mt-0.5">
-          {result.total.toLocaleString()} job{result.total !== 1 ? "s" : ""}
-          {status ? ` · filtered by "${STATUS_LABELS[status as JobStatus] ?? status}"` : ""}
-          {q ? ` · "${q}"` : ""}
-        </p>
+
+      {/* ── Urgent alert banner ─────────────────────────────────────────────── */}
+      {hasUrgent && !status && (
+        <div className="flex flex-wrap items-center gap-3 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
+          <AlertTriangle className="h-4 w-4 text-red-500 flex-shrink-0" />
+          <span className="text-sm font-semibold text-red-700">Needs attention:</span>
+          {nPending > 0 && (
+            <Link
+              href={buildUrl({ status: "pending_validation", sort, limit: String(limit) })}
+              className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 border border-amber-300 hover:bg-amber-200 transition-colors"
+            >
+              <ShieldAlert className="h-3 w-3" /> {nPending} pending validation
+            </Link>
+          )}
+          {nDisputed > 0 && (
+            <Link
+              href={buildUrl({ status: "disputed", sort, limit: String(limit) })}
+              className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-red-100 text-red-800 border border-red-300 hover:bg-red-200 transition-colors"
+            >
+              <AlertTriangle className="h-3 w-3" /> {nDisputed} disputed
+            </Link>
+          )}
+        </div>
+      )}
+
+      {/* ── Header ──────────────────────────────────────────────────────────── */}
+      <div className="flex items-end justify-between gap-4 flex-wrap">
+        <div>
+          <h2 className="text-2xl font-bold text-slate-900">All Jobs</h2>
+          <p className="text-slate-500 text-sm mt-0.5">
+            {result.total.toLocaleString()} job{result.total !== 1 ? "s" : ""}
+            {status ? ` · ${STATUS_LABELS[status as JobStatus] ?? status}` : ""}
+            {q ? ` · "${q}"` : ""}
+          </p>
+        </div>
+
+        {/* Sort + per-page */}
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
+            <SlidersHorizontal className="h-3.5 w-3.5 text-slate-400" />
+            {SORT_OPTIONS.map((opt) => (
+              <Link
+                key={opt.value}
+                href={buildUrl({ status, q, sort: opt.value, limit: String(limit), page: "1" })}
+                className={`text-xs font-medium px-2.5 py-1 rounded-lg border transition-colors ${
+                  sort === opt.value
+                    ? "bg-slate-900 text-white border-slate-900"
+                    : "bg-white text-slate-500 border-slate-200 hover:border-slate-300"
+                }`}
+              >
+                {opt.label}
+              </Link>
+            ))}
+          </div>
+          <div className="flex items-center gap-1 ml-2 border-l border-slate-200 pl-2">
+            {LIMIT_OPTIONS.map((n) => (
+              <Link
+                key={n}
+                href={buildUrl({ status, q, sort, limit: String(n), page: "1" })}
+                className={`text-xs font-medium px-2 py-1 rounded-md transition-colors ${
+                  limit === n
+                    ? "bg-slate-900 text-white"
+                    : "text-slate-500 hover:bg-slate-100"
+                }`}
+              >
+                {n}
+              </Link>
+            ))}
+            <span className="text-xs text-slate-400 pl-0.5">/ page</span>
+          </div>
+        </div>
       </div>
 
-      {/* Search */}
+      {/* ── Search ──────────────────────────────────────────────────────────── */}
       <form method="GET" action="/admin/all-jobs" className="flex gap-2">
         {status && <input type="hidden" name="status" value={status} />}
-        <input
-          type="search"
-          name="q"
-          defaultValue={q}
-          placeholder="Search by title…"
-          className="input flex-1 max-w-sm text-sm py-1.5"
-        />
-        <button type="submit" className="btn-primary py-1.5 px-4 text-sm">
-          Search
-        </button>
-        {(q || status) && (
-          <Link href="/admin/all-jobs" className="btn-secondary py-1.5 px-3 text-sm">
-            Clear
-          </Link>
+        {sort !== "newest" && <input type="hidden" name="sort" value={sort} />}
+        {limit !== 20 && <input type="hidden" name="limit" value={String(limit)} />}
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
+          <input
+            type="search"
+            name="q"
+            defaultValue={q}
+            placeholder="Search by job title…"
+            className="input pl-8 w-full text-sm h-9"
+          />
+        </div>
+        <button type="submit" className="btn-primary py-1.5 px-4 text-sm">Search</button>
+        {isFiltered && (
+          <Link href="/admin/all-jobs" className="btn-secondary py-1.5 px-3 text-sm">Clear</Link>
         )}
       </form>
 
-      {/* Status filter chips */}
+      {/* ── Status filter chips with counts ─────────────────────────────────── */}
       <div className="flex flex-wrap gap-1.5">
         <Link
-          href={buildUrl({ q })}
-          className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
-            !status
-              ? "bg-primary text-white border-primary"
-              : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
+          href={buildUrl({ q, sort, limit: String(limit) })}
+          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+            !status ? "bg-primary text-white border-primary" : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
           }`}
         >
           All
+          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+            !status ? "bg-white/20 text-white" : "bg-slate-100 text-slate-500"
+          }`}>
+            {totalAll.toLocaleString()}
+          </span>
         </Link>
-        {ALL_STATUSES.map((s) => (
-          <Link
-            key={s}
-            href={buildUrl({ status: s, q })}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
-              status === s
-                ? "bg-primary text-white border-primary"
-                : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
-            }`}
-          >
-            {STATUS_LABELS[s]}
-          </Link>
-        ))}
+        {ALL_STATUSES.map((s) => {
+          const cnt = countMap[s] ?? 0;
+          const isActive = status === s;
+          const isUrgent = URGENT_STATUSES.has(s) && cnt > 0;
+          return (
+            <Link
+              key={s}
+              href={buildUrl({ status: s, q, sort, limit: String(limit) })}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+                isActive
+                  ? "bg-primary text-white border-primary"
+                  : isUrgent
+                  ? "bg-white text-amber-700 border-amber-300 hover:bg-amber-50"
+                  : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
+              }`}
+            >
+              {STATUS_LABELS[s]}
+              {cnt > 0 && (
+                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                  isActive   ? "bg-white/20 text-white"
+                  : isUrgent ? "bg-amber-100 text-amber-700"
+                  : "bg-slate-100 text-slate-500"
+                }`}>
+                  {cnt}
+                </span>
+              )}
+            </Link>
+          );
+        })}
       </div>
 
-      {/* Job list */}
+      {/* ── Job list ────────────────────────────────────────────────────────── */}
       {jobs.length === 0 ? (
         <div className="bg-white rounded-xl border border-slate-200 p-16 text-center">
+          <Search className="h-8 w-8 text-slate-300 mx-auto mb-3" />
           <p className="text-slate-400 text-sm">No jobs match your filters.</p>
           <Link href="/admin/all-jobs" className="mt-3 inline-block text-xs text-primary hover:underline">
             Clear filters
@@ -162,27 +278,18 @@ export default async function AdminAllJobsPage({
               key={job._id.toString()}
               href={`/admin/jobs/${job._id.toString()}`}
               className={`flex items-center gap-4 px-5 py-3.5 hover:bg-slate-50 transition-colors group ${
-                urgentStatuses.has(job.status) ? (accentClass[job.status] ?? "") : ""
+                URGENT_STATUSES.has(job.status) ? (ACCENT_CLASS[job.status] ?? "") : ""
               }`}
             >
-              {/* Main content */}
               <div className="flex-1 min-w-0 space-y-1">
-                <p
-                  title={job.title}
-                  className="font-semibold text-slate-900 group-hover:text-primary transition-colors text-sm truncate"
-                >
+                <p title={job.title} className="font-semibold text-slate-900 group-hover:text-primary transition-colors text-sm truncate">
                   {job.title}
                 </p>
-
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-slate-400">
-                  <span className="bg-slate-100 text-slate-600 rounded px-2 py-0.5 font-medium">
-                    {job.category}
-                  </span>
+                  <span className="bg-slate-100 text-slate-600 rounded px-2 py-0.5 font-medium">{job.category}</span>
                   <span className="flex items-center gap-1">
-                    <MapPin className="h-3 w-3 flex-shrink-0" />
-                    {job.location}
+                    <MapPin className="h-3 w-3 flex-shrink-0" />{job.location}
                   </span>
-                  {/* Client → Provider */}
                   <span className="flex items-center gap-1.5">
                     <span className="text-slate-600">{job.clientId.name}</span>
                     {job.providerId && (
@@ -193,21 +300,18 @@ export default async function AdminAllJobsPage({
                     )}
                   </span>
                 </div>
-
                 <div className="flex flex-wrap gap-1.5 pt-0.5">
                   <JobStatusBadge status={job.status} />
                   <EscrowBadge status={job.escrowStatus as never} />
                 </div>
               </div>
 
-              {/* Right: budget + dates */}
               <div className="text-right flex-shrink-0 space-y-0.5 min-w-[90px]">
                 <p className="font-bold text-slate-900 text-sm">{formatCurrency(job.budget)}</p>
                 <p className="text-xs text-slate-400">{formatDate(job.createdAt)}</p>
                 {job.scheduleDate && (
                   <p className="text-[11px] text-slate-400 flex items-center justify-end gap-1">
-                    <CalendarDays className="h-3 w-3" />
-                    {formatDate(job.scheduleDate)}
+                    <CalendarDays className="h-3 w-3" />{formatDate(job.scheduleDate)}
                   </p>
                 )}
               </div>
@@ -218,26 +322,37 @@ export default async function AdminAllJobsPage({
         </div>
       )}
 
-      {/* Pagination */}
+      {/* ── Pagination ──────────────────────────────────────────────────────── */}
       {result.totalPages > 1 && (
-        <div className="flex items-center justify-between text-sm">
-          <p className="text-slate-400">
-            Page {result.page} of {result.totalPages}
+        <div className="flex items-center justify-between text-sm flex-wrap gap-3">
+          <p className="text-slate-400 text-xs">
+            Showing {((page - 1) * limit) + 1}–{Math.min(page * limit, result.total)} of {result.total.toLocaleString()} jobs
           </p>
-          <div className="flex gap-2">
-            {result.page > 1 && (
-              <Link
-                href={buildUrl({ status, page: String(result.page - 1), q })}
-                className="btn-secondary py-1.5 px-3 text-xs"
-              >
-                ← Previous
+          <div className="flex items-center gap-1">
+            {page > 1 && (
+              <Link href={buildUrl({ status, page: String(page - 1), q, sort, limit: String(limit) })} className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors">
+                ← Prev
               </Link>
             )}
-            {result.page < result.totalPages && (
-              <Link
-                href={buildUrl({ status, page: String(result.page + 1), q })}
-                className="btn-secondary py-1.5 px-3 text-xs"
-              >
+            {pageNumbers(page, result.totalPages).map((p, i) =>
+              p === "..." ? (
+                <span key={`ellipsis-${i}`} className="px-2 text-slate-400 text-xs select-none">…</span>
+              ) : (
+                <Link
+                  key={p}
+                  href={buildUrl({ status, page: String(p), q, sort, limit: String(limit) })}
+                  className={`px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors ${
+                    p === page
+                      ? "bg-slate-900 text-white border-slate-900"
+                      : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
+                  }`}
+                >
+                  {p}
+                </Link>
+              )
+            )}
+            {page < result.totalPages && (
+              <Link href={buildUrl({ status, page: String(page + 1), q, sort, limit: String(limit) })} className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors">
                 Next →
               </Link>
             )}

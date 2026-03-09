@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import Button from "@/components/ui/Button";
 import { apiFetch } from "@/lib/fetchClient";
+import { Check, X } from "lucide-react";
 
 export default function AdminKycActions({ userId }: { userId: string }) {
   const router = useRouter();
@@ -19,7 +20,7 @@ export default function AdminKycActions({ userId }: { userId: string }) {
       return;
     }
     if (action === "reject" && reason.trim().length < 5) {
-      toast.error("Please provide a rejection reason");
+      toast.error("Please provide a rejection reason (min. 5 characters)");
       return;
     }
 
@@ -42,29 +43,47 @@ export default function AdminKycActions({ userId }: { userId: string }) {
     }
   }
 
+  function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      handleAction("reject");
+    }
+    if (e.key === "Escape") {
+      setShowRejectReason(false);
+      setReason("");
+    }
+  }
+
   return (
     <div className="space-y-2">
       {showRejectReason && (
-        <div className="flex gap-2">
-          <input
-            className="input flex-1 text-sm"
-            placeholder="Rejection reason (e.g. blurry ID, expired document)"
+        <div className="space-y-2">
+          <textarea
+            autoFocus
+            rows={2}
+            className="input w-full text-sm resize-none"
+            placeholder="Rejection reason, e.g. blurry ID, expired document… (Ctrl+Enter to submit)"
             value={reason}
             onChange={(e) => setReason(e.target.value)}
+            onKeyDown={handleKeyDown}
           />
-          <Button variant="secondary" onClick={() => setShowRejectReason(false)}>Cancel</Button>
-          <Button variant="danger" onClick={() => handleAction("reject")} isLoading={isRejecting}>
-            Confirm Reject
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="secondary" onClick={() => { setShowRejectReason(false); setReason(""); }} className="flex-1">
+              Cancel
+            </Button>
+            <Button variant="danger" onClick={() => handleAction("reject")} isLoading={isRejecting} className="flex-1">
+              <X className="h-3.5 w-3.5" /> Confirm Reject
+            </Button>
+          </div>
         </div>
       )}
       {!showRejectReason && (
         <div className="flex gap-2">
           <Button onClick={() => handleAction("approve")} isLoading={isApproving} className="flex-1">
-            ✓ Approve
+            <Check className="h-3.5 w-3.5" /> Approve
           </Button>
           <Button variant="danger" onClick={() => handleAction("reject")} isLoading={isRejecting} className="flex-1">
-            ✗ Reject
+            <X className="h-3.5 w-3.5" /> Reject
           </Button>
         </div>
       )}

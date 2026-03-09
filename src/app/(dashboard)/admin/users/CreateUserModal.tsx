@@ -129,9 +129,9 @@ export default function CreateUserModal({ onClose, onSuccess }: Props) {
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md flex flex-col max-h-[90vh]">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 shrink-0">
           <div className="flex items-center gap-2.5">
             <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
               <UserPlus className="h-4 w-4 text-primary" />
@@ -151,7 +151,10 @@ export default function CreateUserModal({ onClose, onSuccess }: Props) {
         </div>
 
         {/* Body */}
-        <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+          {/* Scrollable fields */}
+          <div className="overflow-y-auto flex-1 px-6 py-5 space-y-4">
+
           {/* Name */}
           <div>
             <label className="block text-xs font-medium text-slate-700 mb-1.5">Full name</label>
@@ -373,8 +376,10 @@ export default function CreateUserModal({ onClose, onSuccess }: Props) {
             </div>
           )}
 
-          {/* Footer */}
-          <div className="flex items-center justify-end gap-2 pt-1">
+          </div>{/* end scrollable area */}
+
+          {/* Footer — pinned */}
+          <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-slate-100 shrink-0">
             <button
               type="button"
               onClick={onClose}
