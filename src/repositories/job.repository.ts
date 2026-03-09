@@ -1,5 +1,6 @@
 import { FilterQuery, Types } from "mongoose";
 import Job from "@/models/Job";
+import Message from "@/models/Message";
 import type { JobDocument } from "@/models/Job";
 import type { JobStatus, EscrowStatus } from "@/types";
 import { BaseRepository } from "./base.repository";
@@ -17,6 +18,8 @@ export interface JobPaginationOptions {
   page?: number;
   limit?: number;
   sort?: JobSortOption;
+  /** When true, `isPriority: true` jobs are sorted to the top of the result. */
+  priorityFirst?: boolean;
 }
 
 export interface PaginatedJobs {
@@ -34,14 +37,17 @@ export class JobRepository extends BaseRepository<JobDocument> {
 
   async findPaginated(
     filter: FilterQuery<JobDocument>,
-    { page = 1, limit = 20, sort = "newest" }: JobPaginationOptions = {}
+    { page = 1, limit = 20, sort = "newest", priorityFirst = false }: JobPaginationOptions = {}
   ): Promise<PaginatedJobs> {
     await this.connect();
     const skip = (page - 1) * limit;
+    const sortOrder: Record<string, 1 | -1> = priorityFirst
+      ? { isPriority: -1, ...SORT_MAP[sort] }
+      : SORT_MAP[sort];
 
     const [data, total] = await Promise.all([
       Job.find(filter)
-        .sort(SORT_MAP[sort])
+        .sort(sortOrder)
         .skip(skip)
         .limit(limit)
         .populate("clientId", "name email")
@@ -310,15 +316,38 @@ export class JobRepository extends BaseRepository<JobDocument> {
       .lean() as never;
   }
 
-  /** All provider jobs — minimal fields for the messages thread list, sorted by updatedAt. */
+  /** All provider jobs — minimal fields for the messages thread list, sorted by updatedAt.
+   * Also includes open PESO/LGU jobs where the provider has sent at least one inquiry message. */
   async findJobsForMessagesProvider(providerId: string): Promise<Array<{
     _id: { toString(): string }; title: string; status: JobStatus;
   }>> {
     await this.connect();
-    return Job.find({ providerId: new Types.ObjectId(providerId) })
+    const providerObjId = new Types.ObjectId(providerId);
+
+    // Jobs the provider is assigned to
+    const assignedJobs = await Job.find({ providerId: providerObjId })
       .select("_id title status")
       .sort({ updatedAt: -1 })
-      .lean() as never;
+      .lean();
+
+    // PESO/LGU jobs where provider has sent inquiry messages (not yet assigned)
+    const sentThreadIds = await Message.distinct("threadId", { senderId: providerObjId });
+    const assignedJobIds = new Set(assignedJobs.map((j) => String(j._id)));
+    // Only include threads not already in assignedJobs
+    const inquiryThreadIds = sentThreadIds.filter((id: string) => !assignedJobIds.has(id));
+
+    let inquiryJobs: Array<{ _id: unknown; title: string; status: string }> = [];
+    if (inquiryThreadIds.length > 0) {
+      inquiryJobs = await Job.find({
+        _id: { $in: inquiryThreadIds.map((id: string) => new Types.ObjectId(id)) },
+        jobSource: { $in: ["peso", "lgu"] },
+      })
+        .select("_id title status")
+        .sort({ updatedAt: -1 })
+        .lean();
+    }
+
+    return [...assignedJobs, ...inquiryJobs] as never;
   }
 
   /** Jobs for a client that have a provider assigned (i.e. have a chat thread). */

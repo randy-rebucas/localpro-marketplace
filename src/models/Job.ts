@@ -36,8 +36,9 @@ const JobSchema = new Schema<JobDocument>(
     },
     budget: {
       type: Number,
-      required: [true, "Budget is required"],
+      required: false,
       min: [0, "Budget cannot be negative"],
+      default: 0,
     },
     status: {
       type: String,
@@ -72,7 +73,8 @@ const JobSchema = new Schema<JobDocument>(
     },
     scheduleDate: {
       type: Date,
-      required: [true, "Schedule date is required"],
+      required: false,
+      default: null,
     },
     specialInstructions: {
       type: String,
@@ -151,6 +153,10 @@ JobSchema.index({ clientId: 1, status: 1 });
 JobSchema.index({ providerId: 1, status: 1 });
 JobSchema.index({ category: 1, status: 1 });
 JobSchema.index({ coordinates: "2dsphere" }, { sparse: true });
+// PESO-specific indexes
+JobSchema.index({ jobSource: 1, status: 1 });
+JobSchema.index({ pesoPostedBy: 1, status: 1 }, { sparse: true });
+JobSchema.index({ isPriority: -1, status: 1, createdAt: -1 });
 
 // Always delete the cached model so hot-reloads pick up schema changes
 // (no-op in production where the module is loaded once)

@@ -6,6 +6,7 @@ export interface IJobApplication {
   applicantId: mongoose.Types.ObjectId;
   coverLetter: string;
   availability: string;
+  resumeUrl?: string;
   status: "pending" | "shortlisted" | "rejected" | "hired";
   createdAt: Date;
   updatedAt: Date;
@@ -39,6 +40,11 @@ const JobApplicationSchema = new Schema<JobApplicationDocument>(
       required: true,
       trim: true,
       maxlength: [200, "Availability cannot exceed 200 characters"],
+    },
+    resumeUrl: {
+      type: String,
+      trim: true,
+      default: null,
     },
     status: {
       type: String,

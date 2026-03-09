@@ -11,9 +11,10 @@ import { jobApplicationRepository } from "@/repositories/jobApplication.reposito
 import { jobRepository } from "@/repositories";
 
 const ApplySchema = z.object({
-  jobId:       z.string().min(1),
-  coverLetter: z.string().min(20, "Cover letter must be at least 20 characters").max(2000),
+  jobId:        z.string().min(1),
+  coverLetter:  z.string().min(20, "Cover letter must be at least 20 characters").max(2000),
   availability: z.string().min(1, "Availability is required").max(200),
+  resumeUrl:    z.string().url().optional().or(z.literal("")),
 });
 
 export const POST = withHandler(async (req: NextRequest) => {
@@ -24,7 +25,7 @@ export const POST = withHandler(async (req: NextRequest) => {
   const parsed = ApplySchema.safeParse(body);
   if (!parsed.success) throw new ValidationError(parsed.error.errors[0].message);
 
-  const { jobId, coverLetter, availability } = parsed.data;
+  const { jobId, coverLetter, availability, resumeUrl } = parsed.data;
 
   // Verify job exists and is a PESO / LGU job
   const job = await jobRepository.findById(jobId);
@@ -46,6 +47,7 @@ export const POST = withHandler(async (req: NextRequest) => {
     applicantId: user.userId as never,
     coverLetter,
     availability,
+    ...(resumeUrl ? { resumeUrl } : {}),
     status: "pending",
   });
 

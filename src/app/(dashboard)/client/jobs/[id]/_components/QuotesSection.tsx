@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import { Star, Clock, MessageSquare } from "lucide-react";
 import { quoteRepository } from "@/repositories/quote.repository";
 import { providerProfileRepository } from "@/repositories/providerProfile.repository";
@@ -86,6 +87,15 @@ export async function QuotesSection({
                 providerId={accepted.providerId._id.toString()}
                 providerName={accepted.providerId.name}
               />
+              <div className="mt-2">
+                <Link
+                  href={`/client/messages/${jobId}`}
+                  className="inline-flex items-center gap-1.5 text-xs font-medium text-blue-600 hover:text-blue-700 hover:underline"
+                >
+                  <MessageSquare className="h-3.5 w-3.5" />
+                  Message Provider
+                </Link>
+              </div>
               <p className="text-sm text-slate-700 mt-2 leading-relaxed">{accepted.message}</p>
             </div>
           </div>
@@ -199,13 +209,22 @@ export async function QuotesSection({
                     </div>
                     <div className="flex sm:flex-col items-center sm:items-end gap-2">
                       <QuoteStatusBadge status={q.status} />
-                      {q.status === "pending" && (
-                        <QuoteAcceptButton
-                          quoteId={q._id.toString()}
-                          proposedAmount={q.proposedAmount}
-                          providerName={q.providerId.name}
-                        />
-                      )}
+                      <div className="flex items-center gap-2">
+                        {q.status === "pending" && (
+                          <QuoteAcceptButton
+                            quoteId={q._id.toString()}
+                            proposedAmount={q.proposedAmount}
+                            providerName={q.providerId.name}
+                          />
+                        )}
+                        <Link
+                          href={`/client/messages/${jobId}`}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-600 hover:bg-slate-50 hover:text-blue-600 hover:border-blue-300 transition-colors"
+                        >
+                          <MessageSquare className="h-3.5 w-3.5" />
+                          Message
+                        </Link>
+                      </div>
                     </div>
                   </div>
                 </div>

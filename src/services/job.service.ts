@@ -7,15 +7,44 @@ import type { PaginatedJobs } from "@/repositories/job.repository";
 import { connectDB } from "@/lib/db";
 import User from "@/models/User";
 import { getAppSetting } from "@/lib/appSettings";
+import type { JobTag } from "@/types";
 
-export interface CreateJobInput {
-  title: string;
+// ─── Shared base ─────────────────────────────────────────────────────────────
+
+/** Fields every job must have regardless of who posted it. */
+export interface BaseJobInput {
   category: string;
+  title: string;
   description: string;
   budget: number;
   location: string;
-  scheduleDate: string;
+  scheduleDate: string | Date;
   specialInstructions?: string;
+}
+
+/**
+ * Builds the minimal DB payload shared by all job types.
+ * Services extend this with their own source-specific fields.
+ */
+export function buildCoreJobPayload(input: BaseJobInput, posterId: string) {
+  return {
+    clientId:            posterId,
+    category:            input.category,
+    title:               input.title,
+    description:         input.description,
+    budget:              input.budget,
+    location:            input.location,
+    scheduleDate:        new Date(input.scheduleDate),
+    specialInstructions: input.specialInstructions ?? "",
+    escrowStatus:        "not_funded" as const,
+    riskScore:           0,
+    fraudFlags:          [] as string[],
+  };
+}
+
+// ─── Client job ───────────────────────────────────────────────────────────────
+
+export interface CreateJobInput extends BaseJobInput {
   beforePhoto?: string[];
   coordinates?: { type: "Point"; coordinates: [number, number] };
   invitedProviderId?: string;
@@ -52,9 +81,13 @@ export class JobService {
       filter.category = { $regex: escaped, $options: "i" };
     }
 
+    // Priority jobs float to top when providers browse the open marketplace
+    const priorityFirst = user.role === "provider" && (status === "open" || !status);
+
     const result = await jobRepository.findPaginated(filter as never, {
       page: Math.max(1, page),
       limit: Math.min(50, limit),
+      priorityFirst,
     });
 
     // AI ranking: only for providers browsing the open marketplace
@@ -95,13 +128,16 @@ export class JobService {
     }
 
     const { invitedProviderId, ...rest } = input;
+
+    // Build from shared core then layer private-job specifics
+    const coreData = buildCoreJobPayload(rest, user.userId);
     const jobData = {
-      ...rest,
-      scheduleDate: new Date(input.scheduleDate),
-      clientId: user.userId,
-      status: "pending_validation" as const,
-      escrowStatus: "not_funded" as const,
-      ...(invitedProviderId ? { invitedProviderId } : {}),
+      ...coreData,
+      status:    "pending_validation" as const,
+      jobSource: "private"  as const,
+      ...(input.beforePhoto   ? { beforePhoto:   input.beforePhoto }   : {}),
+      ...(input.coordinates   ? { coordinates:   input.coordinates }   : {}),
+      ...(invitedProviderId   ? { invitedProviderId }                   : {}),
     };
 
     // ── Fraud & risk assessment ─────────────────────────────────────────────

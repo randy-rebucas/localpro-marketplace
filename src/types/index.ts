@@ -55,7 +55,7 @@ export interface IUserPreferences {
 
 // ─── Upload ───────────────────────────────────────────────────────────────────
 
-export type UploadFolder = "jobs/before" | "jobs/after" | "avatars" | "kyc" | "misc" | "peso/logos";
+export type UploadFolder = "jobs/before" | "jobs/after" | "avatars" | "kyc" | "misc" | "peso/logos" | "resumes";
 
 export interface IUser {
   _id: Types.ObjectId | string;
@@ -151,7 +151,7 @@ export interface IJob {
   recurringScheduleId?: Types.ObjectId | string | null;
   // ── PESO fields ────────────────────────────────────────────────
   /** Who posted this job: private client, PESO office, or LGU */
-  jobSource?: "private" | "peso" | "lgu";
+  jobSource: "private" | "peso" | "lgu";
   /** Tags for government / PESO job classification */
   jobTags?: JobTag[];
   /** PESO officer user ID who posted the job */

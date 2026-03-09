@@ -1,7 +1,10 @@
 import { pesoRepository } from "@/repositories/peso.repository";
 import { userRepository } from "@/repositories/user.repository";
 import { jobRepository } from "@/repositories/job.repository";
+import { activityRepository } from "@/repositories";
 import { providerProfileRepository } from "@/repositories/providerProfile.repository";
+import { buildCoreJobPayload } from "@/services/job.service";
+import type { BaseJobInput } from "@/services/job.service";
 import { sendEmail } from "@/lib/email";
 import { ConflictError, ForbiddenError, NotFoundError, UnprocessableError, ValidationError } from "@/lib/errors";
 import type { WorkforceRegistryFilters } from "@/repositories/peso.repository";
@@ -10,16 +13,15 @@ import crypto from "crypto";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
-export interface PostPesoJobDto {
-  category: string;
-  title: string;
-  description: string;
-  budget: number;
-  location: string;
-  scheduleDate: string | Date;
-  specialInstructions?: string;
+// ─── DTOs ─────────────────────────────────────────────────────────────────────
+
+/** PESO / LGU job — extends the shared base with budget and scheduleDate optional. */
+export interface PostPesoJobDto extends Omit<BaseJobInput, "budget" | "scheduleDate"> {
+  budget?: number;
+  scheduleDate?: string | Date;
   jobTags?: JobTag[];
   isPriority?: boolean;
+  jobSource?: "peso" | "lgu";
 }
 
 export interface ReferProviderDto {
@@ -70,30 +72,47 @@ export class PesoService {
   }
 
   async postJob(officerId: string, dto: PostPesoJobDto) {
+    const source = dto.jobSource ?? "peso";
+    const coreData = buildCoreJobPayload({
+      ...dto,
+      budget:       dto.budget       ?? 0,
+      scheduleDate: dto.scheduleDate ?? new Date(),
+    }, officerId);
     const job = await jobRepository.create({
-      clientId: officerId,
-      category: dto.category,
-      title: dto.title,
-      description: dto.description,
-      budget: dto.budget,
-      location: dto.location,
-      scheduleDate: new Date(dto.scheduleDate),
-      specialInstructions: dto.specialInstructions ?? "",
-      status: "open",
-      escrowStatus: "not_funded",
-      riskScore: 0,
-      jobSource: "peso",
-      jobTags: dto.jobTags ?? ["peso"],
+      ...coreData,
+      status:     "open",
+      jobSource:  source,
+      jobTags:    dto.jobTags ?? [source === "lgu" ? "lgu_project" : "peso"],
       isPriority: dto.isPriority ?? false,
       pesoPostedBy: officerId,
     });
+
+    await activityRepository.log({
+      userId:    officerId,
+      eventType: "job_created",
+      jobId:     job._id!.toString(),
+      metadata:  { jobSource: source, isPriority: dto.isPriority ?? false },
+    });
+
     return job;
   }
 
-  async listPesoJobs(page = 1, limit = 20) {
+  async listPesoJobs(officerId: string, page = 1, limit = 20) {
+    // Scope to the calling officer's own office
+    const office = await pesoRepository.findOfficeByOfficerId(officerId);
+    if (!office) throw new NotFoundError("PESO office");
+
+    const rawHead = office.headOfficerId as unknown as Record<string, unknown> | string | null;
+    const headId  = rawHead && typeof rawHead === "object" ? String(rawHead._id) : String(rawHead ?? "");
+    const staffIds = ((office.officerIds ?? []) as unknown[]).map((o) => {
+      if (o && typeof o === "object") return String((o as Record<string, unknown>)._id ?? o);
+      return String(o);
+    });
+    const officerIds = [...new Set([headId, ...staffIds].filter(Boolean))];
+
     return jobRepository.findPaginated(
-      { jobSource: { $in: ["peso", "lgu"] } },
-      { page, limit }
+      { jobSource: { $in: ["peso", "lgu"] }, pesoPostedBy: { $in: officerIds } },
+      { page, limit, priorityFirst: true }
     );
   }
 
@@ -347,22 +366,31 @@ export class PesoService {
   }) {
     if (!dto.jobType || !dto.location) throw new ValidationError("Job type and location are required");
 
-    const job = await jobRepository.create({
-      clientId: officerId,
-      category: dto.jobType,
-      title: `[EMERGENCY] ${dto.jobType} – ${dto.location}`,
-      description: `Urgency: ${dto.urgency.toUpperCase()}\nWorkers needed: ${dto.workersNeeded}\nDuration: ${dto.duration}${dto.notes ? `\n\nNotes: ${dto.notes}` : ""}`,
-      budget: 0,
-      location: dto.location,
-      scheduleDate: new Date(),
+    const baseInput: BaseJobInput = {
+      category:            dto.jobType,
+      title:               `[EMERGENCY] ${dto.jobType} – ${dto.location}`,
+      description:         `Urgency: ${dto.urgency.toUpperCase()}\nWorkers needed: ${dto.workersNeeded}\nDuration: ${dto.duration}${dto.notes ? `\n\nNotes: ${dto.notes}` : ""}`,
+      budget:              0,
+      location:            dto.location,
+      scheduleDate:        new Date(),
       specialInstructions: dto.notes ?? "",
-      status: "open",
-      escrowStatus: "not_funded",
-      riskScore: 0,
-      jobSource: "peso",
-      jobTags: ["emergency", "peso"],
-      isPriority: true,
+    };
+
+    const coreData = buildCoreJobPayload(baseInput, officerId);
+    const job = await jobRepository.create({
+      ...coreData,
+      status:       "open",
+      jobSource:    "peso",
+      jobTags:      ["emergency", "peso"],
+      isPriority:   true,
       pesoPostedBy: officerId,
+    });
+
+    await activityRepository.log({
+      userId:    officerId,
+      eventType: "job_created",
+      jobId:     job._id!.toString(),
+      metadata:  { jobSource: "peso", isEmergency: true, urgency: dto.urgency },
     });
 
     return job;

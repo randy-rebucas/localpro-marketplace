@@ -25,8 +25,10 @@ const ALLOWED_COLLECTIONS = new Set([
   "providerprofiles", "categories", "skills", "wallets",
   "wallettransactions", "walletwithdrawals", "ledgerentries",
   "accountbalances", "announcements", "knowledgearticles",
-  "loyaltyaccounts", "recurringschedules", "businessorganizations",
-  "businessmembers", "consultations", "appsettings", "pesooffices",
+  "loyaltyaccounts", "loyaltytransactions", "recurringschedules",
+  "businessorganizations", "businessmembers", "consultations",
+  "appsettings", "pesooffices", "favoriteproviders",
+  "jobapplications", "livelihoodgroups", "quotetemplates",
 ]);
 
 export const POST = withHandler(async (req: NextRequest) => {

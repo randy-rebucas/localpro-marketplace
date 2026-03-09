@@ -81,6 +81,8 @@ interface PublicJob {
   description: string;
   specialInstructions?: string;
   status: JobStatus;
+  jobSource?: "peso" | "lgu";
+  jobTags?: string[];
   milestones?: { _id: string; title: string; amount: number; description?: string; status: string }[];
   createdAt: string;
 }
@@ -90,7 +92,7 @@ async function getJob(id: string): Promise<PublicJob | null> {
     await connectDB();
     const doc = await Job.findById(id)
       .select(
-        "_id title category location budget scheduleDate description specialInstructions status milestones createdAt"
+        "_id title category location budget scheduleDate description specialInstructions status jobSource jobTags milestones createdAt"
       )
       .lean();
     if (!doc) return null;
@@ -140,12 +142,15 @@ export default async function JobDetailPage(
   if (!job) notFound();
 
   const isProvider = session?.role === "provider";
+  const isGovJob   = job.jobSource === "peso" || job.jobSource === "lgu";
   const pageUrl    = `${APP_URL}/jobs/${job._id}`;
   const applyUrl   = `${APP_URL}/provider/marketplace?ref=${job._id}`;
   const qrUrl      = `${QR_BASE}&size=160x160&data=${encodeURIComponent(applyUrl)}`;
   const shareText  = `📌 Job Available: ${job.title} in ${job.location} — ${formatPeso(job.budget)}. Apply via LocalPro!`;
   const isOpen     = job.status === "open";
   const statusCfg  = STATUS_CONFIG[job.status] ?? STATUS_CONFIG.expired;
+  const ctaLabel   = isGovJob ? "Apply for Position" : "Apply Now";
+  const registerLabel = isGovJob ? "Apply for Position" : "Apply as a Provider";
 
   return (
     <div className="min-h-screen bg-[#0e1f33] text-white">
@@ -170,7 +175,7 @@ export default async function JobDetailPage(
             href={applyUrl}
             className="text-sm font-semibold px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 transition-colors text-white"
           >
-            Apply Now
+            {ctaLabel}
           </a>
         ) : (
           <a
@@ -194,6 +199,16 @@ export default async function JobDetailPage(
               <Briefcase className="h-3 w-3 mr-1.5" />
               {job.category}
             </span>
+            {job.jobSource === "peso" && (
+              <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-sky-500/20 text-sky-300 border border-sky-500/30 text-xs font-bold uppercase tracking-wider">
+                🏛️ PESO
+              </span>
+            )}
+            {job.jobSource === "lgu" && (
+              <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-teal-500/20 text-teal-300 border border-teal-500/30 text-xs font-bold uppercase tracking-wider">
+                🏛️ LGU
+              </span>
+            )}
             <span
               className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-bold uppercase tracking-wider ${statusCfg.badge}`}
             >
@@ -261,6 +276,23 @@ export default async function JobDetailPage(
             </section>
           )}
 
+          {/* Gov source notice */}
+          {isGovJob && (
+            <section className="bg-sky-500/[0.08] border border-sky-500/20 rounded-2xl p-5 flex items-start gap-3">
+              <span className="text-2xl leading-none mt-0.5">🏛️</span>
+              <div>
+                <p className="text-sm font-bold text-sky-300 mb-1">
+                  {job.jobSource === "peso" ? "PESO — Public Employment Service Office" : "LGU — Local Government Unit"} Posted Job
+                </p>
+                <p className="text-xs text-sky-200/70 leading-relaxed">
+                  This job was posted by a government office through LocalPro's official integration.
+                  Applicants are evaluated directly by the posting office.
+                  No fees are charged to apply.
+                </p>
+              </div>
+            </section>
+          )}
+
           {/* Milestones */}
           {job.milestones && job.milestones.length > 0 && (
             <section className="bg-white/[0.04] border border-white/[0.08] rounded-2xl p-5 sm:p-6">
@@ -318,6 +350,11 @@ export default async function JobDetailPage(
               <p className="text-3xl font-extrabold text-emerald-300 tracking-tight">
                 {formatPeso(job.budget)}
               </p>
+              {isGovJob && (
+                <p className="text-[11px] text-sky-400 font-medium mt-1 flex items-center gap-1">
+                  🏛️ {job.jobSource === "peso" ? "PESO" : "LGU"} Government Job
+                </p>
+              )}
             </div>
 
             {isOpen ? (
@@ -327,7 +364,7 @@ export default async function JobDetailPage(
                     href={applyUrl}
                     className="block w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-center font-bold text-white text-sm transition-colors"
                   >
-                    Apply Now
+                    {ctaLabel}
                   </a>
                 ) : (
                   <>
@@ -335,7 +372,7 @@ export default async function JobDetailPage(
                       href={PROVIDER_REGISTER_URL}
                       className="block w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-center font-bold text-white text-sm transition-colors"
                     >
-                      Apply as a Provider
+                      {registerLabel}
                     </a>
                     <a
                       href={`${LOGIN_URL}?redirect=/jobs/${job._id}`}
@@ -353,13 +390,18 @@ export default async function JobDetailPage(
             )}
 
             <p className="text-[11px] text-slate-500 text-center leading-relaxed">
-              All payments are protected by LocalPro escrow. You only get paid when the client confirms completion.
+              {isGovJob
+                ? "This is a government-posted job. Applications are reviewed by the PESO/LGU office."
+                : "All payments are protected by LocalPro escrow. You only get paid when the client confirms completion."
+              }
             </p>
           </div>
 
           {/* QR code card */}
           <div className="bg-white/[0.04] border border-white/[0.08] rounded-2xl p-5 flex flex-col items-center gap-3">
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Scan to Apply</p>
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+              {isGovJob ? "Scan to Apply" : "Scan to Quote"}
+            </p>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={qrUrl}

@@ -16,23 +16,30 @@ export interface SendMessageInput {
 }
 
 export class MessagingService {
-  /** Verify the user is a participant (client or assigned provider) in the job thread. */
+  /** Verify the user is a participant (client or assigned provider) in the job thread.
+   * For open PESO/LGU jobs any provider may start an inquiry thread. */
   private async assertParticipant(
     threadId: string,
     user: TokenPayload
-  ): Promise<{ clientId: string; providerId: string | null }> {
+  ): Promise<{ clientId: string; providerId: string | null; isPesoJob: boolean }> {
     const job = await jobRepository.findById(threadId);
     if (!job) throw new NotFoundError("Job");
 
     const j = job as unknown as IJob;
-    const clientId = j.clientId.toString();
+    const clientId   = j.clientId.toString();
     const providerId = j.providerId?.toString() ?? null;
+    const isPesoJob  = j.jobSource === "peso" || j.jobSource === "lgu";
 
-    if (user.userId !== clientId && user.userId !== providerId) {
+    const isClient   = user.userId === clientId;
+    const isAssigned = user.userId === providerId;
+    // Any authenticated provider may open an inquiry on an open PESO/LGU job
+    const isPesoInquiry = isPesoJob && j.status === "open" && user.role === "provider";
+
+    if (!isClient && !isAssigned && !isPesoInquiry) {
       throw new ForbiddenError("You are not a participant in this conversation");
     }
 
-    return { clientId, providerId };
+    return { clientId, providerId, isPesoJob };
   }
 
   async getThread(user: TokenPayload, threadId: string) {
@@ -42,25 +49,29 @@ export class MessagingService {
   }
 
   async sendMessage(user: TokenPayload, input: SendMessageInput) {
-    const { clientId, providerId } = await this.assertParticipant(
+    const { clientId, providerId, isPesoJob } = await this.assertParticipant(
       input.threadId,
       user
     );
 
-    if (!providerId) {
+    // For regular jobs: provider must be assigned
+    // For PESO/LGU jobs: provider can message the PESO officer (clientId) before being assigned
+    if (!providerId && !isPesoJob) {
       throw new UnprocessableError(
         "A provider must be assigned before messaging"
       );
     }
 
     const receiverId =
-      user.userId === clientId ? providerId : clientId;
+      user.userId === clientId
+        ? (providerId ?? user.userId) // fallback shouldn't happen
+        : clientId;
 
     const message = await messageRepository.create({
-      threadId: input.threadId,
-      senderId: user.userId,
+      threadId:   input.threadId,
+      senderId:   user.userId,
       receiverId,
-      body: maskContactInfo(input.body.trim()),
+      body:       maskContactInfo(input.body.trim()),
     });
 
     // Push to SSE stream

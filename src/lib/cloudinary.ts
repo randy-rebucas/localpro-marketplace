@@ -20,32 +20,30 @@ export async function uploadToCloudinary(
     overwrite?: boolean;
     maxWidth?: number;
     maxHeight?: number;
+    resourceType?: "image" | "raw" | "auto";
   } = {}
 ): Promise<{ url: string; publicId: string }> {
-  const { publicId, overwrite = false, maxWidth = 1600, maxHeight = 1600 } = options;
+  const { publicId, overwrite = false, maxWidth = 1600, maxHeight = 1600, resourceType = "image" } = options;
 
   // If Buffer, wrap as a base64 data-URI (cloudinary accepts both)
   let uploadSource: string;
   if (source instanceof Buffer) {
-    uploadSource = `data:image/jpeg;base64,${source.toString("base64")}`;
+    const mimeType = resourceType === "raw" ? "application/pdf" : "image/jpeg";
+    uploadSource = `data:${mimeType};base64,${source.toString("base64")}`;
   } else {
     uploadSource = source as string;
   }
+
+  const transformations = resourceType === "image"
+    ? [{ width: maxWidth, height: maxHeight, crop: "limit" as const, quality: "auto:good", fetch_format: "auto" }]
+    : [];
 
   const result = await cloudinary.uploader.upload(uploadSource, {
     folder,
     public_id: publicId,
     overwrite,
-    transformation: [
-      {
-        width: maxWidth,
-        height: maxHeight,
-        crop: "limit",
-        quality: "auto:good",
-        fetch_format: "auto",
-      },
-    ],
-    resource_type: "image",
+    ...(transformations.length ? { transformation: transformations } : {}),
+    resource_type: resourceType,
   });
 
   return { url: result.secure_url, publicId: result.public_id };

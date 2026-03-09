@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { MessageSquare, Star, ShieldCheck, Zap } from "lucide-react";
 import Link from "next/link";
 
@@ -22,7 +23,15 @@ const TIPS = [
   },
 ];
 
-export default function ProviderMessagesPage() {
+export default function ProviderMessagesPage({
+  searchParams,
+}: {
+  searchParams?: { jobId?: string };
+}) {
+  if (searchParams?.jobId) {
+    redirect(`/provider/messages/${searchParams.jobId}`);
+  }
+
   return (
     <div className="flex-1 flex flex-col items-center justify-center gap-8 px-10 py-16 text-center select-none">
 

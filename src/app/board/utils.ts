@@ -27,6 +27,6 @@ export function qrDataForJob(jobId: string, jobSource?: string): { src: string; 
   return {
     src,
     href: detailUrl,
-    label: isGov ? "SCAN TO VIEW" : "SCAN TO APPLY",
+    label: isGov ? "SCAN TO VIEW" : "SCAN TO QUOTE",
   };
 }

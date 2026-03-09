@@ -22,10 +22,13 @@ import bcrypt from "bcryptjs";
 const RESETABLE_COLLECTIONS = [
   "users", "jobs", "quotes", "payments", "payouts", "transactions",
   "reviews", "disputes", "messages", "notifications", "activitylogs",
-  "favoriteProviders", "providerprofiles", "categories", "skills",
+  "favoriteproviders", "providerprofiles", "categories", "skills",
   "wallets", "wallettransactions", "walletwithdrawals",
   "ledgerentries", "accountbalances", "recurringschedules",
-  "loyaltyaccounts", "consultations",
+  "loyaltyaccounts", "loyaltytransactions", "consultations",
+  "announcements", "knowledgearticles", "businessorganizations",
+  "businessmembers", "jobapplications", "livelihoodgroups",
+  "pesooffices", "quotetemplates", "appsettings",
 ];
 
 const DEFAULT_CATEGORIES = [

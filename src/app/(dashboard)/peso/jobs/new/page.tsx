@@ -27,6 +27,7 @@ const TAG_COLOR: Record<string, string> = Object.fromEntries(
 );
 
 const EMPTY_FORM = {
+  jobSource: "peso" as "peso" | "lgu",
   category: "",
   title: "",
   description: "",
@@ -100,14 +101,51 @@ export default function PostPesoJobPage() {
     if (submitting) return;
     setSubmitting(true);
     try {
+      // Compose the structured description from all rich-text sections
+      const sections: string[] = [form.description.trim()];
+      if (form.qualifications.trim()) {
+        sections.push(`## Qualifications\n${form.qualifications.trim()}`);
+      }
+      if (form.whatWeOffer.trim()) {
+        sections.push(`## What We Offer\n${form.whatWeOffer.trim()}`);
+      }
+      if (form.howToApply.trim()) {
+        sections.push(`## How to Apply\n${form.howToApply.trim()}`);
+      }
+      const composedDescription = sections.join("\n\n");
+
+      // Append contact number to special instructions
+      const composedInstructions = [
+        form.specialInstructions.trim(),
+        form.contactNumber.trim() ? `Contact: ${form.contactNumber.trim()}` : "",
+      ]
+        .filter(Boolean)
+        .join("\n");
+
+      // Auto-sync jobTags to match jobSource
+      const sourceTags = form.jobSource === "lgu" ? ["lgu_project"] : ["peso"];
+      const otherTags  = form.jobTags.filter((t) => t !== "peso" && t !== "lgu_project");
+      const finalTags  = [...new Set([...sourceTags, ...otherTags])];
+
       const res = await apiFetch("/api/peso/jobs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, budget: form.budget ? Number(form.budget) : undefined }),
+        body: JSON.stringify({
+          category:            form.category,
+          title:               form.title,
+          description:         composedDescription,
+          budget:              form.budget ? Number(form.budget) : undefined,
+          location:            form.location,
+          scheduleDate:        form.scheduleDate || undefined,
+          specialInstructions: composedInstructions || undefined,
+          jobTags:             finalTags,
+          isPriority:          form.isPriority,
+          jobSource:           form.jobSource,
+        }),
       });
       if (!res.ok) {
         const err = await res.json();
-        throw new Error(err.error ?? "Failed to post job");
+        throw new Error((err as { error?: string }).error ?? "Failed to post job");
       }
       toast.success("Job posted successfully");
       router.push("/peso/jobs");
@@ -133,9 +171,13 @@ export default function PostPesoJobPage() {
           <ArrowLeft className="h-3.5 w-3.5" />
           Back to Job Board
         </Link>
-        <h1 className="text-xl font-bold text-slate-800">Post a PESO Job</h1>
+        <h1 className="text-xl font-bold text-slate-800">
+          Post a {form.jobSource === "lgu" ? "LGU / Government" : "PESO"} Job
+        </h1>
         <p className="text-sm text-slate-500 mt-0.5">
-          Post a government job to the LocalPro marketplace.
+          {form.jobSource === "lgu"
+            ? "Post an LGU or government-funded job to the LocalPro marketplace."
+            : "Post a government job to the LocalPro marketplace."}
         </p>
       </div>
 
@@ -145,6 +187,32 @@ export default function PostPesoJobPage() {
           onSubmit={handleSubmit}
           className="flex-1 min-w-0 bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-5"
         >
+          {/* Job Source toggle */}
+          <div>
+            <label className={LABEL_CLS}>Posting As</label>
+            <div className="flex gap-3 mt-2">
+              {(["peso", "lgu"] as const).map((src) => (
+                <button
+                  key={src}
+                  type="button"
+                  onClick={() => setForm((f) => {
+                    const otherTags = f.jobTags.filter((t) => t !== "peso" && t !== "lgu_project");
+                    const sourceTag = src === "lgu" ? "lgu_project" : "peso";
+                    return { ...f, jobSource: src, jobTags: [sourceTag, ...otherTags] };
+                  })}
+                  className={`flex-1 py-2 rounded-lg border text-sm font-semibold transition-colors ${
+                    form.jobSource === src
+                      ? src === "lgu"
+                        ? "bg-teal-600 text-white border-teal-600"
+                        : "bg-sky-600 text-white border-sky-600"
+                      : "bg-white text-slate-600 border-slate-300 hover:border-slate-400"
+                  }`}
+                >
+                  {src === "peso" ? "🏛️ PESO Office" : "🏛️ LGU / Government"}
+                </button>
+              ))}
+            </div>
+          </div>
           {/* Category */}
           <div>
             <label className={LABEL_CLS}>
@@ -385,23 +453,36 @@ export default function PostPesoJobPage() {
             ) : (
               <>
                 {/* Header band */}
-                <div className="bg-gradient-to-br from-blue-600 to-blue-700 px-5 pt-5 pb-4">
-                  {/* Priority badge */}
-                  {form.isPriority && (
-                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold bg-amber-400 text-amber-900 px-2 py-0.5 rounded-full mb-2">
-                      <Star className="h-2.5 w-2.5 fill-amber-900" />
-                      Priority
+                <div className={`px-5 pt-5 pb-4 bg-gradient-to-br ${
+                  form.jobSource === "lgu"
+                    ? "from-teal-600 to-teal-700"
+                    : "from-blue-600 to-blue-700"
+                }`}>
+                  {/* Source + Priority badges */}
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                      form.jobSource === "lgu"
+                        ? "bg-teal-100 text-teal-800"
+                        : "bg-sky-100 text-sky-800"
+                    }`}>
+                      🏛️ {form.jobSource === "lgu" ? "LGU" : "PESO"}
                     </span>
-                  )}
+                    {form.isPriority && (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-semibold bg-amber-400 text-amber-900 px-2 py-0.5 rounded-full">
+                        <Star className="h-2.5 w-2.5 fill-amber-900" />
+                        Priority
+                      </span>
+                    )}
+                  </div>
                   <h2 className="text-lg font-bold text-white leading-snug">
                     {form.title || <span className="opacity-40 italic font-normal">Job title…</span>}
                   </h2>
                   {form.category && (
-                    <p className="text-xs text-blue-200 mt-0.5">{form.category}</p>
+                    <p className="text-xs text-white/70 mt-0.5">{form.category}</p>
                   )}
 
                   {/* Meta row */}
-                  <div className="flex flex-wrap gap-x-4 gap-y-1 mt-3 text-xs text-blue-100">
+                  <div className="flex flex-wrap gap-x-4 gap-y-1 mt-3 text-xs text-white/60">
                     {form.location && (
                       <span className="flex items-center gap-1">
                         <MapPin className="h-3 w-3" />

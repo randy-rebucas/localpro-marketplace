@@ -28,6 +28,9 @@ import {
   Zap,
   ShieldCheck,
   MessageCircle,
+  FileUp,
+  FileText,
+  Loader2,
 } from "lucide-react";
 import type { IJob } from "@/types";
 import { apiFetch } from "@/lib/fetchClient";
@@ -95,6 +98,8 @@ interface QuoteForm {
 interface ApplyForm {
   coverLetter: string;
   availability: string;
+  resumeUrl: string;
+  resumeName: string;
 }
 
 interface MarketplaceClientProps {
@@ -126,8 +131,10 @@ export default function MarketplaceClient({
     price: "", timeline: "", sitePhotos: [], message: "",
   });
   const [applyModal, setApplyModal] = useState<{ open: boolean; job: IJob | null }>({ open: false, job: null });
-  const [applyForm, setApplyForm] = useState<ApplyForm>({ coverLetter: "", availability: "" });
+  const [applyForm, setApplyForm] = useState<ApplyForm>({ coverLetter: "", availability: "", resumeUrl: "", resumeName: "" });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isUploadingResume, setIsUploadingResume] = useState(false);
+  const resumeInputRef = useRef<HTMLInputElement>(null);
   const [quotedJobStatuses, setQuotedJobStatuses] = useState<Record<string, string>>(initialQuotedJobStatuses);
   const [appliedJobIds, setAppliedJobIds] = useState<Set<string>>(new Set());
   const [categories] = useState<string[]>(initialCategories);
@@ -350,7 +357,7 @@ export default function MarketplaceClient({
   }
 
   function openApplyModal(job: IJob) {
-    setApplyForm({ coverLetter: "", availability: "" });
+    setApplyForm({ coverLetter: "", availability: "", resumeUrl: "", resumeName: "" });
     setApplyModal({ open: true, job });
   }
 
@@ -368,6 +375,7 @@ export default function MarketplaceClient({
           jobId: applyModal.job._id,
           coverLetter: applyForm.coverLetter,
           availability: applyForm.availability,
+          ...(applyForm.resumeUrl ? { resumeUrl: applyForm.resumeUrl } : {}),
         }),
       });
       const data = await res.json();
@@ -384,7 +392,7 @@ export default function MarketplaceClient({
       toast.success("Application submitted!");
       setAppliedJobIds((prev) => new Set([...prev, applyModal.job!._id.toString()]));
       setApplyModal({ open: false, job: null });
-      setApplyForm({ coverLetter: "", availability: "" });
+      setApplyForm({ coverLetter: "", availability: "", resumeUrl: "", resumeName: "" });
     } catch {
       toast.error("Something went wrong");
     } finally {
@@ -1047,6 +1055,60 @@ export default function MarketplaceClient({
               value={applyForm.availability}
               onChange={(e) => setApplyForm((f) => ({ ...f, availability: e.target.value }))}
             />
+          </div>
+
+          {/* Resume upload */}
+          <div>
+            <label className="label block mb-1 text-xs">Resume / CV <span className="text-slate-400">(optional · PDF, max 10 MB)</span></label>
+            <input
+              ref={resumeInputRef}
+              type="file"
+              accept=".pdf,application/pdf"
+              className="hidden"
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!resumeInputRef.current) resumeInputRef.current = e.target;
+                e.target.value = "";
+                if (!file) return;
+                if (file.size > 10 * 1024 * 1024) { toast.error("File exceeds 10 MB limit"); return; }
+                setIsUploadingResume(true);
+                try {
+                  const fd = new FormData();
+                  fd.append("file", file);
+                  fd.append("folder", "resumes");
+                  const res = await apiFetch("/api/upload", { method: "POST", body: fd });
+                  const data = await res.json();
+                  if (!res.ok) { toast.error(data.error ?? "Upload failed"); return; }
+                  setApplyForm((f) => ({ ...f, resumeUrl: data.url, resumeName: file.name }));
+                  toast.success("Resume uploaded!");
+                } catch { toast.error("Upload failed"); }
+                finally { setIsUploadingResume(false); }
+              }}
+            />
+            {applyForm.resumeUrl ? (
+              <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-emerald-200 bg-emerald-50">
+                <FileText className="h-4 w-4 text-emerald-600 shrink-0" />
+                <span className="text-xs text-emerald-700 font-medium truncate flex-1">{applyForm.resumeName}</span>
+                <button
+                  type="button"
+                  onClick={() => setApplyForm((f) => ({ ...f, resumeUrl: "", resumeName: "" }))}
+                  className="shrink-0 text-slate-400 hover:text-red-500 transition-colors"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                disabled={isUploadingResume}
+                onClick={() => resumeInputRef.current?.click()}
+                className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg border-2 border-dashed border-slate-200 text-slate-500 hover:border-primary hover:text-primary transition-colors disabled:opacity-50 text-xs font-medium"
+              >
+                {isUploadingResume
+                  ? <><Loader2 className="h-4 w-4 animate-spin" />Uploading…</>
+                  : <><FileUp className="h-4 w-4" />Click to upload resume (PDF)</>}
+              </button>
+            )}
           </div>
 
           {/* Actions */}

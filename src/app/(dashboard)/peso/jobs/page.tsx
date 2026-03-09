@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { PlusCircle, Star, Briefcase, Search, X, MapPin, CalendarDays, Tag, Zap, FileText, StickyNote, Clock, Users, CheckCircle2, XCircle, User } from "lucide-react";
+import { PlusCircle, Star, Briefcase, Search, X, MapPin, CalendarDays, Tag, Zap, FileText, StickyNote, Clock, Users, CheckCircle2, XCircle, User, ExternalLink } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { apiFetch } from "@/lib/fetchClient";
 
@@ -33,6 +33,7 @@ interface Applicant {
   };
   coverLetter: string;
   availability: string;
+  resumeUrl?: string;
   status: "pending" | "shortlisted" | "rejected" | "hired";
   createdAt: string;
 }
@@ -436,6 +437,20 @@ export default function PesoJobsPage() {
                           <p className="text-[11px] text-slate-500">
                             <span className="font-semibold">Availability:</span> {app.availability}
                           </p>
+
+                          {/* Resume */}
+                          {app.resumeUrl && (
+                            <a
+                              href={app.resumeUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-blue-600 hover:text-blue-800 transition-colors"
+                            >
+                              <FileText className="h-3.5 w-3.5" />
+                              View Resume
+                              <ExternalLink className="h-3 w-3" />
+                            </a>
+                          )}
 
                           {/* Cover letter */}
                           <p className="text-xs text-slate-600 leading-relaxed line-clamp-3">
