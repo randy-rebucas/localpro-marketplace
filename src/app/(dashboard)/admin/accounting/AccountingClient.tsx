@@ -19,12 +19,29 @@ export default function AccountingClient() {
   const [data, setData] = useState<IncomeStatementData | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState(false);
+
+  const ACCOUNT_NAMES: Record<string, string> = {
+    "4000": "Commission Revenue",
+    "4100": "Subscription Revenue",
+    "4200": "Late Fee Revenue",
+    "5000": "Refunds Issued",
+    "5100": "Processing Fees",
+    "5200": "Bad Debt",
+  };
+
+  const REVENUE_CODES = ["4000", "4100", "4200"];
+  const EXPENSE_CODES = ["5000", "5100", "5200"];
 
   const fetchIS = useCallback(async () => {
     setLoading(true);
+    setError(false);
     try {
       const res = await fetch(`/api/admin/accounting/income-statement?from=${from}&to=${to}`);
-      if (res.ok) setData(await res.json());
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      setData(await res.json());
+    } catch {
+      setError(true);
     } finally {
       setLoading(false);
     }
@@ -80,27 +97,43 @@ export default function AccountingClient() {
 
       {loading ? (
         <div className="p-5 space-y-3">
-          {[...Array(4)].map((_, i) => (
+          {[...Array(6)].map((_, i) => (
             <div key={i} className="h-6 bg-slate-100 rounded animate-pulse" />
           ))}
         </div>
+      ) : error ? (
+        <div className="p-5 text-sm text-red-600">
+          Failed to load income statement. Please try again.
+        </div>
       ) : (
         <div className="p-5 space-y-2.5 text-sm">
-          <div className="flex justify-between items-center">
-            <span className="text-slate-500">Commission Revenue (4000)</span>
-            <span className="font-medium text-green-700 tabular-nums">{formatCurrency(revenuePHP)}</span>
-          </div>
+          {/* Revenue breakdown */}
+          {REVENUE_CODES.map((code) => {
+            const amt = (data?.breakdown[code] ?? 0) / 100;
+            return (
+              <div key={code} className="flex justify-between items-center">
+                <span className="text-slate-500">{ACCOUNT_NAMES[code]} ({code})</span>
+                <span className="font-medium text-green-700 tabular-nums">{formatCurrency(amt)}</span>
+              </div>
+            );
+          })}
           <div className="flex justify-between items-center pt-1 border-t border-slate-100">
             <span className="font-medium text-slate-700">Total Revenue</span>
             <span className="font-semibold text-green-700 tabular-nums">{formatCurrency(revenuePHP)}</span>
           </div>
 
-          <div className="flex justify-between items-center pt-1">
-            <span className="text-slate-500">Refunds Issued (5000)</span>
-            <span className="font-medium text-red-600 tabular-nums">
-              {expensesPHP > 0 ? `(${formatCurrency(expensesPHP)})` : formatCurrency(0)}
-            </span>
-          </div>
+          {/* Expense breakdown */}
+          {EXPENSE_CODES.map((code) => {
+            const amt = (data?.breakdown[code] ?? 0) / 100;
+            return (
+              <div key={code} className="flex justify-between items-center pt-1">
+                <span className="text-slate-500">{ACCOUNT_NAMES[code]} ({code})</span>
+                <span className="font-medium text-red-600 tabular-nums">
+                  {amt > 0 ? `(${formatCurrency(amt)})` : formatCurrency(0)}
+                </span>
+              </div>
+            );
+          })}
           <div className="flex justify-between items-center border-t border-slate-100 pt-1">
             <span className="font-medium text-slate-700">Total Expenses</span>
             <span className="font-semibold text-red-600 tabular-nums">

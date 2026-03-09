@@ -10,13 +10,23 @@ export type JournalEntryInput = Omit<ILedgerEntry, "_id" | "createdAt">;
 
 export class LedgerRepository {
   /**
-   * Posts multiple journal entries atomically within a single bulk write.
-   * All entries share the same journalId.
+   * Posts multiple journal entries atomically inside a MongoDB session.
+   * If any insertion fails the whole journal is rolled back, keeping the
+   * ledger balanced at all times.
    */
   async postJournal(entries: JournalEntryInput[]): Promise<LedgerEntryDocument[]> {
     await connectDB();
-    const docs = await LedgerEntry.insertMany(entries, { ordered: true });
-    return docs as unknown as LedgerEntryDocument[];
+    const session = await mongoose.startSession();
+    let docs: LedgerEntryDocument[];
+    try {
+      await session.withTransaction(async () => {
+        const result = await LedgerEntry.insertMany(entries, { session, ordered: true });
+        docs = result as unknown as LedgerEntryDocument[];
+      });
+    } finally {
+      await session.endSession();
+    }
+    return docs!;
   }
 
   /** Return all entries for a given journal (transaction group) */
@@ -141,6 +151,7 @@ export class LedgerRepository {
 
   /**
    * Income statement for a date range.
+   * Uses a single $facet pipeline (2 passes) instead of 12 serial aggregates.
    * Returns revenue, expenses, and net income in centavos.
    */
   async getIncomeStatement(
@@ -152,35 +163,39 @@ export class LedgerRepository {
 
     const revenueCodes: AccountCode[] = ["4000", "4100", "4200"];
     const expenseCodes: AccountCode[] = ["5000", "5100", "5200"];
+    const allCodes = [...revenueCodes, ...expenseCodes];
+    const dateFilter = { currency, createdAt: { $gte: from, $lte: to } };
+
+    // Single pipeline: group credits and debits by account code in one pass each
+    const facet: Record<string, object[]> = {};
+    for (const code of allCodes) {
+      facet[`cr_${code}`] = [
+        { $match: { ...dateFilter, creditAccount: code } },
+        { $group: { _id: null, total: { $sum: "$amountCentavos" } } },
+      ];
+      facet[`dr_${code}`] = [
+        { $match: { ...dateFilter, debitAccount: code } },
+        { $group: { _id: null, total: { $sum: "$amountCentavos" } } },
+      ];
+    }
+
+    const [result] = await LedgerEntry.aggregate([{ $facet: facet }]);
 
     const breakdown: Record<string, number> = {};
     let revenue = 0;
     let expenses = 0;
 
     for (const code of revenueCodes) {
-      const [cr] = await LedgerEntry.aggregate([
-        { $match: { creditAccount: code, currency, createdAt: { $gte: from, $lte: to } } },
-        { $group: { _id: null, total: { $sum: "$amountCentavos" } } },
-      ]);
-      const [dr] = await LedgerEntry.aggregate([
-        { $match: { debitAccount: code, currency, createdAt: { $gte: from, $lte: to } } },
-        { $group: { _id: null, total: { $sum: "$amountCentavos" } } },
-      ]);
-      const net = ((cr?.total ?? 0) as number) - ((dr?.total ?? 0) as number);
+      const cr = (result[`cr_${code}`][0]?.total ?? 0) as number;
+      const dr = (result[`dr_${code}`][0]?.total ?? 0) as number;
+      const net = cr - dr;
       breakdown[code] = net;
       revenue += net;
     }
-
     for (const code of expenseCodes) {
-      const [dr] = await LedgerEntry.aggregate([
-        { $match: { debitAccount: code, currency, createdAt: { $gte: from, $lte: to } } },
-        { $group: { _id: null, total: { $sum: "$amountCentavos" } } },
-      ]);
-      const [cr] = await LedgerEntry.aggregate([
-        { $match: { creditAccount: code, currency, createdAt: { $gte: from, $lte: to } } },
-        { $group: { _id: null, total: { $sum: "$amountCentavos" } } },
-      ]);
-      const net = ((dr?.total ?? 0) as number) - ((cr?.total ?? 0) as number);
+      const dr = (result[`dr_${code}`][0]?.total ?? 0) as number;
+      const cr = (result[`cr_${code}`][0]?.total ?? 0) as number;
+      const net = dr - cr;
       breakdown[code] = net;
       expenses += net;
     }
