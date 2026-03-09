@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { PlusCircle, Star, Briefcase, Search, X, MapPin, CalendarDays, Tag, Zap, FileText, StickyNote, Clock } from "lucide-react";
+import { PlusCircle, Star, Briefcase, Search, X, MapPin, CalendarDays, Tag, Zap, FileText, StickyNote, Clock, Users, CheckCircle2, XCircle, User } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { apiFetch } from "@/lib/fetchClient";
 
@@ -21,6 +21,28 @@ interface PesoJob {
   scheduleDate: string;
   createdAt: string;
 }
+
+interface Applicant {
+  _id: string;
+  applicantId: {
+    _id: string;
+    name: string;
+    email: string;
+    avatar?: string | null;
+    isVerified?: boolean;
+  };
+  coverLetter: string;
+  availability: string;
+  status: "pending" | "shortlisted" | "rejected" | "hired";
+  createdAt: string;
+}
+
+const APPLICANT_STATUS_META: Record<Applicant["status"], { label: string; color: string }> = {
+  pending:     { label: "Pending",     color: "bg-slate-100 text-slate-600" },
+  shortlisted: { label: "Shortlisted", color: "bg-blue-100 text-blue-700" },
+  rejected:    { label: "Rejected",    color: "bg-red-100 text-red-600" },
+  hired:       { label: "Hired",       color: "bg-emerald-100 text-emerald-700" },
+};
 
 const TAG_META: Record<string, { label: string; color: string }> = {
   peso:        { label: "PESO",        color: "bg-blue-100 text-blue-700" },
@@ -52,6 +74,9 @@ export default function PesoJobsPage() {
   const [total, setTotal] = useState(0);
   const [search, setSearch] = useState("");
   const [preview, setPreview] = useState<PesoJob | null>(null);
+  const [applicants, setApplicants] = useState<Applicant[]>([]);
+  const [applicantsLoading, setApplicantsLoading] = useState(false);
+  const [applicantUpdating, setApplicantUpdating] = useState<string | null>(null);
   const drawerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -63,6 +88,34 @@ export default function PesoJobsPage() {
       })
       .finally(() => setLoading(false));
   }, []);
+
+  const fetchApplicants = useCallback((jobId: string) => {
+    setApplicantsLoading(true);
+    setApplicants([]);
+    apiFetch(`/api/apply/${jobId}`)
+      .then((r) => r.json())
+      .then((d) => setApplicants(d.applicants ?? []))
+      .catch(() => setApplicants([]))
+      .finally(() => setApplicantsLoading(false));
+  }, []);
+
+  async function updateApplicantStatus(jobId: string, appId: string, status: Applicant["status"]) {
+    setApplicantUpdating(appId);
+    try {
+      const res = await apiFetch(`/api/apply/${jobId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: appId, status }),
+      });
+      if (res.ok) {
+        setApplicants((prev) =>
+          prev.map((a) => (a._id === appId ? { ...a, status } : a))
+        );
+      }
+    } finally {
+      setApplicantUpdating(null);
+    }
+  }
 
   // Close drawer on Escape
   useEffect(() => {
@@ -160,7 +213,12 @@ export default function PesoJobsPage() {
           {filtered.map((job) => (
             <button
               key={job._id}
-              onClick={() => setPreview((p) => p?._id === job._id ? null : job)}
+              onClick={() => {
+                const next = preview?._id === job._id ? null : job;
+                setPreview(next);
+                if (next) fetchApplicants(next._id);
+                else setApplicants([]);
+              }}
               className={`w-full text-left bg-white rounded-xl border p-4 shadow-sm flex items-start justify-between gap-4 transition-colors ${
                 preview?._id === job._id
                   ? "border-blue-400 ring-1 ring-blue-300"
@@ -321,6 +379,105 @@ export default function PesoJobsPage() {
                   </p>
                 </div>
               )}
+
+              {/* Applicants */}
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-1.5">
+                    <Users className="h-3.5 w-3.5 text-slate-400" />
+                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Applicants</p>
+                    {!applicantsLoading && (
+                      <span className="text-[11px] font-semibold px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-500">
+                        {applicants.length}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {applicantsLoading ? (
+                  <div className="space-y-2">
+                    {[1, 2].map((i) => (
+                      <div key={i} className="animate-pulse bg-slate-100 rounded-xl h-20" />
+                    ))}
+                  </div>
+                ) : applicants.length === 0 ? (
+                  <div className="flex flex-col items-center gap-1.5 py-6 text-slate-400">
+                    <User className="h-6 w-6 opacity-40" />
+                    <p className="text-xs">No applicants yet</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2.5">
+                    {applicants.map((app) => {
+                      const meta = APPLICANT_STATUS_META[app.status];
+                      return (
+                        <div key={app._id} className="border border-slate-200 rounded-xl p-3 space-y-2 bg-white">
+                          {/* Applicant header */}
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <div className="w-7 h-7 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs font-bold uppercase shrink-0">
+                                {app.applicantId.name?.[0] ?? "?"}
+                              </div>
+                              <div className="min-w-0">
+                                <p className="text-sm font-semibold text-slate-800 truncate">
+                                  {app.applicantId.name}
+                                  {app.applicantId.isVerified && (
+                                    <CheckCircle2 className="inline h-3 w-3 text-emerald-500 ml-1" />
+                                  )}
+                                </p>
+                                <p className="text-[11px] text-slate-400 truncate">{app.applicantId.email}</p>
+                              </div>
+                            </div>
+                            <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full shrink-0 ${meta.color}`}>
+                              {meta.label}
+                            </span>
+                          </div>
+
+                          {/* Availability */}
+                          <p className="text-[11px] text-slate-500">
+                            <span className="font-semibold">Availability:</span> {app.availability}
+                          </p>
+
+                          {/* Cover letter */}
+                          <p className="text-xs text-slate-600 leading-relaxed line-clamp-3">
+                            {app.coverLetter}
+                          </p>
+
+                          {/* Status actions */}
+                          {app.status !== "hired" && (
+                            <div className="flex gap-1.5 flex-wrap pt-1">
+                              {app.status !== "shortlisted" && (
+                                <button
+                                  disabled={applicantUpdating === app._id}
+                                  onClick={() => updateApplicantStatus(preview._id, app._id, "shortlisted")}
+                                  className="text-[11px] font-medium px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 disabled:opacity-50 transition-colors"
+                                >
+                                  Shortlist
+                                </button>
+                              )}
+                              <button
+                                disabled={applicantUpdating === app._id}
+                                onClick={() => updateApplicantStatus(preview._id, app._id, "hired")}
+                                className="text-[11px] font-medium px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 disabled:opacity-50 transition-colors"
+                              >
+                                Hire
+                              </button>
+                              {app.status !== "rejected" && (
+                                <button
+                                  disabled={applicantUpdating === app._id}
+                                  onClick={() => updateApplicantStatus(preview._id, app._id, "rejected")}
+                                  className="text-[11px] font-medium px-2.5 py-1 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 disabled:opacity-50 transition-colors"
+                                >
+                                  <XCircle className="inline h-3 w-3 mr-0.5" />Reject
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </>

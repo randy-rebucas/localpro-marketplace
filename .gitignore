@@ -27,6 +27,9 @@ Thumbs.db
 npm-debug.log*
 pnpm-debug.log*
 
+# Database backups
+backup/
+
 .vercel
 .env*.local
 .env.bak

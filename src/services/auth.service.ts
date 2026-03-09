@@ -72,15 +72,15 @@ export class AuthService {
     );
 
     // Loyalty: create account and link referral (fire-and-forget)
-    if (input.role === "client") {
+    if (input.role === "client" || input.role === "provider") {
       try {
         const { loyaltyService } = await import("@/services/loyalty.service");
         const { loyaltyRepository } = await import("@/repositories/loyalty.repository");
-        const newAcct = await loyaltyService.getAccount(userId);
+        await loyaltyService.getAccount(userId);
         if (input.referralCode) {
           const referrerAcct = await loyaltyRepository.findByReferralCode(input.referralCode);
           if (referrerAcct && referrerAcct.userId.toString() !== userId) {
-            await loyaltyRepository.setReferredBy(newAcct._id.toString(), referrerAcct.userId.toString());
+            await loyaltyRepository.setReferredBy(userId, referrerAcct.userId.toString());
           }
         }
       } catch {

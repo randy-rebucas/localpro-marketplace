@@ -216,12 +216,12 @@ export default function DatabaseClient({ resetEnabled }: { resetEnabled: boolean
   const [refreshing, setRefreshing] = useState(false);
   const [running, setRunning] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [activeAction, setActiveAction] = useState<"backup" | "restore" | "seed_only" | "full_reset" | "clear_collection" | null>(null);
   const [log, setLog] = useState<string[]>([]);
   const [logStatus, setLogStatus] = useState<"idle" | "success" | "error">("idle");
   const [confirm, setConfirm] = useState<{ action: ActionType; collection?: string } | null>(null);
   const [showRestore, setShowRestore] = useState(false);
   const [expandedLog, setExpandedLog] = useState(false);
-  const [backupFilter, setBackupFilter] = useState<"all" | string[]>("all");
 
   const fetchStats = useCallback(async () => {
     try {
@@ -247,6 +247,7 @@ export default function DatabaseClient({ resetEnabled }: { resetEnabled: boolean
     if (!token) { setConfirm({ action, collection }); return; }
     setConfirm(null);
     setRunning(true);
+    setActiveAction(action);
     setLog([]);
     setLogStatus("idle");
     setExpandedLog(true);
@@ -263,33 +264,42 @@ export default function DatabaseClient({ resetEnabled }: { resetEnabled: boolean
       pushLog([(e as Error).message], "error");
     } finally {
       setRunning(false);
+      setActiveAction(null);
     }
   };
 
-  const handleBackup = async () => {
+  const handleBackup = async (collections?: string[]) => {
     setDownloading(true);
+    setActiveAction("backup");
     try {
-      const query = backupFilter === "all" ? "" : `?collections=${(backupFilter as string[]).join(",")}`;
+      const query = collections ? `?collections=${collections.join(",")}` : "";
       const res = await fetch(`/api/admin/database/backup${query}`);
       if (!res.ok) { pushLog(["Backup failed — server error"], "error"); return; }
       const blob = await res.blob();
       const disposition = res.headers.get("Content-Disposition") ?? "";
       const match = disposition.match(/filename="(.+)"/);
       const filename = match?.[1] ?? "backup.json";
+      const savedPath = res.headers.get("X-Backup-Path");
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url; a.download = filename; a.click();
       URL.revokeObjectURL(url);
-      pushLog([`Backup downloaded: ${filename} (${formatBytes(blob.size)})`], "success");
+      const lines = [
+        `✓ Backup downloaded: ${filename} (${formatBytes(blob.size)})`,
+        ...(savedPath ? [`✓ Saved to codebase: ${savedPath}`] : []),
+      ];
+      pushLog(lines, "success");
     } catch (e) {
       pushLog([(e as Error).message], "error");
     } finally {
       setDownloading(false);
+      setActiveAction(null);
     }
   };
 
   const handleRestore = async (file: File, mode: string, token: string) => {
     setRunning(true);
+    setActiveAction("restore");
     setLog([]);
     setLogStatus("idle");
     setExpandedLog(true);
@@ -306,6 +316,7 @@ export default function DatabaseClient({ resetEnabled }: { resetEnabled: boolean
       pushLog([(e as Error).message], "error");
     } finally {
       setRunning(false);
+      setActiveAction(null);
     }
   };
 
@@ -400,20 +411,20 @@ export default function DatabaseClient({ resetEnabled }: { resetEnabled: boolean
                 <div>
                   <p className="text-sm font-semibold text-slate-800">Export Backup</p>
                   <p className="text-xs text-slate-500 mt-0.5">
-                    Downloads all collections as a timestamped <code className="bg-slate-100 px-1 rounded">localpro-backup-*.json</code> file.
+                    Exports all collections as a timestamped <code className="bg-slate-100 px-1 rounded">localpro-backup-*.json</code> file —
+                    saved to <code className="bg-slate-100 px-1 rounded">backup/</code> in the codebase and downloaded to your browser.
                     No token required.
                   </p>
                 </div>
               </div>
               <button
-                onClick={handleBackup}
+                onClick={() => handleBackup()}
                 disabled={downloading || running}
                 className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 border border-blue-200 text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg text-xs font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                {downloading
-                  ? <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                  : <Download className="w-3.5 h-3.5" />}
-                {downloading ? "Exporting…" : "Download"}
+                {activeAction === "backup"
+                  ? <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Exporting…</>
+                  : <><Download className="w-3.5 h-3.5" /> Download</>}
               </button>
             </div>
 
@@ -433,11 +444,12 @@ export default function DatabaseClient({ resetEnabled }: { resetEnabled: boolean
               </div>
               <button
                 onClick={() => setShowRestore(true)}
-                disabled={!resetEnabled || running}
+                disabled={!resetEnabled || running || downloading}
                 className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 border border-indigo-200 text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-lg text-xs font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                <Upload className="w-3.5 h-3.5" />
-                Restore
+                {activeAction === "restore"
+                  ? <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Restoring…</>
+                  : <><Upload className="w-3.5 h-3.5" /> Restore</>}
               </button>
             </div>
           </div>
@@ -462,11 +474,12 @@ export default function DatabaseClient({ resetEnabled }: { resetEnabled: boolean
               </div>
               <button
                 onClick={() => handleAction("seed_only")}
-                disabled={!resetEnabled || running}
+                disabled={!resetEnabled || running || downloading}
                 className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 border border-green-200 text-green-700 bg-green-50 hover:bg-green-100 rounded-lg text-xs font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                <Sprout className="w-3.5 h-3.5" />
-                Seed
+                {activeAction === "seed_only"
+                  ? <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Seeding…</>
+                  : <><Sprout className="w-3.5 h-3.5" /> Seed</>}
               </button>
             </div>
 
@@ -485,11 +498,12 @@ export default function DatabaseClient({ resetEnabled }: { resetEnabled: boolean
               </div>
               <button
                 onClick={() => handleAction("full_reset")}
-                disabled={!resetEnabled || running}
+                disabled={!resetEnabled || running || downloading}
                 className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 border border-red-200 text-red-700 bg-red-50 hover:bg-red-100 rounded-lg text-xs font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                <RotateCcw className="w-3.5 h-3.5" />
-                Full Reset
+                {activeAction === "full_reset"
+                  ? <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Resetting…</>
+                  : <><RotateCcw className="w-3.5 h-3.5" /> Full Reset</>}
               </button>
             </div>
           </div>
@@ -540,11 +554,7 @@ export default function DatabaseClient({ resetEnabled }: { resetEnabled: boolean
                         <div className="flex items-center justify-end gap-1">
                           {/* Per-collection backup */}
                           <button
-                            onClick={() => {
-                              setBackupFilter([col.name]);
-                              setTimeout(() => handleBackup(), 0);
-                              setBackupFilter("all");
-                            }}
+                            onClick={() => handleBackup([col.name])}
                             disabled={downloading || !col.exists || col.count === 0}
                             title={`Backup ${col.name}`}
                             className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium text-blue-600 hover:bg-blue-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
@@ -597,12 +607,23 @@ export default function DatabaseClient({ resetEnabled }: { resetEnabled: boolean
         )}
 
         {/* Running indicator */}
-        {running && (
-          <div className="flex items-center gap-3 text-sm text-slate-600 bg-blue-50 border border-blue-200 rounded-xl px-5 py-3">
-            <RefreshCw className="w-4 h-4 animate-spin text-blue-600 flex-shrink-0" />
-            Running operation — please wait…
-          </div>
-        )}
+        {(running || downloading) && (() => {
+          const ACTION_LABELS: Record<string, { label: string; color: string; border: string }> = {
+            backup:           { label: "Exporting backup…",          color: "text-blue-700",   border: "border-blue-200 bg-blue-50"   },
+            restore:          { label: "Restoring from backup…",     color: "text-indigo-700", border: "border-indigo-200 bg-indigo-50" },
+            seed_only:        { label: "Seeding data…",              color: "text-green-700",  border: "border-green-200 bg-green-50"  },
+            full_reset:       { label: "Resetting database…",        color: "text-red-700",    border: "border-red-200 bg-red-50"      },
+            clear_collection: { label: "Clearing collection…",       color: "text-red-700",    border: "border-red-200 bg-red-50"      },
+          };
+          const meta = ACTION_LABELS[activeAction ?? ""] ?? { label: "Running operation…", color: "text-slate-600", border: "border-blue-200 bg-blue-50" };
+          return (
+            <div className={`flex items-center gap-3 text-sm ${meta.color} ${meta.border} border rounded-xl px-5 py-3`}>
+              <RefreshCw className="w-4 h-4 animate-spin flex-shrink-0" />
+              <span className="font-medium">{meta.label}</span>
+              <span className="text-xs opacity-60 ml-auto">Please wait, do not close this page</span>
+            </div>
+          );
+        })()}
       </div>
     </>
   );

@@ -24,7 +24,7 @@ const PaymentSchema = new Schema<PaymentDocument>(
     confirmedAt:    { type: Date,   default: null },
     refundedAt:     { type: Date,   default: null },
     /** PayMongo webhook event ID for idempotency */
-    webhookEventId: { type: String, default: null, sparse: true },
+    webhookEventId: { type: String, default: null },
   },
   { timestamps: true }
 );

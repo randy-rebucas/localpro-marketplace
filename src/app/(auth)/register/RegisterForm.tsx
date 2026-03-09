@@ -26,6 +26,7 @@ export default function RegisterForm() {
   const searchParams = useSearchParams();
   const { setUser } = useAuthStore();
   const [isLoading, setIsLoading] = useState(false);
+  const refCode = searchParams.get("ref") ?? "";
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -60,7 +61,7 @@ export default function RegisterForm() {
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, ...(refCode ? { referralCode: refCode } : {}) }),
       });
 
       const data = await res.json();
