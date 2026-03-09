@@ -22,6 +22,8 @@ import ActivityDrawer from "./ActivityDrawer";
 interface Props {
   user: IUser;
   providerProfile: IProviderProfile | null;
+  /** Role of the currently logged-in admin/staff user. */
+  currentUserRole: string;
 }
 
 // ─── Completeness ──────────────────────────────────────────────────────────
@@ -184,7 +186,8 @@ interface DupUser {
 
 // ─── Main component ────────────────────────────────────────────────────────
 
-export default function UserDetailView({ user, providerProfile }: Props) {
+export default function UserDetailView({ user, providerProfile, currentUserRole }: Props) {
+  const isAdmin = currentUserRole === "admin";
   const router = useRouter();
   const { items: completenessItems, pct } = getCompleteness(user);
   const c = completenessColor(pct);
@@ -328,14 +331,16 @@ export default function UserDetailView({ user, providerProfile }: Props) {
 
         {/* ── Admin action bar ─────────────────────────────────────────────── */}
         <div className="mt-5 pt-4 border-t border-slate-100 flex flex-wrap gap-2">
-          <button
-            onClick={handleImpersonate}
-            disabled={loadingImpersonate}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition-colors disabled:opacity-50"
-          >
-            {loadingImpersonate ? <span className="h-3 w-3 rounded-full border-2 border-slate-400 border-t-transparent animate-spin" /> : <UserCheck size={13} />}
-            Impersonate
-          </button>
+          {isAdmin && (
+            <button
+              onClick={handleImpersonate}
+              disabled={loadingImpersonate}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition-colors disabled:opacity-50"
+            >
+              {loadingImpersonate ? <span className="h-3 w-3 rounded-full border-2 border-slate-400 border-t-transparent animate-spin" /> : <UserCheck size={13} />}
+              Impersonate
+            </button>
+          )}
           <button
             onClick={handlePasswordReset}
             disabled={loadingReset}
@@ -344,12 +349,14 @@ export default function UserDetailView({ user, providerProfile }: Props) {
             {loadingReset ? <span className="h-3 w-3 rounded-full border-2 border-slate-400 border-t-transparent animate-spin" /> : <KeyRound size={13} />}
             Reset Password
           </button>
-          <button
-            onClick={() => setShowEditRole(true)}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition-colors"
-          >
-            <Shield size={13} /> Edit Role
-          </button>
+          {isAdmin && (
+            <button
+              onClick={() => setShowEditRole(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition-colors"
+            >
+              <Shield size={13} /> Edit Role
+            </button>
+          )}
           <button
             onClick={() => setShowActivity(true)}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition-colors"
@@ -374,14 +381,16 @@ export default function UserDetailView({ user, providerProfile }: Props) {
               <span className="ml-0.5 px-1.5 py-0.5 rounded-full bg-red-100 text-red-700 text-[10px] font-semibold">{duplicates.length}</span>
             )}
           </button>
-          <button
-            onClick={handleDelete}
-            disabled={loadingDelete}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-red-200 text-xs font-medium text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50 ml-auto"
-          >
-            {loadingDelete ? <span className="h-3 w-3 rounded-full border-2 border-red-400 border-t-transparent animate-spin" /> : <Trash2 size={13} />}
-            Delete Account
-          </button>
+          {isAdmin && (
+            <button
+              onClick={handleDelete}
+              disabled={loadingDelete}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-red-200 text-xs font-medium text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50 ml-auto"
+            >
+              {loadingDelete ? <span className="h-3 w-3 rounded-full border-2 border-red-400 border-t-transparent animate-spin" /> : <Trash2 size={13} />}
+              Delete Account
+            </button>
+          )}
         </div>
 
         {/* ── Duplicates panel ─────────────────────────────────────────────── */}

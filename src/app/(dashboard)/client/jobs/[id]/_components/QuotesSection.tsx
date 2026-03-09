@@ -83,11 +83,12 @@ export async function QuotesSection({
                 </span>
               )}
               <p className="text-xs text-slate-500 mt-1">Timeline: {accepted.timeline}</p>
-              <ProviderInfoButton
-                providerId={accepted.providerId._id.toString()}
-                providerName={accepted.providerId.name}
-              />
-              <div className="mt-2">
+              <p className="text-sm text-slate-700 mt-2 leading-relaxed">{accepted.message}</p>
+              <div className="mt-2 flex items-center gap-3">
+                <ProviderInfoButton
+                  providerId={accepted.providerId._id.toString()}
+                  providerName={accepted.providerId.name}
+                />
                 <Link
                   href={`/client/messages/${jobId}`}
                   className="inline-flex items-center gap-1.5 text-xs font-medium text-blue-600 hover:text-blue-700 hover:underline"
@@ -96,7 +97,6 @@ export async function QuotesSection({
                   Message Provider
                 </Link>
               </div>
-              <p className="text-sm text-slate-700 mt-2 leading-relaxed">{accepted.message}</p>
             </div>
           </div>
           <div className="sm:flex-shrink-0 sm:text-right w-full sm:w-auto border-t sm:border-t-0 pt-3 sm:pt-0 border-slate-100">
@@ -158,6 +158,7 @@ export async function QuotesSection({
                     <div className="flex-1 min-w-0">
                       <div className="flex flex-wrap items-center gap-2 mb-0.5">
                         <p className="font-semibold text-slate-900 text-sm">{q.providerId.name}</p>
+                        <QuoteStatusBadge status={q.status} />
                         {q.providerId.isVerified && (
                           <span className="badge bg-blue-100 text-blue-700 text-xs">Verified</span>
                         )}
@@ -186,18 +187,18 @@ export async function QuotesSection({
                         </div>
                       )}
                       <p className="text-xs text-slate-500 mt-1">Timeline: {q.timeline}</p>
+                      <p className="text-sm text-slate-700 mt-2 leading-relaxed">{q.message}</p>
                       <ProviderInfoButton
                         providerId={q.providerId._id.toString()}
                         providerName={q.providerId.name}
                       />
-                      <p className="text-sm text-slate-700 mt-2 leading-relaxed">{q.message}</p>
                     </div>
                   </div>
 
                   {/* Amount + actions — stacks below on mobile, right column on desktop */}
                   <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-start gap-3 sm:gap-2 sm:flex-shrink-0 pt-3 sm:pt-0 border-t sm:border-t-0 border-slate-100">
                     <div className="sm:text-right">
-                      <p className="text-lg font-bold text-slate-900">
+                      <p className="text-xl font-bold text-slate-900">
                         {formatCurrency(q.proposedAmount)}
                       </p>
                       <p className="text-[11px] text-slate-400 mt-0.5">
@@ -207,25 +208,13 @@ export async function QuotesSection({
                         </span>
                       </p>
                     </div>
-                    <div className="flex sm:flex-col items-center sm:items-end gap-2">
-                      <QuoteStatusBadge status={q.status} />
-                      <div className="flex items-center gap-2">
-                        {q.status === "pending" && (
-                          <QuoteAcceptButton
-                            quoteId={q._id.toString()}
-                            proposedAmount={q.proposedAmount}
-                            providerName={q.providerId.name}
-                          />
-                        )}
-                        <Link
-                          href={`/client/messages/${jobId}`}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-600 hover:bg-slate-50 hover:text-blue-600 hover:border-blue-300 transition-colors"
-                        >
-                          <MessageSquare className="h-3.5 w-3.5" />
-                          Message
-                        </Link>
-                      </div>
-                    </div>
+                    {q.status === "pending" && (
+                      <QuoteAcceptButton
+                        quoteId={q._id.toString()}
+                        proposedAmount={q.proposedAmount}
+                        providerName={q.providerId.name}
+                      />
+                    )}
                   </div>
                 </div>
               </li>

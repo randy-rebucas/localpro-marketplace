@@ -41,6 +41,8 @@ interface Props {
   /** Active keyword search, derived from the URL by the server component. */
   searchQuery: string;
   userStats: UserStats;
+  /** Role of the currently logged-in admin/staff user. */
+  currentUserRole: string;
 }
 
 // ─── Completeness helpers ─────────────────────────────────────────────────────
@@ -123,8 +125,9 @@ function pageNumbers(current: number, total: number): (number | "...")[] {
 
 export default function AdminUsersList({
   users, total, page, totalPages, limit, sort,
-  roleFilter, kycFilter, searchQuery, userStats,
+  roleFilter, kycFilter, searchQuery, userStats, currentUserRole,
 }: Props) {
+  const isAdmin = currentUserRole === "admin";
   const router   = useRouter();
   const pathname = usePathname();
 
@@ -437,11 +440,13 @@ export default function AdminUsersList({
               {bulkLoading === "suspend" ? <span className="h-3 w-3 rounded-full border-2 border-white border-t-transparent animate-spin" /> : <Ban size={12} />}
               Suspend all
             </button>
-            <button onClick={() => bulkAction("delete")} disabled={!!bulkLoading}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-medium transition-colors disabled:opacity-50">
-              {bulkLoading === "delete" ? <span className="h-3 w-3 rounded-full border-2 border-white border-t-transparent animate-spin" /> : <Trash2 size={12} />}
-              Delete all
-            </button>
+            {isAdmin && (
+              <button onClick={() => bulkAction("delete")} disabled={!!bulkLoading}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-medium transition-colors disabled:opacity-50">
+                {bulkLoading === "delete" ? <span className="h-3 w-3 rounded-full border-2 border-white border-t-transparent animate-spin" /> : <Trash2 size={12} />}
+                Delete all
+              </button>
+            )}
             <button onClick={() => setSelectedIds(new Set())}
               className="px-2.5 py-1.5 rounded-lg text-slate-500 hover:bg-slate-100 text-xs">
               Clear

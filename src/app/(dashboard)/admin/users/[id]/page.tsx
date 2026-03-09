@@ -38,5 +38,5 @@ export default async function AdminUserDetailPage({
     }
   }
 
-  return <UserDetailView user={user} providerProfile={providerProfile} />;
+  return <UserDetailView user={user} providerProfile={providerProfile} currentUserRole={currentUser.role} />;
 }

@@ -23,12 +23,13 @@ export default function NotificationBell() {
   const [open, setOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
 
-  // Hydrate + connect SSE once on mount
+  // Hydrate + connect SSE once the user is confirmed present
   useEffect(() => {
+    if (!user) return;
     hydrate().then(() => connectSSE());
     return () => disconnectSSE();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [String(user?._id ?? "")]);
 
   // Close on click outside or Escape
   useEffect(() => {

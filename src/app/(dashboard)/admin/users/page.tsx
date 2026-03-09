@@ -93,6 +93,7 @@ export default async function AdminUsersPage({
         kycFilter={kycFilter}
         searchQuery={searchQuery}
         userStats={userStats}
+        currentUserRole={user.role}
       />
     </div>
   );

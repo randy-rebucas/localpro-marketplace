@@ -333,8 +333,10 @@ export class JobRepository extends BaseRepository<JobDocument> {
     // PESO/LGU jobs where provider has sent inquiry messages (not yet assigned)
     const sentThreadIds = await Message.distinct("threadId", { senderId: providerObjId });
     const assignedJobIds = new Set(assignedJobs.map((j) => String(j._id)));
-    // Only include threads not already in assignedJobs
-    const inquiryThreadIds = sentThreadIds.filter((id: string) => !assignedJobIds.has(id));
+    // Only include threads not already in assignedJobs, and guard against non-ObjectId strings
+    const inquiryThreadIds = sentThreadIds.filter(
+      (id: string) => !assignedJobIds.has(id) && Types.ObjectId.isValid(id)
+    );
 
     let inquiryJobs: Array<{ _id: unknown; title: string; status: string }> = [];
     if (inquiryThreadIds.length > 0) {

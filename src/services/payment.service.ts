@@ -5,6 +5,7 @@ import {
   activityRepository,
 } from "@/repositories";
 import { ledgerService } from "@/services/ledger.service";
+import { ledgerRepository } from "@/repositories/ledger.repository";
 import {
   createCheckoutSession,
   getCheckoutSession,
@@ -207,7 +208,13 @@ export class PaymentService {
       paymentIntentId,
       paymentMethodType
     );
-    if (!payment) return; // already paid or not found
+    if (!payment) {
+      // Payment was already marked paid in a prior attempt.
+      // Guard against the deadlock: if the ledger write failed last time,
+      // the retry would return early here and never post it. Re-post if missing.
+      await this._ensureLedgerPostedForSession(sessionId);
+      return;
+    }
 
     const p = payment as unknown as {
       jobId: { toString(): string };
@@ -337,21 +344,19 @@ export class PaymentService {
       chargeType: "recurring",
     });
 
-    try {
-      const journalId = `escrow-fund-${job._id!.toString()}`;
-      await ledgerService.postEscrowFundedGateway(
-        {
-          journalId,
-          entityType: "job",
-          entityId: job._id!.toString(),
-          clientId,
-          providerId: job.providerId?.toString(),
-          initiatedBy: clientId,
-        },
-        job.budget, commission, netAmount
-      );
-      await transactionRepository.updateById((tx as { _id: { toString(): string } })._id.toString(), { ledgerJournalId: journalId });
-    } catch { /* non-critical */ }
+    const journalId = `escrow-fund-${job._id!.toString()}`;
+    await ledgerService.postEscrowFundedGateway(
+      {
+        journalId,
+        entityType: "job",
+        entityId: job._id!.toString(),
+        clientId,
+        providerId: job.providerId?.toString(),
+        initiatedBy: clientId,
+      },
+      job.budget, commission, netAmount
+    );
+    await transactionRepository.updateById((tx as { _id: { toString(): string } })._id.toString(), { ledgerJournalId: journalId });
 
     await activityRepository.log({
       userId: clientId,
@@ -432,6 +437,57 @@ export class PaymentService {
       message: "Your payment attempt failed. Please try funding escrow again.",
       data: { jobId: p.jobId.toString(), paymentIntentId },
     });
+  }
+
+  /**
+   * Recovery guard for the webhook-retry deadlock.
+   *
+   * Scenario: webhook fires → atomicMarkPaid succeeds → ledger write fails →
+   * webhook returns 500 → PayMongo retries → atomicMarkPaid returns null →
+   * we land here. Check whether the ledger journal was ever posted; if not,
+   * re-post it using the already-persisted payment + transaction data.
+   */
+  private async _ensureLedgerPostedForSession(sessionId: string): Promise<void> {
+    const payment = await paymentRepository.findByPaymentIntentId(sessionId);
+    if (!payment) return;
+
+    const p = payment as unknown as {
+      jobId: { toString(): string };
+      clientId: { toString(): string };
+      providerId: { toString(): string } | null;
+      amount: number;
+    };
+
+    const journalId = `escrow-fund-${p.jobId.toString()}`;
+    const existing = await ledgerRepository.countByEntity("job", p.jobId.toString());
+    if (existing > 0) return; // Already posted — nothing to do.
+
+    const jobDoc = await jobRepository.getDocById(p.jobId.toString());
+    if (!jobDoc) return;
+
+    const job = jobDoc as unknown as IJob;
+    const rate = await getDbCommissionRate(job.category);
+    const { commission, netAmount } = calculateCommission(p.amount, rate);
+
+    await ledgerService.postEscrowFundedGateway(
+      {
+        journalId,
+        entityType: "job",
+        entityId: p.jobId.toString(),
+        clientId: p.clientId.toString(),
+        providerId: p.providerId?.toString(),
+        initiatedBy: p.clientId.toString(),
+      },
+      p.amount, commission, netAmount
+    );
+
+    const tx = await transactionRepository.findOneByJobId(p.jobId.toString());
+    if (tx) {
+      await transactionRepository.updateById(
+        (tx as unknown as { _id: { toString(): string } })._id.toString(),
+        { ledgerJournalId: journalId }
+      );
+    }
   }
 }
 

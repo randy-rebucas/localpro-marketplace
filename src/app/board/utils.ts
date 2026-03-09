@@ -2,7 +2,8 @@ import { APP_URL } from "./constants";
 
 // ─── Board Utilities ──────────────────────────────────────────────────────────
 
-export function formatPeso(amount: number) {
+export function formatPeso(amount: number | undefined | null) {
+  if (!amount) return "N/A";
   return `₱${amount.toLocaleString("en-PH")}`;
 }
 

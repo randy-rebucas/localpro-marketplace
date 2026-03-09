@@ -99,6 +99,8 @@ interface NotificationState {
 
 let _eventSource: EventSource | null = null;
 let _visibilityCleanup: (() => void) | null = null;
+let _sseRetries = 0;
+const SSE_MAX_RETRIES = 5;
 
 export const useNotificationStore = create<NotificationState>((set, get) => ({
   notifications: [],
@@ -135,7 +137,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
         withCredentials: true,
       });
 
-      _eventSource.onopen = () => set({ sseConnected: true });
+      _eventSource.onopen = () => { _sseRetries = 0; set({ sseConnected: true }); };
 
       _eventSource.onmessage = (event) => {
         try {
@@ -166,8 +168,14 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
         if (_eventSource && _eventSource.readyState === EventSource.CLOSED) {
           _eventSource.close();
           _eventSource = null;
-          // Retry after 5 s
-          setTimeout(() => open(), 5_000);
+          _sseRetries++;
+          if (_sseRetries > SSE_MAX_RETRIES) {
+            // Give up — likely unauthenticated. Will reconnect on next page load.
+            return;
+          }
+          // Exponential backoff: 5s, 10s, 20s, 40s, 80s
+          const delay = Math.min(5_000 * Math.pow(2, _sseRetries - 1), 80_000);
+          setTimeout(() => open(), delay);
         }
       };
     };
@@ -192,6 +200,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     }
     _visibilityCleanup?.();
     _visibilityCleanup = null;
+    _sseRetries = 0;
     set({ sseConnected: false });
   },
 
