@@ -37,6 +37,8 @@ export default async function AccountingPage() {
 
   const totalAssets      = assets.reduce((s, r) => s + (r.balancePHP ?? 0), 0);
   const totalLiabilities = liabilities.reduce((s, r) => s + (r.balancePHP ?? 0), 0);
+  const totalRevenues    = revenues.reduce((s, r) => s + (r.balancePHP ?? 0), 0);
+  const totalExpenses    = expenses.reduce((s, r) => s + (r.balancePHP ?? 0), 0);
 
   const is = incomeStatement as {
     revenue: number;
@@ -50,7 +52,10 @@ export default async function AccountingPage() {
   const earningsPHP  = rows.find((r) => r.accountCode === "2100")?.balancePHP ?? 0;
   const escrowPHP    = rows.find((r) => r.accountCode === "1100")?.balancePHP ?? 0;
 
-  const isBalanced = Math.abs(totalAssets - totalLiabilities) < 0.01;
+  // Trial balance equation: debit-normal (Assets + Expenses) = credit-normal (Liabilities + Revenue)
+  const debitSide  = totalAssets + totalExpenses;
+  const creditSide = totalLiabilities + totalRevenues;
+  const isBalanced = Math.abs(debitSide - creditSide) < 0.01;
 
   const SECTION_COLORS: Record<string, { label: string; badge: string; text: string }> = {
     asset:     { label: "Assets",      badge: "bg-blue-50 text-blue-700",     text: "text-blue-700"   },
@@ -66,7 +71,7 @@ export default async function AccountingPage() {
         title="How the Accounting Ledger works"
         steps={[
           { icon: "📒", title: "Double-entry bookkeeping", description: "Every financial event posts a matching debit and credit pair, creating an auditable, tamper-evident journal." },
-          { icon: "⚖️", title: "Trial balance", description: "Lists every account with its running balance. Total Assets should always equal Total Liabilities." },
+          { icon: "⚖️", title: "Trial balance", description: "Lists every account with its running balance. Total Debits (Assets + Expenses) must always equal Total Credits (Liabilities + Revenue)." },
           { icon: "📈", title: "Income statement", description: "Shows commission revenue earned minus refunds issued for any date range." },
           { icon: "🔄", title: "Reconciliation", description: "Compares 2100 Earnings Payable in the ledger against transaction records to catch discrepancies early." },
         ]}
@@ -218,18 +223,18 @@ export default async function AccountingPage() {
               </tbody>
               <tfoot className="border-t-2 border-slate-200 bg-slate-50">
                 <tr>
-                  <td colSpan={3} className="px-5 py-3 text-sm font-bold text-slate-700">Total Assets</td>
-                  <td className="px-5 py-3 text-right font-bold text-blue-700 tabular-nums">{formatCurrency(totalAssets)}</td>
+                  <td colSpan={3} className="px-5 py-3 text-sm font-bold text-slate-700">Total Debits (Assets + Expenses)</td>
+                  <td className="px-5 py-3 text-right font-bold text-blue-700 tabular-nums">{formatCurrency(debitSide)}</td>
                 </tr>
                 <tr>
-                  <td colSpan={3} className="px-5 py-2.5 text-sm font-bold text-slate-700">Total Liabilities</td>
-                  <td className="px-5 py-2.5 text-right font-bold text-orange-700 tabular-nums">{formatCurrency(totalLiabilities)}</td>
+                  <td colSpan={3} className="px-5 py-2.5 text-sm font-bold text-slate-700">Total Credits (Liabilities + Revenue)</td>
+                  <td className="px-5 py-2.5 text-right font-bold text-orange-700 tabular-nums">{formatCurrency(creditSide)}</td>
                 </tr>
                 <tr>
                   <td colSpan={4} className="px-5 py-2.5 text-sm">
                     {isBalanced
                       ? <span className="text-green-600 font-semibold">✓ Balanced</span>
-                      : <span className="text-red-600 font-semibold">⚠ Out of balance by {formatCurrency(Math.abs(totalAssets - totalLiabilities))}</span>}
+                      : <span className="text-red-600 font-semibold">⚠ Out of balance by {formatCurrency(Math.abs(debitSide - creditSide))}</span>}
                   </td>
                 </tr>
               </tfoot>

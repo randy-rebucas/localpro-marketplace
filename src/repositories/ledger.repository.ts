@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import type { PipelineStage } from "mongoose";
 import LedgerEntry from "@/models/LedgerEntry";
 import type { LedgerEntryDocument, ILedgerEntry, AccountCode } from "@/models/LedgerEntry";
 import AccountBalance from "@/models/AccountBalance";
@@ -167,7 +168,7 @@ export class LedgerRepository {
     const dateFilter = { currency, createdAt: { $gte: from, $lte: to } };
 
     // Single pipeline: group credits and debits by account code in one pass each
-    const facet: Record<string, object[]> = {};
+    const facet: PipelineStage.Facet["$facet"] = {};
     for (const code of allCodes) {
       facet[`cr_${code}`] = [
         { $match: { ...dateFilter, creditAccount: code } },

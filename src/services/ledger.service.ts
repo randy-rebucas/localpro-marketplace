@@ -183,12 +183,17 @@ export class LedgerService {
 
   /**
    * Flow 7: Dispute resolved — full refund to client.
+   * Reverses the original escrow-funded journal:
    *
    * DR 4000 Commission Revenue     commission ← reverse earned commission
-   * CR 5000 Refunds Issued         commission ← expense recognised
+   * CR 2200 Wallet Payable         commission ← commission portion to client wallet
    *
-   * DR 2100 Earnings Payable       net     ← reverse provider earnings
-   * CR 2200 Wallet Payable         gross   ← credit full amount to client wallet
+   * DR 2100 Earnings Payable       net        ← reverse provider earnings
+   * CR 2200 Wallet Payable         net        ← net portion to client wallet
+   *
+   * Net effect: 2200 Wallet Payable +gross, 4000 Commission Revenue −commission,
+   * 2100 Earnings Payable −net. 5000 Refunds Issued shows the gross reversal on
+   * the income statement.
    */
   async postDisputeRefund(
     opts: JournalOptions,
@@ -202,27 +207,20 @@ export class LedgerService {
     const desc        = `Dispute refund — Job ${opts.entityId}`;
 
     await ledgerRepository.postJournal([
-      // Reverse commission
+      // Reverse commission: debit revenue, credit client wallet
       buildEntry(opts, "dispute_refund_commission",
         ACCOUNT_CODES.COMMISSION_REVENUE,
-        ACCOUNT_CODES.REFUNDS_ISSUED,
+        ACCOUNT_CODES.WALLET_PAYABLE_CLIENTS,
         commissionC,
-        `${desc} (commission reversed)`,
+        `${desc} (commission reversed to client wallet)`,
         { grossC, commissionC, netC }
       ),
-      // Reverse provider earnings + credit full amount to client wallet
+      // Reverse provider earnings: debit liability, credit client wallet
       buildEntry(opts, "dispute_refund_earnings",
         ACCOUNT_CODES.EARNINGS_PAYABLE,
         ACCOUNT_CODES.WALLET_PAYABLE_CLIENTS,
         netC,
         `${desc} (provider earnings reversed, credited to client wallet)`
-      ),
-      // Credit commission portion to client wallet too
-      buildEntry(opts, "dispute_refund_commission",
-        ACCOUNT_CODES.REFUNDS_ISSUED,
-        ACCOUNT_CODES.WALLET_PAYABLE_CLIENTS,
-        commissionC,
-        `${desc} (commission portion returned to client wallet)`
       ),
     ]);
   }
@@ -265,9 +263,10 @@ export class LedgerService {
 
   /**
    * Flow 11: Admin marks wallet withdrawal as completed.
+   * Cash leaves the platform via bank transfer.
    *
    * DR 2300 Withdrawal Payable     amount  ← in-flight cleared
-   * CR 1200 Wallet Funds Held      amount  ← asset reduces (cash out)
+   * CR 1000 Gateway Receivable     amount  ← cash out of platform
    */
   async postWalletWithdrawalCompleted(opts: JournalOptions, amountPHP: number): Promise<void> {
     const amountC = toCentavos(amountPHP);
@@ -275,7 +274,7 @@ export class LedgerService {
     await ledgerRepository.postJournal([
       buildEntry(opts, "wallet_withdrawal_completed",
         ACCOUNT_CODES.WITHDRAWAL_PAYABLE,
-        ACCOUNT_CODES.WALLET_FUNDS_HELD,
+        ACCOUNT_CODES.GATEWAY_RECEIVABLE,
         amountC,
         `Wallet withdrawal completed — Withdrawal ${opts.entityId}`
       ),
