@@ -44,6 +44,8 @@ const PayoutSchema = new Schema<PayoutDocument>(
       type: Date,
       default: null,
     },
+    currency:        { type: String, default: "PHP" },
+    ledgerJournalId: { type: String, default: null },
   },
   { timestamps: true }
 );

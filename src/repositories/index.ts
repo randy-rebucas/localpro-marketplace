@@ -23,3 +23,4 @@ export { businessOrganizationRepository } from "./businessOrganization.repositor
 export { businessMemberRepository } from "./businessMember.repository";
 export { walletRepository } from "./wallet.repository";
 export { pesoRepository } from "./peso.repository";
+export { ledgerRepository } from "./ledger.repository";

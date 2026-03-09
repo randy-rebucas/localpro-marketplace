@@ -5,6 +5,7 @@ import {
   providerProfileRepository,
   quoteRepository,
 } from "@/repositories";
+import { ledgerService } from "@/services/ledger.service";
 import { canTransition, canTransitionEscrow } from "@/lib/jobLifecycle";
 import { pushStatusUpdateMany } from "@/lib/events";
 import { calculateCommission } from "@/lib/commission";
@@ -152,6 +153,27 @@ export class EscrowService {
     }
 
     await transactionRepository.setPending(job._id!.toString(), "completed");
+
+    // ── post ledger entry for escrow release ─────────────────────────────────
+    try {
+      const tx = await transactionRepository.findOneByJobId(job._id!.toString());
+      if (tx) {
+        const t = tx as unknown as { netAmount: number; amount: number };
+        await ledgerService.postEscrowReleased(
+          {
+            journalId: `escrow-release-${job._id!.toString()}`,
+            entityType: "job",
+            entityId: job._id!.toString(),
+            clientId: job.clientId.toString(),
+            providerId: job.providerId?.toString(),
+            initiatedBy: user.userId,
+          },
+          t.netAmount
+        );
+      }
+    } catch {
+      // Non-critical — do not fail escrow release if ledger write fails
+    }
 
     // ── loyalty points for client ────────────────────────────────────────────
     try {

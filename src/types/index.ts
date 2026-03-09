@@ -226,6 +226,10 @@ export interface ITransaction {
   commission: number;
   netAmount: number;
   status: TransactionStatus;
+  currency?: string;
+  commissionRate?: number | null;
+  chargeType?: "job_escrow" | "milestone_release" | "partial_release" | "recurring";
+  ledgerJournalId?: string | null;
   createdAt: Date;
 }
 
@@ -626,9 +630,13 @@ export interface IPayment {
   /** PayMongo payment id (pay_xxx) set on webhook confirmation */
   paymentId?: string;
   refundId?: string;
+  confirmedAt?: Date | null;
+  refundedAt?: Date | null;
+  /** PayMongo webhook event ID for idempotency */
+  webhookEventId?: string | null;
   createdAt: Date;
   updatedAt: Date;
-}
+} 
 // ─── Payout ───────────────────────────────────────────────────────────────────
 
 export type PayoutStatus = "pending" | "processing" | "completed" | "rejected";
@@ -643,6 +651,8 @@ export interface IPayout {
   accountName: string;
   notes?: string;
   processedAt?: Date;
+  currency?: string;
+  ledgerJournalId?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }

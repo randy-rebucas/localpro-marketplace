@@ -27,8 +27,8 @@ export class WalletRepository {
   }
 
   /**
-   * Atomically updates balance and records a wallet transaction.
-   * Uses $inc so concurrent operations can't double-credit/debit.
+   * Atomically updates balance and records a wallet transaction in a
+   * MongoDB multi-document session to prevent partial writes.
    * Returns the new balance.
    */
   async applyTransaction(
@@ -40,28 +40,80 @@ export class WalletRepository {
   ): Promise<{ newBalance: number; txDoc: WalletTransactionDocument }> {
     await connectDB();
 
-    const updated = await Wallet.findOneAndUpdate(
-      { userId: new mongoose.Types.ObjectId(userId) },
-      {
-        $inc: { balance: delta },
-        $setOnInsert: { userId: new mongoose.Types.ObjectId(userId) },
-      },
-      { upsert: true, new: true }
-    ).lean() as { balance: number };
+    const session = await mongoose.startSession();
+    let newBalance = 0;
+    let txDoc!: WalletTransactionDocument;
 
-    const newBalance = updated.balance;
+    try {
+      await session.withTransaction(async () => {
+        const updated = await Wallet.findOneAndUpdate(
+          { userId: new mongoose.Types.ObjectId(userId) },
+          {
+            $inc: { balance: delta },
+            $setOnInsert: { userId: new mongoose.Types.ObjectId(userId) },
+          },
+          { upsert: true, new: true, session }
+        ).lean() as { balance: number };
 
-    const txDoc = await WalletTransaction.create({
-      userId:       new mongoose.Types.ObjectId(userId),
-      type,
-      amount:       Math.abs(delta),
-      balanceAfter: newBalance,
-      description,
-      jobId:  opts?.jobId  ? new mongoose.Types.ObjectId(opts.jobId)  : null,
-      refId:  opts?.refId  ?? null,
-    }) as unknown as WalletTransactionDocument;
+        newBalance = updated.balance;
+
+        const [created] = await WalletTransaction.create(
+          [{
+            userId:       new mongoose.Types.ObjectId(userId),
+            type,
+            amount:       Math.abs(delta),
+            balanceAfter: newBalance,
+            description,
+            jobId:  opts?.jobId  ? new mongoose.Types.ObjectId(opts.jobId)  : null,
+            refId:  opts?.refId  ?? null,
+          }],
+          { session }
+        );
+        txDoc = created as unknown as WalletTransactionDocument;
+      });
+    } finally {
+      await session.endSession();
+    }
 
     return { newBalance, txDoc };
+  }
+
+  /**
+   * Reserve (lock) funds for a pending withdrawal so they can't be
+   * double-spent while the withdrawal is in flight.
+   * Throws if available balance (balance - reservedAmount) < amount.
+   */
+  async reserveBalance(userId: string, amount: number): Promise<void> {
+    await connectDB();
+    const result = await Wallet.findOneAndUpdate(
+      {
+        userId: new mongoose.Types.ObjectId(userId),
+        $expr: { $gte: [{ $subtract: ["$balance", "$reservedAmount"] }, amount] },
+      },
+      { $inc: { reservedAmount: amount } },
+      { new: true }
+    );
+    if (!result) {
+      throw new Error("Insufficient available balance to reserve");
+    }
+  }
+
+  /** Release a reservation without committing it (e.g. withdrawal rejected). */
+  async releaseReservation(userId: string, amount: number): Promise<void> {
+    await connectDB();
+    await Wallet.findOneAndUpdate(
+      { userId: new mongoose.Types.ObjectId(userId) },
+      { $inc: { reservedAmount: -amount } }
+    );
+  }
+
+  /** Commit a reservation: deduct both balance and reservedAmount (withdrawal completed). */
+  async commitReservation(userId: string, amount: number): Promise<void> {
+    await connectDB();
+    await Wallet.findOneAndUpdate(
+      { userId: new mongoose.Types.ObjectId(userId) },
+      { $inc: { balance: -amount, reservedAmount: -amount } }
+    );
   }
 
   // ── Transactions history ──────────────────────────────────────────────────

@@ -17,6 +17,7 @@ import { UnprocessableError, ForbiddenError, NotFoundError } from "@/lib/errors"
 import { canTransitionEscrow } from "@/lib/jobLifecycle";
 import { calculateCommission } from "@/lib/commission";
 import { getDbCommissionRate } from "@/lib/serverCommission";
+import { ledgerService } from "@/services/ledger.service";
 import type { TokenPayload } from "@/lib/auth";
 import type { IJob } from "@/types";
 
@@ -97,8 +98,9 @@ export class WalletService {
     await jobDoc.save();
 
     // Create transaction record for provider payout tracking
-    const { commission, netAmount } = calculateCommission(amount, await getDbCommissionRate((job as unknown as { category: string }).category));
-    await transactionRepository.create({
+    const rate = await getDbCommissionRate((job as unknown as { category: string }).category);
+    const { commission, netAmount } = calculateCommission(amount, rate);
+    const tx = await transactionRepository.create({
       jobId: job._id,
       payerId: user.userId,
       payeeId: job.providerId,
@@ -106,7 +108,24 @@ export class WalletService {
       commission,
       netAmount,
       status: "pending",
+      currency: "PHP",
+      commissionRate: rate,
+      chargeType: "job_escrow",
     });
+
+    const journalId = `escrow-fund-wallet-${job._id!.toString()}`;
+    await ledgerService.postEscrowFundedWallet(
+      {
+        journalId,
+        entityType: "job",
+        entityId: job._id!.toString(),
+        clientId: user.userId,
+        providerId: job.providerId?.toString(),
+        initiatedBy: user.userId,
+      },
+      amount, commission, netAmount
+    );
+    await transactionRepository.updateById((tx as { _id: { toString(): string } })._id.toString(), { ledgerJournalId: journalId });
 
     await activityRepository.log({
       userId: user.userId,
@@ -179,13 +198,8 @@ export class WalletService {
       );
     }
 
-    // Reserve the amount immediately (debit wallet, refund if rejected)
-    await walletRepository.applyTransaction(
-      user.userId,
-      -amount,
-      "withdrawal",
-      `Withdrawal request: ${bankName} ${accountNumber}`,
-    );
+    // Atomically reserve the amount so it can't be double-spent while pending
+    await walletRepository.reserveBalance(user.userId, amount);
 
     const withdrawal = await walletRepository.createWithdrawal({
       userId: user.userId,
@@ -194,6 +208,17 @@ export class WalletService {
       accountNumber: accountNumber.trim(),
       accountName:   accountName.trim(),
     });
+
+    await ledgerService.postWalletWithdrawalRequested(
+      {
+        journalId: `wallet-withdraw-${withdrawal._id?.toString()}`,
+        entityType: "wallet_withdrawal",
+        entityId: withdrawal._id!.toString(),
+        clientId: user.userId,
+        initiatedBy: user.userId,
+      },
+      amount
+    );
 
     await activityRepository.log({
       userId: user.userId,
@@ -232,14 +257,26 @@ export class WalletService {
       status: string;
     };
 
-    // If rejecting, reverse the deducted amount back to the wallet
+    // If rejecting, release the reservation back to the wallet
     if (status === "rejected" && w.status !== "rejected") {
+      await walletRepository.releaseReservation(w.userId.toString(), w.amount);
       await walletRepository.applyTransaction(
         w.userId.toString(),
         w.amount,
         "withdrawal_reversed",
         `Withdrawal rejected: ${notes ?? "Admin decision"}`,
         { refId: withdrawalId }
+      );
+
+      await ledgerService.postWalletWithdrawalReversed(
+        {
+          journalId: `wallet-withdraw-reversed-${withdrawalId}`,
+          entityType: "wallet_withdrawal",
+          entityId: withdrawalId,
+          clientId: w.userId.toString(),
+          initiatedBy: admin.userId,
+        },
+        w.amount
       );
 
       // Notify user
@@ -251,7 +288,20 @@ export class WalletService {
         data: {},
       });
       pushNotification(w.userId.toString(), note);
-    } else if (status === "completed") {
+    } else if (status === "completed" && w.status !== "completed") {
+      // Commit the reservation: deduct balance + release reservedAmount atomically
+      await walletRepository.commitReservation(w.userId.toString(), w.amount);
+      await ledgerService.postWalletWithdrawalCompleted(
+        {
+          journalId: `wallet-withdraw-completed-${withdrawalId}`,
+          entityType: "wallet_withdrawal",
+          entityId: withdrawalId,
+          clientId: w.userId.toString(),
+          initiatedBy: admin.userId,
+        },
+        w.amount
+      );
+
       const note = await notificationRepository.create({
         userId: w.userId.toString(),
         type: "wallet_withdrawal_update" as never,

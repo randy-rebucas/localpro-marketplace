@@ -62,7 +62,8 @@
       "Bash(sed -i 's/setProviders\\(d\\\\.providers ?? \\\\[\\\\]\\)/setProviders\\(d.data ?? []\\)/' \"c:/Users/corew/localpro-marketplace/src/app/\\(dashboard\\)/peso/training/page.tsx\")",
       "Bash(node -e \"const fs=require\\(''fs''\\); const c=fs.readFileSync\\(''c:/Users/corew/localpro-marketplace/src/app/\\(dashboard\\)/peso/groups/page.tsx'',''utf8''\\); console.log\\(c.slice\\(c.indexOf\\(''shrink-0 \\\\`text-[10px]''\\)-50, c.indexOf\\(''shrink-0 \\\\`text-[10px]''\\)+300\\)\\);\")",
       "Bash(grep -v \"shrink-0\\\\`\")",
-      "Bash(npx tsc --noEmit --project tsconfig.json)"
+      "Bash(npx tsc --noEmit --project tsconfig.json)",
+      "Bash(ls c:/Users/corew/localpro-marketplace/src/app/\\\\\\(dashboard\\\\\\)/peso/)"
     ]
   }
 }

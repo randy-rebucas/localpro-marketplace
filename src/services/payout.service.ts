@@ -1,5 +1,6 @@
 import { payoutRepository } from "@/repositories/payout.repository";
 import { transactionRepository, activityRepository } from "@/repositories";
+import { ledgerService } from "@/services/ledger.service";
 import {
   NotFoundError,
   ForbiddenError,
@@ -107,8 +108,25 @@ export class PayoutService {
 
     const updated = await payoutRepository.updateById(payoutId, update);
 
-    // Notify provider
+    // Post ledger entry when payout is completed (DR Earnings Payable / CR Gateway Receivable)
     const p = payout as unknown as { providerId: { toString(): string }; amount: number };
+    if (data.status === "completed") {
+      try {
+        await ledgerService.postPayoutSent(
+          {
+            journalId: `payout-sent-${payoutId}`,
+            entityType: "payout",
+            entityId: payoutId,
+            providerId: p.providerId.toString(),
+            initiatedBy: admin.userId,
+          },
+          p.amount
+        );
+        await payoutRepository.updateById(payoutId, { ledgerJournalId: `payout-sent-${payoutId}` });
+      } catch { /* non-critical */ }
+    }
+
+    // Notify provider
     const { notificationService } = await import("@/services/notification.service");
 
     const messages: Record<string, string> = {
