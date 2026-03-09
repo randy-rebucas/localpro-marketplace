@@ -92,6 +92,11 @@ interface QuoteForm {
   message: string;
 }
 
+interface ApplyForm {
+  coverLetter: string;
+  availability: string;
+}
+
 interface MarketplaceClientProps {
   initialJobs: IJob[];
   initialCategories: string[];
@@ -120,8 +125,11 @@ export default function MarketplaceClient({
   const [quoteForm, setQuoteForm] = useState<QuoteForm>({
     price: "", timeline: "", sitePhotos: [], message: "",
   });
+  const [applyModal, setApplyModal] = useState<{ open: boolean; job: IJob | null }>({ open: false, job: null });
+  const [applyForm, setApplyForm] = useState<ApplyForm>({ coverLetter: "", availability: "" });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [quotedJobStatuses, setQuotedJobStatuses] = useState<Record<string, string>>(initialQuotedJobStatuses);
+  const [appliedJobIds, setAppliedJobIds] = useState<Set<string>>(new Set());
   const [categories] = useState<string[]>(initialCategories);
   const [isGeneratingQuoteMsg, setIsGeneratingQuoteMsg] = useState(false);
   const [minBudget, setMinBudget] = useState("");
@@ -135,6 +143,18 @@ export default function MarketplaceClient({
   const searchRef = useRef<HTMLInputElement>(null);
 
   const debouncedSearch = useDebounce(search);
+
+  // Load applied PESO/LGU job IDs on mount
+  useEffect(() => {
+    apiFetch("/api/apply")
+      .then((r) => r.json())
+      .then((d) => {
+        if (Array.isArray(d.appliedJobIds)) {
+          setAppliedJobIds(new Set<string>(d.appliedJobIds));
+        }
+      })
+      .catch(() => {/* silent — provider may not have applications yet */});
+  }, []);
 
   const fetchJobs = useCallback(async (silent = false) => {
     if (silent) setIsRefreshing(true);
@@ -327,6 +347,49 @@ export default function MarketplaceClient({
   function openQuoteModal(job: IJob) {
     setQuoteForm({ price: "", timeline: "", sitePhotos: [], message: "" });
     setQuoteModal({ open: true, job });
+  }
+
+  function openApplyModal(job: IJob) {
+    setApplyForm({ coverLetter: "", availability: "" });
+    setApplyModal({ open: true, job });
+  }
+
+  async function submitApplication() {
+    if (!applyModal.job) return;
+    if (applyForm.coverLetter.length < 20) { toast.error("Cover letter must be at least 20 characters"); return; }
+    if (!applyForm.availability.trim()) { toast.error("Please enter your availability"); return; }
+
+    setIsSubmitting(true);
+    try {
+      const res = await apiFetch("/api/apply", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          jobId: applyModal.job._id,
+          coverLetter: applyForm.coverLetter,
+          availability: applyForm.availability,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        if (data.error?.includes("already applied")) {
+          setAppliedJobIds((prev) => new Set([...prev, applyModal.job!._id.toString()]));
+          setApplyModal({ open: false, job: null });
+          toast.error("You've already applied to this job");
+        } else {
+          toast.error(data.error ?? "Failed to submit application");
+        }
+        return;
+      }
+      toast.success("Application submitted!");
+      setAppliedJobIds((prev) => new Set([...prev, applyModal.job!._id.toString()]));
+      setApplyModal({ open: false, job: null });
+      setApplyForm({ coverLetter: "", availability: "" });
+    } catch {
+      toast.error("Something went wrong");
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -652,8 +715,10 @@ export default function MarketplaceClient({
         <div className="grid sm:grid-cols-2 gap-4">
           {paginated.map((job) => {
             const id = job._id.toString();
-            const quoteStatus = quotedJobStatuses[id] as "pending" | "accepted" | "rejected" | undefined;
-            const quoted = !!quoteStatus;
+            const isGovJob = job.jobSource === "peso" || job.jobSource === "lgu";
+            const quoteStatus = !isGovJob ? quotedJobStatuses[id] as "pending" | "accepted" | "rejected" | undefined : undefined;
+            const quoted = !isGovJob && !!quoteStatus;
+            const applied = isGovJob && appliedJobIds.has(id);
             const expanded = expandedId === id;
             const isLong = job.description.length > 120;
             const isUrgent = job.scheduleDate &&
@@ -670,6 +735,8 @@ export default function MarketplaceClient({
                 className={`bg-white rounded-xl border shadow-card flex flex-col transition-shadow hover:shadow-card-hover ${
                   refJobId === id
                     ? "border-blue-400 ring-2 ring-blue-300/60"
+                    : applied
+                    ? "border-sky-200"
                     : quoteStatus === "rejected"
                     ? "border-red-200"
                     : quoteStatus === "accepted"
@@ -681,7 +748,9 @@ export default function MarketplaceClient({
               >
                 {/* Top strip */}
                 <div className={`flex items-center justify-between px-5 py-3 border-b text-xs ${
-                  quoteStatus === "rejected"
+                  applied
+                    ? "border-sky-100 bg-sky-50/40"
+                    : quoteStatus === "rejected"
                     ? "border-red-100 bg-red-50/40"
                     : quoteStatus === "accepted"
                     ? "border-blue-100 bg-blue-50/40"
@@ -842,7 +911,12 @@ export default function MarketplaceClient({
                     <MessageCircle className="h-3.5 w-3.5" />
                     Ask question
                   </a>
-                  {quoteStatus === "rejected" ? (
+                  {applied ? (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-sky-50 text-sky-700 text-xs font-medium border border-sky-200">
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                      Applied
+                    </span>
+                  ) : quoteStatus === "rejected" ? (
                     <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-50 text-red-600 text-xs font-medium border border-red-200">
                       <XCircle className="h-3.5 w-3.5" />
                       Quote Rejected
@@ -858,8 +932,12 @@ export default function MarketplaceClient({
                       Quote Sent
                     </span>
                   ) : (
-                    <Button size="sm" onClick={() => openQuoteModal(job)}>
-                      Submit Quote
+                    <Button size="sm" onClick={() =>
+                      isGovJob
+                        ? openApplyModal(job)
+                        : openQuoteModal(job)
+                    }>
+                      {isGovJob ? "Apply Now" : "Submit Quote"}
                     </Button>
                   )}
                 </div>
@@ -894,7 +972,92 @@ export default function MarketplaceClient({
       </div>{/* end right column */}
     </div>{/* end flex layout */}
 
-      {/* Quote Builder modal */}
+      {/* Apply Now modal — PESO / LGU jobs */}
+      <Modal isOpen={applyModal.open} onClose={() => setApplyModal({ open: false, job: null })} title="Apply for Position">
+        <div className="space-y-5">
+
+          {/* Job summary */}
+          <div className="bg-slate-50 rounded-lg px-4 py-3 space-y-1">
+            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Job Opening</p>
+            <p className="text-sm font-semibold text-slate-900 leading-snug">{applyModal.job?.title}</p>
+            {applyModal.job?.location && (
+              <p className="text-xs text-slate-500 flex items-center gap-1">
+                <MapPin className="h-3 w-3" />{applyModal.job.location}
+              </p>
+            )}
+          </div>
+
+          {/* Cover letter */}
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="label text-xs">Cover Letter <span className="text-red-400">*</span></label>
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!applyModal.job) return;
+                  setIsGeneratingQuoteMsg(true);
+                  try {
+                    const res = await apiFetch("/api/ai/generate-quote-message", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        jobTitle: applyModal.job.title,
+                        jobDescription: applyModal.job.description,
+                        jobBudget: applyModal.job.budget,
+                        category: applyModal.job.category,
+                      }),
+                    });
+                    const data = await res.json();
+                    if (!res.ok) {
+                      if (data.upgradeRequired) {
+                        toast(data.error ?? "AI features require Gold tier.", { icon: "🥇", style: { background: "#fffbeb", color: "#92400e", border: "1px solid #fde68a" }, duration: 5000 });
+                      } else { toast.error(data.error ?? "Failed to generate message"); }
+                      return;
+                    }
+                    setApplyForm((f) => ({ ...f, coverLetter: data.message ?? f.coverLetter }));
+                    toast.success("Draft generated! Review before submitting.");
+                  } catch { toast.error("Could not reach AI service."); }
+                  finally { setIsGeneratingQuoteMsg(false); }
+                }}
+                disabled={isGeneratingQuoteMsg}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-violet-200 bg-violet-50 px-2.5 py-1 text-xs font-medium text-violet-700 hover:bg-violet-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <Sparkles className={`h-3.5 w-3.5 ${isGeneratingQuoteMsg ? "animate-pulse" : ""}`} />
+                {isGeneratingQuoteMsg ? "Generating…" : "AI Draft"}
+              </button>
+            </div>
+            <textarea
+              className="input w-full min-h-[110px] resize-none text-sm"
+              placeholder="Introduce yourself, highlight your relevant experience, and explain why you are a good fit for this position…"
+              value={applyForm.coverLetter}
+              onChange={(e) => setApplyForm((f) => ({ ...f, coverLetter: e.target.value }))}
+            />
+            <p className="text-xs text-slate-400 mt-1 flex justify-between">
+              <span>Min 20 characters</span>
+              <span className={applyForm.coverLetter.length > 1000 ? "text-red-500" : ""}>{applyForm.coverLetter.length}/1000</span>
+            </p>
+          </div>
+
+          {/* Availability */}
+          <div>
+            <label className="label block mb-1 text-xs">Availability <span className="text-red-400">*</span></label>
+            <input
+              className="input w-full text-sm"
+              placeholder="e.g. Immediately, Starting April 1, Full-time Mon–Fri"
+              value={applyForm.availability}
+              onChange={(e) => setApplyForm((f) => ({ ...f, availability: e.target.value }))}
+            />
+          </div>
+
+          {/* Actions */}
+          <div className="flex gap-3 justify-end">
+            <Button variant="secondary" onClick={() => setApplyModal({ open: false, job: null })}>Cancel</Button>
+            <Button isLoading={isSubmitting} onClick={submitApplication}>Submit Application</Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Quote Builder modal — private jobs only */}
       <Modal isOpen={quoteModal.open} onClose={() => setQuoteModal({ open: false, job: null })} title="Quote Builder">
         <div className="space-y-5">
 

@@ -1,7 +1,9 @@
 /**
  * GET /api/admin/database/backup
- * Exports all tracked collections as a single JSON file download.
- * Admin-only. Streams the response so large DBs don't time out.
+ * Exports all tracked collections as a single JSON file.
+ * - Writes the file to <project_root>/backup/ on the server.
+ * - Also streams it as a browser download.
+ * Admin-only.
  *
  * Query params:
  *   ?collections=users,jobs,...  — optional comma-separated list (defaults to all)
@@ -12,6 +14,8 @@ import { requireUser, requireRole } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { connectDB } from "@/lib/db";
 import mongoose from "mongoose";
+import fs from "fs";
+import path from "path";
 
 const ALL_COLLECTIONS = [
   "users", "jobs", "quotes", "transactions", "payments", "payouts",
@@ -58,12 +62,20 @@ export const GET = withHandler(async (req: NextRequest) => {
   const timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
   const filename = `localpro-backup-${timestamp}.json`;
 
+  // ── Write to backup/ directory in codebase ─────────────────────────────
+  const backupDir = path.join(process.cwd(), "backup");
+  if (!fs.existsSync(backupDir)) fs.mkdirSync(backupDir, { recursive: true });
+  const savedPath = path.join(backupDir, filename);
+  fs.writeFileSync(savedPath, json, "utf8");
+
+  // ── Also return as browser download ────────────────────────────────────
   return new NextResponse(json, {
     status: 200,
     headers: {
       "Content-Type": "application/json",
       "Content-Disposition": `attachment; filename="${filename}"`,
       "Content-Length": Buffer.byteLength(json, "utf8").toString(),
+      "X-Backup-Path": `backup/${filename}`,
     },
   });
 });
