@@ -123,7 +123,7 @@ export class WalletService {
         providerId: job.providerId?.toString(),
         initiatedBy: user.userId,
       },
-      amount, commission, netAmount
+      amount
     );
     await transactionRepository.updateById((tx as { _id: { toString(): string } })._id.toString(), { ledgerJournalId: journalId });
 

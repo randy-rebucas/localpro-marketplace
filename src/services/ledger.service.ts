@@ -5,15 +5,26 @@
  * collection, creating an immutable, auditable journal.
  *
  * Chart of accounts:
- *   1000  Gateway Receivable       (Asset)
- *   1100  Escrow Held              (Asset)
- *   1200  Wallet Funds Held        (Asset)
- *   2000  Escrow Payable — Clients (Liability)
- *   2100  Earnings Payable         (Liability)
- *   2200  Wallet Payable — Clients (Liability)
- *   2300  Withdrawal Payable       (Liability)
- *   4000  Commission Revenue       (Revenue)
- *   5000  Refunds Issued           (Expense)
+ *   1000  Gateway Receivable       (Asset)     — cash held at payment processor
+ *   1100  Escrow Held              (Asset)     — reserved for future use
+ *   1200  Wallet Funds Held        (Asset)     — reserved for future use
+ *   2000  Escrow Payable — Clients (Liability) — funded escrow awaiting release/refund
+ *   2100  Earnings Payable         (Liability) — released earnings owed to providers
+ *   2200  Wallet Payable — Clients (Liability) — client wallet balances
+ *   2300  Withdrawal Payable       (Liability) — client withdrawal in-flight
+ *   3000  Platform Equity          (Equity)    — reserved
+ *   4000  Commission Revenue       (Revenue)   — platform fee recognised at release
+ *   4100  Subscription Revenue     (Revenue)
+ *   4200  Late Fee Revenue         (Revenue)
+ *   5000  Refunds Issued           (Expense)   — reserved
+ *   5100  Payment Processing Fees  (Expense)
+ *   5200  Bad Debt / Write-offs    (Expense)
+ *
+ * Key design rules:
+ *   • Revenue (4000) is recognised when escrow is RELEASED, not when funded.
+ *   • 2000 tracks in-flight escrow (funded but not yet released or refunded).
+ *   • 2100 tracks released earnings awaiting provider payout.
+ *   • Dispute refund simply moves 2000 → 2200; no revenue reversal needed.
  */
 
 import mongoose from "mongoose";
@@ -72,13 +83,67 @@ function buildEntry(
 
 export class LedgerService {
   /**
-   * Flow 1 & 3: Client pays escrow via PayMongo checkout.
+   * Flow 1: Client pays escrow via PayMongo checkout.
    *
-   * DR 1000 Gateway Receivable     gross   ← money received
-   * CR 4000 Commission Revenue     commission ← platform earns fee
-   * CR 2100 Earnings Payable       net     ← owed to provider
+   * Cash arrives; we owe it back to the client until the job is released or refunded.
+   * Revenue is NOT recognised here — only when escrow is released (Flow 4).
+   *
+   * DR 1000 Gateway Receivable   gross  ← cash received
+   * CR 2000 Escrow Payable       gross  ← liability until release/refund
    */
-  async postEscrowFundedGateway(
+  async postEscrowFundedGateway(opts: JournalOptions, grossPHP: number): Promise<void> {
+    const grossC = toCentavos(grossPHP);
+    const desc   = `Escrow funded via PayMongo — Job ${opts.entityId}`;
+
+    await ledgerRepository.postJournal([
+      buildEntry(opts, "escrow_funded_gateway",
+        ACCOUNT_CODES.GATEWAY_RECEIVABLE,
+        ACCOUNT_CODES.ESCROW_PAYABLE_CLIENTS,
+        grossC,
+        desc,
+        { grossC }
+      ),
+    ]);
+  }
+
+  /**
+   * Flow 2: Client funds escrow from their platform wallet.
+   *
+   * Wallet liability (2200) decreases; escrow liability (2000) increases.
+   * No cash movement — 1000 Gateway Receivable stays the same.
+   * Revenue NOT recognised until release.
+   *
+   * DR 2200 Wallet Payable   gross  ← wallet balance decreases
+   * CR 2000 Escrow Payable   gross  ← escrow liability increases
+   */
+  async postEscrowFundedWallet(opts: JournalOptions, grossPHP: number): Promise<void> {
+    const grossC = toCentavos(grossPHP);
+    const desc   = `Escrow funded from wallet — Job ${opts.entityId}`;
+
+    await ledgerRepository.postJournal([
+      buildEntry(opts, "escrow_funded_wallet",
+        ACCOUNT_CODES.WALLET_PAYABLE_CLIENTS,
+        ACCOUNT_CODES.ESCROW_PAYABLE_CLIENTS,
+        grossC,
+        desc,
+        { grossC }
+      ),
+    ]);
+  }
+
+  /**
+   * Flow 4 & 5: Job completed — client approves, escrow released to provider.
+   *
+   * This is the revenue recognition event. The in-flight escrow (2000) is
+   * split into commission earned (4000) and provider earnings owed (2100).
+   *
+   * DR 2000 Escrow Payable       net         ← escrow cleared (provider's share)
+   * CR 2100 Earnings Payable     net         ← owed to provider
+   *
+   * DR 2000 Escrow Payable       commission  ← escrow cleared (platform's share)
+   * CR 4000 Commission Revenue   commission  ← platform fee recognised
+   */
+  async postEscrowReleased(
     opts: JournalOptions,
     grossPHP: number,
     commissionPHP: number,
@@ -87,17 +152,18 @@ export class LedgerService {
     const grossC      = toCentavos(grossPHP);
     const commissionC = toCentavos(commissionPHP);
     const netC        = toCentavos(netPHP);
-    const desc        = `Escrow funded via PayMongo — Job ${opts.entityId}`;
+    const desc        = `Escrow released — Job ${opts.entityId}`;
 
     await ledgerRepository.postJournal([
-      buildEntry(opts, "escrow_funded_gateway",
-        ACCOUNT_CODES.GATEWAY_RECEIVABLE,
+      buildEntry(opts, "escrow_released",
+        ACCOUNT_CODES.ESCROW_PAYABLE_CLIENTS,
         ACCOUNT_CODES.EARNINGS_PAYABLE,
         netC,
-        `${desc} (net to provider)`
+        `${desc} (net to provider)`,
+        { grossC, commissionC, netC }
       ),
       buildEntry(opts, "commission_accrued",
-        ACCOUNT_CODES.GATEWAY_RECEIVABLE,
+        ACCOUNT_CODES.ESCROW_PAYABLE_CLIENTS,
         ACCOUNT_CODES.COMMISSION_REVENUE,
         commissionC,
         `${desc} (commission ${(commissionPHP / grossPHP * 100).toFixed(0)}%)`,
@@ -107,66 +173,10 @@ export class LedgerService {
   }
 
   /**
-   * Flow 2: Client funds escrow from their wallet balance.
-   *
-   * DR 2200 Wallet Payable         gross   ← client wallet liability decreases
-   * CR 2100 Earnings Payable       net     ← owed to provider
-   * CR 4000 Commission Revenue     commission ← platform fee
-   */
-  async postEscrowFundedWallet(
-    opts: JournalOptions,
-    grossPHP: number,
-    commissionPHP: number,
-    netPHP: number
-  ): Promise<void> {
-    const grossC      = toCentavos(grossPHP);
-    const commissionC = toCentavos(commissionPHP);
-    const netC        = toCentavos(netPHP);
-    const desc        = `Escrow funded from wallet — Job ${opts.entityId}`;
-
-    await ledgerRepository.postJournal([
-      buildEntry(opts, "escrow_funded_wallet",
-        ACCOUNT_CODES.WALLET_PAYABLE_CLIENTS,
-        ACCOUNT_CODES.EARNINGS_PAYABLE,
-        netC,
-        `${desc} (net to provider)`
-      ),
-      buildEntry(opts, "commission_accrued",
-        ACCOUNT_CODES.WALLET_PAYABLE_CLIENTS,
-        ACCOUNT_CODES.COMMISSION_REVENUE,
-        commissionC,
-        `${desc} (commission)`,
-        { grossC, commissionC, netC }
-      ),
-    ]);
-  }
-
-  /**
-   * Flow 4 & 5: Job completed — escrow released to provider.
-   * Commission was already recognized at funding. No new revenue entry needed.
-   *
-   * (No new ledger entries — earnings already in 2100 Earnings Payable)
-   * We record a zero-amount marker for audit trail only.
-   */
-  async postEscrowReleased(opts: JournalOptions, netPHP: number): Promise<void> {
-    const netC = toCentavos(netPHP);
-
-    await ledgerRepository.postJournal([
-      buildEntry(opts, "escrow_released",
-        ACCOUNT_CODES.EARNINGS_PAYABLE,
-        ACCOUNT_CODES.EARNINGS_PAYABLE,
-        netC,
-        `Escrow released — Job ${opts.entityId} (provider earnings confirmed, awaiting payout)`,
-        { status: "released" }
-      ),
-    ]);
-  }
-
-  /**
    * Flow 9 & 10: Admin marks provider payout as completed (bank transfer sent).
    *
-   * DR 2100 Earnings Payable       amount  ← liability settled
-   * CR 1000 Gateway Receivable     amount  ← cash leaves platform
+   * DR 2100 Earnings Payable     amount  ← liability settled
+   * CR 1000 Gateway Receivable   amount  ← cash leaves platform
    */
   async postPayoutSent(opts: JournalOptions, amountPHP: number): Promise<void> {
     const amountC = toCentavos(amountPHP);
@@ -182,20 +192,43 @@ export class LedgerService {
   }
 
   /**
-   * Flow 7: Dispute resolved — full refund to client.
-   * Reverses the original escrow-funded journal:
+   * Flow 7: Dispute resolved in client's favour — full refund.
    *
-   * DR 4000 Commission Revenue     commission ← reverse earned commission
-   * CR 2200 Wallet Payable         commission ← commission portion to client wallet
+   * The in-flight escrow simply moves back to the client's wallet.
+   * No commission was ever recognised (revenue recognition deferred to release),
+   * so no reversal of 4000 is needed — this is a clean single-entry journal.
    *
-   * DR 2100 Earnings Payable       net        ← reverse provider earnings
-   * CR 2200 Wallet Payable         net        ← net portion to client wallet
-   *
-   * Net effect: 2200 Wallet Payable +gross, 4000 Commission Revenue −commission,
-   * 2100 Earnings Payable −net. 5000 Refunds Issued shows the gross reversal on
-   * the income statement.
+   * DR 2000 Escrow Payable       gross  ← escrow cleared
+   * CR 2200 Wallet Payable       gross  ← refund to client wallet
    */
-  async postDisputeRefund(
+  async postDisputeRefund(opts: JournalOptions, grossPHP: number): Promise<void> {
+    const grossC = toCentavos(grossPHP);
+    const desc   = `Dispute refund — Job ${opts.entityId}`;
+
+    await ledgerRepository.postJournal([
+      buildEntry(opts, "dispute_refund_earnings",
+        ACCOUNT_CODES.ESCROW_PAYABLE_CLIENTS,
+        ACCOUNT_CODES.WALLET_PAYABLE_CLIENTS,
+        grossC,
+        `${desc} (full escrow returned to client wallet)`,
+        { grossC }
+      ),
+    ]);
+  }
+
+  /**
+   * Flow 8: Dispute resolved in provider's favour.
+   *
+   * Same accounting as a normal escrow release — commission recognised,
+   * provider earnings posted to 2100.
+   *
+   * DR 2000 Escrow Payable       net         ← escrow cleared (provider's share)
+   * CR 2100 Earnings Payable     net         ← owed to provider
+   *
+   * DR 2000 Escrow Payable       commission  ← escrow cleared (platform's share)
+   * CR 4000 Commission Revenue   commission  ← platform fee recognised
+   */
+  async postDisputeReleaseToProvider(
     opts: JournalOptions,
     grossPHP: number,
     commissionPHP: number,
@@ -204,40 +237,22 @@ export class LedgerService {
     const grossC      = toCentavos(grossPHP);
     const commissionC = toCentavos(commissionPHP);
     const netC        = toCentavos(netPHP);
-    const desc        = `Dispute refund — Job ${opts.entityId}`;
-
-    await ledgerRepository.postJournal([
-      // Reverse commission: debit revenue, credit client wallet
-      buildEntry(opts, "dispute_refund_commission",
-        ACCOUNT_CODES.COMMISSION_REVENUE,
-        ACCOUNT_CODES.WALLET_PAYABLE_CLIENTS,
-        commissionC,
-        `${desc} (commission reversed to client wallet)`,
-        { grossC, commissionC, netC }
-      ),
-      // Reverse provider earnings: debit liability, credit client wallet
-      buildEntry(opts, "dispute_refund_earnings",
-        ACCOUNT_CODES.EARNINGS_PAYABLE,
-        ACCOUNT_CODES.WALLET_PAYABLE_CLIENTS,
-        netC,
-        `${desc} (provider earnings reversed, credited to client wallet)`
-      ),
-    ]);
-  }
-
-  /**
-   * Flow 8: Dispute resolved in provider's favour — no financial change needed.
-   * Earnings were already in 2100. Post audit marker only.
-   */
-  async postDisputeReleaseToProvider(opts: JournalOptions, netPHP: number): Promise<void> {
-    const netC = toCentavos(netPHP);
+    const desc        = `Dispute resolved — provider keeps earnings — Job ${opts.entityId}`;
 
     await ledgerRepository.postJournal([
       buildEntry(opts, "dispute_release",
-        ACCOUNT_CODES.EARNINGS_PAYABLE,
+        ACCOUNT_CODES.ESCROW_PAYABLE_CLIENTS,
         ACCOUNT_CODES.EARNINGS_PAYABLE,
         netC,
-        `Dispute resolved — provider keeps earnings — Job ${opts.entityId}`
+        `${desc} (net to provider)`,
+        { grossC, commissionC, netC }
+      ),
+      buildEntry(opts, "commission_accrued",
+        ACCOUNT_CODES.ESCROW_PAYABLE_CLIENTS,
+        ACCOUNT_CODES.COMMISSION_REVENUE,
+        commissionC,
+        `${desc} (commission recognised)`,
+        { grossC, commissionC, netC }
       ),
     ]);
   }
@@ -245,8 +260,8 @@ export class LedgerService {
   /**
    * Flow 11: Client wallet withdrawal requested.
    *
-   * DR 2200 Wallet Payable         amount  ← liability reduces
-   * CR 2300 Withdrawal Payable     amount  ← in-flight withdrawal liability
+   * DR 2200 Wallet Payable       amount  ← wallet liability reduces
+   * CR 2300 Withdrawal Payable   amount  ← in-flight withdrawal liability
    */
   async postWalletWithdrawalRequested(opts: JournalOptions, amountPHP: number): Promise<void> {
     const amountC = toCentavos(amountPHP);
@@ -263,10 +278,9 @@ export class LedgerService {
 
   /**
    * Flow 11: Admin marks wallet withdrawal as completed.
-   * Cash leaves the platform via bank transfer.
    *
-   * DR 2300 Withdrawal Payable     amount  ← in-flight cleared
-   * CR 1000 Gateway Receivable     amount  ← cash out of platform
+   * DR 2300 Withdrawal Payable   amount  ← in-flight cleared
+   * CR 1000 Gateway Receivable   amount  ← cash leaves platform
    */
   async postWalletWithdrawalCompleted(opts: JournalOptions, amountPHP: number): Promise<void> {
     const amountC = toCentavos(amountPHP);
@@ -284,8 +298,8 @@ export class LedgerService {
   /**
    * Flow 12: Admin rejects wallet withdrawal — reversal.
    *
-   * DR 2300 Withdrawal Payable     amount  ← in-flight cleared
-   * CR 2200 Wallet Payable         amount  ← liability restored
+   * DR 2300 Withdrawal Payable   amount  ← in-flight cleared
+   * CR 2200 Wallet Payable       amount  ← wallet liability restored
    */
   async postWalletWithdrawalReversed(opts: JournalOptions, amountPHP: number): Promise<void> {
     const amountC = toCentavos(amountPHP);
@@ -301,10 +315,10 @@ export class LedgerService {
   }
 
   /**
-   * Client wallet top-up via PayMongo (future flow).
+   * Client wallet top-up via PayMongo.
    *
-   * DR 1000 Gateway Receivable     amount
-   * CR 2200 Wallet Payable         amount
+   * DR 1000 Gateway Receivable   amount  ← cash received
+   * CR 2200 Wallet Payable       amount  ← wallet balance increases
    */
   async postWalletFundedGateway(opts: JournalOptions, amountPHP: number): Promise<void> {
     const amountC = toCentavos(amountPHP);
@@ -321,81 +335,117 @@ export class LedgerService {
 
   /**
    * Milestone release (partial per-milestone payout).
-   * Same accounting as full escrow release but limited to milestone amount.
+   *
+   * Each milestone releases a portion of the in-flight escrow (2000).
+   * Revenue is recognised here, same as a full release.
+   *
+   * DR 2000 Escrow Payable       milestoneNet        ← cleared for provider
+   * CR 2100 Earnings Payable     milestoneNet        ← owed to provider
+   *
+   * DR 2000 Escrow Payable       milestoneCommission ← cleared for platform
+   * CR 4000 Commission Revenue   milestoneCommission ← fee recognised
    */
-  async postMilestoneRelease(opts: JournalOptions, milestonePHP: number, commissionPHP: number, netPHP: number): Promise<void> {
-    const milestoneC  = toCentavos(milestonePHP);
+  async postMilestoneRelease(
+    opts: JournalOptions,
+    milestoneGrossPHP: number,
+    commissionPHP: number,
+    netPHP: number
+  ): Promise<void> {
+    const grossC      = toCentavos(milestoneGrossPHP);
     const commissionC = toCentavos(commissionPHP);
     const netC        = toCentavos(netPHP);
+    const desc        = `Milestone released — Job ${opts.entityId}`;
 
     await ledgerRepository.postJournal([
       buildEntry(opts, "milestone_release",
-        ACCOUNT_CODES.GATEWAY_RECEIVABLE,
+        ACCOUNT_CODES.ESCROW_PAYABLE_CLIENTS,
         ACCOUNT_CODES.EARNINGS_PAYABLE,
         netC,
-        `Milestone released — Job ${opts.entityId} (net to provider)`
+        `${desc} (net to provider)`,
+        { grossC, commissionC, netC }
       ),
       buildEntry(opts, "commission_accrued",
-        ACCOUNT_CODES.GATEWAY_RECEIVABLE,
+        ACCOUNT_CODES.ESCROW_PAYABLE_CLIENTS,
         ACCOUNT_CODES.COMMISSION_REVENUE,
         commissionC,
-        `Milestone commission — Job ${opts.entityId}`,
-        { milestoneC, commissionC, netC }
+        `${desc} (commission recognised)`,
+        { grossC, commissionC, netC }
       ),
     ]);
   }
 
   /**
-   * Partial release by admin.
+   * Partial release by admin — provider gets released portion, client gets refunded portion.
+   *
+   * Released portion (revenue recognition):
+   *   DR 2000 Escrow Payable       releasedNet
+   *   CR 2100 Earnings Payable     releasedNet
+   *   DR 2000 Escrow Payable       releasedComm
+   *   CR 4000 Commission Revenue   releasedComm
+   *
+   * Refunded portion (back to client wallet):
+   *   DR 2000 Escrow Payable       refundedGross
+   *   CR 2200 Wallet Payable       refundedGross
+   *
+   * Total DR 2000 = releasedGross + refundedGross = original gross ✓
    */
   async postPartialRelease(
     opts: JournalOptions,
-    releasedPHP: number,
-    refundedPHP: number,
-    commissionPHP: number,
-    netPHP: number
+    releasedGrossPHP: number,
+    releasedCommissionPHP: number,
+    releasedNetPHP: number,
+    refundedGrossPHP: number
   ): Promise<void> {
-    const releasedC   = toCentavos(releasedPHP);
-    const refundedC   = toCentavos(refundedPHP);
-    const commissionC = toCentavos(commissionPHP);
-    const netC        = toCentavos(netPHP);
+    const releasedGrossC  = toCentavos(releasedGrossPHP);
+    const releasedCommC   = toCentavos(releasedCommissionPHP);
+    const releasedNetC    = toCentavos(releasedNetPHP);
+    const refundedGrossC  = toCentavos(refundedGrossPHP);
+    const desc            = `Partial release — Job ${opts.entityId}`;
 
-    const entries: JournalEntryInput[] = [
-      buildEntry(opts, "partial_release",
-        ACCOUNT_CODES.GATEWAY_RECEIVABLE,
-        ACCOUNT_CODES.EARNINGS_PAYABLE,
-        netC,
-        `Partial release (${releasedPHP} released) — Job ${opts.entityId}`
-      ),
-      buildEntry(opts, "commission_accrued",
-        ACCOUNT_CODES.GATEWAY_RECEIVABLE,
-        ACCOUNT_CODES.COMMISSION_REVENUE,
-        commissionC,
-        `Partial release commission — Job ${opts.entityId}`,
-        { releasedC, commissionC, netC }
-      ),
-    ];
+    const entries: JournalEntryInput[] = [];
 
-    // Refund remainder to client wallet
-    if (refundedC > 0) {
+    // Released portion — revenue recognition
+    if (releasedGrossC > 0) {
       entries.push(
-        buildEntry(opts, "dispute_refund_earnings",
-          ACCOUNT_CODES.GATEWAY_RECEIVABLE,
-          ACCOUNT_CODES.WALLET_PAYABLE_CLIENTS,
-          refundedC,
-          `Partial release remainder refunded to client — Job ${opts.entityId}`
+        buildEntry(opts, "partial_release",
+          ACCOUNT_CODES.ESCROW_PAYABLE_CLIENTS,
+          ACCOUNT_CODES.EARNINGS_PAYABLE,
+          releasedNetC,
+          `${desc} (released: net to provider)`,
+          { releasedGrossC, releasedCommC, releasedNetC }
+        ),
+        buildEntry(opts, "commission_accrued",
+          ACCOUNT_CODES.ESCROW_PAYABLE_CLIENTS,
+          ACCOUNT_CODES.COMMISSION_REVENUE,
+          releasedCommC,
+          `${desc} (released: commission recognised)`
         )
       );
     }
 
-    await ledgerRepository.postJournal(entries);
+    // Refunded portion — back to client wallet
+    if (refundedGrossC > 0) {
+      entries.push(
+        buildEntry(opts, "dispute_refund_earnings",
+          ACCOUNT_CODES.ESCROW_PAYABLE_CLIENTS,
+          ACCOUNT_CODES.WALLET_PAYABLE_CLIENTS,
+          refundedGrossC,
+          `${desc} (refunded portion to client wallet)`,
+          { refundedGrossC }
+        )
+      );
+    }
+
+    if (entries.length > 0) {
+      await ledgerRepository.postJournal(entries);
+    }
   }
 
   /**
    * Manual admin credit to a user's wallet (goodwill, compensation, etc.)
    *
-   * DR 1000 Gateway Receivable     amount
-   * CR 2200 Wallet Payable         amount
+   * DR 1000 Gateway Receivable   amount  ← platform absorbs cost
+   * CR 2200 Wallet Payable       amount  ← wallet balance increases
    */
   async postAdminCredit(opts: JournalOptions, amountPHP: number, reason: string): Promise<void> {
     const amountC = toCentavos(amountPHP);
@@ -413,8 +463,8 @@ export class LedgerService {
   /**
    * Manual admin debit from a user's wallet (correction, clawback, etc.)
    *
-   * DR 2200 Wallet Payable         amount
-   * CR 1000 Gateway Receivable     amount
+   * DR 2200 Wallet Payable       amount  ← wallet balance decreases
+   * CR 1000 Gateway Receivable   amount  ← platform recovers cash
    */
   async postAdminDebit(opts: JournalOptions, amountPHP: number, reason: string): Promise<void> {
     const amountC = toCentavos(amountPHP);
@@ -445,9 +495,8 @@ export class LedgerService {
   }
 
   /**
-   * Reconciliation helper: verify that provider earnings payable matches
-   * sum of completed transactions minus completed payouts.
-   * Returns true if balanced, false + diff if not.
+   * Reconciliation: verify that 2100 Earnings Payable matches
+   * sum of completed transaction nets minus completed payouts.
    */
   async reconcileEarningsPayable(currency = "PHP"): Promise<{
     balanced: boolean;
@@ -465,6 +514,7 @@ export class LedgerService {
       payoutRepository.sumAllCompleted(),
     ]);
 
+    // Only completed transactions have had their escrow released → 2100 credited
     const netToProviders = txSums.gmv - txSums.commission;
     const transactionBalance = toCentavos(netToProviders - (payoutSums ?? 0));
     const diff = ledgerBalance - transactionBalance;

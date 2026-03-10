@@ -11,7 +11,7 @@ interface IncomeStatementData {
   breakdown: Record<string, number>;
 }
 
-export default function AccountingClient() {
+export default function AccountingClient({ embedded = false }: { embedded?: boolean }) {
   const now = new Date();
   const pad = (n: number) => String(n).padStart(2, "0");
   const [from, setFrom] = useState(`${now.getFullYear()}-${pad(now.getMonth() + 1)}-01`);
@@ -64,7 +64,7 @@ export default function AccountingClient() {
   const expensesPHP  = (data?.expenses ?? 0) / 100;
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-card overflow-hidden">
+    <div className={embedded ? "overflow-hidden" : "bg-white rounded-xl border border-slate-200 shadow-card overflow-hidden"}>
       <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <TrendingUp className="w-4 h-4 text-primary" />

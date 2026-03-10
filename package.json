@@ -12,6 +12,11 @@
     "db:seed:no-admin": "node --env-file=.env.local scripts/db-reset.mjs --seed-only --no-admin",
     "db:seed-categories": "node --env-file=.env.local scripts/seed-categories.mjs",
     "db:seed-categories:wipe": "node --env-file=.env.local scripts/seed-categories.mjs --wipe",
+    "db:seed-settings": "node --env-file=.env.local scripts/seed-settings.mjs",
+    "db:seed-settings:force": "node --env-file=.env.local scripts/seed-settings.mjs --force",
+    "db:seed-skills": "node --env-file=.env.local scripts/seed-skills.mjs",
+    "db:seed-skills:force": "node --env-file=.env.local scripts/seed-skills.mjs --force",
+    "db:seed-skills:wipe": "node --env-file=.env.local scripts/seed-skills.mjs --wipe",
     "icons:generate": "node scripts/generate-icons.mjs"
   },
   "dependencies": {

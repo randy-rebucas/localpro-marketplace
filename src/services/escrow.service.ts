@@ -158,7 +158,7 @@ export class EscrowService {
     try {
       const tx = await transactionRepository.findOneByJobId(job._id!.toString());
       if (tx) {
-        const t = tx as unknown as { netAmount: number; amount: number };
+        const t = tx as unknown as { amount: number; commission: number; netAmount: number };
         await ledgerService.postEscrowReleased(
           {
             journalId: `escrow-release-${job._id!.toString()}`,
@@ -168,7 +168,7 @@ export class EscrowService {
             providerId: job.providerId?.toString(),
             initiatedBy: user.userId,
           },
-          t.netAmount
+          t.amount, t.commission, t.netAmount
         );
       }
     } catch {

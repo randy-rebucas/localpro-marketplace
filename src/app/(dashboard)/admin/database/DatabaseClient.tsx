@@ -35,7 +35,7 @@ interface DbStats {
   totalCollections: number;
 }
 
-type ActionType = "full_reset" | "seed_only" | "clear_collection";
+type ActionType = "full_reset" | "seed_only" | "seed_settings" | "seed_skills" | "clear_collection";
 
 function formatBytes(bytes: number): string {
   if (bytes === 0) return "0 B";
@@ -63,6 +63,8 @@ function ConfirmDialog({
   const LABELS: Record<ActionType, { title: string; desc: string; color: string }> = {
     full_reset:       { title: "Full Database Reset",        desc: "This will DELETE ALL data across all collections and re-seed categories and the admin account. This action is irreversible.", color: "text-red-700" },
     seed_only:        { title: "Seed Missing Data",          desc: "This will insert missing seed data (categories, skills) without deleting any existing records.", color: "text-amber-700" },
+    seed_settings:    { title: "Seed App Settings",          desc: "Inserts missing platform settings (commission rates, limits, etc.) without overwriting any existing values.", color: "text-amber-700" },
+    seed_skills:      { title: "Seed Skills",                desc: "Inserts the canonical skill list without overwriting any existing skills.", color: "text-amber-700" },
     clear_collection: { title: `Clear "${collection}"`,      desc: `This will delete ALL documents in the "${collection}" collection. Existing data cannot be recovered.`, color: "text-red-700" },
   };
   const meta = LABELS[action];
@@ -102,7 +104,7 @@ function ConfirmDialog({
             disabled={!token}
             className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-semibold hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            {action === "seed_only" ? "Confirm Seed" : "Confirm Reset"}
+            {action === "seed_only" || action === "seed_settings" || action === "seed_skills" ? "Confirm Seed" : "Confirm Reset"}
           </button>
         </div>
       </div>
@@ -216,7 +218,7 @@ export default function DatabaseClient({ resetEnabled }: { resetEnabled: boolean
   const [refreshing, setRefreshing] = useState(false);
   const [running, setRunning] = useState(false);
   const [downloading, setDownloading] = useState(false);
-  const [activeAction, setActiveAction] = useState<"backup" | "restore" | "seed_only" | "full_reset" | "clear_collection" | null>(null);
+  const [activeAction, setActiveAction] = useState<"backup" | "restore" | "seed_only" | "seed_settings" | "seed_skills" | "full_reset" | "clear_collection" | null>(null);
   const [log, setLog] = useState<string[]>([]);
   const [logStatus, setLogStatus] = useState<"idle" | "success" | "error">("idle");
   const [confirm, setConfirm] = useState<{ action: ActionType; collection?: string } | null>(null);
@@ -485,6 +487,48 @@ export default function DatabaseClient({ resetEnabled }: { resetEnabled: boolean
 
             <div className="flex items-start justify-between gap-4 px-5 py-4">
               <div className="flex items-start gap-3">
+                <div className="p-2 bg-amber-50 rounded-lg mt-0.5">
+                  <Sprout className="w-4 h-4 text-amber-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-slate-800">Seed App Settings</p>
+                  <p className="text-xs text-slate-500 mt-0.5">Inserts missing platform settings (commission rates, job limits, min amounts) without overwriting existing values.</p>
+                </div>
+              </div>
+              <button
+                onClick={() => handleAction("seed_settings")}
+                disabled={!resetEnabled || running || downloading}
+                className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 border border-amber-200 text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-lg text-xs font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {activeAction === "seed_settings"
+                  ? <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Seeding…</>
+                  : <><Sprout className="w-3.5 h-3.5" /> Seed Settings</>}
+              </button>
+            </div>
+
+            <div className="flex items-start justify-between gap-4 px-5 py-4">
+              <div className="flex items-start gap-3">
+                <div className="p-2 bg-amber-50 rounded-lg mt-0.5">
+                  <Sprout className="w-4 h-4 text-amber-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-slate-800">Seed Skills</p>
+                  <p className="text-xs text-slate-500 mt-0.5">Inserts the canonical skill list ({`>`}160 trades) without overwriting any existing skills.</p>
+                </div>
+              </div>
+              <button
+                onClick={() => handleAction("seed_skills")}
+                disabled={!resetEnabled || running || downloading}
+                className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 border border-amber-200 text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-lg text-xs font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {activeAction === "seed_skills"
+                  ? <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Seeding…</>
+                  : <><Sprout className="w-3.5 h-3.5" /> Seed Skills</>}
+              </button>
+            </div>
+
+            <div className="flex items-start justify-between gap-4 px-5 py-4">
+              <div className="flex items-start gap-3">
                 <div className="p-2 bg-red-50 rounded-lg mt-0.5">
                   <RotateCcw className="w-4 h-4 text-red-600" />
                 </div>
@@ -609,11 +653,13 @@ export default function DatabaseClient({ resetEnabled }: { resetEnabled: boolean
         {/* Running indicator */}
         {(running || downloading) && (() => {
           const ACTION_LABELS: Record<string, { label: string; color: string; border: string }> = {
-            backup:           { label: "Exporting backup…",          color: "text-blue-700",   border: "border-blue-200 bg-blue-50"   },
-            restore:          { label: "Restoring from backup…",     color: "text-indigo-700", border: "border-indigo-200 bg-indigo-50" },
-            seed_only:        { label: "Seeding data…",              color: "text-green-700",  border: "border-green-200 bg-green-50"  },
-            full_reset:       { label: "Resetting database…",        color: "text-red-700",    border: "border-red-200 bg-red-50"      },
-            clear_collection: { label: "Clearing collection…",       color: "text-red-700",    border: "border-red-200 bg-red-50"      },
+            backup:           { label: "Exporting backup…",          color: "text-blue-700",   border: "border-blue-200 bg-blue-50"     },
+            restore:          { label: "Restoring from backup…",     color: "text-indigo-700", border: "border-indigo-200 bg-indigo-50"  },
+            seed_only:        { label: "Seeding data…",              color: "text-green-700",  border: "border-green-200 bg-green-50"   },
+            seed_settings:    { label: "Seeding app settings…",      color: "text-amber-700",  border: "border-amber-200 bg-amber-50"   },
+            seed_skills:      { label: "Seeding skills…",             color: "text-amber-700",  border: "border-amber-200 bg-amber-50"   },
+            full_reset:       { label: "Resetting database…",        color: "text-red-700",    border: "border-red-200 bg-red-50"       },
+            clear_collection: { label: "Clearing collection…",       color: "text-red-700",    border: "border-red-200 bg-red-50"       },
           };
           const meta = ACTION_LABELS[activeAction ?? ""] ?? { label: "Running operation…", color: "text-slate-600", border: "border-blue-200 bg-blue-50" };
           return (

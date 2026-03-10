@@ -123,11 +123,11 @@ export class DisputeService {
         job.status = "completed";
         await transactionRepository.setPending(job._id!.toString(), "completed");
 
-        // Post ledger: dispute resolved in provider's favour
+        // Post ledger: dispute resolved in provider's favour (revenue recognition)
         try {
           const tx = await transactionRepository.findOneByJobId(job._id!.toString());
           if (tx) {
-            const t = tx as unknown as { netAmount: number };
+            const t = tx as unknown as { amount: number; commission: number; netAmount: number };
             await ledgerService.postDisputeReleaseToProvider(
               {
                 journalId: `dispute-release-${disputeId}`,
@@ -137,7 +137,7 @@ export class DisputeService {
                 providerId: job.providerId?.toString(),
                 initiatedBy: adminUserId,
               },
-              t.netAmount
+              t.amount, t.commission, t.netAmount
             );
           }
         } catch { /* non-critical */ }
@@ -150,19 +150,25 @@ export class DisputeService {
         // Credit the client's platform wallet (faster than PayMongo reversal)
         const { walletService } = await import("@/services/wallet.service");
         const { paymentRepository } = await import("@/repositories");
-        await walletService.credit(
-          job.clientId.toString(),
-          budget,
-          `Refund for disputed job (dispute resolved in your favour)`,
-          { jobId: job._id!.toString(), silent: true }
-        );
-        await paymentRepository.markRefundedByJobId(job._id!.toString());
 
         // Post ledger: dispute refund to client
         try {
           const tx = await transactionRepository.findOneByJobId(job._id!.toString());
+          // Use t.amount (what was actually paid), not job.budget which may differ
+          // if the client used overrideAmount at payment time.
+          const refundAmount = tx ? (tx as unknown as { amount: number }).amount : budget;
+          await walletService.credit(
+            job.clientId.toString(),
+            refundAmount,
+            `Refund for disputed job (dispute resolved in your favour)`,
+            { jobId: job._id!.toString(), silent: true }
+          );
+          await paymentRepository.markRefundedByJobId(job._id!.toString());
+
           if (tx) {
-            const t = tx as unknown as { amount: number; commission: number; netAmount: number };
+            const t = tx as unknown as { amount: number };
+            // Simplified: move gross from 2000 Escrow Payable → 2200 Wallet Payable.
+            // No commission reversal needed — revenue was never recognised at funding.
             await ledgerService.postDisputeRefund(
               {
                 journalId: `dispute-refund-${disputeId}`,
@@ -172,7 +178,7 @@ export class DisputeService {
                 providerId: job.providerId?.toString(),
                 initiatedBy: adminUserId,
               },
-              t.amount, t.commission, t.netAmount
+              t.amount
             );
           }
         } catch { /* non-critical */ }

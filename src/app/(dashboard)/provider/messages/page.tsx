@@ -23,13 +23,14 @@ const TIPS = [
   },
 ];
 
-export default function ProviderMessagesPage({
+export default async function ProviderMessagesPage({
   searchParams,
 }: {
-  searchParams?: { jobId?: string };
+  searchParams?: Promise<{ jobId?: string }>;
 }) {
-  if (searchParams?.jobId) {
-    redirect(`/provider/messages/${searchParams.jobId}`);
+  const params = await searchParams;
+  if (params?.jobId) {
+    redirect(`/provider/messages/${params.jobId}`);
   }
 
   return (

@@ -83,7 +83,7 @@ export class PaymentService {
           providerId: job.providerId?.toString(),
           initiatedBy: user.userId,
         },
-        amount, commission, netAmount
+        amount
       );
       await transactionRepository.updateById((tx as { _id: { toString(): string } })._id.toString(), { ledgerJournalId: journalId });
 
@@ -255,7 +255,7 @@ export class PaymentService {
         providerId: p.providerId?.toString(),
         initiatedBy: p.clientId.toString(),
       },
-      p.amount, commission, netAmount
+      p.amount
     );
     await transactionRepository.updateById((tx as { _id: { toString(): string } })._id.toString(), { ledgerJournalId: journalId });
     // Mark payment with confirmedAt timestamp
@@ -354,7 +354,7 @@ export class PaymentService {
         providerId: job.providerId?.toString(),
         initiatedBy: clientId,
       },
-      job.budget, commission, netAmount
+      job.budget
     );
     await transactionRepository.updateById((tx as { _id: { toString(): string } })._id.toString(), { ledgerJournalId: journalId });
 
@@ -459,8 +459,10 @@ export class PaymentService {
     };
 
     const journalId = `escrow-fund-${p.jobId.toString()}`;
-    const existing = await ledgerRepository.countByEntity("job", p.jobId.toString());
-    if (existing > 0) return; // Already posted — nothing to do.
+    // Check the specific journalId, not all job entries — other audit markers
+    // (e.g. escrow_released) can exist even if this funding entry never posted.
+    const existing = await ledgerRepository.findByJournalId(journalId);
+    if (existing.length > 0) return; // Already posted — nothing to do.
 
     const jobDoc = await jobRepository.getDocById(p.jobId.toString());
     if (!jobDoc) return;
@@ -478,7 +480,7 @@ export class PaymentService {
         providerId: p.providerId?.toString(),
         initiatedBy: p.clientId.toString(),
       },
-      p.amount, commission, netAmount
+      p.amount
     );
 
     const tx = await transactionRepository.findOneByJobId(p.jobId.toString());
