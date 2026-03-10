@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireUser, requireRole } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { appSettingRepository } from "@/repositories";
+import { pushSettingsUpdate } from "@/lib/events";
 
 /** Server-side defaults — mirrors client DEFAULTS so GET always returns all keys. */
 const DEFAULTS: Record<string, unknown> = {
@@ -53,5 +54,7 @@ export const PATCH = withHandler(async (req: NextRequest) => {
 
   const body: Record<string, unknown> = await req.json();
   const updated = await appSettingRepository.upsertMany(body, user.userId);
+  // Notify board / kiosk SSE listeners so they re-fetch immediately
+  pushSettingsUpdate(updated);
   return NextResponse.json({ ...DEFAULTS, ...updated });
 });

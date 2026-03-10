@@ -81,6 +81,35 @@ export default function BoardPage() {
     }
   }, []);
 
+  // Subscribe to server-sent settings changes so the board re-fetches immediately
+  // when an admin toggles any feature flag or board setting.
+  useEffect(() => {
+    let es: EventSource | null = null;
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+
+    function connect() {
+      es = new EventSource("/api/public/board-settings");
+
+      es.addEventListener("settings_changed", () => {
+        fetchData();
+      });
+
+      es.onerror = () => {
+        es?.close();
+        es = null;
+        // Reconnect after 5 s on error
+        reconnectTimer = setTimeout(connect, 5_000);
+      };
+    }
+
+    connect();
+
+    return () => {
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      es?.close();
+    };
+  }, [fetchData]);
+
   // Initial load + periodic refresh
   useEffect(() => {
     fetchData();

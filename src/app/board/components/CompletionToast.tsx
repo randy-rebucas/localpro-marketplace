@@ -12,7 +12,7 @@ interface RecentCompletion {
   budget: number;
 }
 
-const TOAST_VISIBLE_MS = 5_000;
+const TOAST_VISIBLE_MS = 3_000;
 const POLL_INTERVAL_MS = 45_000;
 
 export function CompletionToast() {
@@ -46,19 +46,24 @@ export function CompletionToast() {
     setQueue(rest);
     setCurrent(next);
     setVisible(true);
+  }, [queue, visible, current]);
+
+  // Auto-close timer — runs independently so state changes don't cancel it
+  useEffect(() => {
+    if (!visible) return;
     const id = setTimeout(() => {
       setVisible(false);
       setTimeout(() => setCurrent(null), 500);
     }, TOAST_VISIBLE_MS);
     return () => clearTimeout(id);
-  }, [queue, visible, current]);
+  }, [visible]);
 
   if (!current) return null;
 
   return (
     <div
-      className={`fixed bottom-16 right-4 z-50 w-72 transition-all duration-500 ${
-        visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 pointer-events-none"
+      className={`fixed top-4 right-4 z-50 w-72 transition-all duration-500 ${
+        visible ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-4 pointer-events-none"
       }`}
     >
       <div className="bg-[#0d1e2e] border border-emerald-500/40 rounded-2xl shadow-2xl p-3.5 flex items-start gap-3">

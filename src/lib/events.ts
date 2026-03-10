@@ -59,6 +59,16 @@ export function pushStatusUpdateMany(
 /** Emit and subscribe to support-chat events. */
 export const supportBus = new SSEBus();
 
+// ─── Settings Channel ─────────────────────────────────────────────────────────
+
+/** Emit and subscribe to app-settings change events (board / kiosk listeners). */
+export const settingsBus = new SSEBus();
+
+/** Notify all board listeners that settings have changed. */
+export function pushSettingsUpdate(payload: Record<string, unknown> = {}): void {
+  settingsBus.emit("settings:changed", payload);
+}
+
 /**
  * Push a support message to a specific user's support stream.
  * Used when an admin replies so the user sees it immediately.
