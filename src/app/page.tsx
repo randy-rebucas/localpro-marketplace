@@ -358,15 +358,104 @@ export default async function RootPage() {
 
   return (
     <div className="min-h-screen bg-white">
+      {/* JSON-LD: Organization + WebSite + FAQ structured data */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify([
+            {
+              "@context": "https://schema.org",
+              "@type": "Organization",
+              name: "LocalPro",
+              url: "https://www.localpro.asia",
+              logo: "https://www.localpro.asia/logo.jpg",
+              description: "The Philippines\u2019 trusted marketplace for local service professionals.",
+              address: {
+                "@type": "PostalAddress",
+                addressLocality: "Ormoc City",
+                addressRegion: "Leyte",
+                addressCountry: "PH",
+              },
+              contactPoint: {
+                "@type": "ContactPoint",
+                contactType: "customer support",
+                availableLanguage: ["English", "Filipino"],
+              },
+              sameAs: [
+                "https://www.facebook.com/localproasia",
+              ],
+            },
+            {
+              "@context": "https://schema.org",
+              "@type": "WebSite",
+              name: "LocalPro",
+              url: "https://www.localpro.asia",
+              description: "Find and hire trusted local service professionals in the Philippines.",
+              potentialAction: {
+                "@type": "SearchAction",
+                target: {
+                  "@type": "EntryPoint",
+                  urlTemplate: "https://www.localpro.asia/board?q={search_term_string}",
+                },
+                "query-input": "required name=search_term_string",
+              },
+            },
+            {
+              "@context": "https://schema.org",
+              "@type": "FAQPage",
+              mainEntity: [
+                {
+                  "@type": "Question",
+                  name: "What is LocalPro?",
+                  acceptedAnswer: {
+                    "@type": "Answer",
+                    text: "LocalPro is a Philippine-based marketplace that connects clients with verified local service professionals such as plumbers, electricians, carpenters, cleaners, and more. Payments are protected by escrow.",
+                  },
+                },
+                {
+                  "@type": "Question",
+                  name: "How do I hire a service provider on LocalPro?",
+                  acceptedAnswer: {
+                    "@type": "Answer",
+                    text: "Simply post a job with your requirements and budget. Verified providers will send you quotes. You choose the best match, then pay securely through LocalPro\u2019s escrow — funds are only released once you approve the completed work.",
+                  },
+                },
+                {
+                  "@type": "Question",
+                  name: "Is LocalPro free to use?",
+                  acceptedAnswer: {
+                    "@type": "Answer",
+                    text: "Yes, posting a job on LocalPro is completely free. Clients pay no platform fees. Service providers pay a small commission only when they complete a job.",
+                  },
+                },
+                {
+                  "@type": "Question",
+                  name: "Are providers on LocalPro verified?",
+                  acceptedAnswer: {
+                    "@type": "Answer",
+                    text: "Yes. Every service provider on LocalPro goes through identity and background verification (KYC) before they can accept jobs. Providers also accumulate reviews and ratings from real clients.",
+                  },
+                },
+                {
+                  "@type": "Question",
+                  name: "What services can I find on LocalPro?",
+                  acceptedAnswer: {
+                    "@type": "Answer",
+                    text: "LocalPro covers a wide range of local services including plumbing, electrical work, carpentry, painting, cleaning, aircon repair, landscaping, construction, and many more. If you need it done locally, post it on LocalPro.",
+                  },
+                },
+              ],
+            },
+          ]),
+        }}
+      />
 
       {/* ── Nav ── */}
       <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-slate-200/80 shadow-sm">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2 shrink-0">
-            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shadow-sm">
-              <span className="text-white font-bold text-xs leading-none">LP</span>
-            </div>
-            <span className="text-lg font-bold">
+            <MapPin className="w-5 h-5 text-primary" />
+            <span className="text-2xl font-bold">
               <span className="text-primary">Local</span><span className="text-brand">Pro</span>
             </span>
           </Link>
@@ -658,9 +747,7 @@ export default async function RootPage() {
           <div className="flex flex-col md:flex-row items-start justify-between gap-8 sm:gap-10 mb-8 sm:mb-10">
             <div className="flex flex-col gap-3 max-w-xs">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-                  <span className="text-white font-bold text-xs leading-none">LP</span>
-                </div>
+                <MapPin className="w-5 h-5 text-primary-300" />
                 <span className="text-base font-bold">
                   <span className="text-primary-300">Local</span><span className="text-brand-400">Pro</span>
                 </span>

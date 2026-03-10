@@ -38,10 +38,22 @@ export async function GET() {
   try {
     await connectDB();
 
+    // Fetch the LGU filter setting first so the job query can be scoped correctly.
+    // Defaults to true (Ormoc-only) when the setting hasn't been seeded yet.
+    const filterMap = await appSettingRepository.findByKeys(["board.lguFilterEnabled"]);
+    const lguOnly = filterMap["board.lguFilterEnabled"] !== false;
+
+    const jobFilter = lguOnly
+      ? { status: "open", location: { $regex: /ormoc/i } }
+      : { status: "open" };
+    const completedFilter = lguOnly
+      ? { status: "completed", location: { $regex: /ormoc/i } }
+      : { status: "completed" };
+
     const [jobs, providerDocs, announcements, openCount, completedCount, features] =
       await Promise.all([
-        // Open jobs — newest first, capped at 20
-        Job.find({ status: "open" })
+        // Open jobs — scoped by board.lguFilterEnabled setting
+        Job.find(jobFilter)
           .sort({ createdAt: -1 })
           .limit(20)
           .select("_id title category location budget scheduleDate createdAt jobSource jobTags isPriority pesoPostedBy")
@@ -58,9 +70,9 @@ export async function GET() {
         // Public / all-target active announcements
         announcementRepository.findActiveForRole("all"),
 
-        // Stats
-        Job.countDocuments({ status: "open" }),
-        Job.countDocuments({ status: "completed" }),
+        // Stats — scoped by the same filter
+        Job.countDocuments(jobFilter),
+        Job.countDocuments(completedFilter),
 
         // All board feature flags in one query
         appSettingRepository.findByKeys([...BOARD_FEATURE_KEYS]),
@@ -107,6 +119,7 @@ export async function GET() {
         topProviders: leaderboard.length,
       },
       features: {
+        lguFilterEnabled:  lguOnly,
         activityFeed:      features["board.activityFeed"] === true,
         earningsWidget:    features["board.earningsWidget"] === true,
         categoryDemand:    features["board.categoryDemand"] === true,

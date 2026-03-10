@@ -17,7 +17,8 @@
     "db:seed-skills": "node --env-file=.env.local scripts/seed-skills.mjs",
     "db:seed-skills:force": "node --env-file=.env.local scripts/seed-skills.mjs --force",
     "db:seed-skills:wipe": "node --env-file=.env.local scripts/seed-skills.mjs --wipe",
-    "icons:generate": "node scripts/generate-icons.mjs"
+    "icons:generate": "node scripts/generate-icons.mjs",
+    "og:generate": "node scripts/generate-og-image.mjs"
   },
   "dependencies": {
     "@tailwindcss/typography": "^0.5.19",

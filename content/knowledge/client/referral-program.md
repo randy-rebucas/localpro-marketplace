@@ -25,7 +25,7 @@ The +100 pts your friend earns is on top of the normal job points they would ear
 
 Your link looks like this:
 ```
-https://localpro.ph/register?ref=ABCD1234
+https://www.localpro.asia/register?ref=ABCD1234
 ```
 
 Share it anywhere — WhatsApp, Facebook, text, email.

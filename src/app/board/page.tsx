@@ -45,6 +45,7 @@ export default function BoardPage() {
   const [showBottomStrip, setShowBottomStrip] = useState(true);
   const [online, setOnline] = useState(true);
   const autoPageTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const bottomStripTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const fetchData = useCallback(async () => {
     try {
@@ -96,6 +97,16 @@ export default function BoardPage() {
       if (autoPageTimer.current) clearInterval(autoPageTimer.current);
     };
   }, [data?.jobs.length]);
+
+  // Auto-toggle bottom strip every 30 seconds
+  useEffect(() => {
+    bottomStripTimer.current = setInterval(() => {
+      setShowBottomStrip((v) => !v);
+    }, 30_000);
+    return () => {
+      if (bottomStripTimer.current) clearInterval(bottomStripTimer.current);
+    };
+  }, []);
 
   const totalJobPages = data ? Math.ceil(data.jobs.length / JOBS_PER_PAGE) : 0;
   const visibleJobs = data ? data.jobs.slice(jobPage * JOBS_PER_PAGE, (jobPage + 1) * JOBS_PER_PAGE) : [];
@@ -403,7 +414,14 @@ export default function BoardPage() {
         <div className="hidden md:flex flex-col">
           {/* Toggle handle */}
           <button
-            onClick={() => setShowBottomStrip((v) => !v)}
+            onClick={() => {
+              setShowBottomStrip((v) => !v);
+              // Reset the auto-toggle timer so it counts 30 s from the manual click
+              if (bottomStripTimer.current) clearInterval(bottomStripTimer.current);
+              bottomStripTimer.current = setInterval(() => {
+                setShowBottomStrip((v) => !v);
+              }, 30_000);
+            }}
             className="flex-shrink-0 w-full flex items-center justify-center gap-1.5 py-0.5 bg-[#11202f] border-t border-white/10 hover:bg-white/5 transition-colors group"
             aria-label={showBottomStrip ? "Hide info strip" : "Show info strip"}
           >
@@ -414,7 +432,13 @@ export default function BoardPage() {
               ? <ChevronDown className="h-3 w-3 text-slate-600 group-hover:text-slate-400 transition-colors" />
               : <ChevronUp className="h-3 w-3 text-slate-600 group-hover:text-slate-400 transition-colors" />}
           </button>
-          {showBottomStrip && <BottomStrip stats={data.stats} features={data.features} />}
+          {/* Slide up/down container */}
+          <div
+            className="overflow-hidden transition-all duration-1000 ease-in-out"
+            style={{ maxHeight: showBottomStrip ? "600px" : "0px" }}
+          >
+            <BottomStrip stats={data.stats} features={data.features} />
+          </div>
         </div>
       )}
 

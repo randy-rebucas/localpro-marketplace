@@ -1,9 +1,20 @@
 import Link from "next/link";
+import { MapPin } from "lucide-react";
 import type { Metadata } from "next";
 
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://www.localpro.asia";
+
 export const metadata: Metadata = {
-  title: "Privacy Policy — LocalPro",
-  description: "Learn how LocalPro collects, uses, and protects your personal information.",
+  title: "Privacy Policy",
+  description: "Learn how LocalPro collects, uses, and protects your personal information on our service marketplace platform.",
+  alternates: { canonical: `${APP_URL}/privacy` },
+  openGraph: {
+    title: "Privacy Policy | LocalPro",
+    description: "Learn how LocalPro collects, uses, and protects your personal information.",
+    url: `${APP_URL}/privacy`,
+    siteName: "LocalPro",
+    type: "website",
+  },
 };
 
 export default function PrivacyPage() {
@@ -13,9 +24,7 @@ export default function PrivacyPage() {
       <header className="sticky top-0 z-50 bg-white/80 backdrop-blur border-b border-slate-200">
         <div className="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shadow-sm">
-              <span className="text-white font-bold text-xs leading-none">LP</span>
-            </div>
+            <MapPin className="w-5 h-5 text-primary" />
             <span className="text-lg font-bold">
               <span className="text-primary">Local</span><span className="text-brand">Pro</span>
             </span>

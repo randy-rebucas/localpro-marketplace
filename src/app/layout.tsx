@@ -12,58 +12,95 @@ const inter = Inter({
   variable: "--font-inter",
 });
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://localpro.ph";
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://www.localpro.asia";
 
 export const metadata: Metadata = {
   metadataBase: new URL(APP_URL),
+  applicationName: "LocalPro",
   title: {
-    default: "LocalPro — Find Local Service Providers",
+    default: "LocalPro — Hire Trusted Local Service Professionals",
     template: "%s | LocalPro",
   },
   description:
-    "Connect with trusted local service providers. Post jobs, get quotes, and pay securely with escrow protection.",
+    "LocalPro is a trusted marketplace for local service professionals. Post a job, receive quotes from KYC-verified providers, and pay securely with escrow protection. Serving the Philippines and beyond.",
   keywords: [
-    "local service providers",
-    "hire professionals",
-    "home services",
-    "freelance marketplace",
-    "plumber",
-    "electrician",
-    "cleaning services",
-    "Philippines services",
+    // Global service marketplace
+    "hire local service professionals",
+    "local service marketplace",
+    "on-demand home services",
+    "verified service providers",
+    "escrow payment marketplace",
+    "freelance service platform",
+    "home repair professionals",
+    "trusted local contractors",
+    // Trade categories (global)
+    "plumber near me",
+    "electrician near me",
+    "house cleaning service",
+    "carpenter for hire",
+    "painter contractor",
+    "aircon repair service",
+    "handyman service",
+    "construction contractor",
+    "landscaping service",
+    "pest control service",
+    // Platform value props
+    "post a job online",
+    "get service quotes",
+    "KYC verified tradespeople",
+    "escrow payment protection",
+    "rated and reviewed contractors",
+    "background checked professionals",
+    // Philippines local
+    "service providers Philippines",
+    "hire professionals Philippines",
+    "home services Philippines",
+    "LocalPro Philippines",
+    "Ormoc City services",
+    "Visayas service marketplace",
+    "trabaho Philippines",
   ],
-  authors: [{ name: "LocalPro" }],
+  authors: [{ name: "LocalPro", url: APP_URL }],
   creator: "LocalPro",
   publisher: "LocalPro",
+  category: "Marketplace",
+  alternates: { canonical: APP_URL },
   robots: {
     index: true,
     follow: true,
-    googleBot: { index: true, follow: true, "max-image-preview": "large" },
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
+    },
   },
   openGraph: {
     type: "website",
     locale: "en_PH",
     url: APP_URL,
     siteName: "LocalPro",
-    title: "LocalPro — Find Local Service Providers",
+    title: "LocalPro — Hire Trusted Local Service Professionals",
     description:
-      "Connect with trusted local service providers. Post jobs, get quotes, and pay securely with escrow protection.",
+      "Post jobs, receive quotes from KYC-verified providers, and pay securely with escrow protection. The trusted marketplace for local service professionals.",
     images: [
       {
-        url: "/og-image.png",
+        url: "/api/og",
         width: 1200,
         height: 630,
-        alt: "LocalPro — Find Local Service Providers",
+        alt: "LocalPro — Hire Trusted Local Service Professionals",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
     site: "@localpro",
-    title: "LocalPro — Find Local Service Providers",
+    creator: "@localpro",
+    title: "LocalPro — Hire Trusted Local Service Professionals",
     description:
-      "Connect with trusted local service providers. Post jobs, get quotes, and pay securely with escrow protection.",
-    images: ["/og-image.png"],
+      "Post jobs, receive quotes from KYC-verified providers, and pay securely with escrow protection.",
+    images: ["/api/og"],
   },
   icons: {
     icon: "/favicon.ico",
@@ -84,7 +121,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${inter.variable} h-full`}>
+    <html lang="en-PH" className={`${inter.variable} h-full`}>
       <body className="font-sans h-full">
         {process.env.NEXT_PUBLIC_GTM_ID && (
           <GoogleTagManagerNoscript gtmId={process.env.NEXT_PUBLIC_GTM_ID} />

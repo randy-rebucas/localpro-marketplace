@@ -113,6 +113,11 @@ export async function generateMetadata(
 
   const title = `${job.title} — ${job.category} | LocalPro`;
   const description = `${job.description.slice(0, 150)}… Location: ${job.location}. Budget: ${formatPeso(job.budget)}.`;
+  const ogImageUrl = `${APP_URL}/api/og?${new URLSearchParams({
+    title: `${job.title} — ${job.category}`,
+    description: `${job.location} · ${formatPeso(job.budget)}`,
+    tag: job.status === "open" ? "Open Job" : job.category,
+  }).toString()}`;
 
   return {
     title,
@@ -123,11 +128,13 @@ export async function generateMetadata(
       url: `${APP_URL}/jobs/${id}`,
       siteName: "LocalPro Marketplace",
       type: "website",
+      images: [{ url: ogImageUrl, width: 1200, height: 630, alt: title }],
     },
     twitter: {
-      card: "summary",
+      card: "summary_large_image",
       title,
       description,
+      images: [ogImageUrl],
     },
   };
 }
@@ -152,8 +159,48 @@ export default async function JobDetailPage(
   const ctaLabel   = isGovJob ? "Apply for Position" : "Apply Now";
   const registerLabel = isGovJob ? "Apply for Position" : "Apply as a Provider";
 
+  // JSON-LD: JobPosting schema for Google Jobs and rich results
+  const jobSchema = {
+    "@context": "https://schema.org",
+    "@type": "JobPosting",
+    title: job.title,
+    description: job.description,
+    datePosted: job.createdAt,
+    validThrough: job.scheduleDate,
+    employmentType: "CONTRACTOR",
+    directApply: true,
+    hiringOrganization: {
+      "@type": "Organization",
+      name: "LocalPro",
+      sameAs: APP_URL,
+      logo: `${APP_URL}/logo.jpg`,
+    },
+    jobLocation: {
+      "@type": "Place",
+      name: job.location,
+      address: {
+        "@type": "PostalAddress",
+        addressLocality: job.location,
+        addressCountry: "PH",
+      },
+    },
+    baseSalary: {
+      "@type": "MonetaryAmount",
+      currency: "PHP",
+      value: {
+        "@type": "QuantitativeValue",
+        value: job.budget,
+        unitText: "FLAT_RATE",
+      },
+    },
+  };
+
   return (
     <div className="min-h-screen bg-[#0e1f33] text-white">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jobSchema) }}
+      />
 
       {/* ── Header ──────────────────────────────────────────────────────────── */}
       <header className="bg-[#1e3a5f] border-b border-white/10 px-4 sm:px-6 lg:px-10 py-3 flex items-center justify-between">

@@ -21,6 +21,7 @@ const DEFAULTS: AppSettings = {
   "platform.newRegistrations": true,
   "platform.kycRequired": false,
   // Job Board
+  "board.lguFilterEnabled": true,
   "board.activityFeed": false,
   "board.earningsWidget": false,
   "board.categoryDemand": false,
@@ -85,6 +86,12 @@ const SETTING_META: Record<string, SettingMeta> = {
     type: "boolean",
   },
   // ── Job Board ────────────────────────────────────────────────────────────────
+  "board.lguFilterEnabled": {
+    label: "LGU Filter (Ormoc Only)",
+    description:
+      "When enabled, the public job board only displays jobs posted within Ormoc City (municipality / LGU level). Disable to show jobs from all locations nationwide.",
+    type: "boolean",
+  },
   "board.activityFeed": {
     label: "Activity Feed",
     description:
@@ -232,6 +239,7 @@ const TABS: Tab[] = [
     label: "Job Board",
     icon: <LayoutDashboard className="h-4 w-4" />,
     keys: [
+      "board.lguFilterEnabled",
       "board.activityFeed",
       "board.earningsWidget",
       "board.categoryDemand",

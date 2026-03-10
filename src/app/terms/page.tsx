@@ -1,9 +1,20 @@
 import Link from "next/link";
+import { MapPin } from "lucide-react";
 import type { Metadata } from "next";
 
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://www.localpro.asia";
+
 export const metadata: Metadata = {
-  title: "Terms of Service — LocalPro",
-  description: "Read the terms and conditions governing your use of the LocalPro Marketplace platform.",
+  title: "Terms of Service",
+  description: "Read the terms and conditions governing your use of the LocalPro Marketplace platform for local service professionals in the Philippines.",
+  alternates: { canonical: `${APP_URL}/terms` },
+  openGraph: {
+    title: "Terms of Service | LocalPro",
+    description: "Read the terms and conditions governing your use of LocalPro Marketplace.",
+    url: `${APP_URL}/terms`,
+    siteName: "LocalPro",
+    type: "website",
+  },
 };
 
 export default function TermsPage() {
@@ -13,9 +24,7 @@ export default function TermsPage() {
       <header className="sticky top-0 z-50 bg-white/80 backdrop-blur border-b border-slate-200">
         <div className="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shadow-sm">
-              <span className="text-white font-bold text-xs leading-none">LP</span>
-            </div>
+            <MapPin className="w-5 h-5 text-primary" />
             <span className="text-lg font-bold">
               <span className="text-primary">Local</span><span className="text-brand">Pro</span>
             </span>

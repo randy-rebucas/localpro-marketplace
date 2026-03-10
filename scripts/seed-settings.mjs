@@ -86,6 +86,13 @@ const DEFAULT_SETTINGS = [
     description: "Minimum payout or wallet withdrawal amount in PHP.",
   },
 
+  // ── Job Board ─────────────────────────────────────────────────────────────
+  {
+    key: "board.lguFilterEnabled",
+    value: true,
+    description: "When true, the public job board only shows jobs posted within Ormoc (LGU level). Set to false to show jobs from all locations.",
+  },
+
   // ── Limits ────────────────────────────────────────────────────────────────
   {
     key: "limits.maxQuotesPerJob",
