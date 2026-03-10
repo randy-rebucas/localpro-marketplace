@@ -55,11 +55,16 @@ const SOURCE_LABELS: Record<string, string> = {
   lgu:  "LGU",
 };
 
+function isJustPosted(createdAt: string) {
+  return Date.now() - new Date(createdAt).getTime() < 10 * 60 * 1000;
+}
+
 export function JobCard({ job }: { job: BoardJob }) {
   const qr = qrDataForJob(job._id, job.jobSource);
   const [imgSrc, setImgSrc] = useState(qr.src);
   const [copied, setCopied] = useState(false);
   const [showShare, setShowShare] = useState(false);
+  const freshlyPosted = isJustPosted(job.createdAt);
 
   const url = jobUrl(job._id);
   const text = shareText(job);
@@ -108,6 +113,12 @@ export function JobCard({ job }: { job: BoardJob }) {
             <span className="inline-block px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 text-xs font-semibold uppercase tracking-wider">
               {job.category}
             </span>
+            {freshlyPosted && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-semibold">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                Just Posted
+              </span>
+            )}
             {job.isPriority && (
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-500/20 text-red-300 border border-red-500/30 text-xs font-semibold">
                 <Zap className="h-2.5 w-2.5" />

@@ -42,7 +42,7 @@ export interface BoardData {
   jobs: BoardJob[];
   leaderboard: LeaderboardEntry[];
   announcements: BoardAnnouncement[];
-  stats: { openJobs: number; completedJobs: number; topProviders: number };
+  stats: { openJobs: number; completedJobs: number; topProviders: number; totalBudget: number };
   features: {
     activityFeed: boolean;
     earningsWidget: boolean;

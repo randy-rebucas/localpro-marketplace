@@ -3,6 +3,41 @@
 import { useEffect, useState } from "react";
 import { BarChart2 } from "lucide-react";
 
+const CATEGORY_EMOJI: Record<string, string> = {
+  plumbing:           "🔧",
+  electrical:         "⚡",
+  cleaning:           "🧹",
+  carpentry:          "🪚",
+  painting:           "🎨",
+  roofing:            "🏠",
+  hvac:               "❄️",
+  landscaping:        "🌿",
+  moving:             "📦",
+  handyman:           "🛠️",
+  masonry:            "🧱",
+  welding:            "🔩",
+  automotive:         "🚗",
+  mechanical:         "⚙️",
+  "it":               "💻",
+  electronics:        "📡",
+  food:               "🍳",
+  tailoring:          "🪡",
+  transportation:     "🚚",
+  health:             "🏥",
+  safety:             "🦺",
+  beauty:             "💅",
+  pet:                "🐾",
+  default:            "🔔",
+};
+
+function categoryEmoji(cat: string): string {
+  const key = cat.toLowerCase();
+  return (
+    Object.entries(CATEGORY_EMOJI).find(([k]) => key.includes(k))?.[1] ??
+    CATEGORY_EMOJI.default
+  );
+}
+
 interface CategoryDemandItem {
   category: string;
   count: number;
@@ -52,7 +87,7 @@ export function CategoryDemandWidget({ className }: { className?: string } = {})
         {items.map((item) => (
           <li key={item.category} className="flex items-center gap-2">
             <span className="text-xs text-slate-300 w-24 truncate flex-shrink-0 capitalize">
-              {item.category}
+              {categoryEmoji(item.category)} {item.category}
             </span>
             <div className="flex-1 h-1.5 bg-white/5 rounded-full overflow-hidden">
               <div

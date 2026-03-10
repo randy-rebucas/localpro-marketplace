@@ -33,6 +33,7 @@ import { ProviderAchievementsWidget } from "./components/ProviderAchievementsWid
 import { TrainingCTA }                from "./components/TrainingCTA";
 import { BottomStrip }                from "./components/BottomStrip";
 import { AchievementFeed }           from "./components/AchievementFeed";
+import { CompletionToast }           from "./components/CompletionToast";
 
 // ─── Main board ───────────────────────────────────────────────────────────────
 
@@ -46,6 +47,21 @@ export default function BoardPage() {
   const [online, setOnline] = useState(true);
   const autoPageTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const bottomStripTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Rotating provider QR motivational copy
+  const QR_COPY_LINES = [
+    `${data?.stats.openJobs ?? "Many"} jobs waiting for a provider right now`,
+    "Top providers earn ₱18,000+ per month",
+    "Free to sign up — start earning today",
+    "KYC-verified. Trusted by Ormoc clients.",
+    "Get paid securely via escrow — every time",
+  ];
+  const [qrCopyIdx, setQrCopyIdx] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setQrCopyIdx((i) => (i + 1) % QR_COPY_LINES.length), 8_000);
+    return () => clearInterval(id);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [QR_COPY_LINES.length]);
 
   const fetchData = useCallback(async () => {
     try {
@@ -123,6 +139,12 @@ export default function BoardPage() {
 
   return (
     <div className="flex flex-col min-h-screen h-screen overflow-x-hidden overflow-y-auto select-none bg-[#14243a] text-[15px] sm:text-base">
+      <style>{`
+        @keyframes fillbar {
+          from { width: 0%; }
+          to   { width: 100%; }
+        }
+      `}</style>
 
       {/* ── Header ─────────────────────────────────────────────────────── */}
       <header className="flex-shrink-0 bg-[#1e3a5f] border-b border-white/10 px-3 sm:px-4 md:px-6 py-2.5 md:py-3 flex flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-4 shadow-sm">
@@ -259,6 +281,17 @@ export default function BoardPage() {
             )}
           </div>
 
+          {/* Pagination progress bar — fills over JOB_PAGE_INTERVAL_MS, resets on page flip */}
+          {totalJobPages > 1 && (
+            <div className="flex-shrink-0 h-0.5 rounded-full bg-white/5 overflow-hidden -mt-1">
+              <div
+                key={jobPage}
+                className="h-full bg-blue-400/60 rounded-full"
+                style={{ animation: `fillbar ${JOB_PAGE_INTERVAL_MS}ms linear forwards` }}
+              />
+            </div>
+          )}
+
           {/* Job cards grid */}
           {data && visibleJobs.length > 0 ? (
             <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2 md:gap-3 content-start overflow-hidden">
@@ -381,9 +414,9 @@ export default function BoardPage() {
               <p className="text-sm md:text-base font-extrabold text-white tracking-tight leading-snug">
                 Become a Provider
               </p>
-              <p className="text-xs text-blue-300 font-medium leading-relaxed">
-                Scan the QR code to sign up<br />and start earning today
-              </p>
+              <p className="text-xs text-blue-300 font-medium leading-relaxed transition-all duration-700 min-h-[2.5rem] flex items-center justify-center text-center px-1">
+                  {QR_COPY_LINES[qrCopyIdx]}
+                </p>
             </div>
 
             {/* URL pill */}
@@ -441,6 +474,9 @@ export default function BoardPage() {
           </div>
         </div>
       )}
+
+      {/* Completion toast — bottom-right corner pop-up */}
+      <CompletionToast />
 
       {/* ── Footer: Announcement ticker ──────────────────────────────────── */}
       <footer className="flex-shrink-0 h-10 bg-[#1a3050] border-t border-white/10 overflow-hidden shadow-inner">

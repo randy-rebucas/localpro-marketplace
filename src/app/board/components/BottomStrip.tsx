@@ -1,10 +1,11 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { APP_URL, PRICE_HIGHLIGHTS, PLATFORM_PARTNERS } from "../constants";
 import type { BoardData } from "../types";
 
 interface BottomStripProps {
-  stats: { openJobs: number; completedJobs: number; topProviders: number };
+  stats: { openJobs: number; completedJobs: number; topProviders: number; totalBudget: number };
   features: BoardData["features"];
 }
 
@@ -16,7 +17,31 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
+/** Animates a number from 0 → target over `duration` ms on mount. */
+function useCountUp(target: number, duration = 900) {
+  const [value, setValue] = useState(0);
+  useEffect(() => {
+    if (target === 0) return;
+    const start = Date.now();
+    const id = setInterval(() => {
+      const progress = Math.min((Date.now() - start) / duration, 1);
+      // Ease-out cubic
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setValue(Math.round(target * eased));
+      if (progress >= 1) clearInterval(id);
+    }, 16);
+    return () => clearInterval(id);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [target]);
+  return value;
+}
+
 export function BottomStrip({ stats, features }: BottomStripProps) {
+  const animOpen      = useCountUp(stats.openJobs);
+  const animCompleted = useCountUp(stats.completedJobs);
+  const animProviders = useCountUp(stats.topProviders);
+  const animBudget    = useCountUp(stats.totalBudget);
+
   const anyVisible =
     features.marketplaceStats ||
     features.priceGuide ||
@@ -36,24 +61,35 @@ export function BottomStrip({ stats, features }: BottomStripProps) {
           <div className="flex items-center gap-4">
             <div className="text-center">
               <p className="text-xl font-extrabold text-emerald-300 tabular-nums leading-none">
-                {stats.openJobs.toLocaleString()}
+                {animOpen.toLocaleString()}
               </p>
               <p className="text-[11px] text-emerald-500/70 font-semibold uppercase tracking-wider mt-0.5">Open Jobs</p>
             </div>
             <div className="h-6 w-px bg-white/10" />
             <div className="text-center">
               <p className="text-xl font-extrabold text-blue-300 tabular-nums leading-none">
-                {stats.completedJobs.toLocaleString()}
+                {animCompleted.toLocaleString()}
               </p>
               <p className="text-[11px] text-blue-500/70 font-semibold uppercase tracking-wider mt-0.5">Completed</p>
             </div>
             <div className="h-6 w-px bg-white/10" />
             <div className="text-center">
               <p className="text-xl font-extrabold text-amber-300 tabular-nums leading-none">
-                {stats.topProviders.toLocaleString()}
+                {animProviders.toLocaleString()}
               </p>
               <p className="text-[11px] text-amber-500/70 font-semibold uppercase tracking-wider mt-0.5">Providers</p>
             </div>
+            {stats.totalBudget > 0 && (
+              <>
+                <div className="h-6 w-px bg-white/10" />
+                <div className="text-center">
+                  <p className="text-xl font-extrabold text-violet-300 tabular-nums leading-none">
+                    ₱{animBudget.toLocaleString()}
+                  </p>
+                  <p className="text-[11px] text-violet-500/70 font-semibold uppercase tracking-wider mt-0.5">In Jobs</p>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

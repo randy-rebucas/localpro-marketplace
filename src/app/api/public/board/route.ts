@@ -50,7 +50,7 @@ export async function GET() {
       ? { status: "completed", location: { $regex: /ormoc/i } }
       : { status: "completed" };
 
-    const [jobs, providerDocs, announcements, openCount, completedCount, features] =
+    const [jobs, providerDocs, announcements, openCount, completedCount, budgetAgg, features] =
       await Promise.all([
         // Open jobs — scoped by board.lguFilterEnabled setting
         Job.find(jobFilter)
@@ -73,6 +73,12 @@ export async function GET() {
         // Stats — scoped by the same filter
         Job.countDocuments(jobFilter),
         Job.countDocuments(completedFilter),
+
+        // Total open budget (for the board stats strip)
+        Job.aggregate<{ total: number }>([
+          { $match: jobFilter },
+          { $group: { _id: null, total: { $sum: "$budget" } } },
+        ]),
 
         // All board feature flags in one query
         appSettingRepository.findByKeys([...BOARD_FEATURE_KEYS]),
@@ -117,6 +123,7 @@ export async function GET() {
         openJobs: openCount,
         completedJobs: completedCount,
         topProviders: leaderboard.length,
+        totalBudget: budgetAgg[0]?.total ?? 0,
       },
       features: {
         lguFilterEnabled:  lguOnly,
