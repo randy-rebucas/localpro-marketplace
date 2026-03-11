@@ -6,7 +6,7 @@ import Image from "next/image";
 import {
   Building2, MapPin, Users, Wallet, PieChart, Plus, Briefcase,
   ChevronRight, TrendingUp, ShieldAlert, Clock, AlertTriangle, BarChart2,
-  CreditCard, Shield, ReceiptText,
+  CreditCard, Shield, ReceiptText, AlertCircle, RefreshCw,
 } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
@@ -78,9 +78,11 @@ export default function BusinessHubClient() {
   const [error, setError]             = useState<string | null>(null);
   const [snap, setSnap]               = useState<DashboardSnapshot | null>(null);
   const [snapLoading, setSnapLoading] = useState(false);
+  const [loadError, setLoadError]     = useState<string | null>(null);
 
   const loadOrg = useCallback(async () => {
     setLoading(true);
+    setLoadError(null);
     try {
       const data = await fetchClient<OrgApiResponse>("/api/business/org");
       setOrg(data.org);
@@ -91,11 +93,15 @@ export default function BusinessHubClient() {
             `/api/business/dashboard?orgId=${data.org._id}`
           );
           setSnap(s);
-        } catch { /* silent */ } finally {
+        } catch {
+          // snapshot errors are non-fatal; show stale/empty data
+        } finally {
           setSnapLoading(false);
         }
       }
-    } catch { /* silent */ } finally {
+    } catch (e: unknown) {
+      setLoadError(e instanceof Error ? e.message : "Failed to load business data.");
+    } finally {
       setLoading(false);
     }
   }, []);
@@ -117,6 +123,24 @@ export default function BusinessHubClient() {
     } finally {
       setCreating(false);
     }
+  }
+
+  // ── Error state ───────────────────────────────────────────────────────────
+  if (loadError) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 gap-4 text-center">
+        <div className="bg-red-50 ring-4 ring-red-100 p-5 rounded-2xl">
+          <AlertCircle className="h-10 w-10 text-red-500" />
+        </div>
+        <div>
+          <h2 className="text-lg font-bold text-slate-800">Failed to load</h2>
+          <p className="text-sm text-slate-500 mt-1">{loadError}</p>
+        </div>
+        <button onClick={loadOrg} className="btn-primary flex items-center gap-2">
+          <RefreshCw className="h-4 w-4" /> Try again
+        </button>
+      </div>
+    );
   }
 
   // ── Loading skeleton ─────────────────────────────────────────────────────
@@ -272,11 +296,19 @@ export default function BusinessHubClient() {
             <Building2 className="h-7 w-7 text-primary" />
           </div>
         )}
-        <div>
-          <h1 className="text-xl font-bold text-slate-900">{org!.name}</h1>
+        <div className="flex-1 min-w-0">
+          <h1 className="text-xl font-bold text-slate-900 truncate">{org!.name}</h1>
           <p className="text-sm text-slate-500 capitalize mt-0.5">
             {org!.type} account · {activeLocations} active branch{activeLocations !== 1 ? "es" : ""}
           </p>
+        </div>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <button
+            onClick={loadOrg}
+            className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-primary border border-slate-200 rounded-lg px-3 py-1.5 transition-colors"
+          >
+            <RefreshCw className="h-3.5 w-3.5" /> Refresh
+          </button>
         </div>
       </div>
 
@@ -333,6 +365,11 @@ export default function BusinessHubClient() {
       )}
 
       {/* ── Charts 2×2 ── */}
+      {snapLoading && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 animate-pulse">
+          {[...Array(4)].map((_, i) => <div key={i} className="h-64 bg-slate-100 rounded-2xl" />)}
+        </div>
+      )}
       {!snapLoading && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
 
@@ -476,7 +513,7 @@ export default function BusinessHubClient() {
       )}
 
       {/* ── Quick-nav cards ── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {NAV_CARDS.map((c) => (
           <Link
             key={c.label}

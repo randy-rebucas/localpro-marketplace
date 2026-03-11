@@ -15,6 +15,8 @@ export const STAFF_CAPABILITIES: StaffCapability[] = [
   "manage_kyc",
   "manage_disputes",
   "manage_users",
+  "manage_agencies",
+  "manage_businesses",
   "view_revenue",
   "manage_payouts",
   "manage_categories",

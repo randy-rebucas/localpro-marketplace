@@ -100,6 +100,7 @@ const UserSchema = new Schema<UserDocument>(
     kycRejectionReason: { type: String, default: null },
     addresses: { type: [AddressSubSchema], default: [] },
     capabilities: { type: [String], default: [] },
+    agencyId: { type: Schema.Types.ObjectId, ref: "AgencyProfile", default: null },
     facebookId: { type: String, default: null, index: true, sparse: true },
     oauthProvider: { type: String, enum: ["facebook", null], default: null },
     phone: { type: String, default: null, sparse: true },

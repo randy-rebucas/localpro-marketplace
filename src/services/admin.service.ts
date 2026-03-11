@@ -8,6 +8,7 @@ import {
 } from "@/repositories";
 import { pushNotification, pushStatusUpdate } from "@/lib/events";
 import { NotFoundError, UnprocessableError } from "@/lib/errors";
+import { sendBusinessJobInviteEmail } from "@/lib/email";
 import type { JobStatus, AdminStats } from "@/types";
 
 export interface UpdateUserInput {
@@ -102,6 +103,70 @@ export class AdminService {
         data: { jobId },
       });
       pushNotification(j.invitedProviderId.toString(), providerNotif);
+    }
+
+    // ── Business preferred provider routing ───────────────────────────────────
+    // If the client belongs to a business org with preferred providers and the
+    // job went to open marketplace (not a direct invite), notify all preferred
+    // providers so they get first visibility on the new job.
+    if (!j.invitedProviderId) {
+      try {
+        const BusinessOrganization = (await import("@/models/BusinessOrganization")).default;
+        const User = (await import("@/models/User")).default;
+
+        const org = await BusinessOrganization.findOne(
+          { ownerId: j.clientId.toString() },
+          "name locations"
+        ).lean();
+
+        if (org) {
+          // Collect all unique preferred provider IDs across all locations
+          const preferredIds = [
+            ...new Set(
+              org.locations
+                .flatMap((loc: { preferredProviderIds?: unknown[] }) =>
+                  (loc.preferredProviderIds ?? []).map(String)
+                )
+            ),
+          ] as string[];
+
+          if (preferredIds.length > 0) {
+            // Look up emails for the fire-and-forget emails
+            const providers = await User.find(
+              { _id: { $in: preferredIds } },
+              "email name"
+            ).lean();
+
+            await Promise.all(
+              preferredIds.map(async (providerId) => {
+                const notif = await notificationRepository.create({
+                  userId: providerId,
+                  type: "job_direct_invite",
+                  title: `New job from ${org.name}`,
+                  message: `${org.name} posted a new job: "${j.title}". You're a preferred provider — be the first to quote!`,
+                  data: { jobId, jobTitle: j.title },
+                });
+                pushNotification(providerId, notif);
+
+                const p = providers.find((u) => String(u._id) === providerId);
+                if (p?.email) {
+                  sendBusinessJobInviteEmail(
+                    p.email,
+                    p.name,
+                    org.name,
+                    j.title
+                  ).catch((err) =>
+                    console.error("[BUSINESS_ROUTING] Email failed:", err)
+                  );
+                }
+              })
+            );
+          }
+        }
+      } catch (err) {
+        // Non-critical — don't fail job approval because of this
+        console.error("[BUSINESS_ROUTING] Failed to notify preferred providers:", err);
+      }
     }
 
     return jobDoc;

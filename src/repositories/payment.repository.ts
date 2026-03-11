@@ -90,6 +90,47 @@ export class PaymentRepository extends BaseRepository<PaymentDocument> {
     ).lean() as unknown as PaymentDocument | null;
   }
 
+  /**
+   * Create or update the single awaiting_payment record for a job+client.
+   * If the client retries after abandoning a previous checkout session,
+   * the existing record is updated with the new session details instead of
+   * inserting a duplicate (which would hit the unique partial index).
+   */
+  async upsertAwaitingPayment(data: {
+    jobId: unknown;
+    clientId: string;
+    providerId: unknown;
+    paymentIntentId: string;
+    clientKey: string;
+    amount: number;
+    amountInCentavos: number;
+    currency: string;
+  }): Promise<PaymentDocument> {
+    await this.connect();
+    const doc = await Payment.findOneAndUpdate(
+      {
+        jobId: new Types.ObjectId(String(data.jobId)),
+        clientId: new Types.ObjectId(data.clientId),
+        status: "awaiting_payment",
+      },
+      {
+        $set: {
+          paymentIntentId: data.paymentIntentId,
+          clientKey: data.clientKey,
+          amount: data.amount,
+          amountInCentavos: data.amountInCentavos,
+          currency: data.currency,
+          providerId: data.providerId ? new Types.ObjectId(String(data.providerId)) : null,
+        },
+        $setOnInsert: {
+          status: "awaiting_payment",
+        },
+      },
+      { new: true, upsert: true }
+    ).lean() as unknown as PaymentDocument;
+    return doc;
+  }
+
   /** Batch fetch: returns a jobId → amount map for all paid payments in the given job ID list. */
   async findAmountsByJobIds(jobIds: string[]): Promise<Map<string, number>> {
     if (jobIds.length === 0) return new Map();

@@ -11,6 +11,8 @@ export type StaffCapability =
   | "manage_kyc"
   | "manage_disputes"
   | "manage_users"
+  | "manage_agencies"
+  | "manage_businesses"
   | "view_revenue"
   | "manage_payouts"
   | "manage_categories"
@@ -31,14 +33,16 @@ const CAPABILITY_META: Record<
   StaffCapability,
   { label: string; description: string; color: string }
 > = {
-  manage_jobs:       { label: "Manage Jobs",       description: "Approve or reject job postings",       color: "bg-blue-100 text-blue-800" },
-  manage_kyc:        { label: "Manage KYC",        description: "Review provider KYC submissions",       color: "bg-purple-100 text-purple-800" },
-  manage_disputes:   { label: "Manage Disputes",   description: "Resolve platform disputes",             color: "bg-red-100 text-red-800" },
-  manage_users:      { label: "Manage Users",      description: "Suspend or verify user accounts",       color: "bg-orange-100 text-orange-800" },
-  view_revenue:      { label: "View Revenue",      description: "Access financial reports and GMV data", color: "bg-green-100 text-green-800" },
-  manage_payouts:    { label: "Manage Payouts",    description: "Process provider payout requests",      color: "bg-emerald-100 text-emerald-800" },
-  manage_categories: { label: "Manage Categories", description: "Add, edit, or reorder service categories", color: "bg-slate-100 text-slate-800" },
-  manage_support:    { label: "Manage Support",    description: "Handle user support tickets",           color: "bg-cyan-100 text-cyan-800" },
+  manage_jobs:       { label: "Manage Jobs",        description: "Approve or reject job postings",              color: "bg-blue-100 text-blue-800" },
+  manage_kyc:        { label: "Manage KYC",         description: "Review provider KYC submissions",              color: "bg-purple-100 text-purple-800" },
+  manage_disputes:   { label: "Manage Disputes",    description: "Resolve platform disputes",                    color: "bg-red-100 text-red-800" },
+  manage_users:      { label: "Manage Users",       description: "Suspend or verify user accounts",              color: "bg-orange-100 text-orange-800" },
+  manage_agencies:   { label: "Manage Agencies",    description: "View and manage provider agency accounts",     color: "bg-violet-100 text-violet-800" },
+  manage_businesses: { label: "Manage Businesses",  description: "View and manage client business organizations", color: "bg-sky-100 text-sky-800" },
+  view_revenue:      { label: "View Revenue",       description: "Access financial reports and GMV data",        color: "bg-green-100 text-green-800" },
+  manage_payouts:    { label: "Manage Payouts",     description: "Process provider payout requests",             color: "bg-emerald-100 text-emerald-800" },
+  manage_categories: { label: "Manage Categories",  description: "Add, edit, or reorder service categories",    color: "bg-slate-100 text-slate-800" },
+  manage_support:    { label: "Manage Support",     description: "Handle user support tickets",                  color: "bg-cyan-100 text-cyan-800" },
 };
 
 const ALL_CAPABILITIES = Object.keys(CAPABILITY_META) as StaffCapability[];

@@ -63,7 +63,21 @@
       "Bash(node -e \"const fs=require\\(''fs''\\); const c=fs.readFileSync\\(''c:/Users/corew/localpro-marketplace/src/app/\\(dashboard\\)/peso/groups/page.tsx'',''utf8''\\); console.log\\(c.slice\\(c.indexOf\\(''shrink-0 \\\\`text-[10px]''\\)-50, c.indexOf\\(''shrink-0 \\\\`text-[10px]''\\)+300\\)\\);\")",
       "Bash(grep -v \"shrink-0\\\\`\")",
       "Bash(npx tsc --noEmit --project tsconfig.json)",
-      "Bash(ls c:/Users/corew/localpro-marketplace/src/app/\\\\\\(dashboard\\\\\\)/peso/)"
+      "Bash(ls c:/Users/corew/localpro-marketplace/src/app/\\\\\\(dashboard\\\\\\)/peso/)",
+      "Bash(find \"c:/Users/corew/localpro-marketplace/src/app/\\(dashboard\\)/client/business\" -type f)",
+      "Bash(mkdir -p \"c:/Users/corew/localpro-marketplace/src/app/\\(dashboard\\)/provider/business/_components\")",
+      "Bash(mkdir -p \"c:/Users/corew/localpro-marketplace/src/app/\\(dashboard\\)/provider/business/staff/_components\")",
+      "Bash(mkdir -p \"c:/Users/corew/localpro-marketplace/src/app/\\(dashboard\\)/provider/business/jobs/_components\")",
+      "Bash(mkdir -p \"c:/Users/corew/localpro-marketplace/src/app/\\(dashboard\\)/provider/business/earnings/_components\")",
+      "Bash(mkdir -p \"c:/Users/corew/localpro-marketplace/src/app/\\(dashboard\\)/provider/business/analytics/_components\")",
+      "Bash(mkdir -p \"c:/Users/corew/localpro-marketplace/src/app/\\(dashboard\\)/provider/business/service-areas/_components\")",
+      "Bash(mkdir -p \"c:/Users/corew/localpro-marketplace/src/app/\\(dashboard\\)/provider/business/profile/_components\")",
+      "Bash(mkdir -p \"c:/Users/corew/localpro-marketplace/src/app/\\(dashboard\\)/provider/business/compliance/_components\")",
+      "Bash(find \"c:/Users/corew/localpro-marketplace/src/app/\\(dashboard\\)/provider/business\" -type f)",
+      "Bash(pnpm tsc:*)",
+      "Bash(find \"c:\\\\Users\\\\corew\\\\localpro-marketplace\\\\src\\\\app\\\\\\(dashboard\\)\\\\provider\\\\business\" -type f)",
+      "Bash(ls \"C:/Users/corew/localpro-marketplace/src/app/\\(dashboard\\)/provider/business/\")",
+      "Bash(ls \"C:/Users/corew/localpro-marketplace/src/app/\\(dashboard\\)/provider/business/analytics/_components/\")"
     ]
   }
 }

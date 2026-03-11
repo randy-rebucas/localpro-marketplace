@@ -45,10 +45,8 @@ export class PaymentService {
     const check = canTransitionEscrow(job, "funded");
     if (!check.allowed) throw new UnprocessableError(check.reason!);
 
-    if (overrideAmount !== undefined && overrideAmount > job.budget * 1.2) {
-      throw new UnprocessableError(
-        "Override amount cannot exceed 120% of the job budget"
-      );
+    if (overrideAmount !== undefined && overrideAmount <= 0) {
+      throw new UnprocessableError("Escrow amount must be greater than zero.");
     }
 
     const amount = overrideAmount ?? job.budget;
@@ -138,7 +136,9 @@ export class PaymentService {
       },
     });
 
-    await paymentRepository.create({
+    // Upsert — if a previous checkout was abandoned, update the existing
+    // awaiting_payment record instead of inserting a duplicate (unique index).
+    await paymentRepository.upsertAwaitingPayment({
       jobId: job._id,
       clientId: user.userId,
       providerId: job.providerId,
@@ -147,7 +147,6 @@ export class PaymentService {
       amount,
       amountInCentavos: Math.round(amount * 100),
       currency: "PHP",
-      status: "awaiting_payment",
     });
 
     return {

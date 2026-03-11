@@ -176,6 +176,13 @@ export function getNotificationLink(
       if (role === "admin") return "/admin";
       return null;
 
+    case "agency_job_assigned":
+      if (role === "provider" && jobId) return `/provider/jobs/${jobId}`;
+      return "/provider/jobs";
+
+    case "agency_staff_invited":
+      return null; // handled by the invite acceptance page (/agency/invite/[token])
+
     default:
       return null;
   }

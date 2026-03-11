@@ -67,6 +67,17 @@ export class ConsultationService {
       );
     }
 
+    // Agency staff members cannot initiate consultations as independent providers
+    if (user.role === "provider") {
+      const providerUser = await userRepository.findById(user.userId);
+      const agencyId = (providerUser as { agencyId?: unknown } | null)?.agencyId;
+      if (agencyId) {
+        throw new ForbiddenError(
+          "Agency staff members cannot create consultations independently. Your agency owner manages client outreach."
+        );
+      }
+    }
+
     // Rate limiting: Max consultations per day
     const count = await consultationRepository.countByInitiatorToday(user.userId);
     const dailyLimit = user.role === "provider" ? 5 : 10;

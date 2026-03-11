@@ -386,11 +386,23 @@ export default function LocationsClient() {
 
       {/* ── Location list ── */}
       {org.locations.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16 bg-white rounded-2xl border border-slate-200 gap-3">
-          <MapPin className="h-8 w-8 text-slate-300" />
-          <p className="text-sm text-slate-400">
-            No locations yet. Click <strong className="text-slate-600">Add Location</strong> to get started.
-          </p>
+        <div className="flex flex-col items-center justify-center py-16 bg-white rounded-2xl border border-dashed border-slate-200 gap-5 text-center px-6">
+          <div className="w-14 h-14 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-center">
+            <MapPin className="h-6 w-6 text-slate-400" />
+          </div>
+          <div className="space-y-1.5 max-w-xs">
+            <p className="text-sm font-semibold text-slate-700">No locations yet</p>
+            <p className="text-xs text-slate-400 leading-relaxed">
+              Add your first business location to start tracking budgets, assigning managers, and monitoring jobs per site.
+            </p>
+          </div>
+          <button
+            onClick={() => { setShowForm(true); setEditingId(null); setForm(EMPTY_FORM); }}
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary text-white text-sm font-semibold hover:bg-primary-700 transition-colors shadow-sm"
+          >
+            <Plus className="h-4 w-4" />
+            Add your first location
+          </button>
         </div>
       ) : (
         <div className="space-y-3">

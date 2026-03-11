@@ -207,6 +207,54 @@ export class EscrowService {
       });
     }
 
+    // ── Agency staff payout split record ──────────────────────────────────────
+    if (job.providerId) {
+      try {
+        const UserModel = (await import("@/models/User")).default;
+        const worker = await UserModel.findById(job.providerId.toString(), "agencyId").lean();
+
+        if (worker?.agencyId) {
+          const AgencyProfile = (await import("@/models/AgencyProfile")).default;
+          const AgencyStaffPayout = (await import("@/models/AgencyStaffPayout")).default;
+
+          const agency = await AgencyProfile.findById(worker.agencyId).lean();
+          if (agency) {
+            const staffEntry = agency.staff.find(
+              (s: { userId: { toString(): string }; workerSharePct: number }) =>
+                s.userId.toString() === job.providerId!.toString()
+            );
+
+            const sharePct =
+              (staffEntry?.workerSharePct ?? 0) > 0
+                ? (staffEntry!.workerSharePct)
+                : (agency.defaultWorkerSharePct ?? 60);
+
+            // Determine gross amount from the job transaction
+            const tx = await transactionRepository.findOneByJobId(job._id!.toString());
+            const grossAmount = (tx as unknown as { netAmount?: number } | null)?.netAmount ?? job.budget;
+
+            const workerAmount = Math.round(grossAmount * (sharePct / 100) * 100) / 100;
+            const agencyAmount = Math.round((grossAmount - workerAmount) * 100) / 100;
+
+            await AgencyStaffPayout.create({
+              agencyId: agency._id,
+              agencyOwnerId: agency.providerId,
+              workerId: job.providerId.toString(),
+              jobId: job._id!.toString(),
+              grossAmount,
+              workerAmount,
+              agencyAmount,
+              workerSharePct: sharePct,
+              status: "pending",
+            });
+          }
+        }
+      } catch (err) {
+        // Non-critical — do not fail escrow release if payout split fails
+        console.error("[PAYOUT_SPLIT] Failed to create staff payout record:", err);
+      }
+    }
+
     pushStatusUpdateMany(
       [job.clientId.toString(), job.providerId?.toString()].filter(Boolean) as string[],
       { entity: "job", id: job._id!.toString(), escrowStatus: "released" }

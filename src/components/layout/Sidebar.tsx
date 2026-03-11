@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import {
   LayoutDashboard,
   PlusCircle,
+  Sparkles,
   ClipboardList,
   Lock,
   Star,
@@ -70,20 +71,20 @@ const navGroups: Partial<Record<UserRole, NavGroup[]>> = {
   client: [
     {
       items: [
-        { label: "Dashboard",  href: "/client/dashboard", icon: <LayoutDashboard className="h-4.5 w-4.5" /> },
+        { label: "Dashboard", href: "/client/dashboard", icon: <LayoutDashboard className="h-4.5 w-4.5" /> },
       ],
     },
     {
       heading: "Jobs",
       items: [
-        { label: "Post a Job",         href: "/client/post-job",       icon: <PlusCircle    className="h-4.5 w-4.5" /> },
-        { label: "My Jobs",            href: "/client/jobs",           icon: <ClipboardList className="h-4.5 w-4.5" /> },
-        { label: "Consultations",      href: "/client/consultations",  icon: <Eye           className="h-4.5 w-4.5" /> },
-        { label: "Recurring Bookings", href: "/client/recurring",      icon: <Repeat2       className="h-4.5 w-4.5" /> },
-        { label: "Escrow",             href: "/client/escrow",         icon: <Lock          className="h-4.5 w-4.5" /> },
-        { label: "Wallet",             href: "/client/wallet",         icon: <Wallet        className="h-4.5 w-4.5" /> },
-        { label: "Favorites",          href: "/client/favorites",      icon: <Heart         className="h-4.5 w-4.5" /> },
-        { label: "Reviews",            href: "/client/reviews",        icon: <Star          className="h-4.5 w-4.5" /> },
+        { label: "Post a Job", href: "/client/post-job", icon: <PlusCircle className="h-4.5 w-4.5" /> },
+        { label: "My Jobs", href: "/client/jobs", icon: <ClipboardList className="h-4.5 w-4.5" /> },
+        { label: "Consultations", href: "/client/consultations", icon: <Eye className="h-4.5 w-4.5" /> },
+        { label: "Recurring Bookings", href: "/client/recurring", icon: <Repeat2 className="h-4.5 w-4.5" /> },
+        { label: "Escrow", href: "/client/escrow", icon: <Lock className="h-4.5 w-4.5" /> },
+        { label: "Wallet", href: "/client/wallet", icon: <Wallet className="h-4.5 w-4.5" /> },
+        { label: "Favorites", href: "/client/favorites", icon: <Heart className="h-4.5 w-4.5" /> },
+        { label: "Reviews", href: "/client/reviews", icon: <Star className="h-4.5 w-4.5" /> },
       ],
     },
     {
@@ -102,17 +103,23 @@ const navGroups: Partial<Record<UserRole, NavGroup[]>> = {
     {
       heading: "Work",
       items: [
-        { label: "Marketplace",   href: "/provider/marketplace",   icon: <Store        className="h-4.5 w-4.5" /> },
-        { label: "Active Jobs",   href: "/provider/jobs",          icon: <Briefcase    className="h-4.5 w-4.5" /> },
-        { label: "Consultations", href: "/provider/consultations", icon: <Eye          className="h-4.5 w-4.5" /> },
-        { label: "Calendar",      href: "/provider/calendar",      icon: <CalendarDays className="h-4.5 w-4.5" /> },
+        { label: "Marketplace", href: "/provider/marketplace", icon: <Store className="h-4.5 w-4.5" /> },
+        { label: "Active Jobs", href: "/provider/jobs", icon: <Briefcase className="h-4.5 w-4.5" /> },
+        { label: "Consultations", href: "/provider/consultations", icon: <Eye className="h-4.5 w-4.5" /> },
+        { label: "Calendar", href: "/provider/calendar", icon: <CalendarDays className="h-4.5 w-4.5" /> },
       ],
     },
     {
       heading: "Finance",
       items: [
         { label: "Earnings", href: "/provider/earnings", icon: <CircleDollarSign className="h-4.5 w-4.5" /> },
-        { label: "Payouts",  href: "/provider/payouts",  icon: <Banknote         className="h-4.5 w-4.5" /> },
+        { label: "Payouts", href: "/provider/payouts", icon: <Banknote className="h-4.5 w-4.5" /> },
+      ],
+    },
+    {
+      heading: "Business",
+      items: [
+        { label: "Agency Hub", href: "/provider/business", icon: <Building2 className="h-4.5 w-4.5" /> },
       ],
     },
   ],
@@ -125,38 +132,40 @@ const navGroups: Partial<Record<UserRole, NavGroup[]>> = {
     {
       heading: "Operations",
       items: [
-        { label: "All Jobs",      href: "/admin/all-jobs", icon: <Briefcase     className="h-4.5 w-4.5" />, capability: "manage_jobs" },
-        { label: "Validate Jobs", href: "/admin/jobs",     icon: <CheckCircle   className="h-4.5 w-4.5" />, capability: "manage_jobs" },
-        { label: "Fraud Monitor", href: "/admin/fraud",    icon: <ShieldAlert   className="h-4.5 w-4.5" />, capability: "manage_jobs" },
-        { label: "KYC Review",    href: "/admin/kyc",      icon: <ShieldCheck   className="h-4.5 w-4.5" />, capability: "manage_kyc" },
-        { label: "Disputes",      href: "/admin/disputes", icon: <AlertTriangle className="h-4.5 w-4.5" />, capability: "manage_disputes" },
-        { label: "Activity Logs", href: "/admin/logs",     icon: <ScrollText    className="h-4.5 w-4.5" />, capability: "__admin_only__" },
+        { label: "All Jobs", href: "/admin/all-jobs", icon: <Briefcase className="h-4.5 w-4.5" />, capability: "manage_jobs" },
+        { label: "Validate Jobs", href: "/admin/jobs", icon: <CheckCircle className="h-4.5 w-4.5" />, capability: "manage_jobs" },
+        { label: "Fraud Monitor", href: "/admin/fraud", icon: <ShieldAlert className="h-4.5 w-4.5" />, capability: "manage_jobs" },
+        { label: "KYC Review", href: "/admin/kyc", icon: <ShieldCheck className="h-4.5 w-4.5" />, capability: "manage_kyc" },
+        { label: "Disputes", href: "/admin/disputes", icon: <AlertTriangle className="h-4.5 w-4.5" />, capability: "manage_disputes" },
+        { label: "Activity Logs", href: "/admin/logs", icon: <ScrollText className="h-4.5 w-4.5" />, capability: "__admin_only__" },
       ],
     },
     {
       heading: "Finance",
       items: [
-        { label: "Revenue",             href: "/admin/revenue",     icon: <TrendingUp className="h-4.5 w-4.5" />, capability: "view_revenue" },
-        { label: "Accounting",          href: "/admin/accounting",  icon: <Scale      className="h-4.5 w-4.5" />, capability: "view_revenue" },
-        { label: "Payouts",             href: "/admin/payouts",     icon: <Banknote   className="h-4.5 w-4.5" />, capability: "manage_payouts" },
-        { label: "Wallet Withdrawals",  href: "/admin/wallet",      icon: <Wallet     className="h-4.5 w-4.5" />, capability: "manage_payouts" },
+        { label: "Revenue", href: "/admin/revenue", icon: <TrendingUp className="h-4.5 w-4.5" />, capability: "view_revenue" },
+        { label: "Accounting", href: "/admin/accounting", icon: <Scale className="h-4.5 w-4.5" />, capability: "view_revenue" },
+        { label: "Payouts", href: "/admin/payouts", icon: <Banknote className="h-4.5 w-4.5" />, capability: "manage_payouts" },
+        { label: "Wallet Withdrawals", href: "/admin/wallet", icon: <Wallet className="h-4.5 w-4.5" />, capability: "manage_payouts" },
       ],
     },
     {
       heading: "Users",
       items: [
-        { label: "Users",      href: "/admin/users",      icon: <Users   className="h-4.5 w-4.5" />, capability: "manage_users" },
-        { label: "Staff",      href: "/admin/staff",      icon: <UserCog className="h-4.5 w-4.5" />, capability: "__admin_only__" },
-        { label: "Categories", href: "/admin/categories", icon: <Tag     className="h-4.5 w-4.5" />, capability: "manage_categories" },
+        { label: "Users",         href: "/admin/users",      icon: <Users      className="h-4.5 w-4.5" />, capability: "manage_users" },
+        { label: "Agencies",      href: "/admin/agencies",   icon: <UsersRound className="h-4.5 w-4.5" />, capability: "manage_agencies" },
+        { label: "Businesses",    href: "/admin/businesses", icon: <Building2  className="h-4.5 w-4.5" />, capability: "manage_businesses" },
+        { label: "Staff",         href: "/admin/staff",      icon: <UserCog    className="h-4.5 w-4.5" />, capability: "__admin_only__" },
+        { label: "Categories",    href: "/admin/categories", icon: <Tag        className="h-4.5 w-4.5" />, capability: "manage_categories" },
       ],
     },
     {
       heading: "Communication",
       items: [
-        { label: "Support Inbox",  href: "/admin/support",       icon: <Headphones className="h-4.5 w-4.5" />, capability: "manage_support" },
-        { label: "Announcements",  href: "/admin/announcements", icon: <Megaphone  className="h-4.5 w-4.5" />, capability: "__admin_only__" },
-        { label: "Knowledge Base", href: "/admin/knowledge",     icon: <BookOpen   className="h-4.5 w-4.5" />, capability: "__admin_only__" },
-        { label: "Notifications",  href: "/admin/notifications", icon: <Bell       className="h-4.5 w-4.5" />, capability: null },
+        { label: "Support Inbox", href: "/admin/support", icon: <Headphones className="h-4.5 w-4.5" />, capability: "manage_support" },
+        { label: "Announcements", href: "/admin/announcements", icon: <Megaphone className="h-4.5 w-4.5" />, capability: "__admin_only__" },
+        { label: "Knowledge Base", href: "/admin/knowledge", icon: <BookOpen className="h-4.5 w-4.5" />, capability: "__admin_only__" },
+        { label: "Notifications", href: "/admin/notifications", icon: <Bell className="h-4.5 w-4.5" />, capability: null },
       ],
     },
     {
@@ -168,8 +177,8 @@ const navGroups: Partial<Record<UserRole, NavGroup[]>> = {
     {
       heading: "Platform",
       items: [
-        { label: "App Settings", href: "/admin/settings", icon: <Settings  className="h-4.5 w-4.5" />, capability: "__admin_only__" },
-        { label: "Database",     href: "/admin/database", icon: <Database  className="h-4.5 w-4.5" />, capability: "__admin_only__" },
+        { label: "App Settings", href: "/admin/settings", icon: <Settings className="h-4.5 w-4.5" />, capability: "__admin_only__" },
+        { label: "Database", href: "/admin/database", icon: <Database className="h-4.5 w-4.5" />, capability: "__admin_only__" },
       ],
     },
   ],
@@ -182,25 +191,25 @@ const navGroups: Partial<Record<UserRole, NavGroup[]>> = {
     {
       heading: "Workforce",
       items: [
-        { label: "Workforce Registry",    href: "/peso/workforce",     icon: <Users          className="h-4.5 w-4.5" /> },
-        { label: "Provider Verification", href: "/peso/verification",  icon: <ShieldCheck    className="h-4.5 w-4.5" /> },
-        { label: "Referrals",             href: "/peso/referrals",     icon: <UserCog        className="h-4.5 w-4.5" /> },
-        { label: "Bulk Onboarding",       href: "/peso/onboarding",    icon: <ScrollText     className="h-4.5 w-4.5" /> },
-        { label: "My Office",             href: "/peso/officers",      icon: <Building2      className="h-4.5 w-4.5" /> },
+        { label: "Workforce Registry", href: "/peso/workforce", icon: <Users className="h-4.5 w-4.5" /> },
+        { label: "Provider Verification", href: "/peso/verification", icon: <ShieldCheck className="h-4.5 w-4.5" /> },
+        { label: "Referrals", href: "/peso/referrals", icon: <UserCog className="h-4.5 w-4.5" /> },
+        { label: "Bulk Onboarding", href: "/peso/onboarding", icon: <ScrollText className="h-4.5 w-4.5" /> },
+        { label: "My Office", href: "/peso/officers", icon: <Building2 className="h-4.5 w-4.5" /> },
       ],
     },
     {
       heading: "Programs",
       items: [
-        { label: "Training & Certs",  href: "/peso/training",  icon: <GraduationCap className="h-4.5 w-4.5" /> },
-        { label: "Livelihood Groups", href: "/peso/groups",    icon: <UsersRound    className="h-4.5 w-4.5" /> },
-        { label: "Emergency",         href: "/peso/emergency", icon: <Zap           className="h-4.5 w-4.5" /> },
+        { label: "Training & Certs", href: "/peso/training", icon: <GraduationCap className="h-4.5 w-4.5" /> },
+        { label: "Livelihood Groups", href: "/peso/groups", icon: <UsersRound className="h-4.5 w-4.5" /> },
+        { label: "Emergency", href: "/peso/emergency", icon: <Zap className="h-4.5 w-4.5" /> },
       ],
     },
     {
       heading: "Job Board",
       items: [
-        { label: "PESO Jobs",  href: "/peso/jobs",     icon: <Briefcase  className="h-4.5 w-4.5" /> },
+        { label: "PESO Jobs", href: "/peso/jobs", icon: <Briefcase className="h-4.5 w-4.5" /> },
         { label: "Post a Job", href: "/peso/jobs/new", icon: <PlusCircle className="h-4.5 w-4.5" /> },
       ],
     },
@@ -243,19 +252,19 @@ function getInitials(name?: string | null): string {
 }
 
 const ROLE_COLORS: Record<string, string> = {
-  client:   "bg-sky-500/20 text-sky-300",
+  client: "bg-sky-500/20 text-sky-300",
   provider: "bg-emerald-500/20 text-emerald-300",
-  admin:    "bg-violet-500/20 text-violet-300",
-  staff:    "bg-amber-500/20 text-amber-300",
-  peso:     "bg-blue-500/20 text-blue-300",
+  admin: "bg-violet-500/20 text-violet-300",
+  staff: "bg-amber-500/20 text-amber-300",
+  peso: "bg-blue-500/20 text-blue-300",
 };
 
 const ROLE_AVATAR_BG: Record<string, string> = {
-  client:   "bg-blue-600",
+  client: "bg-blue-600",
   provider: "bg-violet-600",
-  admin:    "bg-amber-600",
-  staff:    "bg-teal-600",
-  peso:     "bg-blue-700",
+  admin: "bg-amber-600",
+  staff: "bg-teal-600",
+  peso: "bg-blue-700",
 };
 
 interface SidebarProps {
@@ -298,7 +307,8 @@ export default function Sidebar({ role, capabilities, isOpen, onClose }: Sidebar
       : rawGroups;
 
   const groups =
-    role === "client" && user?.accountType !== "business"
+    (role === "client" && user?.accountType !== "business") ||
+    (role === "provider" && !!user?.agencyId)
       ? baseGroups.filter((g) => g.heading !== "Business")
       : baseGroups;
 
@@ -491,6 +501,72 @@ export default function Sidebar({ role, capabilities, isOpen, onClose }: Sidebar
         </nav>
 
         {/* ── Collapse toggle (desktop only) + Sign out ──────────────────── */}
+        {/* Upgrade to Business CTA — only for personal client accounts */}
+        {role === "client" && user?.accountType !== "business" && (
+          isCollapsed ? (
+            <Link
+              href="/client/upgrade"
+              onClick={onClose}
+              title="Upgrade to Business"
+              className="flex justify-center w-full px-0 py-2.5 rounded-lg bg-gradient-to-b from-amber-500/20 to-orange-500/10 border border-amber-500/40 hover:border-amber-400/70 transition-all duration-150"
+            >
+              <Sparkles className="h-4 w-4 text-amber-400" />
+            </Link>
+          ) : (
+            <Link
+              href="/client/upgrade"
+              onClick={onClose}
+              className="group block w-full rounded-xl overflow-hidden border border-amber-500/30 hover:border-amber-400/60 transition-all duration-200 mb-1"
+            >
+              <div className="bg-gradient-to-br from-amber-500/20 via-orange-500/10 to-yellow-500/5 px-3 py-2.5">
+                <div className="flex items-center gap-2 mb-1">
+                  <Sparkles className="h-3.5 w-3.5 text-amber-400 flex-shrink-0" />
+                  <span className="text-xs font-bold text-amber-300 uppercase tracking-widest">Go Business</span>
+                </div>
+                <p className="text-[11px] text-amber-200/80 leading-snug">
+                  Post unlimited jobs, manage a team &amp; unlock priority support.
+                </p>
+                <div className="mt-2 flex items-center gap-1 text-[11px] font-semibold text-amber-300 group-hover:text-amber-200 transition-colors">
+                  Upgrade now
+                  <ChevronRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
+                </div>
+              </div>
+            </Link>
+          )
+        )}
+        {/* Upgrade to Agency CTA — only for solo providers (not agency owners, not agency staff) */}
+        {role === "provider" && user?.accountType !== "business" && !user?.agencyId && (
+          isCollapsed ? (
+            <Link
+              href="/provider/upgrade"
+              onClick={onClose}
+              title="Upgrade to Agency"
+              className="flex justify-center w-full px-0 py-2.5 rounded-lg bg-emerald-900/60 border border-emerald-700/60 hover:border-emerald-600 transition-all duration-150"
+            >
+              <Building2 className="h-4 w-4 text-emerald-400" />
+            </Link>
+          ) : (
+            <Link
+              href="/provider/upgrade"
+              onClick={onClose}
+              className="group block w-full rounded-xl overflow-hidden border border-emerald-700/50 hover:border-emerald-600 bg-emerald-950/60 hover:bg-emerald-950 transition-all duration-200 mb-1"
+            >
+              <div className="px-3 py-2.5">
+                <div className="flex items-center gap-2 mb-1">
+                  <Building2 className="h-3.5 w-3.5 text-emerald-400 flex-shrink-0" />
+                  <span className="text-xs font-bold text-emerald-300 uppercase tracking-widest">Go Agency</span>
+                </div>
+                <p className="text-xs text-slate-300 leading-snug">
+                  Manage a team, take bigger jobs &amp; unlock agency tools.
+                </p>
+                <div className="mt-2 flex items-center gap-1 text-xs font-semibold text-emerald-400 group-hover:text-emerald-300 transition-colors">
+                  Upgrade now
+                  <ChevronRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
+                </div>
+              </div>
+            </Link>
+          )
+        )}
         <div className={cn(
           "pb-4 pt-2 border-t border-slate-700/50 space-y-0.5 transition-all duration-300",
           isCollapsed ? "px-2" : "px-3"

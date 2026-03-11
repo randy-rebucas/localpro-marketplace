@@ -9,6 +9,8 @@ export type StaffCapability =
   | "manage_kyc"
   | "manage_disputes"
   | "manage_users"
+  | "manage_agencies"
+  | "manage_businesses"
   | "view_revenue"
   | "manage_payouts"
   | "manage_categories"
@@ -82,6 +84,8 @@ export interface IUser {
   flaggedJobCount?: number;
   /** Active fraud/suspicious-behaviour flags */
   fraudFlags?: string[];
+  /** Agency this provider belongs to as a staff member (null = solo / owner) */
+  agencyId?: Types.ObjectId | string | null;
   /** Saved card PM ID for recurring auto-pay (card only) */
   savedPaymentMethodId?: string | null;
   savedPaymentMethodLast4?: string | null;
@@ -446,7 +450,9 @@ export type NotificationType =
   | "payment_reminder"
   | "admin_message"
   | "wallet_credited"
-  | "wallet_withdrawal_update";
+  | "wallet_withdrawal_update"
+  | "agency_job_assigned"
+  | "agency_staff_invited";
 
 export interface INotification {
   _id: Types.ObjectId | string;
@@ -456,6 +462,7 @@ export interface INotification {
   message: string;
   data?: {
     jobId?: string;
+    jobTitle?: string;
     quoteId?: string;
     disputeId?: string;
     messageThreadId?: string;
