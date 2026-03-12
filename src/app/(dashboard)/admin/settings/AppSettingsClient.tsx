@@ -2,12 +2,14 @@
 
 import { useEffect, useState } from "react";
 import {
+  Gift,
   LayoutDashboard,
   Monitor,
   RefreshCw,
   Save,
   Server,
   Settings2,
+  Shield,
   ToggleLeft,
   ToggleRight,
   Wallet,
@@ -42,6 +44,24 @@ const DEFAULTS: AppSettings = {
   "limits.maxQuotesPerJob": 5,
   "limits.quoteValidityDays": 7,
   "limits.maxActiveJobsPerClient": 10,
+  "limits.escrowAutoReleaseDays": 7,
+  "limits.jobExpiryDays": 30,
+  "limits.disputeEscalationDays": 5,
+  "limits.consultationExpiryDays": 7,
+  "limits.dailyConsultationLimitClient": 10,
+  "limits.dailyConsultationLimitProvider": 5,
+  // Loyalty
+  "loyalty.pointsPerPeso": 0.1,
+  "loyalty.pesoPerHundredPoints": 10,
+  "loyalty.minRedemptionPoints": 500,
+  "loyalty.firstJobBonusPoints": 100,
+  "loyalty.tierThresholdSilver": 500,
+  "loyalty.tierThresholdGold": 2000,
+  "loyalty.tierThresholdPlatinum": 5000,
+  // Fraud & Security
+  "fraud.jobFlagScore": 50,
+  "fraud.jobBlockScore": 80,
+  "fraud.highBudgetThreshold": 5000,
 };
 
 type SettingType = "boolean" | "number";
@@ -56,7 +76,7 @@ interface SettingMeta {
   step?: number;
 }
 
-type TabId = "general" | "board" | "payments" | "limits";
+type TabId = "general" | "board" | "payments" | "limits" | "loyalty" | "fraud";
 
 interface Tab {
   id: TabId;
@@ -225,6 +245,154 @@ const SETTING_META: Record<string, SettingMeta> = {
     max: 100,
     step: 1,
   },
+  "limits.escrowAutoReleaseDays": {
+    label: "Escrow Auto-Release (days)",
+    description:
+      "Days after a job is marked complete before escrow is automatically released to the provider if the client does not act.",
+    type: "number",
+    min: 1,
+    max: 30,
+    step: 1,
+  },
+  "limits.jobExpiryDays": {
+    label: "Job Expiry (days)",
+    description:
+      "Days an open job listing waits for an accepted quote before it is automatically expired.",
+    type: "number",
+    min: 7,
+    max: 90,
+    step: 1,
+  },
+  "limits.disputeEscalationDays": {
+    label: "Dispute Escalation (days)",
+    description:
+      "Days a dispute can remain open/investigating before admins receive an escalation notification.",
+    type: "number",
+    min: 1,
+    max: 14,
+    step: 1,
+  },
+  "limits.consultationExpiryDays": {
+    label: "Consultation Expiry (days)",
+    description:
+      "Days before an unanswered consultation request automatically expires.",
+    type: "number",
+    min: 1,
+    max: 30,
+    step: 1,
+  },
+  "limits.dailyConsultationLimitClient": {
+    label: "Daily Consultation Limit (Client)",
+    description:
+      "Maximum number of consultation requests a client can send per day.",
+    type: "number",
+    min: 1,
+    max: 50,
+    step: 1,
+  },
+  "limits.dailyConsultationLimitProvider": {
+    label: "Daily Consultation Limit (Provider)",
+    description:
+      "Maximum number of consultation requests a provider can send per day.",
+    type: "number",
+    min: 1,
+    max: 50,
+    step: 1,
+  },
+  // ── Loyalty ──────────────────────────────────────────────────────────────────
+  "loyalty.pointsPerPeso": {
+    label: "Points Earned per ₱1 Spent",
+    description:
+      "How many loyalty points a client earns per ₱1 of job spend. Default 0.1 = 1 point per ₱10.",
+    type: "number",
+    min: 0.01,
+    max: 1,
+    step: 0.01,
+  },
+  "loyalty.pesoPerHundredPoints": {
+    label: "₱ Value per 100 Points Redeemed",
+    description:
+      "Peso cashback value awarded when a client redeems 100 loyalty points.",
+    type: "number",
+    unit: "₱",
+    min: 1,
+    max: 100,
+    step: 1,
+  },
+  "loyalty.minRedemptionPoints": {
+    label: "Minimum Points per Redemption",
+    description:
+      "Minimum loyalty points a client must have to initiate a redemption request.",
+    type: "number",
+    min: 100,
+    max: 5000,
+    step: 100,
+  },
+  "loyalty.firstJobBonusPoints": {
+    label: "First Job Bonus Points",
+    description:
+      "Bonus loyalty points awarded to a client when they complete their very first job.",
+    type: "number",
+    min: 0,
+    max: 1000,
+    step: 10,
+  },
+  "loyalty.tierThresholdSilver": {
+    label: "Silver Tier Threshold",
+    description:
+      "Lifetime points required to reach Silver tier.",
+    type: "number",
+    min: 100,
+    max: 10000,
+    step: 100,
+  },
+  "loyalty.tierThresholdGold": {
+    label: "Gold Tier Threshold",
+    description:
+      "Lifetime points required to reach Gold tier.",
+    type: "number",
+    min: 500,
+    max: 50000,
+    step: 100,
+  },
+  "loyalty.tierThresholdPlatinum": {
+    label: "Platinum Tier Threshold",
+    description:
+      "Lifetime points required to reach Platinum tier.",
+    type: "number",
+    min: 1000,
+    max: 100000,
+    step: 500,
+  },
+  // ── Fraud & Security ─────────────────────────────────────────────────────────
+  "fraud.jobFlagScore": {
+    label: "Job Flag Score Threshold",
+    description:
+      "Risk score (0–100) at or above which a new job posting is flagged for admin review.",
+    type: "number",
+    min: 10,
+    max: 100,
+    step: 5,
+  },
+  "fraud.jobBlockScore": {
+    label: "Job Block Score Threshold",
+    description:
+      "Risk score (0–100) at or above which a new job posting is automatically rejected and the client is notified.",
+    type: "number",
+    min: 10,
+    max: 100,
+    step: 5,
+  },
+  "fraud.highBudgetThreshold": {
+    label: "High-Budget Fraud Threshold",
+    description:
+      "Job budgets (₱) above this value incur an elevated fraud risk score. Helps catch inflated-budget scam posts.",
+    type: "number",
+    unit: "₱",
+    min: 1000,
+    max: 100000,
+    step: 500,
+  },
 };
 
 const TABS: Tab[] = [
@@ -272,6 +440,36 @@ const TABS: Tab[] = [
       "limits.maxQuotesPerJob",
       "limits.quoteValidityDays",
       "limits.maxActiveJobsPerClient",
+      "limits.escrowAutoReleaseDays",
+      "limits.jobExpiryDays",
+      "limits.disputeEscalationDays",
+      "limits.consultationExpiryDays",
+      "limits.dailyConsultationLimitClient",
+      "limits.dailyConsultationLimitProvider",
+    ],
+  },
+  {
+    id: "loyalty",
+    label: "Loyalty",
+    icon: <Gift className="h-4 w-4" />,
+    keys: [
+      "loyalty.pointsPerPeso",
+      "loyalty.pesoPerHundredPoints",
+      "loyalty.minRedemptionPoints",
+      "loyalty.firstJobBonusPoints",
+      "loyalty.tierThresholdSilver",
+      "loyalty.tierThresholdGold",
+      "loyalty.tierThresholdPlatinum",
+    ],
+  },
+  {
+    id: "fraud",
+    label: "Fraud & Security",
+    icon: <Shield className="h-4 w-4" />,
+    keys: [
+      "fraud.jobFlagScore",
+      "fraud.jobBlockScore",
+      "fraud.highBudgetThreshold",
     ],
   },
 ];

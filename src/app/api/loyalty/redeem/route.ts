@@ -6,7 +6,7 @@ import { loyaltyService } from "@/services/loyalty.service";
 import { ValidationError } from "@/lib/errors";
 
 const RedeemSchema = z.object({
-  points: z.number().int().min(500),
+  points: z.number().int().min(1),
 });
 
 export const POST = withHandler(async (req: NextRequest) => {

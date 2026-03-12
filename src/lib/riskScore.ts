@@ -2,7 +2,12 @@ import type { IJob } from "@/types";
 import { detectSpam, evaluateClientBehaviour, type ClientBehaviourInput } from "@/lib/fraudDetection";
 
 const HIGH_RISK_CATEGORIES = ["electrical", "plumbing", "roofing", "gas"];
-const HIGH_BUDGET_THRESHOLD = 5000;
+// Default budget threshold — overridden at runtime via fraud.highBudgetThreshold setting
+const DEFAULT_HIGH_BUDGET_THRESHOLD = 5000;
+
+export interface RiskThresholds {
+  highBudgetThreshold?: number;
+}
 
 export interface RiskAssessment {
   score: number;
@@ -19,10 +24,12 @@ export interface RiskAssessment {
  */
 export function assessJobRisk(
   job: Partial<IJob>,
-  behaviour?: ClientBehaviourInput
+  behaviour?: ClientBehaviourInput,
+  thresholds?: RiskThresholds
 ): RiskAssessment {
   const fraudFlags: string[] = [];
   let score = 0;
+  const HIGH_BUDGET_THRESHOLD = thresholds?.highBudgetThreshold ?? DEFAULT_HIGH_BUDGET_THRESHOLD;
 
   // ── 1. Spam / content detection ──────────────────────────────────────────
   const spam = detectSpam(

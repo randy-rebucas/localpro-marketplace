@@ -142,7 +142,7 @@ export class JobService {
 
     // ── Fraud & risk assessment ─────────────────────────────────────────────
     await connectDB();
-    const [sevenDayCount, rejectedCount, clientDoc] = await Promise.all([
+    const [sevenDayCount, rejectedCount, clientDoc, fraudBlockScore, fraudHighBudget] = await Promise.all([
       jobRepository.countByClientSince(
         user.userId,
         new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
@@ -156,6 +156,8 @@ export class JobService {
           flaggedJobCount?: number;
           createdAt?: Date;
         } | null>,
+      getAppSetting<number>("fraud.jobBlockScore", 80),
+      getAppSetting<number>("fraud.highBudgetThreshold", 5000),
     ]);
 
     const accountAgeDays = clientDoc?.createdAt
@@ -170,7 +172,14 @@ export class JobService {
       isVerified: clientDoc?.isVerified ?? false,
       kycApproved: clientDoc?.kycStatus === "approved",
       accountAgeDays,
-    });
+    }, { highBudgetThreshold: fraudHighBudget as number });
+
+    // Block posting if risk score meets or exceeds the block threshold
+    if (riskScore >= (fraudBlockScore as number)) {
+      throw new UnprocessableError(
+        "Your job posting was blocked due to a high fraud risk score. Please review your job details or contact support."
+      );
+    }
 
     const job = await jobRepository.create({ ...jobData, riskScore, fraudFlags });
 

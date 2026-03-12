@@ -1,6 +1,7 @@
 import { Types } from "mongoose";
 import { consultationRepository, activityRepository, userRepository } from "@/repositories";
 import { NotFoundError, ForbiddenError, ConflictError, UnprocessableError } from "@/lib/errors";
+import { getAppSetting } from "@/lib/appSettings";
 import type { TokenPayload } from "@/lib/auth";
 import type { IConsultation, ConsultationType, ConsultationStatus } from "@/types";
 import type { ConsultationDocument } from "@/models/Consultation";
@@ -78,9 +79,14 @@ export class ConsultationService {
       }
     }
 
-    // Rate limiting: Max consultations per day
+    // Rate limiting: Max consultations per day (configurable via limits.dailyConsultationLimit*)
     const count = await consultationRepository.countByInitiatorToday(user.userId);
-    const dailyLimit = user.role === "provider" ? 5 : 10;
+    const [limitClient, limitProvider, expiryDays] = await Promise.all([
+      getAppSetting<number>("limits.dailyConsultationLimitClient", 10),
+      getAppSetting<number>("limits.dailyConsultationLimitProvider", 5),
+      getAppSetting<number>("limits.consultationExpiryDays", 7),
+    ]);
+    const dailyLimit = user.role === "provider" ? (limitProvider as number) : (limitClient as number);
     if (count >= dailyLimit) {
       throw new UnprocessableError(
         `Daily consultation request limit reached (${dailyLimit} per day)`
@@ -106,9 +112,9 @@ export class ConsultationService {
     // Determine initiator role
     const initiatorRole = user.role === "client" ? "client" : "provider";
 
-    // Set expiration to 7 days from now
+    // Set expiration based on configurable limits.consultationExpiryDays
     const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + 7);
+    expiresAt.setDate(expiresAt.getDate() + (expiryDays as number));
 
     const consultation = await consultationRepository.create({
       initiatorId: new Types.ObjectId(user.userId),
