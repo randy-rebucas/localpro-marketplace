@@ -308,7 +308,7 @@ export default function Sidebar({ role, capabilities, isOpen, onClose }: Sidebar
 
   const groups =
     (role === "client" && user?.accountType !== "business") ||
-    (role === "provider" && !!user?.agencyId)
+    (role === "provider" && user?.accountType !== "business" && !user?.agencyId)
       ? baseGroups.filter((g) => g.heading !== "Business")
       : baseGroups;
 
