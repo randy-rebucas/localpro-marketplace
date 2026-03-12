@@ -32,17 +32,27 @@ export class WalletService {
     userId: string,
     amount: number,
     description: string,
-    opts?: { jobId?: string; refId?: string; silent?: boolean }
+    opts?: { jobId?: string; refId?: string; silent?: boolean; journalId?: string }
   ): Promise<number> {
     if (amount <= 0) throw new UnprocessableError("Credit amount must be positive");
 
-    const { newBalance } = await walletRepository.applyTransaction(
+    const { newBalance, txDoc } = await walletRepository.applyTransaction(
       userId,
       amount,
       "refund_credit",
       description,
       { jobId: opts?.jobId, refId: opts?.refId }
     );
+
+    // Stamp ledger journal reference on the WalletTransaction for traceability
+    if (opts?.journalId) {
+      try {
+        await walletRepository.setTransactionLedgerJournalId(
+          (txDoc as unknown as { _id: { toString(): string } })._id.toString(),
+          opts.journalId
+        );
+      } catch { /* non-critical */ }
+    }
 
     if (!opts?.silent) {
       const note = await notificationRepository.create({
@@ -85,7 +95,7 @@ export class WalletService {
     }
 
     // Debit wallet
-    await walletRepository.applyTransaction(
+    const { txDoc: escrowPaymentTxDoc } = await walletRepository.applyTransaction(
       user.userId,
       -amount,
       "escrow_payment",
@@ -126,6 +136,13 @@ export class WalletService {
       amount
     );
     await transactionRepository.updateById((tx as { _id: { toString(): string } })._id.toString(), { ledgerJournalId: journalId });
+    // Stamp journalId on the WalletTransaction (escrow_payment) for traceability
+    try {
+      await walletRepository.setTransactionLedgerJournalId(
+        (escrowPaymentTxDoc as unknown as { _id: { toString(): string } })._id.toString(),
+        journalId
+      );
+    } catch { /* non-critical */ }
 
     await activityRepository.log({
       userId: user.userId,
@@ -171,6 +188,190 @@ export class WalletService {
       transactions,
       withdrawals,
     };
+  }
+
+  // ── Wallet top-up via PayMongo ───────────────────────────────────────────
+
+  /**
+   * Create a PayMongo checkout session for a wallet top-up.
+   * Returns the checkout URL to redirect the user.
+   *
+   * Journal (posted on webhook confirmation):
+   *   DR 1000 Gateway Receivable   amount  ← cash received
+   *   CR 2200 Wallet Payable       amount  ← wallet balance increases
+   */
+  async topUpWithGateway(
+    user: TokenPayload,
+    amountPHP: number,
+    baseUrl: string
+  ): Promise<{ checkoutUrl: string; sessionId: string }> {
+    if (amountPHP < 100) {
+      throw new UnprocessableError("Minimum top-up amount is ₱100");
+    }
+    if (amountPHP > 100_000) {
+      throw new UnprocessableError("Maximum top-up amount is ₱100,000 per transaction");
+    }
+
+    const { createCheckoutSession } = await import("@/lib/paymongo");
+
+    const session = await createCheckoutSession({
+      amountPHP,
+      description: `Wallet top-up — ₱${amountPHP.toLocaleString()}`,
+      lineItemName: "Wallet Top-Up",
+      successUrl: `${baseUrl}/client/wallet?topup=success`,
+      cancelUrl:  `${baseUrl}/client/wallet?topup=cancelled`,
+      metadata: {
+        type:       "wallet_topup",
+        userId:     user.userId,
+        amountPHP:  String(amountPHP),
+      },
+    });
+
+    return { checkoutUrl: session.checkoutUrl, sessionId: session.id };
+  }
+
+  /**
+   * Called from the success-redirect page. Fetches the checkout session from
+   * PayMongo to verify it was actually paid, then calls topUpConfirm (idempotent).
+   * This is the primary confirmation path — the webhook is a redundant fallback.
+   */
+  async topUpVerifyAndConfirm(userId: string, sessionId: string): Promise<"credited" | "already_done" | "not_paid"> {
+    const { getCheckoutSession } = await import("@/lib/paymongo");
+    const session = await getCheckoutSession(sessionId);
+
+    const isPaid =
+      session.paymentIntentStatus === "succeeded" ||
+      session.status === "paid";
+
+    if (!isPaid) return "not_paid";
+
+    // Check idempotency: if fully processed (wallet + ledger), return early.
+    // If only partially processed (wallet credited, ledger missing), fall through
+    // to topUpConfirm which handles the recovery path.
+    const { connectDB } = await import("@/lib/db");
+    await connectDB();
+    const WalletTransaction = (await import("@/models/WalletTransaction")).default;
+    const existing = await WalletTransaction.findOne({ refId: sessionId })
+      .select("ledgerJournalId")
+      .lean() as { ledgerJournalId?: string | null } | null;
+
+    if (existing?.ledgerJournalId) return "already_done";
+
+    // Retrieve the charged amount from the payment intent (authoritative source)
+    const { getPaymentIntent } = await import("@/lib/paymongo");
+    let amountPHP = 0;
+    if (session.paymentIntentId) {
+      const pi = await getPaymentIntent(session.paymentIntentId);
+      amountPHP = pi.amountCentavos / 100;
+    }
+
+    if (amountPHP <= 0) return "not_paid";
+
+    await this.topUpConfirm(userId, amountPHP, sessionId, userId);
+    return existing ? "already_done" : "credited"; // wallet existed → ledger retry, else fresh credit
+  }
+
+  /**
+   * Credits the wallet, posts the ledger journal entry, and stamps the
+   * ledger journal ID on the wallet transaction for traceability.
+   *
+   * Idempotent with recovery:
+   *   - If sessionId already has a WalletTransaction AND a ledgerJournalId → fully done, skip.
+   *   - If wallet transaction exists but ledgerJournalId is null → wallet was credited on a
+   *     previous attempt but the ledger write failed; retry the ledger only.
+   *   - If nothing exists → full flow: credit wallet, post ledger, stamp journalId.
+   */
+  async topUpConfirm(
+    userId: string,
+    amountPHP: number,
+    sessionId: string,
+    webhookInitiatedBy?: string
+  ): Promise<void> {
+    const { connectDB } = await import("@/lib/db");
+    await connectDB();
+    const WalletTransaction = (await import("@/models/WalletTransaction")).default;
+
+    type TxLean = { _id: { toString(): string }; ledgerJournalId?: string | null };
+    const existing = await WalletTransaction.findOne({ refId: sessionId })
+      .select("_id ledgerJournalId")
+      .lean() as TxLean | null;
+
+    const journalId = `wallet-topup-${sessionId}`;
+
+    if (existing) {
+      // Wallet already credited — check if the ledger entry was also written.
+      if (!existing.ledgerJournalId) {
+        // Partial failure recovery: retry the ledger write only.
+        console.warn(`[WALLET TOPUP] Retrying missing ledger for session ${sessionId}`);
+        const txId = existing._id.toString();
+        try {
+          await ledgerService.postWalletFundedGateway(
+            {
+              journalId,
+              entityType:  "wallet_topup",
+              entityId:    txId,   // ← MongoDB ObjectId, not the session string
+              clientId:    userId,
+              initiatedBy: webhookInitiatedBy ?? userId,
+            },
+            amountPHP
+          );
+          await WalletTransaction.findByIdAndUpdate(txId, { ledgerJournalId: journalId });
+          console.log(`[WALLET TOPUP] Ledger recovery succeeded for session ${sessionId}`);
+        } catch (e) {
+          console.error(`[WALLET TOPUP] Ledger recovery failed for session ${sessionId}`, e);
+        }
+      } else {
+        console.log(`[WALLET TOPUP] Session ${sessionId} fully processed — skipping`);
+      }
+      return;
+    }
+
+    // ── Full flow ─────────────────────────────────────────────────────────────
+
+    // 1. Credit the wallet (creates WalletTransaction with refId = sessionId)
+    const { txDoc } = await walletRepository.applyTransaction(
+      userId,
+      amountPHP,
+      "topup",
+      `Wallet top-up via PayMongo — ₱${amountPHP.toLocaleString()}`,
+      { refId: sessionId }
+    );
+    const txId = (txDoc as unknown as { _id: { toString(): string } })._id.toString();
+
+    // 2. Post ledger: DR 1000 Gateway Receivable / CR 2200 Wallet Payable
+    //    entityId uses the WalletTransaction's MongoDB _id (valid ObjectId).
+    try {
+      await ledgerService.postWalletFundedGateway(
+        {
+          journalId,
+          entityType:  "wallet_topup",
+          entityId:    txId,
+          clientId:    userId,
+          initiatedBy: webhookInitiatedBy ?? userId,
+        },
+        amountPHP
+      );
+      // 3. Stamp journal ID for traceability
+      await WalletTransaction.findByIdAndUpdate(txId, { ledgerJournalId: journalId });
+    } catch (e) {
+      // Wallet is already credited — do not throw. The ledger can be recovered on
+      // the next call via the partial-failure path above.
+      console.error(`[WALLET TOPUP] Ledger write failed for session ${sessionId} (tx ${txId})`, e);
+    }
+
+    // 4. Notify user (non-critical)
+    try {
+      const note = await notificationRepository.create({
+        userId,
+        type:    "wallet_credited" as never,
+        title:   "Wallet topped up",
+        message: `₱${amountPHP.toLocaleString()} has been added to your wallet.`,
+        data:    { source: "topup", sessionId },
+      });
+      pushNotification(userId, note);
+    } catch (e) {
+      console.error(`[WALLET TOPUP] Notification failed for session ${sessionId}`, e);
+    }
   }
 
   // ── Withdrawal requests ───────────────────────────────────────────────────
@@ -219,6 +420,10 @@ export class WalletService {
       },
       amount
     );
+    await walletRepository.setWithdrawalLedgerJournalId(
+      withdrawal._id!.toString(),
+      `wallet-withdraw-${withdrawal._id?.toString()}`
+    );
 
     await activityRepository.log({
       userId: user.userId,
@@ -260,7 +465,7 @@ export class WalletService {
     // If rejecting, release the reservation back to the wallet
     if (status === "rejected" && w.status !== "rejected") {
       await walletRepository.releaseReservation(w.userId.toString(), w.amount);
-      await walletRepository.applyTransaction(
+      const { txDoc: reversedTxDoc } = await walletRepository.applyTransaction(
         w.userId.toString(),
         w.amount,
         "withdrawal_reversed",
@@ -278,6 +483,17 @@ export class WalletService {
         },
         w.amount
       );
+      await walletRepository.setWithdrawalLedgerJournalId(
+        withdrawalId,
+        `wallet-withdraw-reversed-${withdrawalId}`
+      );
+      // Stamp journalId on the reversal WalletTransaction for traceability
+      try {
+        await walletRepository.setTransactionLedgerJournalId(
+          (reversedTxDoc as unknown as { _id: { toString(): string } })._id.toString(),
+          `wallet-withdraw-reversed-${withdrawalId}`
+        );
+      } catch { /* non-critical */ }
 
       // Notify user
       const note = await notificationRepository.create({
@@ -289,8 +505,13 @@ export class WalletService {
       });
       pushNotification(w.userId.toString(), note);
     } else if (status === "completed" && w.status !== "completed") {
-      // Commit the reservation: deduct balance + release reservedAmount atomically
-      await walletRepository.commitReservation(w.userId.toString(), w.amount);
+      // Commit the reservation: deduct balance + release reservedAmount atomically, create WalletTransaction
+      const { txDoc: completedTxDoc } = await walletRepository.commitReservationWithTx(
+        w.userId.toString(),
+        w.amount,
+        `Withdrawal sent to bank — ₱${w.amount.toLocaleString()}`,
+        { refId: withdrawalId }
+      );
       await ledgerService.postWalletWithdrawalCompleted(
         {
           journalId: `wallet-withdraw-completed-${withdrawalId}`,
@@ -301,6 +522,17 @@ export class WalletService {
         },
         w.amount
       );
+      await walletRepository.setWithdrawalLedgerJournalId(
+        withdrawalId,
+        `wallet-withdraw-completed-${withdrawalId}`
+      );
+      // Stamp journalId on the withdrawal WalletTransaction for traceability
+      try {
+        await walletRepository.setTransactionLedgerJournalId(
+          (completedTxDoc as unknown as { _id: { toString(): string } })._id.toString(),
+          `wallet-withdraw-completed-${withdrawalId}`
+        );
+      } catch { /* non-critical */ }
 
       const note = await notificationRepository.create({
         userId: w.userId.toString(),

@@ -642,6 +642,8 @@ export interface IPayment {
   refundedAt?: Date | null;
   /** PayMongo webhook event ID for idempotency */
   webhookEventId?: string | null;
+  /** Double-entry ledger journal ID (escrow_funded_gateway) */
+  ledgerJournalId?: string | null;
   createdAt: Date;
   updatedAt: Date;
 } 
@@ -680,6 +682,7 @@ export type WalletTxType =
   | "escrow_payment"
   | "withdrawal"
   | "withdrawal_reversed"
+  | "topup"
   | "admin_credit"
   | "admin_debit";
 
@@ -692,6 +695,7 @@ export interface IWalletTransaction {
   description: string;
   jobId?: Types.ObjectId | string | null;
   refId?: string | null;
+  ledgerJournalId?: string | null;
   createdAt: Date;
 }
 
@@ -707,6 +711,7 @@ export interface IWalletWithdrawal {
   accountName: string;
   notes?: string | null;
   processedAt?: Date | null;
+  ledgerJournalId?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }

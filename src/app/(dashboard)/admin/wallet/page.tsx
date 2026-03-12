@@ -9,6 +9,8 @@ import {
   XCircle,
   Loader2,
   Wallet,
+  ArrowDownToLine,
+  Ban,
 } from "lucide-react";
 import type { IWalletWithdrawal, IUser, WalletWithdrawalStatus } from "@/types";
 import WithdrawalActions from "./_components/WithdrawalActions";
@@ -53,7 +55,10 @@ export default async function AdminWalletPage() {
   const active = all.filter((w) => w.status === "pending" || w.status === "processing");
   const done   = all.filter((w) => w.status === "completed" || w.status === "rejected");
 
-  const totalActive = active.reduce((s, w) => s + w.amount, 0);
+  const totalActive    = active.reduce((s, w) => s + w.amount, 0);
+  const totalCompleted = done.filter((w) => w.status === "completed").reduce((s, w) => s + w.amount, 0);
+  const completedCount = done.filter((w) => w.status === "completed").length;
+  const rejectedCount  = done.filter((w) => w.status === "rejected").length;
 
   return (
     <div className="space-y-5">
@@ -67,6 +72,57 @@ export default async function AdminWalletPage() {
           <p className="text-xs text-slate-500 dark:text-slate-400">
             Review and process client requests to withdraw their wallet balance to a bank account.
           </p>
+        </div>
+      </div>
+
+      {/* Stat cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 shadow-sm flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/30 shrink-0">
+            <Clock className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium uppercase tracking-wide truncate">Pending</p>
+            <p className="text-xl font-bold text-slate-900 dark:text-white">{active.length}</p>
+            <p className="text-xs text-slate-400 dark:text-slate-500">{formatCurrency(totalActive)}</p>
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 shadow-sm flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/30 shrink-0">
+            <Loader2 className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium uppercase tracking-wide truncate">Processing</p>
+            <p className="text-xl font-bold text-slate-900 dark:text-white">
+              {active.filter((w) => w.status === "processing").length}
+            </p>
+            <p className="text-xs text-slate-400 dark:text-slate-500">
+              {formatCurrency(active.filter((w) => w.status === "processing").reduce((s, w) => s + w.amount, 0))}
+            </p>
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 shadow-sm flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900/30 shrink-0">
+            <ArrowDownToLine className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium uppercase tracking-wide truncate">Completed</p>
+            <p className="text-xl font-bold text-slate-900 dark:text-white">{completedCount}</p>
+            <p className="text-xs text-slate-400 dark:text-slate-500">{formatCurrency(totalCompleted)}</p>
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 shadow-sm flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/30 shrink-0">
+            <Ban className="h-5 w-5 text-red-600 dark:text-red-400" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium uppercase tracking-wide truncate">Rejected</p>
+            <p className="text-xl font-bold text-slate-900 dark:text-white">{rejectedCount}</p>
+            <p className="text-xs text-slate-400 dark:text-slate-500">reversed to wallet</p>
+          </div>
         </div>
       </div>
 
@@ -144,6 +200,11 @@ export default async function AdminWalletPage() {
                         {w.notes && (
                           <p className="text-xs text-slate-400 dark:text-slate-500 italic mt-1">{w.notes}</p>
                         )}
+                        {(w as { ledgerJournalId?: string | null }).ledgerJournalId && (
+                          <p className="text-[10px] text-slate-400 dark:text-slate-500 font-mono mt-1">
+                            Ledger: {(w as { ledgerJournalId?: string | null }).ledgerJournalId}
+                          </p>
+                        )}
                       </div>
                     </div>
 
@@ -190,6 +251,7 @@ export default async function AdminWalletPage() {
                     <th className="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Bank</th>
                     <th className="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Account</th>
                     <th className="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Status</th>
+                    <th className="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Ledger</th>
                     <th className="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Notes</th>
                   </tr>
                 </thead>
@@ -218,6 +280,11 @@ export default async function AdminWalletPage() {
                             {cfg.icon}
                             {cfg.label}
                           </span>
+                        </td>
+                        <td className="px-6 py-3.5 text-[10px] font-mono text-slate-400 dark:text-slate-500 max-w-[160px] truncate">
+                          {(w as { ledgerJournalId?: string | null }).ledgerJournalId
+                            ? <span className="bg-violet-50 dark:bg-violet-900/20 text-violet-600 dark:text-violet-400 px-1.5 py-0.5 rounded">{(w as { ledgerJournalId?: string | null }).ledgerJournalId}</span>
+                            : <span className="text-slate-300 dark:text-slate-600">—</span>}
                         </td>
                         <td className="px-6 py-3.5 text-slate-400 dark:text-slate-500 text-xs max-w-[180px] truncate">
                           {w.notes ?? "—"}

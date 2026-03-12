@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { apiFetch } from "@/lib/fetchClient";
 import { ChevronDown, RefreshCw, BookOpen, ChevronLeft, ChevronRight } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 
@@ -226,7 +227,7 @@ export default function LedgerEntriesClient({ embedded = false }: { embedded?: b
     try {
       const params = new URLSearchParams({ page: String(page), limit: String(LIMIT) });
       if (entity) params.set("entity", entity);
-      const res = await fetch(`/api/admin/accounting/entries?${params}`);
+      const res = await apiFetch(`/api/admin/accounting/entries?${params}`);
       if (!res.ok) throw new Error();
       const data = await res.json();
       setJournals(data.journals ?? []);

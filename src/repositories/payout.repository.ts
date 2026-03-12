@@ -53,6 +53,28 @@ export class PayoutRepository extends BaseRepository<PayoutDocument> {
     return Payout.find({ status: "pending", createdAt: { $lt: cutoff } })
       .lean() as unknown as PayoutDocument[];
   }
+
+  /** Per-status breakdown for a provider. */
+  async getProviderStats(providerId: string): Promise<{
+    totalCompleted: number;
+    totalPending: number;
+    totalProcessing: number;
+    pendingCount: number;
+  }> {
+    await this.connect();
+    const rows = await Payout.aggregate([
+      { $match: { providerId: new (require("mongoose").Types.ObjectId)(providerId) } },
+      { $group: { _id: "$status", total: { $sum: "$amount" }, count: { $sum: 1 } } },
+    ]) as Array<{ _id: string; total: number; count: number }>;
+
+    const byStatus = Object.fromEntries(rows.map((r) => [r._id, r]));
+    return {
+      totalCompleted:  byStatus.completed?.total   ?? 0,
+      totalPending:    byStatus.pending?.total      ?? 0,
+      totalProcessing: byStatus.processing?.total   ?? 0,
+      pendingCount:    (byStatus.pending?.count ?? 0) + (byStatus.processing?.count ?? 0),
+    };
+  }
 }
 
 export const payoutRepository = new PayoutRepository();

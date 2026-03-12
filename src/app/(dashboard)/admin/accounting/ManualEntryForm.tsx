@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { apiFetch } from "@/lib/fetchClient";
 import { Plus, AlertTriangle, CheckCircle2, ArrowRight } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 
@@ -142,7 +143,7 @@ export default function ManualEntryForm() {
     setSubmitting(true);
     setResult(null);
     try {
-      const res = await fetch("/api/admin/accounting/manual-entry", {
+      const res = await apiFetch("/api/admin/accounting/manual-entry", {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

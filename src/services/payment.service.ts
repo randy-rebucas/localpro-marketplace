@@ -257,8 +257,9 @@ export class PaymentService {
       p.amount
     );
     await transactionRepository.updateById((tx as { _id: { toString(): string } })._id.toString(), { ledgerJournalId: journalId });
-    // Mark payment with confirmedAt timestamp
-    await paymentRepository.updateByPaymentIntentId(paymentIntentId, { confirmedAt: new Date() });
+    // Mark payment with confirmedAt timestamp and ledger journal reference.
+    // Payment.paymentIntentId stores the checkout sessionId (cs_xxx), not the pi_xxx.
+    await paymentRepository.updateByPaymentIntentId(sessionId, { confirmedAt: new Date(), ledgerJournalId: journalId });
 
     await activityRepository.log({
       userId: p.clientId.toString(),
@@ -488,6 +489,12 @@ export class PaymentService {
         (tx as unknown as { _id: { toString(): string } })._id.toString(),
         { ledgerJournalId: journalId }
       );
+    }
+    // Also stamp the journal ID on the Payment record for traceability
+    const paymentDoc = await paymentRepository.findByPaymentIntentId(sessionId);
+    if (paymentDoc) {
+      const pd = paymentDoc as unknown as { paymentIntentId: string };
+      await paymentRepository.updateByPaymentIntentId(pd.paymentIntentId, { ledgerJournalId: journalId });
     }
   }
 }

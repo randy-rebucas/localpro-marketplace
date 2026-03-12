@@ -11,6 +11,7 @@ export interface IWalletWithdrawalDoc {
   accountName: string;
   notes?: string | null;
   processedAt?: Date | null;
+  ledgerJournalId?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -36,6 +37,7 @@ const WalletWithdrawalSchema = new Schema<WalletWithdrawalDocument>(
     accountName:   { type: String, required: true, trim: true },
     notes:         { type: String, default: null },
     processedAt:   { type: Date,   default: null },
+    ledgerJournalId: { type: String, default: null },
   },
   { timestamps: true }
 );

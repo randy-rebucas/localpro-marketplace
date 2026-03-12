@@ -5,7 +5,7 @@ import { ledgerRepository } from "@/repositories/ledger.repository";
 import type { AccountCode } from "@/models/LedgerEntry";
 
 const ASSET_CODES:     AccountCode[] = ["1000", "1100", "1200"];
-const LIABILITY_CODES: AccountCode[] = ["2000", "2100", "2200", "2300"];
+const LIABILITY_CODES: AccountCode[] = ["2000", "2100", "2200", "2300", "2400"];
 const EQUITY_CODES:    AccountCode[] = ["3000"];
 const REVENUE_CODES:   AccountCode[] = ["4000", "4100", "4200"];
 const EXPENSE_CODES:   AccountCode[] = ["5000", "5100", "5200"];
@@ -18,6 +18,7 @@ const LABELS: Record<AccountCode, string> = {
   "2100": "Earnings Payable — Providers",
   "2200": "Wallet Payable — Clients",
   "2300": "Withdrawal Payable — Clients",
+  "2400": "Payout In-Flight — Providers",
   "3000": "Platform Equity",
   "4000": "Commission Revenue",
   "4100": "Subscription Revenue",

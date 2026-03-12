@@ -159,11 +159,12 @@ export const POST = withHandler(async (
     const { walletService } = await import("@/services/wallet.service");
     const { paymentRepository } = await import("@/repositories");
     const refundAmount = (job as unknown as { budget: number }).budget;
+    const refundJournalId = `admin-refund-${id}`;
     await walletService.credit(
       job.clientId.toString(),
       refundAmount,
       `Admin escrow refund — Job #${id.slice(-6)}`,
-      { jobId: id, silent: true }
+      { jobId: id, silent: true, journalId: refundJournalId }
     );
     await paymentRepository.markRefundedByJobId(id);
 
@@ -171,7 +172,7 @@ export const POST = withHandler(async (
     try {
       await ledgerService.postDisputeRefund(
         {
-          journalId: `admin-refund-${id}`,
+          journalId: refundJournalId,
           entityType: "job",
           entityId: id,
           clientId: job.clientId.toString(),

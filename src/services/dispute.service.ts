@@ -157,11 +157,12 @@ export class DisputeService {
           // Use t.amount (what was actually paid), not job.budget which may differ
           // if the client used overrideAmount at payment time.
           const refundAmount = tx ? (tx as unknown as { amount: number }).amount : budget;
+          const journalId = `dispute-refund-${disputeId}`;
           await walletService.credit(
             job.clientId.toString(),
             refundAmount,
             `Refund for disputed job (dispute resolved in your favour)`,
-            { jobId: job._id!.toString(), silent: true }
+            { jobId: job._id!.toString(), silent: true, journalId }
           );
           await paymentRepository.markRefundedByJobId(job._id!.toString());
 
@@ -171,7 +172,7 @@ export class DisputeService {
             // No commission reversal needed — revenue was never recognised at funding.
             await ledgerService.postDisputeRefund(
               {
-                journalId: `dispute-refund-${disputeId}`,
+                journalId,
                 entityType: "dispute",
                 entityId: disputeId,
                 clientId: job.clientId.toString(),

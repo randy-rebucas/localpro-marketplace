@@ -6,6 +6,7 @@ import { connectDB } from "@/lib/db";
 import User from "@/models/User";
 import Payment from "@/models/Payment";
 import { businessOrganizationRepository } from "@/repositories";
+import { walletService } from "@/services/wallet.service";
 import type { BusinessPlan } from "@/types";
 
 /**
@@ -110,7 +111,23 @@ export async function POST(req: NextRequest) {
         });
         console.log(`[PAYMONGO] Subscription plan "${metadata.plan}" activated for org ${metadata.orgId}`);
 
-      // ── Branch B: escrow job payment ─────────────────────────────────────
+      // ── Branch B: wallet top-up ───────────────────────────────────────────
+      } else if (metadata.type === "wallet_topup" && metadata.userId) {
+        const sessionId = resourceData.id;
+        const amountPHP = parseFloat(metadata.amountPHP ?? "0");
+        if (amountPHP <= 0) {
+          console.error(`[PAYMONGO WEBHOOK] wallet_topup missing amountPHP — session ${sessionId}`);
+        } else {
+          await walletService.topUpConfirm(
+            metadata.userId,
+            amountPHP,
+            sessionId,
+            metadata.userId
+          );
+          console.log(`[PAYMONGO] Wallet top-up ₱${amountPHP} confirmed for user ${metadata.userId} — session ${sessionId}`);
+        }
+
+      // ── Branch C: escrow job payment ─────────────────────────────────────
       } else {
         const sessionId = resourceData.id;
         const paymentIntentId = resourceData.attributes.payment_intent?.id ?? "";

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { apiFetch } from "@/lib/fetchClient";
 import { formatCurrency } from "@/lib/utils";
 import { TrendingUp, RefreshCw } from "lucide-react";
 
@@ -37,7 +38,7 @@ export default function AccountingClient({ embedded = false }: { embedded?: bool
     setLoading(true);
     setError(false);
     try {
-      const res = await fetch(`/api/admin/accounting/income-statement?from=${from}&to=${to}`);
+      const res = await apiFetch(`/api/admin/accounting/income-statement?from=${from}&to=${to}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       setData(await res.json());
     } catch {
@@ -52,7 +53,7 @@ export default function AccountingClient({ embedded = false }: { embedded?: bool
   const handleRefresh = async () => {
     setRefreshing(true);
     try {
-      await fetch("/api/admin/accounting/reconcile", { method: "POST" });
+      await apiFetch("/api/admin/accounting/reconcile", { method: "POST" });
       await fetchIS();
     } finally {
       setRefreshing(false);
