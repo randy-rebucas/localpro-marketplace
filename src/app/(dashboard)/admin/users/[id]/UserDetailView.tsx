@@ -18,6 +18,7 @@ import UserActions from "../UserActions";
 import KycActions from "./KycActions";
 import EditRoleModal from "./EditRoleModal";
 import ActivityDrawer from "./ActivityDrawer";
+import UserWalletSection from "./UserWalletSection";
 
 interface Props {
   user: IUser;
@@ -640,6 +641,18 @@ export default function UserDetailView({ user, providerProfile, currentUserRole 
           <Section title="Provider Profile">
             <p className="text-xs text-slate-400 italic">No provider profile created yet.</p>
           </Section>
+        )}
+
+        {/* Wallet — visible for client and provider roles */}
+        {(user.role === "client" || user.role === "provider") && (
+          <div className="bg-white rounded-xl border border-slate-200 shadow-card">
+            <div className="px-6 py-4 border-b border-slate-100">
+              <h3 className="text-sm font-semibold text-slate-700">Wallet</h3>
+            </div>
+            <div className="px-6 py-4">
+              <UserWalletSection userId={userId} />
+            </div>
+          </div>
         )}
       </div>
 

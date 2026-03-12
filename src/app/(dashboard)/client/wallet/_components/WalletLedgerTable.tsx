@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Wallet, ArrowDownCircle, ArrowUpCircle,
   BadgeCheck, AlertTriangle, ChevronDown, ChevronUp,
-  Hash, CalendarDays, BookOpen,
+  Hash, CalendarDays, BookOpen, RefreshCw,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
+import { apiFetch } from "@/lib/fetchClient";
 import WalletLedgerFooter from "./WalletLedgerFooter";
 import type { IWalletTransaction } from "@/types";
 
@@ -35,25 +36,91 @@ function TxDetail({ label, value, mono }: { label: string; value: string; mono?:
 
 // ─── Main component ──────────────────────────────────────────────────────────
 
-interface Props {
-  transactions: IWalletTransaction[];
-}
-
-export default function WalletLedgerTable({ transactions }: Props) {
+export default function WalletLedgerTable() {
+  const [transactions, setTransactions] = useState<IWalletTransaction[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await apiFetch("/api/wallet/transactions");
+      if (!res.ok) throw new Error("Failed to load transactions");
+      const json = (await res.json()) as { transactions: IWalletTransaction[] };
+      setTransactions(json.transactions);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to load transactions");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { void load(); }, [load]);
 
   const totalIn  = transactions.filter((t) => TX_CONFIG[t.type]?.credit).reduce((s, t) => s + t.amount, 0);
   const totalOut = transactions.filter((t) => !TX_CONFIG[t.type]?.credit).reduce((s, t) => s + t.amount, 0);
+  const unaccounted = transactions.filter((t) => !t.ledgerJournalId).length;
+
+  if (loading) {
+    return (
+      <div className="animate-pulse divide-y divide-slate-100">
+        {[...Array(5)].map((_, i) => (
+          <div key={i} className="px-6 py-4 flex items-center gap-4">
+            <div className="h-4 w-4 rounded-full bg-slate-200 flex-shrink-0" />
+            <div className="flex-1 space-y-1.5">
+              <div className="h-3 bg-slate-200 rounded w-1/3" />
+              <div className="h-3 bg-slate-100 rounded w-2/3" />
+            </div>
+            <div className="h-3 bg-slate-200 rounded w-16" />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="px-6 py-8 text-center">
+        <p className="text-sm text-red-500 mb-2">{error}</p>
+        <button onClick={load} className="text-xs text-violet-600 hover:underline">Retry</button>
+      </div>
+    );
+  }
+
+  if (transactions.length === 0) {
+    return (
+      <div className="px-6 py-12 text-center text-sm text-slate-400">
+        No transactions yet. Top up or withdraw to get started.
+      </div>
+    );
+  }
 
   return (
     <>
       {/* Column headers */}
       <div className="hidden sm:grid grid-cols-[2fr_1fr_1fr_1fr_auto] gap-4 px-6 py-2 bg-slate-50 border-b border-slate-100 text-xs font-medium text-slate-400 uppercase tracking-wide">
-        <span>Description</span>
-        <span className="text-right">Amount</span>
-        <span className="text-right">Balance After</span>
-        <span className="text-right">Date</span>
-        <span className="text-right">Ledger</span>
+        <div className="flex items-center justify-between col-span-full sm:contents">
+          <span>Description</span>
+          <span className="hidden sm:block text-right">Amount</span>
+          <span className="hidden sm:block text-right">Balance After</span>
+          <span className="hidden sm:block text-right">Date</span>
+          <div className="hidden sm:flex items-center gap-3 justify-end">
+            {unaccounted > 0 ? (
+              <span className="inline-flex items-center gap-1 text-[10px] font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5 normal-case tracking-normal">
+                <AlertTriangle className="h-3 w-3" />{unaccounted} missing
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 text-[10px] font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-0.5 normal-case tracking-normal">
+                <BadgeCheck className="h-3 w-3" />All accounted
+              </span>
+            )}
+            <button onClick={load} title="Refresh" className="text-slate-400 hover:text-slate-600 transition-colors">
+              <RefreshCw className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        </div>
       </div>
 
       <div className="divide-y divide-slate-100">

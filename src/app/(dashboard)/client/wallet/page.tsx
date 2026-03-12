@@ -11,7 +11,7 @@ import WalletTopUpForm from "./_components/WalletTopUpForm";
 import WalletTopUpConfirm from "./_components/WalletTopUpConfirm";
 import WalletLedgerTable from "./_components/WalletLedgerTable";
 import WalletWithdrawalList from "./_components/WalletWithdrawalList";
-import type { IWalletTransaction, IWalletWithdrawal } from "@/types";
+import type { IWalletWithdrawal } from "@/types";
 
 export const dynamic = "force-dynamic";
 export async function generateMetadata() {
@@ -29,11 +29,8 @@ export default async function WalletPage({
 
   const { topup: topupStatus } = await searchParams;
 
-  const { balance, pendingWithdrawals, availableBalance, transactions, withdrawals } =
+  const { balance, pendingWithdrawals, availableBalance, withdrawals } =
     await walletService.getWallet(user.userId);
-
-  const serialisedTx = JSON.parse(JSON.stringify(transactions)) as IWalletTransaction[];
-  const unaccounted  = serialisedTx.filter((t) => !t.ledgerJournalId).length;
 
   const serialisedWithdrawals = JSON.parse(JSON.stringify(withdrawals)) as IWalletWithdrawal[];
   const unaccountedWithdrawals = serialisedWithdrawals.filter((w) => !w.ledgerJournalId).length;
@@ -104,41 +101,37 @@ export default async function WalletPage({
 
       {/* ── 2 & 3. Two-column: ledger (left) + actions (right) ────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-6 items-start">
-
-        {/* ── LEFT: Transaction ledger ──────────────────────────────────────────────── */}
-        <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-          <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
+        <div className="space-y-6">
+          {/* ── LEFT: Transaction ledger ──────────────────────────────────────────────── */}
+          <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center gap-2">
               <BookOpen className="h-4 w-4 text-slate-500" />
               <h2 className="text-base font-semibold text-slate-800">Transaction Ledger</h2>
-              {serialisedTx.length > 0 && (
-                <span className="text-xs text-slate-400 font-normal">({serialisedTx.length} entries)</span>
-              )}
             </div>
-            {serialisedTx.length > 0 && (
-              unaccounted > 0 ? (
-                <span className="inline-flex items-center gap-1.5 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2.5 py-1 font-medium">
-                  <AlertTriangle className="h-3 w-3" />
-                  {unaccounted} missing ledger
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-1.5 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2.5 py-1 font-medium">
-                  <BadgeCheck className="h-3 w-3" />
-                  All accounted
-                </span>
-              )
+            <WalletLedgerTable />
+          </div>
+          <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+            {serialisedWithdrawals.length > 0 && (
+              <>
+                <div className="mt-4 px-6 py-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between gap-3">
+                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Requests</p>
+                  {unaccountedWithdrawals > 0 ? (
+                    <span className="inline-flex items-center gap-1.5 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2.5 py-1 font-medium">
+                      <AlertTriangle className="h-3 w-3" />
+                      {unaccountedWithdrawals} missing ledger
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2.5 py-1 font-medium">
+                      <BadgeCheck className="h-3 w-3" />
+                      All accounted
+                    </span>
+                  )}
+                </div>
+                <WalletWithdrawalList withdrawals={serialisedWithdrawals} />
+              </>
             )}
           </div>
-
-          {serialisedTx.length === 0 ? (
-            <div className="px-6 py-12 text-center text-sm text-slate-400">
-              No transactions yet. Top up or withdraw to get started.
-            </div>
-          ) : (
-            <WalletLedgerTable transactions={serialisedTx} />
-          )}
         </div>
-
         {/* ── RIGHT: Top up + Withdraw ──────────────────────────────────────────────── */}
         <div className="space-y-4">
 
@@ -166,25 +159,7 @@ export default async function WalletPage({
               <WalletWithdrawForm available={availableBalance} />
             </div>
 
-            {serialisedWithdrawals.length > 0 && (
-              <>
-                <div className="px-6 py-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between gap-3">
-                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Requests</p>
-                  {unaccountedWithdrawals > 0 ? (
-                    <span className="inline-flex items-center gap-1.5 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2.5 py-1 font-medium">
-                      <AlertTriangle className="h-3 w-3" />
-                      {unaccountedWithdrawals} missing ledger
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1.5 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2.5 py-1 font-medium">
-                      <BadgeCheck className="h-3 w-3" />
-                      All accounted
-                    </span>
-                  )}
-                </div>
-                <WalletWithdrawalList withdrawals={serialisedWithdrawals} />
-              </>
-            )}
+
           </div>
 
         </div>
