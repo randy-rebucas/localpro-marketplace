@@ -46,6 +46,7 @@ const ACCOUNT_NAMES: Record<string, string> = {
   "5000": "Refunds Issued",
   "5100": "Payment Processing Fees",
   "5200": "Bad Debt / Write-offs",
+  "2400": "Payout In-Flight — Providers",
 };
 
 const ENTRY_TYPE_LABELS: Record<string, string> = {
@@ -68,6 +69,7 @@ const ENTRY_TYPE_LABELS: Record<string, string> = {
   admin_credit:                "Admin Credit",
   admin_debit:                 "Admin Debit",
   reversal:                    "Reversal",
+  payout_requested:            "Payout Requested"
 };
 
 const TYPE_COLORS: Record<string, string> = {
