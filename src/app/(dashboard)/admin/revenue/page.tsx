@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { getCurrentUser } from "@/lib/auth";
 import { transactionRepository } from "@/repositories/transaction.repository";
+import { ledgerRepository } from "@/repositories/ledger.repository";
 import { userRepository } from "@/repositories/user.repository";
 import { jobRepository } from "@/repositories/job.repository";
 import KpiCard from "@/components/ui/KpiCard";
@@ -25,25 +26,40 @@ async function getRevenueStats() {
   const oneYearAgo = new Date();
   oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
 
-  const [totals, monthlyAgg, topPayeesAgg, totalUsers, completedJobs] = await Promise.all([
-    transactionRepository.getAdminTotals(),
-    transactionRepository.getMonthlyRevenue(oneYearAgo),
-    transactionRepository.getTopPayees(5),
-    userRepository.count({}),
-    jobRepository.count({ status: "completed" }),
-  ]);
+  // Ledger is the authoritative source for GMV and commission figures.
+  // Jobs count, user count, and top-payee names still come from their own collections
+  // since the ledger doesn't store those dimensions.
+  const [ledgerTotals, ledgerMonthly, jobMonthlyAgg, topPayeesAgg, totalUsers, completedJobs] =
+    await Promise.all([
+      ledgerRepository.getRevenueTotals(),
+      ledgerRepository.getMonthlyLedgerRevenue(oneYearAgo),
+      transactionRepository.getMonthlyRevenue(oneYearAgo),
+      transactionRepository.getTopPayees(5),
+      userRepository.count({}),
+      jobRepository.count({ status: "completed" }),
+    ]);
 
-  const { gmv: totalGMV, commission: totalCommission } = totals;
+  // Convert centavos → PHP
+  const totalGMV        = ledgerTotals.gmvCentavos        / 100;
+  const totalCommission = ledgerTotals.commissionCentavos / 100;
 
   // Build ordered 12-month labels (some months may have no data)
   const now = new Date();
   const months = Array.from({ length: 12 }, (_, i) => {
     const d     = new Date(now.getFullYear(), now.getMonth() - (11 - i), 1);
     const label = d.toLocaleString("default", { month: "short", year: "2-digit" });
-    const row   = monthlyAgg.find(
+    const ledgerRow = ledgerMonthly.find(
       (r) => r._id.year === d.getFullYear() && r._id.month === d.getMonth() + 1
     );
-    return { month: label, gmv: row?.gmv ?? 0, commission: row?.commission ?? 0, jobs: row?.jobs ?? 0 };
+    const jobRow = jobMonthlyAgg.find(
+      (r) => r._id.year === d.getFullYear() && r._id.month === d.getMonth() + 1
+    );
+    return {
+      month:      label,
+      gmv:        (ledgerRow?.gmv        ?? 0) / 100,
+      commission: (ledgerRow?.commission ?? 0) / 100,
+      jobs:       jobRow?.jobs ?? 0,
+    };
   });
 
   const providerIds = topPayeesAgg.map((r) => String(r._id));

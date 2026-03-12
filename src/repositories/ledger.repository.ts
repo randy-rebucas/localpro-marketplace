@@ -204,6 +204,98 @@ export class LedgerRepository {
     return { revenue, expenses, netIncome: revenue - expenses, breakdown: breakdown as Record<AccountCode, number> };
   }
 
+  /**
+   * All-time revenue totals sourced from the ledger.
+   * - GMV  = sum of credits to 2000 (Escrow Payable — Clients), i.e. total escrow funded
+   * - commission = balance of account 4000 (Commission Revenue)
+   * - refunds    = balance of account 5000 (Refunds Issued)
+   */
+  async getRevenueTotals(currency = "PHP"): Promise<{
+    gmvCentavos: number;
+    commissionCentavos: number;
+    refundsCentavos: number;
+  }> {
+    await connectDB();
+    const [gmvRes, commCr, commDr, refDr, refCr] = await Promise.all([
+      LedgerEntry.aggregate([
+        { $match: { creditAccount: "2000", currency } },
+        { $group: { _id: null, total: { $sum: "$amountCentavos" } } },
+      ]),
+      LedgerEntry.aggregate([
+        { $match: { creditAccount: "4000", currency } },
+        { $group: { _id: null, total: { $sum: "$amountCentavos" } } },
+      ]),
+      LedgerEntry.aggregate([
+        { $match: { debitAccount: "4000", currency } },
+        { $group: { _id: null, total: { $sum: "$amountCentavos" } } },
+      ]),
+      LedgerEntry.aggregate([
+        { $match: { debitAccount: "5000", currency } },
+        { $group: { _id: null, total: { $sum: "$amountCentavos" } } },
+      ]),
+      LedgerEntry.aggregate([
+        { $match: { creditAccount: "5000", currency } },
+        { $group: { _id: null, total: { $sum: "$amountCentavos" } } },
+      ]),
+    ]);
+    return {
+      gmvCentavos:        (gmvRes[0]?.total  ?? 0) as number,
+      commissionCentavos: ((commCr[0]?.total ?? 0) as number) - ((commDr[0]?.total ?? 0) as number),
+      refundsCentavos:    ((refDr[0]?.total  ?? 0) as number) - ((refCr[0]?.total  ?? 0) as number),
+    };
+  }
+
+  /**
+   * Month-by-month revenue breakdown sourced from the ledger.
+   * Each row: { year, month, gmvCentavos, commissionCentavos }
+   * - GMV        = credits to 2000 in that month
+   * - Commission = credits to 4000 in that month
+   */
+  async getMonthlyLedgerRevenue(
+    from: Date,
+    currency = "PHP"
+  ): Promise<{ _id: { year: number; month: number }; gmv: number; commission: number }[]> {
+    await connectDB();
+
+    const [gmvRows, commRows] = await Promise.all([
+      LedgerEntry.aggregate([
+        { $match: { creditAccount: "2000", currency, createdAt: { $gte: from } } },
+        {
+          $group: {
+            _id: { year: { $year: "$createdAt" }, month: { $month: "$createdAt" } },
+            total: { $sum: "$amountCentavos" },
+          },
+        },
+      ]),
+      LedgerEntry.aggregate([
+        { $match: { creditAccount: "4000", currency, createdAt: { $gte: from } } },
+        {
+          $group: {
+            _id: { year: { $year: "$createdAt" }, month: { $month: "$createdAt" } },
+            total: { $sum: "$amountCentavos" },
+          },
+        },
+      ]),
+    ]);
+
+    // Merge into a single list keyed by year+month
+    const map = new Map<string, { _id: { year: number; month: number }; gmv: number; commission: number }>();
+    for (const r of gmvRows) {
+      const key = `${r._id.year}-${r._id.month}`;
+      map.set(key, { _id: r._id, gmv: r.total as number, commission: 0 });
+    }
+    for (const r of commRows) {
+      const key = `${r._id.year}-${r._id.month}`;
+      const existing = map.get(key);
+      if (existing) {
+        existing.commission = r.total as number;
+      } else {
+        map.set(key, { _id: r._id, gmv: 0, commission: r.total as number });
+      }
+    }
+    return Array.from(map.values());
+  }
+
   /** Count journal entries for a given entity — useful for auditing */
   async countByEntity(entityType: ILedgerEntry["entityType"], entityId: string): Promise<number> {
     await connectDB();
