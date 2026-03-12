@@ -15,6 +15,7 @@ import type {
   BudgetAlertRow,
 } from "@/types";
 import { connectDB } from "@/lib/db";
+import { BASE_COMMISSION_RATE } from "@/lib/commission";
 import mongoose from "mongoose";
 
 export class BusinessService {
@@ -1269,7 +1270,7 @@ export class BusinessService {
     const memberCount = memberUserIds.length;
 
     return {
-      commissionRate:       COMMISSION_RATE,
+      commissionRate:       BASE_COMMISSION_RATE,
       commissionHistory,
       totalGrossSpend,
       totalCommissionPaid,

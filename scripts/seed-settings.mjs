@@ -13,6 +13,26 @@
  */
 
 import mongoose from "mongoose";
+import { readFileSync, existsSync } from "fs";
+import { resolve, dirname } from "path";
+import { fileURLToPath } from "url";
+
+// ─── Auto-load .env.local (works even without --env-file flag) ────────────────
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const envPath   = resolve(__dirname, "../.env.local");
+if (existsSync(envPath)) {
+  for (const line of readFileSync(envPath, "utf8").split("\n")) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+    const eqIdx = trimmed.indexOf("=");
+    if (eqIdx === -1) continue;
+    const key = trimmed.slice(0, eqIdx).trim();
+    const raw = trimmed.slice(eqIdx + 1).trim();
+    // Strip surrounding single or double quotes
+    const val = /^(["']).*\1$/.test(raw) ? raw.slice(1, -1) : raw;
+    if (!(key in process.env)) process.env[key] = val;
+  }
+}
 
 // ─── CLI flags ────────────────────────────────────────────────────────────────
 const FORCE = process.argv.includes("--force");
@@ -20,7 +40,7 @@ const FORCE = process.argv.includes("--force");
 // ─── Config ───────────────────────────────────────────────────────────────────
 const MONGODB_URI = process.env.MONGODB_URI;
 if (!MONGODB_URI) {
-  console.error("❌  MONGODB_URI is not set. Run with: node --env-file=.env.local scripts/seed-settings.mjs");
+  console.error("❌  MONGODB_URI is not set. Ensure .env.local exists with MONGODB_URI=<connection-string>");
   process.exit(1);
 }
 
