@@ -107,6 +107,7 @@ async function getJob(id: string): Promise<PublicJob | null> {
 export async function generateMetadata(
   { params }: { params: Promise<{ id: string }> }
 ): Promise<Metadata> {
+  try {
   const { id } = await params;
   const job = await getJob(id);
   if (!job) return { title: "Job Not Found" };
@@ -137,6 +138,9 @@ export async function generateMetadata(
       images: [ogImageUrl],
     },
   };
+  } catch {
+    return { title: "Job Details | LocalPro" };
+  }
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
