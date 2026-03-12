@@ -120,14 +120,23 @@ export default function SettingsClient() {
     <div className="space-y-6 max-w-2xl">
 
       {/* ── Header ── */}
-      <div className="flex items-start sm:items-center justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="text-xl font-bold text-slate-900">Agency Settings</h1>
-          <p className="text-sm text-slate-500 mt-0.5">{settings.name}</p>
+      <div className="flex items-center justify-between gap-4 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-5 py-4 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-xl bg-slate-100 dark:bg-slate-700/50">
+            <Settings className="h-5 w-5 text-slate-600 dark:text-slate-400" />
+          </div>
+          <div>
+            <h1 className="text-base font-bold text-slate-800 dark:text-white">Agency Settings</h1>
+            <p className="text-xs text-slate-500 dark:text-slate-400">{settings.name}</p>
+          </div>
         </div>
         <div className="flex gap-2">
-          <button onClick={load} className="flex items-center gap-1.5 text-sm border border-slate-200 px-3 py-1.5 rounded-lg hover:bg-slate-50 text-slate-600 transition-colors">
-            <RefreshCw className="h-3.5 w-3.5" /> Refresh
+          <button
+            onClick={load}
+            className="p-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+            title="Refresh"
+          >
+            <RefreshCw className="h-4 w-4" />
           </button>
           {dirty && (
             <button onClick={handleSave} disabled={saving} className="btn-primary flex items-center gap-2">

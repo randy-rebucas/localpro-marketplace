@@ -57,7 +57,18 @@ export default async function AccountingPage() {
   const isBalanced = Math.abs(debitSide - creditSide) < 0.01;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
+      {/* Header */}
+      <div className="flex items-center gap-4 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-5 py-4 shadow-sm">
+        <div className="p-2 rounded-xl bg-teal-100 dark:bg-teal-900/30">
+          <CircleDollarSign className="h-5 w-5 text-teal-600 dark:text-teal-400" />
+        </div>
+        <div>
+          <h2 className="text-base font-bold text-slate-800 dark:text-white">Accounting Ledger</h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400">Double-entry bookkeeping — all amounts in PHP</p>
+        </div>
+      </div>
+
       <PageGuide
         pageKey="admin-accounting"
         title="How the Accounting Ledger works"
@@ -68,11 +79,6 @@ export default async function AccountingPage() {
           { icon: "🔄", title: "Reconciliation", description: "Compares 2100 Earnings Payable in the ledger against transaction records to catch discrepancies early." },
         ]}
       />
-
-      <div>
-        <h2 className="text-2xl font-bold text-slate-900">Accounting Ledger</h2>
-        <p className="text-slate-500 text-sm mt-0.5">Double-entry bookkeeping — all amounts in PHP</p>
-      </div>
 
       {/* KPI cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -104,22 +110,26 @@ export default async function AccountingPage() {
       </div>
 
       {/* Reconciliation banner */}
-      <div className={`rounded-xl border p-4 flex items-start gap-3 ${reconcile.balanced ? "bg-green-50 border-green-200" : "bg-amber-50 border-amber-200"}`}>
-        <span className={`text-base font-bold mt-0.5 ${reconcile.balanced ? "text-green-600" : "text-amber-600"}`}>
+      <div className={`rounded-2xl border p-4 flex items-start gap-3 ${
+        reconcile.balanced
+          ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800"
+          : "bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800"
+      }`}>
+        <span className={`text-base font-bold mt-0.5 ${reconcile.balanced ? "text-green-600 dark:text-green-400" : "text-amber-600 dark:text-amber-400"}`}>
           {reconcile.balanced ? "✓" : "⚠"}
         </span>
         <div>
-          <p className={`font-semibold text-sm ${reconcile.balanced ? "text-green-800" : "text-amber-800"}`}>
+          <p className={`font-semibold text-sm ${reconcile.balanced ? "text-green-800 dark:text-green-300" : "text-amber-800 dark:text-amber-300"}`}>
             {reconcile.balanced
               ? "Earnings Payable is balanced — ledger matches transaction records"
               : "Earnings Payable discrepancy detected"}
           </p>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
             Ledger: <strong>{formatCurrency(reconcile.ledgerBalance / 100)}</strong>
             {" · "}
             Transaction-derived: <strong>{formatCurrency(reconcile.transactionBalance / 100)}</strong>
             {!reconcile.balanced && (
-              <> · <span className="text-amber-700 font-medium">Diff: {formatCurrency(Math.abs(reconcile.diff) / 100)}</span></>
+              <> · <span className="text-amber-700 dark:text-amber-400 font-medium">Diff: {formatCurrency(Math.abs(reconcile.diff) / 100)}</span></>
             )}
           </p>
         </div>

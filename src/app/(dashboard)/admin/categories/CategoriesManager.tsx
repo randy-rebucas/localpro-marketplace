@@ -98,36 +98,38 @@ export default function CategoriesManager({ initialCategories }: Props) {
   }
 
   return (
-    <div className="space-y-6 max-w-2xl">
+    <div className="space-y-5">
       {/* ── Add new ──────────────────────────────────────────────────────── */}
-      <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
-        <h3 className="font-semibold text-slate-700 mb-4 text-sm uppercase tracking-wide">
+      <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-5">
+        <h3 className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-4">
           Add New Category
         </h3>
-        <div className="flex gap-3 items-end">
-          <div className="flex-1">
-            <label className="block text-xs font-medium text-slate-600 mb-1">Name</label>
+        <div className="flex gap-3 items-end flex-wrap">
+          <div className="flex-1 min-w-32">
+            <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Name</label>
             <input
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && addCategory()}
               placeholder="e.g. Pool Maintenance"
-              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full border border-slate-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400"
             />
-          </div>          <div className="flex-1">
-            <label className="block text-xs font-medium text-slate-600 mb-1">Description</label>
+          </div>
+          <div className="flex-1 min-w-32">
+            <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Description</label>
             <input
               value={newDescription}
               onChange={(e) => setNewDescription(e.target.value)}
               placeholder="Short description (optional)"
-              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full border border-slate-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400"
             />
-          </div>          <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">Icon</label>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Icon</label>
             <select
               value={newIcon}
               onChange={(e) => setNewIcon(e.target.value)}
-              className="border border-slate-300 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="border border-slate-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 rounded-xl px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400"
             >
               {COMMON_ICONS.map((ic) => (
                 <option key={ic} value={ic}>{ic}</option>
@@ -141,19 +143,19 @@ export default function CategoriesManager({ initialCategories }: Props) {
       </div>
 
       {/* ── List ─────────────────────────────────────────────────────────── */}
-      <div className="bg-white border border-slate-200 rounded-xl shadow-sm divide-y divide-slate-100">
+      <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl divide-y divide-slate-100 dark:divide-slate-700 overflow-hidden">
         {categories.length === 0 && (
-          <p className="text-slate-500 text-sm text-center py-10">No categories yet.</p>
+          <p className="text-slate-500 dark:text-slate-400 text-sm text-center py-12">No categories yet.</p>
         )}
         {categories.map((cat) => (
-          <div key={cat._id} className="flex items-center gap-3 px-5 py-3">
+          <div key={cat._id} className="flex items-center gap-3 px-5 py-3.5 hover:bg-slate-50 dark:hover:bg-slate-700/40 transition-colors">
             {editId === cat._id ? (
               /* ── inline edit mode ── */
               <>
                 <select
                   value={editIcon}
                   onChange={(e) => setEditIcon(e.target.value)}
-                  className="border border-slate-300 rounded-md px-2 py-1 text-sm"
+                  className="border border-slate-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 rounded-lg px-2 py-1 text-sm"
                 >
                   {COMMON_ICONS.map((ic) => (
                     <option key={ic} value={ic}>{ic}</option>
@@ -168,13 +170,13 @@ export default function CategoriesManager({ initialCategories }: Props) {
                     if (e.key === "Escape") setEditId(null);
                   }}
                   placeholder="Name"
-                  className="w-32 border border-slate-300 rounded-md px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-32 border border-slate-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 rounded-lg px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
                 />
                 <input
                   value={editDescription}
                   onChange={(e) => setEditDescription(e.target.value)}
                   placeholder="Description (optional)"
-                  className="flex-1 border border-slate-300 rounded-md px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="flex-1 border border-slate-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 rounded-lg px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
                 />
                 <Button size="sm" variant="primary" isLoading={loading === `save-${cat._id}`} onClick={() => saveEdit(cat._id)}>
                   Save
@@ -186,16 +188,22 @@ export default function CategoriesManager({ initialCategories }: Props) {
             ) : (
               /* ── view mode ── */
               <>
-                <span className="text-xl w-8 text-center">{cat.icon}</span>
+                <span className="text-xl w-8 text-center flex-shrink-0">{cat.icon}</span>
                 <div className="flex-1 min-w-0">
-                  <span className={`text-sm font-medium ${cat.isActive ? "text-slate-800" : "text-slate-400 line-through"}`}>
+                  <span className={`text-sm font-semibold ${
+                    cat.isActive ? "text-slate-800 dark:text-slate-100" : "text-slate-400 dark:text-slate-500 line-through"
+                  }`}>
                     {cat.name}
                   </span>
                   {cat.description && (
-                    <p className="text-xs text-slate-400 truncate mt-0.5">{cat.description}</p>
+                    <p className="text-xs text-slate-400 dark:text-slate-500 truncate mt-0.5">{cat.description}</p>
                   )}
                 </div>
-                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${cat.isActive ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>
+                <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wide ${
+                  cat.isActive
+                    ? "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400"
+                    : "bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400"
+                }`}>
                   {cat.isActive ? "Active" : "Hidden"}
                 </span>
                 <Button

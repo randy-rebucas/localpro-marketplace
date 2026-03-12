@@ -313,10 +313,15 @@ export default function JobsClient() {
     <div className="space-y-5">
 
       {/* ── Header ─────────────────────────────────────────────────────────── */}
-      <div className="flex items-start justify-between gap-3 flex-wrap">
-        <div>
-          <h1 className="text-xl font-bold text-slate-900">Job Management</h1>
-          <p className="text-sm text-slate-500 mt-0.5">{total} job{total !== 1 ? "s" : ""} · {org.name}</p>
+      <div className="flex items-center justify-between gap-3 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-5 py-4 shadow-sm flex-wrap">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-xl bg-sky-100 dark:bg-sky-900/30">
+            <Briefcase className="h-5 w-5 text-sky-600 dark:text-sky-400" />
+          </div>
+          <div>
+            <h1 className="text-base font-bold text-slate-800 dark:text-white">Job Management</h1>
+            <p className="text-xs text-slate-500 dark:text-slate-400">{total} job{total !== 1 ? "s" : ""} · {org.name}</p>
+          </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <button

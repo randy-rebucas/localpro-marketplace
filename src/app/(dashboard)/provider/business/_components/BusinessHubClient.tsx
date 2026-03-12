@@ -242,7 +242,7 @@ export default function BusinessHubClient() {
     <div className="space-y-5">
 
       {/* ── Header card ── */}
-      <div className="bg-white rounded-2xl border border-slate-200 px-5 py-4 flex items-center justify-between gap-4">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 px-5 py-4 flex items-center justify-between gap-4 shadow-sm">
         <div className="flex items-center gap-3.5 min-w-0">
           {profile!.logo ? (
             <Image
@@ -250,11 +250,11 @@ export default function BusinessHubClient() {
               alt="logo"
               width={48}
               height={48}
-              className="h-12 w-12 rounded-xl object-cover ring-2 ring-primary/10 flex-shrink-0"
+              className="h-12 w-12 rounded-xl object-cover ring-2 ring-indigo-100 flex-shrink-0"
             />
           ) : (
-            <div className="h-12 w-12 rounded-xl bg-primary/10 ring-2 ring-primary/10 flex items-center justify-center flex-shrink-0">
-              <Building2 className="h-6 w-6 text-primary" />
+            <div className="h-12 w-12 rounded-xl bg-indigo-100 dark:bg-indigo-900/30 ring-2 ring-indigo-100 dark:ring-indigo-800 flex items-center justify-center flex-shrink-0">
+              <Building2 className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
             </div>
           )}
           <div className="min-w-0">

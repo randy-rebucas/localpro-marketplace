@@ -131,19 +131,25 @@ export default function ServiceAreasClient() {
     <div className="space-y-5 max-w-2xl">
 
       {/* ── Header ── */}
-      <div className="flex items-start sm:items-center justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">Service Areas</h1>
-          <p className="text-sm text-slate-500 mt-0.5">
-            {agency.name} · {areas.length} area{areas.length !== 1 ? "s" : ""}
-          </p>
+      <div className="flex items-center justify-between gap-4 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-5 py-4 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-xl bg-teal-100 dark:bg-teal-900/30">
+            <MapPin className="h-5 w-5 text-teal-600 dark:text-teal-400" />
+          </div>
+          <div>
+            <h1 className="text-base font-bold text-slate-800 dark:text-white">Service Areas</h1>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              {agency.name} · {areas.length} area{areas.length !== 1 ? "s" : ""}
+            </p>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={load}
-            className="flex items-center gap-1.5 text-sm border border-slate-200 px-3 py-1.5 rounded-lg hover:bg-slate-50 text-slate-600 transition-colors"
+            className="p-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+            title="Refresh"
           >
-            <RefreshCw className="h-3.5 w-3.5" /> Refresh
+            <RefreshCw className="h-4 w-4" />
           </button>
           {dirty && (
             <button onClick={handleSave} disabled={saving} className="btn-primary flex items-center gap-2">

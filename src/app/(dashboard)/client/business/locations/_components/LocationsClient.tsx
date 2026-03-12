@@ -251,17 +251,17 @@ export default function LocationsClient() {
     <div className="space-y-6">
 
       {/* ── Header ── */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold text-slate-900">Locations</h1>
-          <p className="text-sm text-slate-500 mt-0.5">
-            {org.name}
-            {org.locations.length > 0 && (
-              <span className="ml-2 text-slate-400">
-                · {activeCount} active{inactiveCount > 0 ? `, ${inactiveCount} inactive` : ""}
-              </span>
-            )}
-          </p>
+      <div className="flex items-center justify-between gap-4 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-5 py-4 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-xl bg-blue-100 dark:bg-blue-900/30">
+            <MapPin className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+          </div>
+          <div>
+            <h1 className="text-base font-bold text-slate-800 dark:text-white">Locations</h1>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              {org.name}{org.locations.length > 0 && ` · ${activeCount} active${inactiveCount > 0 ? `, ${inactiveCount} inactive` : ""}`}
+            </p>
+          </div>
         </div>
         <button
           onClick={showForm ? () => setShowForm(false) : openAdd}

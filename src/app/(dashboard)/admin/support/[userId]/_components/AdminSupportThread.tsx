@@ -56,15 +56,15 @@ export default function AdminSupportThread({ userId, adminId, targetUser }: Prop
         streamTransform={streamTransform}
         header={
           <div className="flex items-center gap-3">
-            <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+            <div className="h-9 w-9 rounded-full bg-primary/10 dark:bg-primary/20 flex items-center justify-center flex-shrink-0">
               <User className="h-4 w-4 text-primary" />
             </div>
             <div>
-              <p className="text-sm font-semibold text-slate-800">
+              <p className="text-sm font-semibold text-slate-800 dark:text-white">
                 {targetUser?.name ?? "User"}
               </p>
               {targetUser && (
-                <p className="text-xs text-slate-500 capitalize">
+                <p className="text-xs text-slate-500 dark:text-slate-400 capitalize">
                   {targetUser.email} · {targetUser.role}
                 </p>
               )}

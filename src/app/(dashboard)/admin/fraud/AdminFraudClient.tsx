@@ -48,20 +48,20 @@ interface Props {
 function RiskBadge({ score }: { score: number }) {
   if (score >= 70)
     return (
-      <span className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full bg-red-100 text-red-700 border border-red-200">
+      <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800">
         <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
         Critical · {score}
       </span>
     );
   if (score >= 50)
     return (
-      <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full bg-orange-100 text-orange-700 border border-orange-200">
+      <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 border border-orange-200 dark:border-orange-800">
         <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
         High · {score}
       </span>
     );
   return (
-    <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-100 text-amber-700 border border-amber-200">
+    <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800">
       <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
       Med · {score}
     </span>
@@ -81,10 +81,10 @@ function StatCard({
   onClick?: () => void;
 }) {
   const colorMap = {
-    red:    "bg-red-50 border-red-100 hover:border-red-300",
-    orange: "bg-orange-50 border-orange-100 hover:border-orange-300",
-    amber:  "bg-amber-50 border-amber-100 hover:border-amber-300",
-    rose:   "bg-rose-50 border-rose-100 hover:border-rose-300",
+    red:    "bg-red-50 dark:bg-red-900/20 border-red-100 dark:border-red-800 hover:border-red-300",
+    orange: "bg-orange-50 dark:bg-orange-900/20 border-orange-100 dark:border-orange-800 hover:border-orange-300",
+    amber:  "bg-amber-50 dark:bg-amber-900/20 border-amber-100 dark:border-amber-800 hover:border-amber-300",
+    rose:   "bg-rose-50 dark:bg-rose-900/20 border-rose-100 dark:border-rose-800 hover:border-rose-300",
   };
   const ringMap = {
     red: "ring-2 ring-red-400",
@@ -97,12 +97,12 @@ function StatCard({
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-xl border p-4 flex items-center gap-3 text-left transition-all ${colorMap[color]} ${active ? ringMap[color] : ""} ${onClick ? "cursor-pointer" : "cursor-default"}`}
+      className={`rounded-2xl border p-4 flex items-center gap-3 text-left transition-all ${colorMap[color]} ${active ? ringMap[color] : ""} ${onClick ? "cursor-pointer" : "cursor-default"}`}
     >
       {icon}
       <div>
-        <p className="text-2xl font-bold text-slate-900">{value}</p>
-        <p className="text-xs text-slate-500 mt-0.5">{label}</p>
+        <p className="text-2xl font-bold text-slate-900 dark:text-white">{value}</p>
+        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{label}</p>
       </div>
     </button>
   );
@@ -115,7 +115,7 @@ function FilterTab({ label, count, active, onClick, colorActive = "slate" }: {
   colorActive?: "slate" | "red" | "orange";
 }) {
   const activeClass = {
-    slate:  "bg-slate-900 text-white border-slate-900",
+    slate:  "bg-slate-900 dark:bg-white text-white dark:text-slate-900 border-slate-900 dark:border-white",
     red:    "bg-red-600 text-white border-red-600",
     orange: "bg-orange-500 text-white border-orange-500",
   }[colorActive];
@@ -124,8 +124,8 @@ function FilterTab({ label, count, active, onClick, colorActive = "slate" }: {
     <button
       type="button"
       onClick={onClick}
-      className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border transition-colors ${
-        active ? activeClass : "bg-white text-slate-600 border-slate-200 hover:border-slate-300 hover:bg-slate-50"
+      className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl border transition-colors ${
+        active ? activeClass : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600 hover:border-slate-300 dark:hover:bg-slate-700"
       }`}
     >
       {label}
@@ -140,19 +140,19 @@ function FilterTab({ label, count, active, onClick, colorActive = "slate" }: {
 
 function JobRow({ job }: { job: SerializedJob }) {
   return (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+    <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
       <div className={`h-1 w-full ${job.riskScore >= 70 ? "bg-red-500" : "bg-orange-400"}`} />
       <div className="p-4">
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1 min-w-0">
             <Link
               href={`/admin/jobs/${job.id}`}
-              className="font-semibold text-slate-900 hover:text-primary transition-colors text-sm"
+              className="font-semibold text-slate-900 dark:text-white hover:text-primary transition-colors text-sm"
             >
               {job.title}
             </Link>
-            <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1 text-xs text-slate-400">
-              <span className="bg-slate-100 text-slate-600 rounded px-2 py-0.5 font-medium">{job.category}</span>
+            <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1 text-xs text-slate-400 dark:text-slate-500">
+              <span className="bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded px-2 py-0.5 font-medium">{job.category}</span>
               <span>
                 Client:{" "}
                 <Link href={`/admin/users/${job.clientId}`} className="text-primary hover:underline">
@@ -164,7 +164,7 @@ function JobRow({ job }: { job: SerializedJob }) {
             </div>
           </div>
           <div className="flex-shrink-0 text-right space-y-1.5">
-            <p className="text-base font-bold text-slate-900">{formatCurrency(job.budget)}</p>
+            <p className="text-base font-bold text-slate-900 dark:text-white">{formatCurrency(job.budget)}</p>
             <RiskBadge score={job.riskScore} />
           </div>
         </div>
@@ -172,7 +172,7 @@ function JobRow({ job }: { job: SerializedJob }) {
         {job.fraudFlags.length > 0 && (
           <div className="mt-3 flex flex-wrap gap-2">
             {job.fraudFlags.map((flag, i) => (
-              <span key={i} className="inline-flex items-center gap-1 text-xs bg-red-50 text-red-700 border border-red-200 rounded-full px-2.5 py-0.5">
+              <span key={i} className="inline-flex items-center gap-1 text-xs bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800 rounded-full px-2.5 py-0.5">
                 <Flag className="h-2.5 w-2.5" />{flag}
               </span>
             ))}
@@ -193,30 +193,30 @@ function JobRow({ job }: { job: SerializedJob }) {
 
 function UserRow({ u }: { u: SerializedUser }) {
   return (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
+    <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm p-4">
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <Link href={`/admin/users/${u.id}`} className="font-semibold text-slate-900 hover:text-primary transition-colors text-sm">
+            <Link href={`/admin/users/${u.id}`} className="font-semibold text-slate-900 dark:text-white hover:text-primary transition-colors text-sm">
               {u.name}
             </Link>
-            <span className="inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-full border bg-slate-100 text-slate-600 border-slate-200 capitalize">
+            <span className="inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-full border bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600 capitalize">
               {u.role}
             </span>
             {u.isSuspended && (
-              <span className="inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-full border bg-slate-100 text-slate-500 border-slate-200">
+              <span className="inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-full border bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-600">
                 Suspended
               </span>
             )}
           </div>
-          <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1 text-xs text-slate-400">
+          <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1 text-xs text-slate-400 dark:text-slate-500">
             <span>{u.email}</span>
             <span>KYC: {u.kycStatus ?? "none"}</span>
             <span>Joined {formatDate(u.createdAt)}</span>
           </div>
         </div>
         <div className="flex-shrink-0 text-right">
-          <span className="inline-flex items-center gap-1 text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200 rounded-full px-2.5 py-1">
+          <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide bg-rose-50 dark:bg-rose-900/20 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-800 rounded-full px-2.5 py-1">
             <Flag className="h-3 w-3" />
             {u.flaggedJobCount} flagged job{u.flaggedJobCount !== 1 ? "s" : ""}
           </span>
@@ -226,7 +226,7 @@ function UserRow({ u }: { u: SerializedUser }) {
       {u.fraudFlags.length > 0 && (
         <div className="mt-3 flex flex-wrap gap-2">
           {u.fraudFlags.map((flag, i) => (
-            <span key={i} className="inline-flex items-center gap-1 text-xs bg-rose-50 text-rose-700 border border-rose-200 rounded-full px-2.5 py-0.5">
+            <span key={i} className="inline-flex items-center gap-1 text-xs bg-rose-50 dark:bg-rose-900/20 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-800 rounded-full px-2.5 py-0.5">
               <ShieldAlert className="h-2.5 w-2.5" />{flag}
             </span>
           ))}
@@ -333,7 +333,7 @@ export default function AdminFraudClient({ flaggedJobs, suspiciousUsers }: Props
             placeholder="Search jobs or users…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="input pl-8 pr-8 w-full text-sm h-9"
+            className="input pl-8 pr-8 w-full text-sm h-9 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
           />
           {search && (
             <button type="button" onClick={() => setSearch("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
@@ -345,7 +345,7 @@ export default function AdminFraudClient({ flaggedJobs, suspiciousUsers }: Props
         <button
           type="button"
           onClick={() => setSortJobs((s) => s === "risk" ? "date" : "risk")}
-          className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border bg-white text-slate-600 border-slate-200 hover:border-slate-300 transition-colors"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl border bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600 hover:border-slate-300 dark:hover:bg-slate-700 transition-colors"
         >
           <ArrowUpDown className="h-3.5 w-3.5" />
           Sort: {sortJobs === "risk" ? "Risk score" : "Newest first"}
@@ -356,10 +356,10 @@ export default function AdminFraudClient({ flaggedJobs, suspiciousUsers }: Props
       <section>
         <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
           <div className="flex items-center gap-2">
-            <Briefcase className="h-4 w-4 text-slate-500" />
-            <h2 className="text-base font-semibold text-slate-800">
+            <Briefcase className="h-4 w-4 text-slate-500 dark:text-slate-400" />
+            <h2 className="text-base font-semibold text-slate-800 dark:text-white">
               Flagged Jobs
-              <span className="ml-2 text-sm font-normal text-slate-400">({filteredJobs.length}{hasSearch || riskFilter !== "all" ? ` of ${flaggedJobs.length}` : ""})</span>
+              <span className="ml-2 text-sm font-normal text-slate-400 dark:text-slate-500">({filteredJobs.length}{hasSearch || riskFilter !== "all" ? ` of ${flaggedJobs.length}` : ""})</span>
             </h2>
           </div>
 
@@ -371,9 +371,11 @@ export default function AdminFraudClient({ flaggedJobs, suspiciousUsers }: Props
         </div>
 
         {filteredJobs.length === 0 ? (
-          <div className="bg-white rounded-xl border border-slate-200 p-10 text-center">
-            <Flag className="h-7 w-7 text-slate-300 mx-auto mb-2" />
-            <p className="text-slate-400 text-sm">
+          <div className="flex flex-col items-center justify-center bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-10">
+            <div className="p-4 rounded-2xl bg-slate-100 dark:bg-slate-700 ring-8 ring-slate-100 dark:ring-slate-700 mb-4">
+              <Flag className="h-7 w-7 text-slate-400 dark:text-slate-500" />
+            </div>
+            <p className="text-slate-500 dark:text-slate-400 text-sm">
               {hasSearch || riskFilter !== "all" ? "No jobs match your filter." : "No flagged jobs at this time."}
             </p>
           </div>
@@ -389,23 +391,23 @@ export default function AdminFraudClient({ flaggedJobs, suspiciousUsers }: Props
         <button
           type="button"
           onClick={() => setUsersOpen((v) => !v)}
-          className="w-full flex items-center justify-between px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl hover:bg-slate-100 transition-colors group mb-3"
+          className="w-full flex items-center justify-between px-4 py-3 bg-slate-50 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-700 rounded-2xl hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors group mb-3"
         >
           <div className="flex items-center gap-3">
-            <UserIcon className="h-4 w-4 text-slate-500" />
-            <span className="text-sm font-semibold text-slate-700">
+            <UserIcon className="h-4 w-4 text-slate-500 dark:text-slate-400" />
+            <span className="text-sm font-semibold text-slate-700 dark:text-white">
               Suspicious Users
             </span>
-            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-rose-100 text-rose-700 border border-rose-200">
+            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-800">
               {suspiciousUsers.length}
             </span>
             {nSuspended > 0 && (
-              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-200 text-slate-600">
+              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-200 dark:bg-slate-600 text-slate-600 dark:text-slate-300">
                 {nSuspended} suspended
               </span>
             )}
           </div>
-          <span className="text-slate-400 group-hover:text-slate-600 transition-colors">
+          <span className="text-slate-400 dark:text-slate-500 group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors">
             {usersOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
           </span>
         </button>
@@ -420,9 +422,11 @@ export default function AdminFraudClient({ flaggedJobs, suspiciousUsers }: Props
             </div>
 
             {filteredUsers.length === 0 ? (
-              <div className="bg-white rounded-xl border border-slate-200 p-10 text-center">
-                <UserIcon className="h-7 w-7 text-slate-300 mx-auto mb-2" />
-                <p className="text-slate-400 text-sm">
+              <div className="flex flex-col items-center justify-center bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-10">
+                <div className="p-4 rounded-2xl bg-slate-100 dark:bg-slate-700 ring-8 ring-slate-100 dark:ring-slate-700 mb-4">
+                  <UserIcon className="h-7 w-7 text-slate-400 dark:text-slate-500" />
+                </div>
+                <p className="text-slate-500 dark:text-slate-400 text-sm">
                   {hasSearch || userFilter !== "all" ? "No users match your filter." : "No suspicious users detected."}
                 </p>
               </div>

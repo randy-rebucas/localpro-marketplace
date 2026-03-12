@@ -6,6 +6,7 @@ import User from "@/models/User";
 import PageGuide from "@/components/shared/PageGuide";
 import RealtimeRefresher from "@/components/shared/RealtimeRefresher";
 import AdminFraudClient from "./AdminFraudClient";
+import { ShieldAlert } from "lucide-react";
 
 export const metadata: Metadata = { title: "Fraud Monitor" };
 
@@ -84,7 +85,20 @@ export default async function AdminFraudPage() {
   }));
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
+      {/* Header */}
+      <div className="flex items-center gap-4 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-5 py-4 shadow-sm">
+        <div className="p-2 rounded-xl bg-red-100 dark:bg-red-900/30">
+          <ShieldAlert className="h-5 w-5 text-red-600 dark:text-red-400" />
+        </div>
+        <div>
+          <h2 className="text-base font-bold text-slate-800 dark:text-white">Fraud Monitor</h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            {serializedJobs.length} flagged job{serializedJobs.length !== 1 ? "s" : ""} · {serializedUsers.length} suspicious user{serializedUsers.length !== 1 ? "s" : ""}
+          </p>
+        </div>
+      </div>
+
       <PageGuide
         pageKey="admin-fraud"
         title="How Fraud Monitoring works"
@@ -97,13 +111,6 @@ export default async function AdminFraudPage() {
       />
 
       <RealtimeRefresher entity="job" />
-
-      <div>
-        <h2 className="text-2xl font-bold text-slate-900">Fraud Monitor</h2>
-        <p className="text-slate-500 text-sm mt-0.5">
-          {serializedJobs.length} flagged job{serializedJobs.length !== 1 ? "s" : ""} · {serializedUsers.length} suspicious user{serializedUsers.length !== 1 ? "s" : ""}
-        </p>
-      </div>
 
       <AdminFraudClient flaggedJobs={serializedJobs} suspiciousUsers={serializedUsers} />
     </div>

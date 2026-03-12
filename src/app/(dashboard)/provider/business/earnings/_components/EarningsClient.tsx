@@ -176,14 +176,19 @@ export default function EarningsClient() {
     <div className="space-y-6">
 
       {/* ── Header ── */}
-      <div className="flex items-start sm:items-center justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">Agency Earnings</h1>
-          {data?.agencyName && (
-            <p className="text-slate-500 text-sm mt-1">Revenue overview for <strong>{data.agencyName}</strong>.</p>
-          )}
+      <div className="flex items-center justify-between gap-4 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-5 py-4 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-xl bg-emerald-100 dark:bg-emerald-900/30">
+            <Wallet className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+          </div>
+          <div>
+            <h1 className="text-base font-bold text-slate-800 dark:text-white">Agency Earnings</h1>
+            {data?.agencyName && (
+              <p className="text-xs text-slate-500 dark:text-slate-400">Revenue overview for {data.agencyName}</p>
+            )}
+          </div>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2">
           <select
             className="input text-sm"
             value={months}
@@ -195,9 +200,10 @@ export default function EarningsClient() {
           </select>
           <button
             onClick={() => load(months)}
-            className="flex items-center gap-1.5 text-sm border border-slate-200 px-3 py-1.5 rounded-lg hover:bg-slate-50 text-slate-600 transition-colors"
+            className="p-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+            title="Refresh"
           >
-            <RefreshCw className="h-3.5 w-3.5" /> Refresh
+            <RefreshCw className="h-4 w-4" />
           </button>
           <Link href="/provider/payouts" className="btn-primary flex items-center gap-1.5">
             <Wallet className="h-4 w-4" /> Withdraw

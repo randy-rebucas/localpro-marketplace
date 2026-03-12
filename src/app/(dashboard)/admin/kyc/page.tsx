@@ -4,6 +4,7 @@ import { userRepository } from "@/repositories/user.repository";
 import { providerProfileRepository } from "@/repositories/providerProfile.repository";
 import PageGuide from "@/components/shared/PageGuide";
 import AdminKycClient from "./AdminKycClient";
+import { ShieldCheck } from "lucide-react";
 
 export const metadata: Metadata = { title: "KYC Review" };
 
@@ -57,7 +58,20 @@ export default async function AdminKycPage() {
   const certMap = Object.fromEntries(certMapRaw);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
+      {/* Header */}
+      <div className="flex items-center gap-4 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-5 py-4 shadow-sm">
+        <div className="p-2 rounded-xl bg-indigo-100 dark:bg-indigo-900/30">
+          <ShieldCheck className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+        </div>
+        <div>
+          <h2 className="text-base font-bold text-slate-800 dark:text-white">KYC Review</h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            {serializedPending.length} submission{serializedPending.length !== 1 ? "s" : ""} awaiting verification
+          </p>
+        </div>
+      </div>
+
       <PageGuide
         pageKey="admin-kyc"
         title="How KYC Review works"
@@ -68,13 +82,6 @@ export default async function AdminKycPage() {
           { icon: "🔁", title: "Resubmission queue",    description: "Rejected providers can upload new documents — they'll reappear here for a second review." },
         ]}
       />
-
-      <div>
-        <h2 className="text-2xl font-bold text-slate-900">KYC Review</h2>
-        <p className="text-slate-500 text-sm mt-0.5">
-          {serializedPending.length} submission{serializedPending.length !== 1 ? "s" : ""} awaiting verification
-        </p>
-      </div>
 
       <AdminKycClient
         pending={serializedPending}

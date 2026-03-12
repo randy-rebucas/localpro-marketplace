@@ -224,14 +224,23 @@ export default function StaffClient() {
     <div className="space-y-5">
 
       {/* ── Header ── */}
-      <div className="flex items-start sm:items-center justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">Staff Management</h1>
-          <p className="text-slate-500 text-sm mt-0.5">{agency.name} · {staff.length} staff member{staff.length !== 1 ? "s" : ""}</p>
+      <div className="flex items-center justify-between gap-4 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-5 py-4 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-xl bg-blue-100 dark:bg-blue-900/30">
+            <Users className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+          </div>
+          <div>
+            <h1 className="text-base font-bold text-slate-800 dark:text-white">Staff Management</h1>
+            <p className="text-xs text-slate-500 dark:text-slate-400">{agency.name} · {staff.length} staff member{staff.length !== 1 ? "s" : ""}</p>
+          </div>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={load} className="flex items-center gap-1.5 text-sm border border-slate-200 px-3 py-1.5 rounded-lg hover:bg-slate-50 text-slate-600 transition-colors">
-            <RefreshCw className="h-3.5 w-3.5" /> Refresh
+          <button
+            onClick={load}
+            className="p-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+            title="Refresh"
+          >
+            <RefreshCw className="h-4 w-4" />
           </button>
           {tab === "team" && (
             <button

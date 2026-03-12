@@ -199,7 +199,7 @@ export default function KnowledgeAdminView({ initialArticles }: Props) {
     <>
       {/* Toolbar */}
       <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
-        <div className="flex gap-3 w-full sm:w-auto flex-1">
+        <div className="flex gap-2 w-full sm:w-auto flex-1">
           <div className="relative flex-1 sm:w-72 sm:flex-none">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
             <input
@@ -207,7 +207,7 @@ export default function KnowledgeAdminView({ initialArticles }: Props) {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Filter articles…"
-              className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-lg text-sm bg-white outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+              className="w-full pl-9 pr-4 py-2 border border-slate-200 dark:border-slate-700 rounded-xl text-sm bg-white dark:bg-slate-800 dark:text-slate-200 dark:placeholder-slate-500 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
             />
           </div>
           <div className="flex gap-1.5">
@@ -215,10 +215,10 @@ export default function KnowledgeAdminView({ initialArticles }: Props) {
               <button
                 key={f}
                 onClick={() => setFilterFolder(f)}
-                className={`px-3 py-2 rounded-lg text-xs font-medium border transition-colors capitalize ${
+                className={`px-3 py-2 rounded-xl text-xs font-semibold border transition-colors capitalize ${
                   filterFolder === f
                     ? "bg-primary text-white border-primary"
-                    : "bg-white text-slate-600 border-slate-200 hover:border-slate-300"
+                    : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600"
                 }`}
               >
                 {f === "all" ? "All" : f}
@@ -228,12 +228,12 @@ export default function KnowledgeAdminView({ initialArticles }: Props) {
         </div>
 
         <div className="flex items-center gap-3">
-          <span className="text-xs text-slate-400 hidden lg:block">
+          <span className="text-xs text-slate-400 dark:text-slate-500 hidden lg:block">
             {items.length} articles · {items.filter(a => a.folder === "client").length} client · {items.filter(a => a.folder === "provider").length} provider
           </span>
           <button
             onClick={openCreate}
-            className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors whitespace-nowrap"
+            className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl text-sm font-semibold hover:bg-primary/90 transition-colors whitespace-nowrap"
           >
             <Plus className="h-4 w-4" />
             Add Article
@@ -243,9 +243,11 @@ export default function KnowledgeAdminView({ initialArticles }: Props) {
 
       {/* List */}
       {filtered.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 py-16 text-slate-400 bg-white border border-slate-200 rounded-xl">
-          <BookOpen className="h-10 w-10 opacity-20" />
-          <p className="text-sm">{query ? `No articles matching "${query}"` : "No articles yet"}</p>
+        <div className="flex flex-col items-center gap-3 py-16 text-slate-400 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl">
+          <div className="p-4 rounded-2xl bg-slate-100 dark:bg-slate-700 ring-8 ring-slate-100 dark:ring-slate-700">
+            <BookOpen className="h-8 w-8 text-slate-400 dark:text-slate-500" />
+          </div>
+          <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{query ? `No articles matching “${query}”` : "No articles yet"}</p>
         </div>
       ) : (
         <div className="space-y-8">
@@ -255,43 +257,43 @@ export default function KnowledgeAdminView({ initialArticles }: Props) {
             return (
               <div key={key}>
                 <div className="flex items-center gap-2 mb-3">
-                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full capitalize ${FOLDER_CHIP[fld]}`}>
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide ${FOLDER_CHIP[fld]}`}>
                     {fld}
                   </span>
-                  <span className="text-sm font-semibold text-slate-700">{groupName}</span>
-                  <span className="text-xs text-slate-400">({groupArticles.length})</span>
+                  <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">{groupName}</span>
+                  <span className="text-xs text-slate-400 dark:text-slate-500">({groupArticles.length})</span>
                 </div>
 
-                <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+                <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden">
                   <table className="w-full text-sm">
-                    <tbody className="divide-y divide-slate-100">
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
                       {groupArticles.map((a) => (
-                        <tr key={a.id} className="hover:bg-slate-50 transition-colors">
+                        <tr key={a.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/40 transition-colors">
                           <td className="px-5 py-3.5">
                             <div className="flex items-start gap-2">
-                              <FileText className="h-4 w-4 text-slate-300 flex-shrink-0 mt-0.5" />
+                              <FileText className="h-4 w-4 text-slate-300 dark:text-slate-600 flex-shrink-0 mt-0.5" />
                               <div>
-                                <p className="font-medium text-slate-900 truncate max-w-xs">{a.title}</p>
-                                <p className="text-xs text-slate-400 mt-0.5 truncate max-w-xs">{a.excerpt}</p>
+                                <p className="font-medium text-slate-900 dark:text-slate-100 truncate max-w-xs">{a.title}</p>
+                                <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5 truncate max-w-xs">{a.excerpt}</p>
                               </div>
                             </div>
                           </td>
-                          <td className="px-4 py-3.5 text-xs text-slate-400 whitespace-nowrap hidden md:table-cell">
+                          <td className="px-4 py-3.5 text-xs text-slate-400 dark:text-slate-500 whitespace-nowrap hidden md:table-cell">
                             Order {a.order}
                           </td>
                           <td className="px-4 py-3.5 hidden lg:table-cell">
-                            <code className="text-[11px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded font-mono">
+                            <code className="text-[11px] bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 px-2 py-0.5 rounded font-mono">
                               {a.folder}/{a.slug}.md
                             </code>
                           </td>
-                          <td className="px-4 py-3.5 text-xs text-slate-400 whitespace-nowrap hidden md:table-cell">
+                          <td className="px-4 py-3.5 text-xs text-slate-400 dark:text-slate-500 whitespace-nowrap hidden md:table-cell">
                             {new Date(a.updatedAt).toLocaleDateString()}
                           </td>
                           <td className="px-4 py-3.5">
                             <div className="flex items-center gap-1.5 justify-end">
                               <button
                                 onClick={() => openEdit(a)}
-                                className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+                                className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
                                 title="Edit"
                               >
                                 <Pencil className="h-3.5 w-3.5" />
@@ -299,7 +301,7 @@ export default function KnowledgeAdminView({ initialArticles }: Props) {
                               <button
                                 onClick={() => handleDelete(a)}
                                 disabled={deletingId === a.id}
-                                className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+                                className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors disabled:opacity-50"
                                 title="Delete"
                               >
                                 <Trash2 className="h-3.5 w-3.5" />

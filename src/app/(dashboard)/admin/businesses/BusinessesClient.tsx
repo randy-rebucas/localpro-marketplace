@@ -39,16 +39,16 @@ interface BusinessOrg {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const PLAN_COLORS: Record<string, string> = {
-  starter:    "bg-slate-100   text-slate-600  ring-1 ring-slate-200",
-  growth:     "bg-blue-50     text-blue-700   ring-1 ring-blue-200",
-  pro:        "bg-violet-50   text-violet-700 ring-1 ring-violet-200",
-  enterprise: "bg-amber-50    text-amber-700  ring-1 ring-amber-200",
+  starter:    "bg-slate-100   text-slate-600  ring-1 ring-slate-200  dark:bg-slate-700   dark:text-slate-300  dark:ring-slate-600",
+  growth:     "bg-blue-50     text-blue-700   ring-1 ring-blue-200   dark:bg-blue-900/30  dark:text-blue-300   dark:ring-blue-800",
+  pro:        "bg-violet-50   text-violet-700 ring-1 ring-violet-200 dark:bg-violet-900/30 dark:text-violet-300 dark:ring-violet-800",
+  enterprise: "bg-amber-50    text-amber-700  ring-1 ring-amber-200  dark:bg-amber-900/30 dark:text-amber-300  dark:ring-amber-800",
 };
 
 const STATUS_COLORS: Record<string, string> = {
-  active:    "bg-emerald-50  text-emerald-700 ring-1 ring-emerald-200",
-  past_due:  "bg-amber-50    text-amber-700   ring-1 ring-amber-200",
-  cancelled: "bg-red-50      text-red-700     ring-1 ring-red-200",
+  active:    "bg-emerald-50  text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:ring-emerald-800",
+  past_due:  "bg-amber-50    text-amber-700   ring-1 ring-amber-200  dark:bg-amber-900/30  dark:text-amber-300  dark:ring-amber-800",
+  cancelled: "bg-red-50      text-red-700     ring-1 ring-red-200    dark:bg-red-900/30    dark:text-red-300    dark:ring-red-800",
 };
 
 const TYPE_LABELS: Record<string, string> = {
@@ -62,7 +62,7 @@ function StatCard({ label, value, icon, color }: {
   icon: React.ReactNode; color: string;
 }) {
   return (
-    <div className={`flex items-center gap-3 rounded-xl border px-4 py-3 ${color}`}>
+    <div className={`flex items-center gap-3 rounded-2xl border px-4 py-3 ${color}`}>
       <div className="shrink-0 opacity-80">{icon}</div>
       <div>
         <p className="text-lg font-bold leading-tight">{value}</p>
@@ -120,23 +120,23 @@ function EditModal({ org, onClose, onSaved }: EditModalProps) {
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-sm">
         {/* Modal header */}
-        <div className="flex items-start justify-between gap-3 px-6 pt-5 pb-4 border-b border-slate-100">
+        <div className="flex items-start justify-between gap-3 px-6 pt-5 pb-4 border-b border-slate-100 dark:border-slate-700">
           <div className="flex items-center gap-3 min-w-0">
             {org.logo ? (
               <Image src={org.logo} alt={org.name} width={40} height={40} className="rounded-xl object-cover shrink-0" />
             ) : (
-              <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center shrink-0">
-                <Briefcase size={18} className="text-blue-600" />
+              <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
+                <Briefcase size={18} className="text-blue-600 dark:text-blue-400" />
               </div>
             )}
             <div className="min-w-0">
-              <h3 className="font-semibold text-slate-900 truncate">{org.name}</h3>
-              <p className="text-xs text-slate-500 truncate">{org.ownerId.email}</p>
+              <h3 className="font-semibold text-slate-900 dark:text-white truncate">{org.name}</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{org.ownerId.email}</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors shrink-0">
+          <button onClick={onClose} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-600 dark:hover:text-slate-300 transition-colors shrink-0">
             <X size={16} />
           </button>
         </div>
@@ -145,11 +145,11 @@ function EditModal({ org, onClose, onSaved }: EditModalProps) {
           {/* Plan + Status side by side */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Plan</label>
+              <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Plan</label>
               <select
                 value={plan}
                 onChange={(e) => setPlan(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-400"
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-600 text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-400"
               >
                 {["starter", "growth", "pro", "enterprise"].map((p) => (
                   <option key={p} value={p}>{p.charAt(0).toUpperCase() + p.slice(1)}</option>
@@ -157,11 +157,11 @@ function EditModal({ org, onClose, onSaved }: EditModalProps) {
               </select>
             </div>
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Status</label>
+              <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Status</label>
               <select
                 value={planStatus}
                 onChange={(e) => setPlanStatus(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-400"
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-600 text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-400"
               >
                 {[["active","Active"],["past_due","Past Due"],["cancelled","Cancelled"]].map(([v, l]) => (
                   <option key={v} value={v}>{l}</option>
@@ -172,7 +172,7 @@ function EditModal({ org, onClose, onSaved }: EditModalProps) {
 
           {/* Monthly budget */}
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Default Monthly Budget</label>
+            <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Default Monthly Budget</label>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-medium pointer-events-none">₱</span>
               <input
@@ -181,28 +181,28 @@ function EditModal({ org, onClose, onSaved }: EditModalProps) {
                 value={budget}
                 onChange={(e) => setBudget(e.target.value)}
                 placeholder="e.g. 50000"
-                className="w-full pl-7 pr-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 placeholder:text-slate-300"
+                className="w-full pl-7 pr-3 py-2 rounded-xl border border-slate-200 dark:border-slate-600 text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder:text-slate-300 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-400"
               />
             </div>
-            <p className="text-xs text-slate-400">Leave blank to keep the current value unchanged.</p>
+            <p className="text-xs text-slate-400 dark:text-slate-500">Leave blank to keep the current value unchanged.</p>
           </div>
 
           {/* Suspend toggle */}
-          <label className={`flex items-center justify-between gap-3 cursor-pointer rounded-xl border px-4 py-3 transition-colors ${suspend ? "border-red-200 bg-red-50" : "border-slate-200 hover:bg-slate-50"}`}>
+          <label className={`flex items-center justify-between gap-3 cursor-pointer rounded-xl border px-4 py-3 transition-colors ${suspend ? "border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20" : "border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700/50"}`}>
             <div className="flex items-center gap-2.5">
               {suspend
                 ? <ShieldOff size={15} className="text-red-500 shrink-0" />
                 : <ShieldCheck size={15} className="text-slate-400 shrink-0" />}
               <div>
-                <p className={`text-sm font-medium ${suspend ? "text-red-700" : "text-slate-700"}`}>
+                <p className={`text-sm font-semibold ${suspend ? "text-red-700 dark:text-red-400" : "text-slate-700 dark:text-slate-300"}`}>
                   {suspend ? "Owner suspended" : "Suspend owner account"}
                 </p>
-                <p className="text-xs text-slate-400 mt-0.5">Blocks all logins for this business owner</p>
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Blocks all logins for this business owner</p>
               </div>
             </div>
             <div className="relative shrink-0">
               <input type="checkbox" className="sr-only peer" checked={suspend} onChange={(e) => setSuspend(e.target.checked)} />
-              <div className="w-10 h-5 bg-slate-200 peer-checked:bg-red-500 rounded-full transition-colors" />
+              <div className="w-10 h-5 bg-slate-200 dark:bg-slate-600 peer-checked:bg-red-500 rounded-full transition-colors" />
               <div className="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform peer-checked:translate-x-5" />
             </div>
           </label>
@@ -212,7 +212,7 @@ function EditModal({ org, onClose, onSaved }: EditModalProps) {
         <div className="flex gap-3 px-6 pb-5">
           <button
             onClick={onClose}
-            className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors"
+            className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
           >
             Cancel
           </button>
@@ -271,25 +271,17 @@ export default function BusinessesClient() {
   const totalLocations = orgs.reduce((n, o) => n + (o.locations?.length ?? 0), 0);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {editing && (
         <EditModal org={editing} onClose={() => setEditing(null)} onSaved={load} />
       )}
 
-      {/* Header */}
-      <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2.5">
-            <span className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-100">
-              <Briefcase size={17} className="text-blue-600" />
-            </span>
-            Business Organizations
-          </h1>
-          <p className="text-sm text-slate-500 mt-1">{total} business organizations registered on the platform</p>
-        </div>
+      {/* Toolbar: count + refresh */}
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-slate-500 dark:text-slate-400">{total} business organizations registered</p>
         <button
           onClick={load}
-          className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-slate-200 text-sm text-slate-600 hover:bg-slate-50 transition-colors"
+          className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-600 text-sm text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
         >
           <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
           Refresh
@@ -299,9 +291,9 @@ export default function BusinessesClient() {
       {/* Quick stats */}
       {!loading && orgs.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-          <StatCard label="Active plans"      value={activeCount}    icon={<TrendingUp size={18} />}  color="bg-emerald-50 border-emerald-200 text-emerald-700" />
-          <StatCard label="Total locations"   value={totalLocations} icon={<MapPin size={18} />}     color="bg-blue-50    border-blue-200    text-blue-700"    />
-          <StatCard label="Owners suspended"  value={suspendedCount} icon={<ShieldOff size={18} />}  color="bg-red-50     border-red-200     text-red-700"     />
+          <StatCard label="Active plans"      value={activeCount}    icon={<TrendingUp size={18} />}  color="bg-emerald-50 border-emerald-200 text-emerald-700 dark:bg-emerald-900/20 dark:border-emerald-800 dark:text-emerald-300" />
+          <StatCard label="Total locations"   value={totalLocations} icon={<MapPin size={18} />}     color="bg-blue-50    border-blue-200    text-blue-700    dark:bg-blue-900/20    dark:border-blue-800    dark:text-blue-300"    />
+          <StatCard label="Owners suspended"  value={suspendedCount} icon={<ShieldOff size={18} />}  color="bg-red-50     border-red-200     text-red-700     dark:bg-red-900/20     dark:border-red-800     dark:text-red-300"     />
         </div>
       )}
 
@@ -313,13 +305,13 @@ export default function BusinessesClient() {
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1); }}
             placeholder="Search by organization name…"
-            className="w-full pl-8 pr-3 py-2 rounded-lg border border-slate-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-400 placeholder:text-slate-400"
+            className="w-full pl-8 pr-3 py-2 rounded-xl border border-slate-200 dark:border-slate-600 text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-400"
           />
         </div>
         <select
           value={planFilter}
           onChange={(e) => { setPlanFilter(e.target.value); setPage(1); }}
-          className="px-3 py-2 rounded-lg border border-slate-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-400 text-slate-700"
+          className="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-600 text-sm bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-400"
         >
           <option value="">All Plans</option>
           {["starter", "growth", "pro", "enterprise"].map((p) => (
@@ -329,7 +321,7 @@ export default function BusinessesClient() {
         <select
           value={statusFilter}
           onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
-          className="px-3 py-2 rounded-lg border border-slate-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-400 text-slate-700"
+          className="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-600 text-sm bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-400"
         >
           <option value="">All Statuses</option>
           <option value="active">Active</option>
@@ -339,7 +331,7 @@ export default function BusinessesClient() {
         {(search || planFilter || statusFilter) && (
           <button
             onClick={() => { setSearch(""); setPlanFilter(""); setStatusFilter(""); setPage(1); }}
-            className="flex items-center gap-1 px-3 py-2 rounded-lg border border-slate-200 text-xs text-slate-500 hover:bg-slate-50 transition-colors"
+            className="flex items-center gap-1 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-600 text-xs text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
           >
             <X size={12} /> Clear
           </button>
@@ -347,54 +339,56 @@ export default function BusinessesClient() {
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-slate-100 bg-slate-50/80">
-                <th className="text-left px-5 py-3.5 font-semibold text-slate-500 text-xs uppercase tracking-wide">Organization</th>
-                <th className="text-left px-5 py-3.5 font-semibold text-slate-500 text-xs uppercase tracking-wide">Owner</th>
-                <th className="text-center px-4 py-3.5 font-semibold text-slate-500 text-xs uppercase tracking-wide">Locations</th>
-                <th className="text-left px-5 py-3.5 font-semibold text-slate-500 text-xs uppercase tracking-wide">Plan</th>
-                <th className="text-left px-5 py-3.5 font-semibold text-slate-500 text-xs uppercase tracking-wide">Registered</th>
-                <th className="text-right px-5 py-3.5 font-semibold text-slate-500 text-xs uppercase tracking-wide">Actions</th>
+              <tr className="border-b border-slate-100 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-700/50">
+                <th className="text-left px-5 py-3.5 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Organization</th>
+                <th className="text-left px-5 py-3.5 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Owner</th>
+                <th className="text-center px-4 py-3.5 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Locations</th>
+                <th className="text-left px-5 py-3.5 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Plan</th>
+                <th className="text-left px-5 py-3.5 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Registered</th>
+                <th className="text-right px-5 py-3.5 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-50">
+            <tbody className="divide-y divide-slate-50 dark:divide-slate-700">
               {loading ? (
                 <tr>
                   <td colSpan={6} className="py-20 text-center">
                     <Loader2 size={22} className="animate-spin text-blue-400 mx-auto" />
-                    <p className="text-xs text-slate-400 mt-2">Loading organizations…</p>
+                    <p className="text-xs text-slate-400 dark:text-slate-500 mt-2">Loading organizations…</p>
                   </td>
                 </tr>
               ) : orgs.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="py-20 text-center">
-                    <div className="flex flex-col items-center gap-2">
-                      <Briefcase size={32} className="text-slate-200" />
-                      <p className="text-sm font-medium text-slate-400">No organizations found</p>
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="p-4 rounded-2xl bg-slate-100 dark:bg-slate-700 ring-8 ring-slate-100 dark:ring-slate-700">
+                        <Briefcase size={28} className="text-slate-400 dark:text-slate-500" />
+                      </div>
+                      <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">No organizations found</p>
                       {(search || planFilter || statusFilter) && (
-                        <p className="text-xs text-slate-400">Try adjusting your filters</p>
+                        <p className="text-xs text-slate-400 dark:text-slate-500">Try adjusting your filters</p>
                       )}
                     </div>
                   </td>
                 </tr>
               ) : orgs.map((o) => (
-                <tr key={o._id} className="hover:bg-slate-50/60 transition-colors group">
+                <tr key={o._id} className="hover:bg-slate-50/60 dark:hover:bg-slate-700/40 transition-colors group">
                   {/* Org */}
                   <td className="px-5 py-3.5">
                     <div className="flex items-center gap-3">
                       {o.logo ? (
-                        <Image src={o.logo} alt={o.name} width={36} height={36} className="rounded-xl object-cover shrink-0 ring-1 ring-slate-100" />
+                        <Image src={o.logo} alt={o.name} width={36} height={36} className="rounded-xl object-cover shrink-0 ring-1 ring-slate-100 dark:ring-slate-600" />
                       ) : (
-                        <div className="w-9 h-9 rounded-xl bg-blue-100 flex items-center justify-center shrink-0">
-                          <Briefcase size={15} className="text-blue-500" />
+                        <div className="w-9 h-9 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
+                          <Briefcase size={15} className="text-blue-500 dark:text-blue-400" />
                         </div>
                       )}
                       <div>
-                        <p className="font-semibold text-slate-800 leading-tight">{o.name}</p>
-                        <p className="text-xs text-slate-400 mt-0.5">{TYPE_LABELS[o.type] ?? o.type}</p>
+                        <p className="font-semibold text-slate-800 dark:text-white leading-tight">{o.name}</p>
+                        <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{TYPE_LABELS[o.type] ?? o.type}</p>
                       </div>
                     </div>
                   </td>
@@ -408,16 +402,16 @@ export default function BusinessesClient() {
                           ? <ShieldCheck size={12} className="text-emerald-400 shrink-0" />
                           : null}
                       <div className="min-w-0">
-                        <p className="font-medium text-slate-700 leading-tight truncate max-w-[160px]">{o.ownerId?.name}</p>
-                        <p className="text-xs text-slate-400 truncate max-w-[160px]">{o.ownerId?.email}</p>
+                        <p className="font-medium text-slate-700 dark:text-slate-200 leading-tight truncate max-w-[160px]">{o.ownerId?.name}</p>
+                        <p className="text-xs text-slate-400 dark:text-slate-500 truncate max-w-[160px]">{o.ownerId?.email}</p>
                       </div>
                     </div>
                   </td>
 
                   {/* Location count */}
                   <td className="px-4 py-3.5 text-center">
-                    <span className="inline-flex items-center gap-1 text-slate-600 text-sm font-medium">
-                      <MapPin size={12} className="text-slate-400" />
+                    <span className="inline-flex items-center gap-1 text-slate-600 dark:text-slate-300 text-sm font-medium">
+                      <MapPin size={12} className="text-slate-400 dark:text-slate-500" />
                       {o.locations?.length ?? 0}
                     </span>
                   </td>
@@ -425,10 +419,10 @@ export default function BusinessesClient() {
                   {/* Plan + status stacked */}
                   <td className="px-5 py-3.5">
                     <div className="flex flex-col gap-1">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium capitalize w-fit ${PLAN_COLORS[o.plan ?? ""] ?? "bg-slate-100 text-slate-600 ring-1 ring-slate-200"}`}>
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide w-fit ${PLAN_COLORS[o.plan ?? ""] ?? "bg-slate-100 text-slate-600 ring-1 ring-slate-200 dark:bg-slate-700 dark:text-slate-300"}`}>
                         {o.plan ?? "—"}
                       </span>
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium capitalize w-fit ${STATUS_COLORS[o.planStatus ?? ""] ?? "bg-slate-100 text-slate-600 ring-1 ring-slate-200"}`}>
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide w-fit ${STATUS_COLORS[o.planStatus ?? ""] ?? "bg-slate-100 text-slate-600 ring-1 ring-slate-200 dark:bg-slate-700 dark:text-slate-300"}`}>
                         {(o.planStatus ?? "active").replace("_", " ")}
                       </span>
                     </div>
@@ -436,7 +430,7 @@ export default function BusinessesClient() {
 
                   {/* Registered */}
                   <td className="px-5 py-3.5">
-                    <span className="inline-flex items-center gap-1 text-xs text-slate-400">
+                    <span className="inline-flex items-center gap-1 text-xs text-slate-400 dark:text-slate-500">
                       <CalendarDays size={12} className="shrink-0" />
                       {formatDate(o.createdAt)}
                     </span>
@@ -469,23 +463,23 @@ export default function BusinessesClient() {
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-between px-5 py-3 border-t border-slate-100 bg-slate-50/60">
-            <p className="text-xs text-slate-400">
+          <div className="flex items-center justify-between px-5 py-3 border-t border-slate-100 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-700/30">
+            <p className="text-xs text-slate-400 dark:text-slate-500">
               Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, total)} of {total} organizations
             </p>
             <div className="flex items-center gap-1">
               <button
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page === 1}
-                className="p-1.5 rounded-lg text-slate-400 hover:bg-white hover:text-slate-700 disabled:opacity-30 transition-colors border border-transparent hover:border-slate-200"
+                className="p-1.5 rounded-lg text-slate-400 hover:bg-white dark:hover:bg-slate-600 hover:text-slate-700 dark:hover:text-slate-200 disabled:opacity-30 transition-colors border border-transparent hover:border-slate-200 dark:hover:border-slate-500"
               >
                 <ChevronLeft size={15} />
               </button>
-              <span className="text-xs text-slate-500 px-2">{page} / {totalPages}</span>
+              <span className="text-xs text-slate-500 dark:text-slate-400 px-2">{page} / {totalPages}</span>
               <button
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={page === totalPages}
-                className="p-1.5 rounded-lg text-slate-400 hover:bg-white hover:text-slate-700 disabled:opacity-30 transition-colors border border-transparent hover:border-slate-200"
+                className="p-1.5 rounded-lg text-slate-400 hover:bg-white dark:hover:bg-slate-600 hover:text-slate-700 dark:hover:text-slate-200 disabled:opacity-30 transition-colors border border-transparent hover:border-slate-200 dark:hover:border-slate-500"
               >
                 <ChevronRight size={15} />
               </button>

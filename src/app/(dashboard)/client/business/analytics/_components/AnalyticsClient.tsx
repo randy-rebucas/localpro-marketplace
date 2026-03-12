@@ -115,12 +115,15 @@ export default function AnalyticsClient() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-start sm:items-center justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">Analytics</h1>
-          <p className="text-slate-500 text-sm mt-1">
-            Expense trends and provider performance for <strong>{org.name}</strong>.
-          </p>
+      <div className="flex items-center justify-between gap-4 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-5 py-4 shadow-sm flex-wrap">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-xl bg-amber-100 dark:bg-amber-900/30">
+            <BarChart2 className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+          </div>
+          <div>
+            <h1 className="text-base font-bold text-slate-800 dark:text-white">Analytics</h1>
+            <p className="text-xs text-slate-500 dark:text-slate-400">Expense trends and provider performance for {org.name}.</p>
+          </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <select

@@ -147,13 +147,22 @@ export default function CompanyProfileClient() {
     <div className="space-y-6 max-w-2xl">
 
       {/* ── Header ── */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold text-slate-900">Company Profile</h1>
-          <p className="text-sm text-slate-500 mt-0.5">Edit your agency&apos;s public information.</p>
+      <div className="flex items-center justify-between gap-4 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-5 py-4 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-xl bg-indigo-100 dark:bg-indigo-900/30">
+            <Building2 className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+          </div>
+          <div>
+            <h1 className="text-base font-bold text-slate-800 dark:text-white">Company Profile</h1>
+            <p className="text-xs text-slate-500 dark:text-slate-400">Edit your agency&apos;s public information.</p>
+          </div>
         </div>
-        <button onClick={load} className="flex items-center gap-1.5 text-sm border border-slate-200 px-3 py-1.5 rounded-lg hover:bg-slate-50 text-slate-600">
-          <RefreshCw className="h-3.5 w-3.5" />
+        <button
+          onClick={load}
+          className="p-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+          title="Refresh"
+        >
+          <RefreshCw className="h-4 w-4" />
         </button>
       </div>
 

@@ -36,9 +36,9 @@ interface Props {
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const STATUS_CONFIG = {
-  pending:  { label: "Pending Review", icon: <Clock className="h-4 w-4" />,      cls: "text-amber-700 bg-amber-50 border-amber-200" },
-  approved: { label: "Approved",       icon: <ShieldCheck className="h-4 w-4" />, cls: "text-green-700 bg-green-50 border-green-200" },
-  rejected: { label: "Rejected",       icon: <ShieldX className="h-4 w-4" />,     cls: "text-red-700 bg-red-50 border-red-200" },
+  pending:  { label: "Pending Review", icon: <Clock className="h-4 w-4" />,      cls: "text-amber-700 bg-amber-50 dark:bg-amber-900/30 dark:text-amber-400 border-amber-200 dark:border-amber-800" },
+  approved: { label: "Approved",       icon: <ShieldCheck className="h-4 w-4" />, cls: "text-green-700 bg-green-50 dark:bg-green-900/30 dark:text-green-400 border-green-200 dark:border-green-800" },
+  rejected: { label: "Rejected",       icon: <ShieldX className="h-4 w-4" />,     cls: "text-red-700 bg-red-50 dark:bg-red-900/30 dark:text-red-400 border-red-200 dark:border-red-800" },
 };
 
 type RoleFilter    = "all" | "provider" | "client";
@@ -84,18 +84,18 @@ function ProviderRow({ u, certMap }: { u: SerializedUser; certMap: Record<string
       {/* Documents */}
       {u.kycDocuments.length > 0 ? (
         <div className="px-5 pb-4">
-          <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">
+          <p className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2">
             Documents ({u.kycDocuments.length})
           </p>
           <div className="space-y-1.5">
             {u.kycDocuments.map((doc, i) => (
-              <div key={i} className="flex items-center justify-between bg-slate-50 border border-slate-100 rounded-lg px-3 py-2">
+              <div key={i} className="flex items-center justify-between bg-slate-50 dark:bg-slate-700/50 border border-slate-100 dark:border-slate-600 rounded-xl px-3 py-2">
                 <div className="flex items-center gap-2 min-w-0">
-                  <FileText className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
+                  <FileText className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500 flex-shrink-0" />
                   <div className="min-w-0">
-                    <p className="text-sm text-slate-700 capitalize leading-none">{doc.type.replace(/_/g, " ")}</p>
+                    <p className="text-sm text-slate-700 dark:text-slate-200 capitalize leading-none">{doc.type.replace(/_/g, " ")}</p>
                     {doc.uploadedAt && (
-                      <p className="text-[11px] text-slate-400 mt-0.5">
+                      <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
                         Uploaded {new Date(doc.uploadedAt).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" })}
                       </p>
                     )}
@@ -115,7 +115,7 @@ function ProviderRow({ u, certMap }: { u: SerializedUser; certMap: Record<string
         </div>
       ) : (
         <div className="px-5 pb-4">
-          <p className="text-xs text-slate-400 italic">No documents uploaded.</p>
+          <p className="text-xs text-slate-400 dark:text-slate-500 italic">No documents uploaded.</p>
         </div>
       )}
 
@@ -153,10 +153,10 @@ function RoleTab({ label, count, active, onClick }: { label: string; count: numb
     <button
       type="button"
       onClick={onClick}
-      className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border transition-colors ${
+      className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl border transition-colors ${
         active
-          ? "bg-slate-900 text-white border-slate-900"
-          : "bg-white text-slate-600 border-slate-200 hover:border-slate-300 hover:bg-slate-50"
+          ? "bg-slate-900 dark:bg-white text-white dark:text-slate-900 border-slate-900 dark:border-white"
+          : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600 hover:border-slate-300 dark:hover:bg-slate-700"
       }`}
     >
       {label}
@@ -233,7 +233,7 @@ export default function AdminKycClient({ pending, reviewed, certMap }: Props) {
             placeholder="Search by name or email…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="input pl-8 pr-8 w-full text-sm h-9"
+            className="input pl-8 pr-8 w-full text-sm h-9 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
           />
           {search && (
             <button
@@ -271,15 +271,19 @@ export default function AdminKycClient({ pending, reviewed, certMap }: Props) {
 
         {filteredPending.length === 0 ? (
           hasActiveSearch ? (
-            <div className="bg-white rounded-xl border border-slate-200 p-8 text-center">
-              <Search className="h-6 w-6 text-slate-300 mx-auto mb-2" />
-              <p className="text-slate-400 text-sm">No pending submissions match your search.</p>
+            <div className="flex flex-col items-center justify-center bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-8">
+              <div className="p-3 rounded-2xl bg-slate-100 dark:bg-slate-700 ring-8 ring-slate-100 dark:ring-slate-700 mb-3">
+                <Search className="h-6 w-6 text-slate-400 dark:text-slate-500" />
+              </div>
+              <p className="text-slate-500 dark:text-slate-400 text-sm">No pending submissions match your search.</p>
             </div>
           ) : (
-            <div className="bg-white rounded-xl border border-slate-200 p-12 text-center">
-              <ShieldCheck className="h-8 w-8 text-green-400 mx-auto mb-3" />
-              <p className="text-slate-500 text-sm font-medium">All caught up!</p>
-              <p className="text-slate-400 text-xs mt-1">No pending KYC submissions.</p>
+            <div className="flex flex-col items-center justify-center bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-12">
+              <div className="p-4 rounded-2xl bg-slate-100 dark:bg-slate-700 ring-8 ring-slate-100 dark:ring-slate-700 mb-4">
+                <ShieldCheck className="h-7 w-7 text-green-500 dark:text-green-400" />
+              </div>
+              <p className="text-slate-600 dark:text-slate-300 font-semibold">All caught up!</p>
+              <p className="text-slate-400 dark:text-slate-500 text-xs mt-1">No pending KYC submissions.</p>
             </div>
           )
         ) : (
@@ -296,18 +300,18 @@ export default function AdminKycClient({ pending, reviewed, certMap }: Props) {
           <button
             type="button"
             onClick={() => setReviewedOpen((v) => !v)}
-            className="w-full flex items-center justify-between px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl hover:bg-slate-100 transition-colors group"
+            className="w-full flex items-center justify-between px-4 py-3 bg-slate-50 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-700 rounded-2xl hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors group"
           >
             <div className="flex items-center gap-3">
-              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
                 <Users className="h-3.5 w-3.5" />
                 Recently Reviewed
               </span>
               <div className="flex items-center gap-2">
-                <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-green-100 text-green-700 border border-green-200">
+                <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800">
                   <ShieldCheck className="h-3 w-3" /> {nApproved}
                 </span>
-                <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-red-100 text-red-700 border border-red-200">
+                <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800">
                   <ShieldX className="h-3 w-3" /> {nRejected}
                 </span>
               </div>
@@ -331,12 +335,12 @@ export default function AdminKycClient({ pending, reviewed, certMap }: Props) {
                       key={s}
                       type="button"
                       onClick={() => setReviewedFilter(s)}
-                      className={`text-xs font-semibold px-3 py-1 rounded-lg border transition-colors capitalize ${
+                      className={`text-xs font-semibold px-3 py-1 rounded-xl border transition-colors capitalize ${
                         active
                           ? s === "approved" ? "bg-green-600 text-white border-green-600"
                             : s === "rejected" ? "bg-red-600 text-white border-red-600"
-                            : "bg-slate-900 text-white border-slate-900"
-                          : "bg-white text-slate-500 border-slate-200 hover:border-slate-300"
+                            : "bg-slate-900 dark:bg-white text-white dark:text-slate-900 border-slate-900 dark:border-white"
+                          : "bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-600 hover:border-slate-300 dark:hover:bg-slate-700"
                       }`}
                     >
                       {s === "all" ? "All" : s.charAt(0).toUpperCase() + s.slice(1)} ({cnt})
@@ -347,8 +351,8 @@ export default function AdminKycClient({ pending, reviewed, certMap }: Props) {
               </div>
 
               {filteredReviewed.length === 0 ? (
-                <div className="bg-white rounded-xl border border-slate-200 p-8 text-center">
-                  <p className="text-slate-400 text-sm">No entries match your filter.</p>
+                <div className="flex flex-col items-center justify-center bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-8">
+                  <p className="text-slate-400 dark:text-slate-500 text-sm">No entries match your filter.</p>
                 </div>
               ) : (
                 filteredReviewed.map((u) => <ProviderRow key={u.id} u={u} certMap={certMap} />)

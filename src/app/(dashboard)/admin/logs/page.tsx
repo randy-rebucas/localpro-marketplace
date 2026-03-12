@@ -36,6 +36,7 @@ export const EVENT_CONFIG: Record<ActivityEventType, { label: string; color: str
   recurring_cancelled:           { label: "Recurring Cancelled",        color: "bg-red-100 text-red-600 border-red-200",            dot: "bg-red-400" },
   recurring_job_spawned:         { label: "Recurring Job Spawned",      color: "bg-teal-100 text-teal-700 border-teal-200",         dot: "bg-teal-500" },
   job_cancelled:                 { label: "Job Cancelled",              color: "bg-slate-100 text-slate-600 border-slate-200",      dot: "bg-slate-500" },
+  admin_ledger_entry:            { label: "Ledger Entry",               color: "bg-teal-100 text-teal-700 border-teal-200",          dot: "bg-teal-500" },
 };
 
 export const ALL_EVENT_TYPES = Object.keys(EVENT_CONFIG) as ActivityEventType[];
@@ -99,12 +100,15 @@ export default async function AdminLogsPage({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* Header */}
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex items-center gap-4 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-5 py-4 shadow-sm">
+        <div className="p-2 rounded-xl bg-slate-100 dark:bg-slate-700">
+          <ScrollText className="h-5 w-5 text-slate-600 dark:text-slate-300" />
+        </div>
         <div>
-          <h2 className="text-2xl font-bold text-slate-900">Activity Logs</h2>
-          <p className="text-slate-500 text-sm mt-1">
+          <h2 className="text-base font-bold text-slate-800 dark:text-white">Activity Logs</h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
             Audit trail of every significant platform event
             {eventFilter ? ` · filtered by "${EVENT_CONFIG[eventFilter]?.label}"` : ""}
           </p>
@@ -118,11 +122,11 @@ export default async function AdminLogsPage({
           { icon: <CalendarDays className="h-4 w-4" />, label: "Last 7 days", value: counts.week.toLocaleString(),  color: "text-violet-600" },
           { icon: <Database className="h-4 w-4" />, label: "All-time",  value: counts.total.toLocaleString(), color: "text-slate-600" },
         ].map((s) => (
-          <div key={s.label} className="bg-white rounded-xl border border-slate-200 px-4 py-3.5 flex items-center gap-3">
+          <div key={s.label} className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 px-4 py-3.5 flex items-center gap-3">
             <div className={`${s.color} opacity-70`}>{s.icon}</div>
             <div>
-              <p className="text-lg font-bold text-slate-900 leading-none">{s.value}</p>
-              <p className="text-xs text-slate-400 mt-0.5">{s.label}</p>
+              <p className="text-lg font-bold text-slate-900 dark:text-white leading-none">{s.value}</p>
+              <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{s.label}</p>
             </div>
           </div>
         ))}
@@ -133,7 +137,7 @@ export default async function AdminLogsPage({
         <select
           name="event"
           defaultValue={eventFilter ?? ""}
-          className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+          className="h-9 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 text-sm text-slate-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
         >
           <option value="">All event types</option>
           {ALL_EVENT_TYPES.map((e) => (
@@ -142,34 +146,34 @@ export default async function AdminLogsPage({
         </select>
         <button
           type="submit"
-          className="h-9 px-4 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary/90 transition-colors"
+          className="h-9 px-4 rounded-xl bg-primary text-white text-sm font-medium hover:bg-primary/90 transition-colors"
         >
           Apply
         </button>
         {eventFilter && (
           <Link
             href="/admin/logs"
-            className="h-9 px-3 inline-flex items-center rounded-lg border border-slate-200 text-sm text-slate-500 hover:text-slate-700 hover:border-slate-300 transition-colors"
+            className="h-9 px-3 inline-flex items-center rounded-xl border border-slate-200 dark:border-slate-600 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-white hover:border-slate-300 transition-colors"
           >
             Clear ×
           </Link>
         )}
         {total > 0 && (
-          <span className="ml-auto text-xs text-slate-400">
+          <span className="ml-auto text-xs text-slate-400 dark:text-slate-500">
             {from}–{to} of {total.toLocaleString()}
           </span>
         )}
       </form>
 
       {/* Table */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-card overflow-hidden">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
         {logs.length === 0 ? (
-          <div className="px-6 py-16 text-center">
-            <div className="h-12 w-12 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-3">
-              <ScrollText className="h-5 w-5 text-slate-400" />
+          <div className="flex flex-col items-center justify-center px-6 py-16">
+            <div className="p-4 rounded-2xl bg-slate-100 dark:bg-slate-700 ring-8 ring-slate-100 dark:ring-slate-700 mb-4">
+              <ScrollText className="h-7 w-7 text-slate-400 dark:text-slate-500" />
             </div>
-            <p className="text-sm font-semibold text-slate-700">No activity logs found</p>
-            <p className="text-xs text-slate-400 mt-1">{eventFilter ? "Try removing the event filter to see all logs." : "Platform events will appear here as they occur."}</p>
+            <p className="text-slate-600 dark:text-slate-300 font-semibold">No activity logs found</p>
+            <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">{eventFilter ? "Try removing the event filter to see all logs." : "Platform events will appear here as they occur."}</p>
             {eventFilter && (
               <Link href="/admin/logs" className="mt-3 inline-block text-sm text-primary hover:underline">
                 Clear filter
@@ -182,16 +186,16 @@ export default async function AdminLogsPage({
             <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-slate-100 bg-slate-50/70">
-                    <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide w-36">Time</th>
-                    <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">User</th>
-                    <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">Event</th>
-                    <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">Job</th>
-                    <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">Details</th>
+                  <tr className="border-b border-slate-100 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-700/50">
+                    <th className="px-5 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 w-36">Time</th>
+                    <th className="px-5 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">User</th>
+                    <th className="px-5 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Event</th>
+                    <th className="px-5 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Job</th>
+                    <th className="px-5 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Details</th>
                     <th className="w-8" />
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
                   {logs.map((log) => {
                     const userObj = typeof log.userId === "object" && log.userId !== null ? log.userId : null;
                     const jobObj  = typeof log.jobId  === "object" && log.jobId  !== null ? log.jobId  : null;
@@ -199,12 +203,12 @@ export default async function AdminLogsPage({
                     return (
                       <tr
                         key={String(log._id)}
-                        className="group hover:bg-slate-50/80 transition-colors"
+                        className="group hover:bg-slate-50/80 dark:hover:bg-slate-700/40 transition-colors"
                       >
                         {/* Time */}
                         <td className="px-5 py-3.5 whitespace-nowrap">
                           <span
-                            className="inline-flex items-center gap-1 text-xs text-slate-400"
+                            className="inline-flex items-center gap-1 text-xs text-slate-400 dark:text-slate-500"
                             title={new Date(log.createdAt).toLocaleString("en-PH", { dateStyle: "medium", timeStyle: "medium" })}
                           >
                             <Clock className="h-3 w-3 flex-shrink-0" />
@@ -222,12 +226,12 @@ export default async function AdminLogsPage({
                                 </span>
                               </div>
                               <div className="min-w-0">
-                                <p className="text-sm font-medium text-slate-800 truncate max-w-[130px]">{userObj.name}</p>
+                                <p className="text-sm font-semibold text-slate-800 dark:text-white truncate max-w-[130px]">{userObj.name}</p>
                                 <RolePill role={userObj.role} />
                               </div>
                             </div>
                           ) : (
-                            <span className="text-xs text-slate-400 font-mono">{String(log.userId).slice(-8)}</span>
+                            <span className="text-xs text-slate-400 dark:text-slate-500 font-mono">{String(log.userId).slice(-8)}</span>
                           )}
                         </td>
 
@@ -239,11 +243,11 @@ export default async function AdminLogsPage({
                         {/* Job */}
                         <td className="px-5 py-3.5 max-w-[180px]">
                           {jobObj ? (
-                            <span className="text-xs text-slate-700 font-medium truncate block" title={jobObj.title}>
+                            <span className="text-xs text-slate-700 dark:text-slate-200 font-medium truncate block" title={jobObj.title}>
                               {jobObj.title}
                             </span>
                           ) : (
-                            <span className="text-xs text-slate-300">—</span>
+                            <span className="text-xs text-slate-300 dark:text-slate-600">—</span>
                           )}
                         </td>
 
@@ -252,17 +256,17 @@ export default async function AdminLogsPage({
                           {metaEntries.length > 0 ? (
                             <div className="flex flex-wrap gap-1">
                               {metaEntries.slice(0, 3).map(([k, v]) => (
-                                <span key={k} className="inline-flex items-center gap-1 text-[10px] bg-slate-100 text-slate-600 rounded px-1.5 py-0.5">
-                                  <span className="text-slate-400">{k}:</span>
+                                <span key={k} className="inline-flex items-center gap-1 text-[10px] bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded px-1.5 py-0.5">
+                                  <span className="text-slate-400 dark:text-slate-500">{k}:</span>
                                   <span className="font-medium">{String(v)}</span>
                                 </span>
                               ))}
                               {metaEntries.length > 3 && (
-                                <span className="text-[10px] text-slate-400">+{metaEntries.length - 3} more</span>
+                                <span className="text-[10px] text-slate-400 dark:text-slate-500">+{metaEntries.length - 3} more</span>
                               )}
                             </div>
                           ) : (
-                            <span className="text-xs text-slate-300">—</span>
+                            <span className="text-xs text-slate-300 dark:text-slate-600">—</span>
                           )}
                         </td>
 
@@ -284,31 +288,31 @@ export default async function AdminLogsPage({
             </div>
 
             {/* Mobile card list */}
-            <ul className="md:hidden divide-y divide-slate-100">
+            <ul className="md:hidden divide-y divide-slate-100 dark:divide-slate-700">
               {logs.map((log) => {
                 const userObj = typeof log.userId === "object" && log.userId !== null ? log.userId : null;
                 const jobObj  = typeof log.jobId  === "object" && log.jobId  !== null ? log.jobId  : null;
                 const metaEntries = log.metadata ? Object.entries(log.metadata) : [];
                 return (
                   <li key={String(log._id)}>
-                    <Link href={`/admin/logs/${String(log._id)}`} className="block px-4 py-3.5 hover:bg-slate-50 transition-colors space-y-1.5">
+                    <Link href={`/admin/logs/${String(log._id)}`} className="block px-4 py-3.5 hover:bg-slate-50 dark:hover:bg-slate-700/40 transition-colors space-y-1.5">
                       <div className="flex items-center justify-between gap-2">
                         <EventBadge type={log.eventType} />
-                        <span className="text-xs text-slate-400">{formatRelativeTime(log.createdAt)}</span>
+                        <span className="text-xs text-slate-400 dark:text-slate-500">{formatRelativeTime(log.createdAt)}</span>
                       </div>
                       {userObj && (
-                        <p className="text-xs text-slate-600">
-                          <span className="font-medium">{userObj.name}</span>
-                          <span className="ml-1.5 text-slate-400">({userObj.role})</span>
+                        <p className="text-xs text-slate-600 dark:text-slate-300">
+                          <span className="font-semibold">{userObj.name}</span>
+                          <span className="ml-1.5 text-slate-400 dark:text-slate-500">({userObj.role})</span>
                         </p>
                       )}
                       {jobObj && (
-                        <p className="text-xs text-slate-500 truncate">{jobObj.title}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{jobObj.title}</p>
                       )}
                       {metaEntries.length > 0 && (
                         <div className="flex flex-wrap gap-1">
                           {metaEntries.slice(0, 3).map(([k, v]) => (
-                            <span key={k} className="text-[10px] bg-slate-100 text-slate-600 rounded px-1.5 py-0.5">
+                            <span key={k} className="text-[10px] bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded px-1.5 py-0.5">
                               {k}: <strong>{String(v)}</strong>
                             </span>
                           ))}
@@ -326,28 +330,28 @@ export default async function AdminLogsPage({
       {/* Pagination */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between gap-4 flex-wrap">
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-slate-400 dark:text-slate-500">
             Showing {from.toLocaleString()}–{to.toLocaleString()} of {total.toLocaleString()} events
           </p>
           <div className="flex items-center gap-2">
             {page > 1 ? (
-              <Link href={pageUrl(page - 1)} className="inline-flex items-center gap-1 h-8 px-3 rounded-lg border border-slate-200 text-sm text-slate-600 hover:border-slate-300 hover:text-slate-900 transition-colors">
+              <Link href={pageUrl(page - 1)} className="inline-flex items-center gap-1 h-8 px-3 rounded-xl border border-slate-200 dark:border-slate-600 text-sm text-slate-600 dark:text-slate-300 hover:border-slate-300 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white transition-colors">
                 <ChevronLeft className="h-3.5 w-3.5" /> Prev
               </Link>
             ) : (
-              <span className="inline-flex items-center gap-1 h-8 px-3 rounded-lg border border-slate-100 text-sm text-slate-300 cursor-not-allowed">
+              <span className="inline-flex items-center gap-1 h-8 px-3 rounded-xl border border-slate-100 dark:border-slate-700 text-sm text-slate-300 dark:text-slate-600 cursor-not-allowed">
                 <ChevronLeft className="h-3.5 w-3.5" /> Prev
               </span>
             )}
-            <span className="text-sm text-slate-500 tabular-nums">
+            <span className="text-sm text-slate-500 dark:text-slate-400 tabular-nums">
               {page} / {totalPages}
             </span>
             {page < totalPages ? (
-              <Link href={pageUrl(page + 1)} className="inline-flex items-center gap-1 h-8 px-3 rounded-lg border border-slate-200 text-sm text-slate-600 hover:border-slate-300 hover:text-slate-900 transition-colors">
+              <Link href={pageUrl(page + 1)} className="inline-flex items-center gap-1 h-8 px-3 rounded-xl border border-slate-200 dark:border-slate-600 text-sm text-slate-600 dark:text-slate-300 hover:border-slate-300 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white transition-colors">
                 Next <ChevronRight className="h-3.5 w-3.5" />
               </Link>
             ) : (
-              <span className="inline-flex items-center gap-1 h-8 px-3 rounded-lg border border-slate-100 text-sm text-slate-300 cursor-not-allowed">
+              <span className="inline-flex items-center gap-1 h-8 px-3 rounded-xl border border-slate-100 dark:border-slate-700 text-sm text-slate-300 dark:text-slate-600 cursor-not-allowed">
                 Next <ChevronRight className="h-3.5 w-3.5" />
               </span>
             )}

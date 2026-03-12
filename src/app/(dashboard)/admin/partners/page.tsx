@@ -70,13 +70,13 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col">
+      <div className="relative bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col border border-slate-200 dark:border-slate-700">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-          <h2 className="text-base font-bold text-slate-800">{title}</h2>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-700">
+          <h2 className="text-base font-bold text-slate-800 dark:text-white">{title}</h2>
           <button
             onClick={onClose}
-            className="h-8 w-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+            className="h-8 w-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
           >
             <X className="h-4 w-4" />
           </button>
@@ -336,15 +336,15 @@ export default function AdminPartnersPage() {
     <>
       <div className="space-y-5">
         {/* ── Header ─────────────────────────────────────────────────── */}
-        <div className="flex items-start justify-between gap-4 flex-wrap">
-          <div>
-            <h1 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-              <Handshake className="h-5 w-5 text-blue-600" />
-              PESO Partners
-            </h1>
-            <p className="text-sm text-slate-500 mt-0.5">
-              Manage all registered PESO offices and their officers.
-            </p>
+        <div className="flex items-center justify-between gap-4 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-5 py-4 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-xl bg-blue-100 dark:bg-blue-900/30">
+              <Handshake className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+            </div>
+            <div>
+              <h1 className="text-base font-bold text-slate-800 dark:text-white">PESO Partners</h1>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Manage all registered PESO offices and their officers.</p>
+            </div>
           </div>
           <button
             onClick={openCreate}
@@ -358,16 +358,18 @@ export default function AdminPartnersPage() {
         {/* ── Summary stats ───────────────────────────────────────────── */}
         <div className="grid grid-cols-3 gap-4">
           {[
-            { label: "Total Offices", value: offices.length, color: "text-blue-600" },
-            { label: "Active", value: offices.filter((o) => o.isActive).length, color: "text-emerald-600" },
-            { label: "Inactive", value: offices.filter((o) => !o.isActive).length, color: "text-slate-400" },
+            { label: "Total Offices", value: offices.length,                          icon: Building2,  bg: "bg-blue-50 dark:bg-blue-900/30",    ring: "ring-blue-100 dark:ring-blue-800",    color: "text-blue-600 dark:text-blue-400"    },
+            { label: "Active",        value: offices.filter((o) => o.isActive).length,  icon: ToggleRight, bg: "bg-emerald-50 dark:bg-emerald-900/30", ring: "ring-emerald-100 dark:ring-emerald-800", color: "text-emerald-600 dark:text-emerald-400" },
+            { label: "Inactive",      value: offices.filter((o) => !o.isActive).length, icon: ToggleLeft,  bg: "bg-slate-100 dark:bg-slate-700",     ring: "ring-slate-100 dark:ring-slate-700",   color: "text-slate-400 dark:text-slate-500"  },
           ].map((stat) => (
-            <div
-              key={stat.label}
-              className="bg-white rounded-xl border border-slate-200 px-5 py-4 text-center shadow-sm"
-            >
-              <p className={`text-2xl font-bold ${stat.color}`}>{stat.value}</p>
-              <p className="text-xs text-slate-500 mt-0.5">{stat.label}</p>
+            <div key={stat.label} className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 px-4 py-4 flex items-center gap-3 shadow-sm">
+              <div className={`${stat.bg} ring-4 ${stat.ring} p-2.5 rounded-xl flex-shrink-0`}>
+                <stat.icon className={`h-4 w-4 ${stat.color}`} />
+              </div>
+              <div>
+                <p className={`text-2xl font-bold ${stat.color}`}>{stat.value}</p>
+                <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide mt-0.5">{stat.label}</p>
+              </div>
             </div>
           ))}
         </div>
@@ -404,59 +406,59 @@ export default function AdminPartnersPage() {
         </div>
 
         {/* ── Table ───────────────────────────────────────────────────── */}
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
           {loading ? (
-            <div className="space-y-px">
+            <div className="space-y-px animate-pulse">
               {[...Array(4)].map((_, i) => (
-                <div key={i} className="h-20 bg-slate-50 animate-pulse border-b border-slate-100 last:border-0" />
+                <div key={i} className="h-20 bg-slate-50 dark:bg-slate-700/50 border-b border-slate-100 dark:border-slate-700 last:border-0" />
               ))}
             </div>
           ) : filtered.length === 0 ? (
-            <div className="px-6 py-12 text-center text-slate-400 text-sm">
+            <div className="px-6 py-12 text-center text-slate-400 dark:text-slate-500 text-sm">
               {search ? "No offices match your search." : "No PESO offices found."}
             </div>
           ) : (
-            <ul className="divide-y divide-slate-100">
+            <ul className="divide-y divide-slate-100 dark:divide-slate-700">
               {filtered.map((office) => (
                 <li
                   key={office._id}
-                  className="flex items-start justify-between gap-4 px-5 py-4 hover:bg-slate-50 transition-colors"
+                  className="flex items-start justify-between gap-4 px-5 py-4 hover:bg-slate-50 dark:hover:bg-slate-700/40 transition-colors"
                 >
                   {/* Left — office info */}
                   <div className="flex items-start gap-3 min-w-0">
-                    <div className="h-10 w-10 rounded-xl bg-blue-700 flex items-center justify-center text-white shrink-0">
+                    <div className="h-10 w-10 rounded-xl bg-blue-600 flex items-center justify-center text-white shrink-0">
                       <Building2 className="h-5 w-5" />
                     </div>
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <p className="font-semibold text-slate-800 text-sm">{office.officeName}</p>
+                        <p className="font-semibold text-slate-800 dark:text-slate-100 text-sm">{office.officeName}</p>
                         <span
                           className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide ${
                             office.isActive
-                              ? "bg-emerald-100 text-emerald-700"
-                              : "bg-slate-100 text-slate-400"
+                              ? "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400"
+                              : "bg-slate-100 dark:bg-slate-700 text-slate-400 dark:text-slate-500"
                           }`}
                         >
                           {office.isActive ? "Active" : "Inactive"}
                         </span>
                       </div>
                       <div className="flex items-center gap-3 mt-1 flex-wrap">
-                        <span className="flex items-center gap-1 text-xs text-slate-500">
+                        <span className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
                           <MapPin className="h-3 w-3" />
                           {office.municipality}, {office.region}
                         </span>
-                        <span className="flex items-center gap-1 text-xs text-slate-400">
+                        <span className="flex items-center gap-1 text-xs text-slate-400 dark:text-slate-500">
                           <Mail className="h-3 w-3" />
                           {office.contactEmail}
                         </span>
                       </div>
                       <div className="flex items-center gap-3 mt-2 flex-wrap">
-                        <span className="flex items-center gap-1 text-xs text-blue-600 font-medium">
+                        <span className="flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 font-medium">
                           <ShieldCheck className="h-3 w-3" />
                           {office.headOfficerId?.name ?? "—"}
                           <span className="text-slate-400 font-normal">(Head)</span>
                         </span>
-                        <span className="flex items-center gap-1 text-xs text-slate-500">
+                        <span className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
                           <Users className="h-3 w-3" />
                           {office.officerIds?.length ?? 0} staff officer
                           {office.officerIds?.length !== 1 ? "s" : ""}
@@ -467,25 +469,23 @@ export default function AdminPartnersPage() {
 
                   {/* Right — actions */}
                   <div className="flex items-center gap-2 shrink-0 pt-0.5">
-                    {/* Edit */}
                     <button
                       onClick={() => openEdit(office)}
                       title="Edit office"
-                      className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors text-slate-600 bg-slate-100 hover:bg-slate-200"
+                      className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600"
                     >
                       <Pencil className="h-3.5 w-3.5" />
                       <span className="hidden sm:inline">Edit</span>
                     </button>
 
-                    {/* Toggle */}
                     <button
                       onClick={() => handleToggle(office)}
                       disabled={togglingId === office._id}
                       title={office.isActive ? "Deactivate" : "Activate"}
                       className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50 ${
                         office.isActive
-                          ? "text-amber-600 bg-amber-50 hover:bg-amber-100"
-                          : "text-emerald-600 bg-emerald-50 hover:bg-emerald-100"
+                          ? "text-amber-600 bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 dark:hover:bg-amber-900/30"
+                          : "text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/30"
                       }`}
                     >
                       {office.isActive ? (
@@ -495,11 +495,10 @@ export default function AdminPartnersPage() {
                       )}
                     </button>
 
-                    {/* Delete */}
                     <button
                       onClick={() => setDeleteTarget(office)}
                       title="Delete office"
-                      className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors text-red-600 bg-red-50 hover:bg-red-100"
+                      className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors text-red-600 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                       <span className="hidden sm:inline">Delete</span>

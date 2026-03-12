@@ -104,19 +104,25 @@ export default function ScheduleClient() {
     <div className="space-y-6 max-w-2xl">
 
       {/* ── Header ── */}
-      <div className="flex items-start sm:items-center justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="text-xl font-bold text-slate-900">Schedule & Availability</h1>
-          <p className="text-sm text-slate-500 mt-0.5">
-            {openDays} day{openDays !== 1 ? "s" : ""} open · {closedDays} closed
-          </p>
+      <div className="flex items-center justify-between gap-4 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-5 py-4 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-xl bg-cyan-100 dark:bg-cyan-900/30">
+            <CalendarDays className="h-5 w-5 text-cyan-600 dark:text-cyan-400" />
+          </div>
+          <div>
+            <h1 className="text-base font-bold text-slate-800 dark:text-white">Schedule &amp; Availability</h1>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              {openDays} day{openDays !== 1 ? "s" : ""} open · {closedDays} closed
+            </p>
+          </div>
         </div>
         <div className="flex gap-2">
           <button
             onClick={load}
-            className="flex items-center gap-1.5 text-sm border border-slate-200 px-3 py-1.5 rounded-lg hover:bg-slate-50 text-slate-600 transition-colors"
+            className="p-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+            title="Refresh"
           >
-            <RefreshCw className="h-3.5 w-3.5" /> Refresh
+            <RefreshCw className="h-4 w-4" />
           </button>
           {dirty && (
             <button

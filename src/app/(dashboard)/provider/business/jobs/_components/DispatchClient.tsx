@@ -202,18 +202,24 @@ export default function DispatchClient() {
     <div className="space-y-5">
 
       {/* ── Header ── */}
-      <div className="flex items-start justify-between gap-3 flex-wrap">
-        <div>
-          <h1 className="text-xl font-bold text-slate-900">Job Dispatch</h1>
-          <p className="text-sm text-slate-500 mt-0.5">
-            {total} job{total !== 1 ? "s" : ""} · {agency.name}
-          </p>
+      <div className="flex items-center justify-between gap-4 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-5 py-4 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-xl bg-blue-100 dark:bg-blue-900/30">
+            <Briefcase className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+          </div>
+          <div>
+            <h1 className="text-base font-bold text-slate-800 dark:text-white">Job Dispatch</h1>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              {total} job{total !== 1 ? "s" : ""} · {agency.name}
+            </p>
+          </div>
         </div>
         <button
           onClick={loadJobs}
-          className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-medium border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors"
+          className="p-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+          title="Refresh"
         >
-          <RefreshCw className="h-3.5 w-3.5" /> Refresh
+          <RefreshCw className="h-4 w-4" />
         </button>
       </div>
 

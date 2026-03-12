@@ -215,14 +215,19 @@ export default function MembersClient() {
     <div className="space-y-5">
 
       {/* ── Header ── */}
-      <div className="flex items-start sm:items-center justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">User &amp; Role Management</h1>
-          <p className="text-slate-500 text-sm mt-0.5">{org.name} · {members.length} member{members.length !== 1 ? "s" : ""}</p>
+      <div className="flex items-center justify-between gap-4 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-5 py-4 shadow-sm flex-wrap">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-xl bg-violet-100 dark:bg-violet-900/30">
+            <Users className="h-5 w-5 text-violet-600 dark:text-violet-400" />
+          </div>
+          <div>
+            <h1 className="text-base font-bold text-slate-800 dark:text-white">User &amp; Role Management</h1>
+            <p className="text-xs text-slate-500 dark:text-slate-400">{org.name} · {members.length} member{members.length !== 1 ? "s" : ""}</p>
+          </div>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={load} disabled={loading} className="flex items-center gap-1.5 text-sm border border-slate-200 px-3 py-1.5 rounded-lg hover:bg-slate-50 text-slate-600 transition-colors disabled:opacity-50">
-            <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} /> Refresh
+          <button onClick={load} disabled={loading} title="Refresh" aria-label="Refresh" className="p-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-500 hover:text-slate-800 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors disabled:opacity-50">
+            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
           </button>
           {tab === "team" && (
             <button
