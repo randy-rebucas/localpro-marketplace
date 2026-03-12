@@ -1216,7 +1216,7 @@ export class BusinessService {
     const now    = new Date();
     const from12 = new Date(now.getFullYear(), now.getMonth() - 11, 1);
 
-    const commAgg: { _id: string; gross: number; count: number }[] =
+    const commAgg: { _id: string; gross: number; commission: number; count: number }[] =
       await Transaction.aggregate([
         {
           $match: {
@@ -1227,20 +1227,19 @@ export class BusinessService {
         },
         {
           $group: {
-            _id:   { $dateToString: { format: "%Y-%m", date: "$createdAt" } },
-            gross: { $sum: "$amount" },
-            count: { $sum: 1 },
+            _id:        { $dateToString: { format: "%Y-%m", date: "$createdAt" } },
+            gross:      { $sum: "$amount" },
+            commission: { $sum: "$commission" },
+            count:      { $sum: 1 },
           },
         },
         { $sort: { _id: 1 } },
       ]);
 
-    const COMMISSION_RATE = 0.15;
-
     const commissionHistory = commAgg.map((row) => ({
       month:      row._id,
       gross:      row.gross,
-      commission: parseFloat((row.gross * COMMISSION_RATE).toFixed(2)),
+      commission: parseFloat((row.commission ?? 0).toFixed(2)),
       jobs:       row.count,
     }));
 
@@ -1252,11 +1251,11 @@ export class BusinessService {
           status:  { $in: ["completed", "released", "settled", "paid"] },
         },
       },
-      { $group: { _id: null, gross: { $sum: "$amount" }, count: { $sum: 1 } } },
+      { $group: { _id: null, gross: { $sum: "$amount" }, commission: { $sum: "$commission" }, count: { $sum: 1 } } },
     ]);
 
-    const totalGrossSpend    = allTimeAgg?.gross ?? 0;
-    const totalCommissionPaid = parseFloat((totalGrossSpend * COMMISSION_RATE).toFixed(2));
+    const totalGrossSpend     = allTimeAgg?.gross ?? 0;
+    const totalCommissionPaid = parseFloat(((allTimeAgg?.commission ?? 0) as number).toFixed(2));
     const totalJobsCompleted  = allTimeAgg?.count ?? 0;
 
     // ── This-month summary ─────────────────────────────────────────────────────

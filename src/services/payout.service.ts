@@ -1,6 +1,7 @@
 import { payoutRepository } from "@/repositories/payout.repository";
 import { transactionRepository, activityRepository } from "@/repositories";
 import { ledgerService } from "@/services/ledger.service";
+import { getAppSetting } from "@/lib/appSettings";
 import {
   NotFoundError,
   ForbiddenError,
@@ -37,6 +38,10 @@ export class PayoutService {
 
     if (!amount || amount <= 0) {
       throw new UnprocessableError("Amount must be greater than zero.");
+    }
+    const minPayout = await getAppSetting("payments.minPayoutAmount", 100) as number;
+    if (amount < minPayout) {
+      throw new UnprocessableError(`Minimum payout amount is ₱${minPayout.toLocaleString()}.`);
     }
     if (!bankName?.trim() || !accountNumber?.trim() || !accountName?.trim()) {
       throw new UnprocessableError("Bank name, account number, and account name are required.");
