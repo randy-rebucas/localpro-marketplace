@@ -6,6 +6,7 @@ import { cloudinary } from "@/lib/cloudinary";
 import { messageRepository, userRepository } from "@/repositories";
 import { pushSupportToAdmin, pushSupportToUser } from "@/lib/events";
 import Message from "@/models/Message";
+import { businessService } from "@/services/business.service";
 
 const MAX_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
 const ALLOWED_MIME = [
@@ -25,6 +26,9 @@ const ALLOWED_MIME = [
  */
 export const POST = withHandler(async (req: NextRequest) => {
   const user = await requireUser();
+
+  // Enforce Priority Support plan gate for business clients
+  await businessService.checkPrioritySupportAccess(user.userId);
 
   const formData = await req.formData();
   const file = formData.get("file") as File | null;

@@ -4,12 +4,13 @@ import { useEffect, useState, useCallback, type ElementType } from "react";
 import Image from "next/image";
 import {
   Users, Plus, Trash2, Shield, User, Crown, Briefcase, Eye, Coins,
-  RefreshCw, Search, CheckCircle, AlertCircle, Lock,
+  RefreshCw, Search, CheckCircle, AlertCircle, Lock, ArrowUpRight,
   Activity, Mail, MapPin, Building2, X, ChevronRight, Clock,
   KeyRound, BarChart2, Settings,
 } from "lucide-react";
 import { fetchClient } from "@/lib/fetchClient";
 import type { IBusinessOrganization, IBusinessMember, BusinessMemberRole } from "@/types";
+import { MEMBER_LIMITS, PLAN_LABELS, PLAN_UPGRADE_NEXT, isAtMemberLimit } from "@/lib/businessPlan";
 import toast from "react-hot-toast";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -196,6 +197,11 @@ export default function MembersClient() {
 
   const roleCounts = members.reduce((acc, m) => { acc[m.role] = (acc[m.role] ?? 0) + 1; return acc; }, {} as Record<BusinessMemberRole, number>);
 
+  const memberLimit = org ? MEMBER_LIMITS[org.plan] : Infinity;
+  const atLimit     = org ? isAtMemberLimit(org.plan, members.length) : false;
+  const planLabel   = org ? PLAN_LABELS[org.plan] : "";
+  const nextPlan    = org ? PLAN_UPGRADE_NEXT[org.plan] : undefined;
+
   if (loading) return (
     <div className="space-y-4 animate-pulse">
       <div className="h-9 w-52 bg-slate-200 rounded-lg" />
@@ -226,15 +232,27 @@ export default function MembersClient() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          {/* Plan quota badge */}
+          {tab === "team" && org && (
+            <span className={`hidden sm:inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full border ${
+              atLimit
+                ? "bg-red-50 border-red-200 text-red-700"
+                : "bg-slate-50 border-slate-200 text-slate-500"
+            }`}>
+              <Users className="h-3 w-3" />
+              {members.length} / {memberLimit === Infinity ? "\u221e" : memberLimit} &middot; {planLabel}
+            </span>
+          )}
           <button onClick={load} disabled={loading} title="Refresh" aria-label="Refresh" className="p-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-500 hover:text-slate-800 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors disabled:opacity-50">
             <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
           </button>
           {tab === "team" && (
             <button
-              onClick={() => { setShowInvite((v) => !v); setSearchEmail(""); setSearchResult(null); }}
-              className="btn-primary flex items-center gap-2"
+              onClick={() => { if (!atLimit) { setShowInvite((v) => !v); setSearchEmail(""); setSearchResult(null); } }}
+              disabled={!showInvite && atLimit}
+              className="btn-primary flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {showInvite ? <X className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+              {showInvite ? <X className="h-4 w-4" /> : atLimit ? <Lock className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
               {showInvite ? "Cancel" : "Invite User"}
             </button>
           )}
@@ -282,6 +300,28 @@ export default function MembersClient() {
               );
             })}
           </div>
+
+          {/* Plan limit upgrade banner */}
+          {atLimit && !showInvite && (
+            <div className="flex items-center justify-between gap-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+              <div className="flex items-center gap-2.5 text-sm text-amber-800">
+                <Lock className="h-4 w-4 shrink-0" />
+                <span>
+                  You&apos;ve reached the <strong>{planLabel}</strong> plan limit of{" "}
+                  <strong>{memberLimit} member{memberLimit === 1 ? "" : "s"}</strong>.
+                  {nextPlan && ` Upgrade to ${PLAN_LABELS[nextPlan]} to invite more.`}
+                </span>
+              </div>
+              {nextPlan && (
+                <a
+                  href="/client/business/plan"
+                  className="shrink-0 inline-flex items-center gap-1 text-xs font-semibold text-amber-700 hover:text-amber-900 underline underline-offset-2"
+                >
+                  Upgrade <ArrowUpRight className="h-3.5 w-3.5" />
+                </a>
+              )}
+            </div>
+          )}
 
           {/* Invite form */}
           {showInvite && (

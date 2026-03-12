@@ -16,6 +16,12 @@ class BusinessOrganizationRepository extends BaseRepository<BusinessOrganization
       .lean() as unknown as IBusinessOrganization | null;
   }
 
+  async findOrgById(orgId: string): Promise<IBusinessOrganization | null> {
+    await this.connect();
+    return BusinessOrganization.findById(orgId)
+      .lean() as unknown as IBusinessOrganization | null;
+  }
+
   async createOrg(data: {
     ownerId: string;
     name: string;

@@ -16,7 +16,7 @@ import { pushNotification, pushStatusUpdateMany } from "@/lib/events";
 import { UnprocessableError, ForbiddenError, NotFoundError } from "@/lib/errors";
 import { canTransitionEscrow } from "@/lib/jobLifecycle";
 import { calculateCommission } from "@/lib/commission";
-import { getDbCommissionRate } from "@/lib/serverCommission";
+import { getEffectiveCommissionRate } from "@/lib/serverCommission";
 import { ledgerService } from "@/services/ledger.service";
 import type { TokenPayload } from "@/lib/auth";
 import type { IJob } from "@/types";
@@ -108,7 +108,7 @@ export class WalletService {
     await jobDoc.save();
 
     // Create transaction record for provider payout tracking
-    const rate = await getDbCommissionRate((job as unknown as { category: string }).category);
+    const rate = await getEffectiveCommissionRate((job as unknown as { category: string }).category, user.userId);
     const { commission, netAmount } = calculateCommission(amount, rate);
     const tx = await transactionRepository.create({
       jobId: job._id,

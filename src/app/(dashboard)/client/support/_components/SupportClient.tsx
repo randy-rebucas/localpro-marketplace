@@ -1,8 +1,12 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
-import { Headphones, Clock, ShieldCheck, AlertCircle } from "lucide-react";
+import { Headphones, Clock, ShieldCheck, AlertCircle, Lock, ArrowUpRight } from "lucide-react";
 import PageGuide from "@/components/shared/PageGuide";
+import { fetchClient } from "@/lib/fetchClient";
+import { hasPrioritySupportAccess, PLAN_LABELS, PLAN_UPGRADE_NEXT } from "@/lib/businessPlan";
+import type { IBusinessOrganization } from "@/types";
 
 const ChatWindow = dynamic(() => import("@/components/chat/ChatWindow"), {
   ssr: false,
@@ -18,6 +22,88 @@ const INFO_CHIPS = [
 ];
 
 export default function SupportClient({ userId }: { userId: string }) {
+  const [org, setOrg] = useState<IBusinessOrganization | null | undefined>(undefined);
+
+  useEffect(() => {
+    fetchClient<{ org: IBusinessOrganization | null }>("/api/business/org")
+      .then((d) => setOrg(d.org))
+      .catch(() => setOrg(null));
+  }, []);
+
+  // Business client on a non-enterprise plan → upgrade wall
+  if (org && !hasPrioritySupportAccess(org.plan)) {
+    const planLabel = PLAN_LABELS[org.plan];
+    const nextPlan  = PLAN_UPGRADE_NEXT[org.plan];
+    const nextLabel = nextPlan ? PLAN_LABELS[nextPlan] : "Enterprise";
+    return (
+      <div className="flex flex-col gap-4 h-[calc(100vh-8rem)]">
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <h2 className="text-2xl font-bold text-slate-900">Support</h2>
+            <p className="text-slate-500 text-sm mt-1">Chat with our team for help with jobs, payments, or disputes.</p>
+          </div>
+        </div>
+
+        {/* Upgrade wall */}
+        <div className="flex-1 flex flex-col items-center justify-center gap-6 rounded-2xl border border-slate-200 bg-slate-50 px-6 py-12 text-center">
+          <div className="relative">
+            <div className="absolute inset-0 rounded-full bg-amber-300/20 blur-xl scale-150" />
+            <div className="relative w-16 h-16 rounded-full bg-amber-50 border border-amber-200 flex items-center justify-center">
+              <Lock className="h-7 w-7 text-amber-500" />
+            </div>
+          </div>
+          <div className="max-w-sm">
+            <h3 className="text-xl font-bold text-slate-900 mb-2">Priority Support</h3>
+            <p className="text-slate-500 text-sm leading-relaxed">
+              Priority Support — including a dedicated account manager, 4-hour response SLA, and white-glove onboarding — is available on the{" "}
+              <span className="font-semibold text-slate-700">Enterprise</span> plan.
+              Your current plan is <span className="font-semibold text-slate-700">{planLabel}</span>.
+            </p>
+          </div>
+          {nextPlan && (
+            <a
+              href="/client/business/billing"
+              className="inline-flex items-center gap-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold px-5 py-2.5 transition-colors"
+            >
+              Upgrade to {nextLabel}
+              <ArrowUpRight className="h-4 w-4" />
+            </a>
+          )}
+          <a href="/client/business" className="text-xs text-slate-400 hover:text-slate-600 transition-colors">
+            Back to Dashboard
+          </a>
+
+          {/* Blurred preview */}
+          <div className="relative w-full max-w-lg mt-2 pointer-events-none select-none">
+            <div className="rounded-xl border border-slate-200 bg-white overflow-hidden blur-sm opacity-40">
+              <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-100">
+                <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Headphones className="h-4 w-4 text-primary" />
+                </div>
+                <div className="text-left">
+                  <p className="text-sm font-semibold text-slate-800">LocalPro Support</p>
+                  <span className="text-[11px] text-emerald-600">Online · 4-hour SLA</span>
+                </div>
+              </div>
+              <div className="px-4 py-6 space-y-3">
+                <div className="flex justify-end"><div className="h-8 w-44 rounded-xl bg-primary/20" /></div>
+                <div className="flex"><div className="h-8 w-52 rounded-xl bg-slate-200" /></div>
+                <div className="flex"><div className="h-8 w-40 rounded-xl bg-slate-200" /></div>
+              </div>
+              <div className="flex items-center gap-2 px-4 py-3 border-t border-slate-100">
+                <div className="flex-1 h-9 rounded-xl bg-slate-100" />
+                <div className="h-9 w-9 rounded-xl bg-primary/20" />
+              </div>
+            </div>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span className="text-xs font-semibold text-slate-500 bg-white/80 rounded-full px-3 py-1 border border-slate-200">Enterprise only</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-4 h-[calc(100vh-8rem)]">
       <PageGuide

@@ -16,7 +16,7 @@ import {
 import { connectDB } from "@/lib/db";
 import User from "@/models/User";
 import { calculateCommission } from "@/lib/commission";
-import { getDbCommissionRate } from "@/lib/serverCommission";
+import { getEffectiveCommissionRate } from "@/lib/serverCommission";
 import { canTransitionEscrow } from "@/lib/jobLifecycle";
 import {
   NotFoundError,
@@ -56,7 +56,7 @@ export class PaymentService {
       job.escrowStatus = "funded";
       await jobDoc.save();
 
-      const rate = await getDbCommissionRate(job.category);
+      const rate = await getEffectiveCommissionRate(job.category, user.userId);
       const { commission, netAmount } = calculateCommission(amount, rate);
       const tx = await transactionRepository.create({
         jobId: job._id,
@@ -229,7 +229,7 @@ export class PaymentService {
     job.escrowStatus = "funded";
     await jobDoc.save();
 
-    const rate = await getDbCommissionRate(job.category);
+    const rate = await getEffectiveCommissionRate(job.category, p.clientId.toString());
     const { commission, netAmount } = calculateCommission(p.amount, rate);
     const tx = await transactionRepository.create({
       jobId: p.jobId,
@@ -328,7 +328,7 @@ export class PaymentService {
     job.escrowStatus = "funded";
     await jobDoc.save();
 
-    const rate = await getDbCommissionRate(job.category);
+    const rate = await getEffectiveCommissionRate(job.category, clientId);
     const { commission, netAmount } = calculateCommission(job.budget, rate);
     await connectDB();
     const tx = await transactionRepository.create({
@@ -468,7 +468,7 @@ export class PaymentService {
     if (!jobDoc) return;
 
     const job = jobDoc as unknown as IJob;
-    const rate = await getDbCommissionRate(job.category);
+    const rate = await getEffectiveCommissionRate(job.category, p.clientId.toString());
     const { commission, netAmount } = calculateCommission(p.amount, rate);
 
     await ledgerService.postEscrowFundedGateway(

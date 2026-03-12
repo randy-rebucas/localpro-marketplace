@@ -5,10 +5,11 @@ import Image from "next/image";
 import {
   MapPin, Plus, Pencil, Trash2, ToggleLeft, ToggleRight,
   Wallet, Bell, Users, X, BarChart2, Briefcase, Star,
-  ChevronRight, AlertTriangle, CheckCircle2, Clock,
+  ChevronRight, AlertTriangle, CheckCircle2, Clock, Lock, ArrowUpRight,
 } from "lucide-react";
 import { fetchClient } from "@/lib/fetchClient";
 import type { IBusinessOrganization, IBusinessLocation, IBusinessMember } from "@/types";
+import { LOCATION_LIMITS, PLAN_LABELS, PLAN_UPGRADE_NEXT, isAtLocationLimit } from "@/lib/businessPlan";
 import { formatCurrency } from "@/lib/utils";
 import LocationAutocomplete from "@/components/shared/LocationAutocomplete";
 import toast from "react-hot-toast";
@@ -128,6 +129,7 @@ export default function LocationsClient() {
   }, [detailLocId, org?._id?.toString()]);
 
   function openAdd() {
+    if (org && isAtLocationLimit(org.plan, org.locations.length)) return;
     setEditingId(null);
     setForm(EMPTY_FORM);
     setShowForm(true);
@@ -246,6 +248,10 @@ export default function LocationsClient() {
 
   const activeCount   = org.locations.filter((l) => l.isActive).length;
   const inactiveCount = org.locations.length - activeCount;
+  const locationLimit  = LOCATION_LIMITS[org.plan];
+  const atLimit        = isAtLocationLimit(org.plan, org.locations.length);
+  const planLabel      = PLAN_LABELS[org.plan];
+  const nextPlan       = PLAN_UPGRADE_NEXT[org.plan];
 
   return (
     <div className="space-y-6">
@@ -263,14 +269,48 @@ export default function LocationsClient() {
             </p>
           </div>
         </div>
-        <button
-          onClick={showForm ? () => setShowForm(false) : openAdd}
-          className="btn-primary flex items-center gap-2 flex-shrink-0"
-        >
-          <Plus className="h-4 w-4" />
-          {showForm ? "Cancel" : "Add Location"}
-        </button>
+        <div className="flex items-center gap-3 flex-shrink-0">
+          {/* Plan quota badge */}
+          <span className={`hidden sm:inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full border ${
+            atLimit
+              ? "bg-red-50 border-red-200 text-red-700"
+              : "bg-slate-50 border-slate-200 text-slate-500"
+          }`}>
+            <MapPin className="h-3 w-3" />
+            {org.locations.length} / {locationLimit === Infinity ? "∞" : locationLimit} · {planLabel}
+          </span>
+          <button
+            onClick={showForm ? () => setShowForm(false) : openAdd}
+            disabled={!showForm && atLimit}
+            className="btn-primary flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {!showForm && atLimit ? <Lock className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+            {showForm ? "Cancel" : "Add Location"}
+          </button>
+        </div>
       </div>
+
+      {/* ── Plan limit upgrade banner ── */}
+      {atLimit && !showForm && (
+        <div className="flex items-center justify-between gap-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+          <div className="flex items-center gap-2.5 text-sm text-amber-800">
+            <Lock className="h-4 w-4 shrink-0" />
+            <span>
+              You&apos;ve reached the <strong>{planLabel}</strong> plan limit of{" "}
+              <strong>{locationLimit} branch{locationLimit === 1 ? "" : "es"}</strong>.
+              {nextPlan && ` Upgrade to ${PLAN_LABELS[nextPlan]} to add more.`}
+            </span>
+          </div>
+          {nextPlan && (
+            <a
+              href="/client/business/plan"
+              className="shrink-0 inline-flex items-center gap-1 text-xs font-semibold text-amber-700 hover:text-amber-900 underline underline-offset-2"
+            >
+              Upgrade <ArrowUpRight className="h-3.5 w-3.5" />
+            </a>
+          )}
+        </div>
+      )}
 
       {/* ── Add / Edit form ── */}
       {showForm && (
@@ -397,11 +437,12 @@ export default function LocationsClient() {
             </p>
           </div>
           <button
-            onClick={() => { setShowForm(true); setEditingId(null); setForm(EMPTY_FORM); }}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary text-white text-sm font-semibold hover:bg-primary-700 transition-colors shadow-sm"
+            onClick={() => { if (!atLimit) { setShowForm(true); setEditingId(null); setForm(EMPTY_FORM); } }}
+            disabled={atLimit}
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary text-white text-sm font-semibold hover:bg-primary-700 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Plus className="h-4 w-4" />
-            Add your first location
+            {atLimit ? <Lock className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+            {atLimit ? `Plan limit reached (${locationLimit})` : "Add your first location"}
           </button>
         </div>
       ) : (

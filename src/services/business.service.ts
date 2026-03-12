@@ -16,6 +16,7 @@ import type {
 } from "@/types";
 import { connectDB } from "@/lib/db";
 import { BASE_COMMISSION_RATE } from "@/lib/commission";
+import { isAtLocationLimit, getLocationLimit, isAtMemberLimit, getMemberLimit, isAtJobLimit, getJobLimit, JOB_LIMITS, PLAN_LABELS, hasPrioritySupportAccess, getBusinessCommissionRate } from "@/lib/businessPlan";
 import mongoose from "mongoose";
 
 export class BusinessService {
@@ -74,6 +75,18 @@ export class BusinessService {
     }
   ): Promise<IBusinessOrganization> {
     await this.requireManagerAccess(orgId, requestingUserId);
+
+    const currentOrg = await businessOrganizationRepository.findOrgById(orgId);
+    if (!currentOrg) throw new NotFoundError("Organization not found.");
+
+    if (isAtLocationLimit(currentOrg.plan, currentOrg.locations.length)) {
+      const limit = getLocationLimit(currentOrg.plan);
+      const label = PLAN_LABELS[currentOrg.plan];
+      throw new ForbiddenError(
+        `Your ${label} plan allows up to ${limit} branch${limit === 1 ? "" : "es"}. Upgrade your plan to add more locations.`
+      );
+    }
+
     const updated = await businessOrganizationRepository.addLocation(orgId, location);
     if (!updated) throw new NotFoundError("Organization not found.");
     return updated;
@@ -123,6 +136,19 @@ export class BusinessService {
   ): Promise<IBusinessMember> {
     await this.requireManagerAccess(orgId, requestingUserId);
     if (data.role === "owner") throw new ValidationError("Cannot assign owner role via invite.");
+
+    const currentOrg = await businessOrganizationRepository.findOrgById(orgId);
+    if (!currentOrg) throw new NotFoundError("Organization not found.");
+
+    const activeMembers = await businessMemberRepository.findByOrg(orgId);
+    if (isAtMemberLimit(currentOrg.plan, activeMembers.length)) {
+      const limit = getMemberLimit(currentOrg.plan);
+      const label = PLAN_LABELS[currentOrg.plan];
+      throw new ForbiddenError(
+        `Your ${label} plan allows up to ${limit} team member${limit === 1 ? "" : "s"}. Upgrade your plan to invite more.`
+      );
+    }
+
     const existing = await businessMemberRepository.findMembership(orgId, data.userId);
     if (existing) throw new ConflictError("User is already a member of this organization.");
     return businessMemberRepository.addMember({
@@ -591,10 +617,13 @@ export class BusinessService {
       page?: number;
       limit?: number;
     } = {}
-  ): Promise<{ jobs: unknown[]; total: number; pages: number }> {
+  ): Promise<{ jobs: unknown[]; total: number; pages: number; monthlyCount: number; jobLimit: number }> {
     await this.requireMemberAccess(orgId, requestingUserId);
     const memberUserIds = await businessMemberRepository.getMemberUserIds(orgId);
-    if (memberUserIds.length === 0) return { jobs: [], total: 0, pages: 0 };
+    if (memberUserIds.length === 0) {
+      const org = await businessOrganizationRepository.findOrgById(orgId);
+      return { jobs: [], total: 0, pages: 0, monthlyCount: 0, jobLimit: JOB_LIMITS[org?.plan ?? "starter"] };
+    }
 
     await connectDB();
     const Job = mongoose.model("Job");
@@ -624,19 +653,88 @@ export class BusinessService {
       match.createdAt = df;
     }
 
-    const skip = (page - 1) * limit;
-    const [total, jobs] = await Promise.all([
+    // Monthly count (current calendar month, all statuses)
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const [total, jobs, monthlyCount, currentOrg] = await Promise.all([
       Job.countDocuments(match),
       Job.find(match)
         .sort({ createdAt: -1 })
-        .skip(skip)
+        .skip((page - 1) * limit)
         .limit(limit)
         .populate("clientId", "name avatar")
         .populate("providerId", "name avatar")
         .lean(),
+      Job.countDocuments({
+        clientId: { $in: memberUserIds.map((id) => new mongoose.Types.ObjectId(id)) },
+        createdAt: { $gte: monthStart },
+      }),
+      businessOrganizationRepository.findOrgById(orgId),
     ]);
 
-    return { jobs, total, pages: Math.ceil(total / limit) };
+    const jobLimit = JOB_LIMITS[currentOrg?.plan ?? "starter"];
+
+    return { jobs, total, pages: Math.ceil(total / limit), monthlyCount, jobLimit };
+  }
+
+  /** Count jobs posted by org members in the current calendar month. */
+  async countMonthlyJobsForOrg(orgId: string): Promise<number> {
+    const memberUserIds = await businessMemberRepository.getMemberUserIds(orgId);
+    if (memberUserIds.length === 0) return 0;
+    await connectDB();
+    const Job = mongoose.model("Job");
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    return Job.countDocuments({
+      clientId: { $in: memberUserIds.map((id) => new mongoose.Types.ObjectId(id)) },
+      createdAt: { $gte: monthStart },
+    });
+  }
+
+  /**
+   * If the user is an active member of a business org, enforce the org's
+   * monthly job posting limit. No-ops for regular (non-business) clients.
+   */
+  async checkBusinessJobMonthlyLimit(userId: string): Promise<void> {
+    const memberships = await businessMemberRepository.findByUser(userId);
+    if (!memberships || memberships.length === 0) return; // not a business client
+
+    // Use the first active org (owner typically belongs to exactly one)
+    const orgId = String(memberships[0].orgId);
+    const org   = await businessOrganizationRepository.findOrgById(orgId);
+    if (!org) return;
+
+    const limit = getJobLimit(org.plan);
+    if (limit === Infinity) return; // unlimited plan
+
+    const monthlyCount = await this.countMonthlyJobsForOrg(orgId);
+    if (isAtJobLimit(org.plan, monthlyCount)) {
+      const label = PLAN_LABELS[org.plan];
+      throw new ForbiddenError(
+        `Your ${label} plan allows up to ${limit} job${limit === 1 ? "" : "s"} per month. Upgrade your plan to post more jobs this month.`
+      );
+    }
+  }
+
+  /**
+   * If the user is an active member of a business org, enforce that the
+   * org is on the Enterprise plan (required for Priority Support).
+   * No-ops for regular (non-business) clients.
+   */
+  async checkPrioritySupportAccess(userId: string): Promise<void> {
+    const memberships = await businessMemberRepository.findByUser(userId);
+    if (!memberships || memberships.length === 0) return; // not a business client
+
+    const orgId = String(memberships[0].orgId);
+    const org   = await businessOrganizationRepository.findOrgById(orgId);
+    if (!org) return;
+
+    if (!hasPrioritySupportAccess(org.plan)) {
+      const label = PLAN_LABELS[org.plan];
+      throw new ForbiddenError(
+        `Priority Support is available on the Enterprise plan. Your current plan is ${label}.`
+      );
+    }
   }
 
   async getBusinessJobDetail(
@@ -1270,7 +1368,7 @@ export class BusinessService {
     const memberCount = memberUserIds.length;
 
     return {
-      commissionRate:       BASE_COMMISSION_RATE,
+      commissionRate:       getBusinessCommissionRate((org.plan ?? "starter") as import("@/types").BusinessPlan),
       commissionHistory,
       totalGrossSpend,
       totalCommissionPaid,

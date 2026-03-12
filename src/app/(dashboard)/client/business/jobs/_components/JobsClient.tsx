@@ -6,11 +6,12 @@ import Link from "next/link";
 import {
   Briefcase, Plus, Upload, RefreshCw, Filter, ChevronLeft, ChevronRight,
   X, Clock, CheckCircle2, AlertTriangle, DollarSign, MapPin, Calendar,
-  User, ImageIcon, FileText, RotateCcw, Download, ExternalLink,
+  User, ImageIcon, FileText, RotateCcw, Download, ExternalLink, Lock, ArrowUpRight,
 } from "lucide-react";
 import { fetchClient } from "@/lib/fetchClient";
 import { formatCurrency } from "@/lib/utils";
 import type { IBusinessOrganization } from "@/types";
+import { PLAN_LABELS, PLAN_UPGRADE_NEXT, isAtJobLimit, hasBulkAndRecurringAccess } from "@/lib/businessPlan";
 import toast from "react-hot-toast";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -145,6 +146,8 @@ export default function JobsClient() {
   const [total, setTotal]         = useState(0);
   const [pages, setPages]         = useState(1);
   const [listLoading, setListLoading] = useState(false);
+  const [monthlyCount, setMonthlyCount] = useState(0);
+  const [jobLimit, setJobLimit]         = useState<number>(Infinity);
 
   // detail
   const [selectedId, setSelectedId]       = useState<string | null>(null);
@@ -182,10 +185,12 @@ export default function JobsClient() {
       if (category)   sp.set("category",   category);
       if (dateFrom)   sp.set("dateFrom",   dateFrom);
       if (dateTo)     sp.set("dateTo",     dateTo);
-      const data = await fetchClient<{ jobs: JobRow[]; total: number; pages: number }>(`/api/business/jobs?${sp}`);
+      const data = await fetchClient<{ jobs: JobRow[]; total: number; pages: number; monthlyCount: number; jobLimit: number }>(`/api/business/jobs?${sp}`);
       setJobs(data.jobs);
       setTotal(data.total);
       setPages(data.pages);
+      setMonthlyCount(data.monthlyCount ?? 0);
+      setJobLimit(data.jobLimit ?? Infinity);
     } catch {
       toast.error("Failed to load jobs.");
     } finally {
@@ -285,6 +290,10 @@ export default function JobsClient() {
   }
 
   const hasFilters = !!(locationId || status || category || dateFrom || dateTo);
+  const atJobLimitVal    = org ? isAtJobLimit(org.plan, monthlyCount) : false;
+  const hasBulkRecurring = org ? hasBulkAndRecurringAccess(org.plan) : false;
+  const planLabel        = org ? PLAN_LABELS[org.plan] : "";
+  const nextPlan         = org ? PLAN_UPGRADE_NEXT[org.plan] : undefined;
 
   // ── loading ───────────────────────────────────────────────────────────────
   if (orgLoading) {
@@ -324,23 +333,88 @@ export default function JobsClient() {
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          {/* Plan monthly quota badge */}
+          <span className={`hidden sm:inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full border ${
+            atJobLimitVal
+              ? "bg-red-50 border-red-200 text-red-700"
+              : "bg-slate-50 border-slate-200 text-slate-500"
+          }`}>
+            <Briefcase className="h-3 w-3" />
+            {monthlyCount} / {jobLimit === Infinity ? "\u221e" : jobLimit} &nbsp;this month &middot; {planLabel}
+          </span>
           <button
-            onClick={() => { setShowRecurring((v) => !v); setShowBulk(false); }}
-            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-medium border transition-colors ${showRecurring ? "border-primary/40 bg-primary/5 text-primary" : "border-slate-200 text-slate-600 hover:bg-slate-50"}`}
+            onClick={() => { if (hasBulkRecurring) { setShowRecurring((v) => !v); setShowBulk(false); } }}
+            disabled={!hasBulkRecurring}
+            title={!hasBulkRecurring ? "Requires Pro or Enterprise plan" : undefined}
+            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-medium border transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+              showRecurring ? "border-primary/40 bg-primary/5 text-primary" : "border-slate-200 text-slate-600 hover:bg-slate-50"
+            }`}
           >
-            <RefreshCw className="h-3.5 w-3.5" /> Recurring
+            {!hasBulkRecurring ? <Lock className="h-3.5 w-3.5" /> : <RefreshCw className="h-3.5 w-3.5" />} Recurring
           </button>
           <button
-            onClick={() => { setShowBulk((v) => !v); setShowRecurring(false); }}
-            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-medium border transition-colors ${showBulk ? "border-primary/40 bg-primary/5 text-primary" : "border-slate-200 text-slate-600 hover:bg-slate-50"}`}
+            onClick={() => { if (hasBulkRecurring && !atJobLimitVal) { setShowBulk((v) => !v); setShowRecurring(false); } }}
+            disabled={!hasBulkRecurring || (!showBulk && atJobLimitVal)}
+            title={!hasBulkRecurring ? "Requires Pro or Enterprise plan" : undefined}
+            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-medium border transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+              showBulk ? "border-primary/40 bg-primary/5 text-primary" : "border-slate-200 text-slate-600 hover:bg-slate-50"
+            }`}
           >
-            <Upload className="h-3.5 w-3.5" /> Bulk Upload
+            {(!hasBulkRecurring || (!showBulk && atJobLimitVal)) ? <Lock className="h-3.5 w-3.5" /> : <Upload className="h-3.5 w-3.5" />} Bulk Upload
           </button>
-          <Link href="/jobs/post" className="btn-primary flex items-center gap-1.5">
-            <Plus className="h-4 w-4" /> New Job
-          </Link>
+          {atJobLimitVal ? (
+            <span className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-medium border border-red-200 bg-red-50 text-red-500 cursor-not-allowed">
+              <Lock className="h-4 w-4" /> New Job
+            </span>
+          ) : (
+            <Link href="/client/post-job" className="btn-primary flex items-center gap-1.5">
+              <Plus className="h-4 w-4" /> New Job
+            </Link>
+          )}
         </div>
       </div>
+
+      {/* ── Plan limit upgrade banner ── */}
+      {atJobLimitVal && (
+        <div className="flex items-center justify-between gap-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+          <div className="flex items-center gap-2.5 text-sm text-amber-800">
+            <Lock className="h-4 w-4 shrink-0" />
+            <span>
+              You&apos;ve reached the <strong>{planLabel}</strong> plan limit of{" "}
+              <strong>{jobLimit} job{jobLimit === 1 ? "" : "s"}/month</strong>.
+              {nextPlan && ` Upgrade to ${PLAN_LABELS[nextPlan]} to post more jobs.`}
+            </span>
+          </div>
+          {nextPlan && (
+            <a
+              href="/client/business/plan"
+              className="shrink-0 inline-flex items-center gap-1 text-xs font-semibold text-amber-700 hover:text-amber-900 underline underline-offset-2"
+            >
+              Upgrade <ArrowUpRight className="h-3.5 w-3.5" />
+            </a>
+          )}
+        </div>
+      )}
+
+      {/* ── Bulk/Recurring plan gate banner ── */}
+      {!hasBulkRecurring && (
+        <div className="flex items-center justify-between gap-4 rounded-xl border border-violet-200 bg-violet-50 px-4 py-3">
+          <div className="flex items-center gap-2.5 text-sm text-violet-800">
+            <Lock className="h-4 w-4 shrink-0" />
+            <span>
+              <strong>Bulk CSV Upload</strong> and <strong>Recurring Scheduler</strong> are available on the{" "}
+              <strong>Pro</strong> and <strong>Enterprise</strong> plans.
+              Your current plan is <strong>{planLabel}</strong>.
+            </span>
+          </div>
+          <a
+            href="/client/business/plan"
+            className="shrink-0 inline-flex items-center gap-1 text-xs font-semibold text-violet-700 hover:text-violet-900 underline underline-offset-2"
+          >
+            Upgrade <ArrowUpRight className="h-3.5 w-3.5" />
+          </a>
+        </div>
+      )}
 
       {/* ── Bulk Upload Panel ──────────────────────────────────────────────── */}
       {showBulk && (

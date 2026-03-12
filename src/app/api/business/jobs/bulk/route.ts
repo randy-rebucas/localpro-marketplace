@@ -5,6 +5,9 @@ import { withHandler } from "@/lib/utils";
 import { ForbiddenError } from "@/lib/errors";
 import { jobService } from "@/services";
 import { businessMemberRepository } from "@/repositories";
+import { businessOrganizationRepository } from "@/repositories/businessOrganization.repository";
+import { businessService } from "@/services/business.service";
+import { getJobLimit, PLAN_LABELS, hasBulkAndRecurringAccess } from "@/lib/businessPlan";
 
 const BulkJobRowSchema = z.object({
   title:               z.string().min(5).max(200),
@@ -35,6 +38,35 @@ export const POST = withHandler(async (req: NextRequest) => {
   // Verify caller is a member of the org
   const membership = await businessMemberRepository.findMembership(orgId, user.userId);
   if (!membership?.isActive) throw new ForbiddenError("Not a member of this org.");
+
+  // ── Plan feature gate: Bulk upload requires Pro or Enterprise ──────────────────
+  const orgForGate = await businessOrganizationRepository.findOrgById(orgId);
+  if (!orgForGate || !hasBulkAndRecurringAccess(orgForGate.plan)) {
+    throw new ForbiddenError(
+      `Bulk CSV upload is available on the Pro and Enterprise plans. Upgrade your plan to use this feature.`
+    );
+  }
+
+  // ── Plan monthly job limit check ─────────────────────────────────────────
+  const monthlyCount = await businessService.countMonthlyJobsForOrg(orgId);
+  const org = orgForGate;
+  if (org) {
+    const limit = getJobLimit(org.plan);
+    if (limit !== Infinity) {
+      const remaining = limit - monthlyCount;
+      if (remaining <= 0) {
+        const label = PLAN_LABELS[org.plan];
+        throw new ForbiddenError(
+          `Your ${label} plan allows up to ${limit} job${limit === 1 ? "" : "s"} per month and you have reached the limit. Upgrade your plan to post more jobs.`
+        );
+      }
+      if (jobs.length > remaining) {
+        throw new ForbiddenError(
+          `You can only post ${remaining} more job${remaining === 1 ? "" : "s"} this month (${PLAN_LABELS[org.plan]} plan limit: ${limit}/month). Reduce the batch size or upgrade your plan.`
+        );
+      }
+    }
+  }
 
   const results: { index: number; jobId?: string; error?: string }[] = [];
 

@@ -26,6 +26,7 @@ interface PlanDef {
   branches:    string;
   members:     string;
   jobs:        string;
+  commission:  string;
   analytics:   boolean;
   bulkUpload:  boolean;
   recurring:   boolean;
@@ -36,25 +37,25 @@ const PLANS: PlanDef[] = [
   {
     key: "starter", label: "Starter", price: 0,    priceLabel: "Free",
     color: "bg-slate-100",   textColor: "text-slate-700",
-    branches: "2", members: "5",   jobs: "10 / mo",
+    branches: "2", members: "5",   jobs: "10 / mo", commission: "15%",
     analytics: false, bulkUpload: false, recurring: false, priority: false,
   },
   {
     key: "growth",  label: "Growth",  price: 999,  priceLabel: "₱999 / mo",
     color: "bg-blue-100",    textColor: "text-blue-700",
-    branches: "5", members: "15",  jobs: "50 / mo",
+    branches: "5", members: "15",  jobs: "50 / mo", commission: "12%",
     analytics: true,  bulkUpload: false, recurring: false, priority: false,
   },
   {
     key: "pro",     label: "Pro",     price: 2499, priceLabel: "₱2,499 / mo",
     color: "bg-violet-100",  textColor: "text-violet-700",
-    branches: "15", members: "50",  jobs: "Unlimited",
+    branches: "15", members: "50",  jobs: "Unlimited", commission: "10%",
     analytics: true,  bulkUpload: true,  recurring: true,  priority: false,
   },
   {
     key: "enterprise", label: "Enterprise", price: 4999, priceLabel: "₱4,999 / mo",
     color: "bg-amber-100",   textColor: "text-amber-700",
-    branches: "Unlimited", members: "Unlimited", jobs: "Unlimited",
+    branches: "Unlimited", members: "Unlimited", jobs: "Unlimited", commission: "8%",
     analytics: true,  bulkUpload: true,  recurring: true,  priority: true,
   },
 ];
@@ -374,6 +375,7 @@ export default function BillingClient() {
             <li>🏢 {currentPlan.branches} branches</li>
             <li>👥 {currentPlan.members} members</li>
             <li>📋 {currentPlan.jobs}</li>
+            <li>💳 {currentPlan.commission} commission</li>
           </ul>
           {data?.planExpiresAt && currentPlanKey !== "starter" && (
             <p className="mt-2 text-xs text-slate-500">
@@ -504,6 +506,7 @@ export default function BillingClient() {
                     `🏢 ${plan.branches} branches`,
                     `👥 ${plan.members} members`,
                     `📋 ${plan.jobs}`,
+                    `💳 ${plan.commission} commission`,
                   ].map((f) => <li key={f}>{f}</li>)}
                   {(["analytics", "bulkUpload", "recurring", "priority"] as const).map((feat) => (
                     <li key={feat} className="flex items-center gap-1">

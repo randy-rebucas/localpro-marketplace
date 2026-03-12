@@ -5,11 +5,13 @@ import Image from "next/image";
 import {
   TrendingUp, Star, User, Download,
   CheckCircle, AlertTriangle, Briefcase, BarChart2, FileText,
+  Lock, ArrowUpRight,
 } from "lucide-react";
 import { fetchClient } from "@/lib/fetchClient";
 import type {
   IBusinessOrganization, MonthlyExpenseRow, ProviderPerformanceRow,
 } from "@/types";
+import { hasAnalyticsAccess, PLAN_LABELS, PLAN_UPGRADE_NEXT } from "@/lib/businessPlan";
 import { formatCurrency } from "@/lib/utils";
 import toast from "react-hot-toast";
 
@@ -34,6 +36,9 @@ export default function AnalyticsClient() {
       setOrg(orgData.org);
       const id = orgData.org._id.toString();
       setOrgId(id);
+
+      // Skip data fetches for plans without analytics access — the UI will show the upgrade wall
+      if (!hasAnalyticsAccess(orgData.org.plan)) { setLoading(false); return; }
 
       const [expData, provData] = await Promise.all([
         fetchClient<{ rows: MonthlyExpenseRow[] }>(
@@ -106,6 +111,56 @@ export default function AnalyticsClient() {
         No business profile found.{" "}
         <a href="/client/business" className="text-primary underline">Create one first.</a>
       </p>
+    );
+  }
+
+  // ── Plan gate: Analytics requires Growth or higher ───────────────────────────────
+  if (!hasAnalyticsAccess(org.plan)) {
+    const nextPlan = PLAN_UPGRADE_NEXT[org.plan];
+    return (
+      <div className="flex flex-col items-center justify-center gap-6 py-24 text-center px-6">
+        <div className="w-16 h-16 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center">
+          <Lock className="h-7 w-7 text-amber-500" />
+        </div>
+        <div className="space-y-2 max-w-md">
+          <h2 className="text-lg font-bold text-slate-800">Analytics &amp; Insights</h2>
+          <p className="text-sm text-slate-500 leading-relaxed">
+            Expense reports, provider performance, and budget monitoring are available on the{" "}
+            <strong>Growth, Pro,</strong> and <strong>Enterprise</strong> plans.
+            Your current plan is <strong>{PLAN_LABELS[org.plan]}</strong>.
+          </p>
+        </div>
+        <div className="flex flex-col sm:flex-row gap-3">
+          {nextPlan && (
+            <a
+              href="/client/business/plan"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary-700 transition-colors shadow-sm"
+            >
+              Upgrade to {PLAN_LABELS[nextPlan]}
+              <ArrowUpRight className="h-4 w-4" />
+            </a>
+          )}
+          <a
+            href="/client/business"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50 transition-colors"
+          >
+            Back to Dashboard
+          </a>
+        </div>
+        {/* Preview of what they'll unlock */}
+        <div className="grid sm:grid-cols-3 gap-4 mt-4 w-full max-w-xl opacity-40 pointer-events-none select-none">
+          {[
+            { icon: BarChart2, label: "Monthly Expense Breakdown" },
+            { icon: TrendingUp, label: "Provider Performance" },
+            { icon: FileText, label: "CSV Report Export" },
+          ].map(({ icon: Icon, label }) => (
+            <div key={label} className="flex flex-col items-center gap-2 p-4 bg-white rounded-xl border border-slate-200">
+              <Icon className="h-6 w-6 text-slate-400" />
+              <span className="text-xs text-slate-400 font-medium text-center">{label}</span>
+            </div>
+          ))}
+        </div>
+      </div>
     );
   }
 

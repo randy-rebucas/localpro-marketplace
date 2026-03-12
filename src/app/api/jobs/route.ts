@@ -5,6 +5,7 @@ import { requireUser } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { ValidationError, ForbiddenError, UnprocessableError } from "@/lib/errors";
 import { getAppSetting } from "@/lib/appSettings";
+import { businessService } from "@/services/business.service";
 
 const JOB_STATUSES = [
   "pending_validation", "open", "assigned", "in_progress",
@@ -67,6 +68,9 @@ export const POST = withHandler(async (req: NextRequest) => {
   if (parsed.data.budget < (minBudget as number)) {
     throw new ValidationError(`Job budget must be at least ₱${(minBudget as number).toLocaleString()}`);
   }
+
+  // ── Business org monthly job limit ──────────────────────────────────────
+  await businessService.checkBusinessJobMonthlyLimit(user.userId);
 
   const job = await jobService.createJob(user, parsed.data);
   return NextResponse.json(job, { status: 201 });

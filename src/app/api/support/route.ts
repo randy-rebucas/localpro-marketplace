@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { supportService } from "@/services/support.service";
+import { businessService } from "@/services/business.service";
 import { requireUser } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { ValidationError } from "@/lib/errors";
@@ -19,6 +20,9 @@ export const GET = withHandler(async () => {
 /** POST /api/support — user sends a message to support */
 export const POST = withHandler(async (req: NextRequest) => {
   const user = await requireUser();
+
+  // Enforce Priority Support plan gate for business clients
+  await businessService.checkPrioritySupportAccess(user.userId);
 
   const body = await req.json();
   const parsed = SendMessageSchema.safeParse(body);

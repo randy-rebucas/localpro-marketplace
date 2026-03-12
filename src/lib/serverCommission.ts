@@ -5,6 +5,10 @@
  */
 import { getAppSettings } from "@/lib/appSettings";
 import { HIGH_VALUE_CATEGORIES } from "@/lib/commission";
+import { getBusinessCommissionRate } from "@/lib/businessPlan";
+import { businessMemberRepository } from "@/repositories/businessMember.repository";
+import { businessOrganizationRepository } from "@/repositories/businessOrganization.repository";
+import type { BusinessPlan } from "@/types";
 
 /**
  * Async version: reads base and high-value commission rates from app settings
@@ -20,4 +24,30 @@ export async function getDbCommissionRate(category?: string | null): Promise<num
   const highRate = (settings["payments.highCommissionRate"] as number) / 100;
   if (category && HIGH_VALUE_CATEGORIES.has(category)) return highRate;
   return baseRate;
+}
+
+/**
+ * Client-aware commission rate resolver.
+ *
+ * If `clientId` belongs to a business org, returns the plan-tier rate
+ * (starter 15% → growth 12% → pro 10% → enterprise 8%) which overrides
+ * the standard category-based rate.
+ *
+ * Falls back to `getDbCommissionRate(category)` for regular clients.
+ */
+export async function getEffectiveCommissionRate(
+  category?: string | null,
+  clientId?: string | null
+): Promise<number> {
+  if (clientId) {
+    try {
+      const memberships = await businessMemberRepository.findByUser(clientId);
+      if (memberships && memberships.length > 0) {
+        const orgId = String(memberships[0].orgId);
+        const org   = await businessOrganizationRepository.findOrgById(orgId);
+        if (org) return getBusinessCommissionRate(org.plan as BusinessPlan);
+      }
+    } catch { /* non-critical — fall through to standard rate */ }
+  }
+  return getDbCommissionRate(category);
 }
