@@ -300,7 +300,8 @@ export type ActivityEventType =
   | "recurring_created"
   | "recurring_cancelled"
   | "recurring_job_spawned"
-  | "job_cancelled";
+  | "job_cancelled"
+  | "admin_ledger_entry";
 
 export interface IActivityLog {
   _id: Types.ObjectId | string;

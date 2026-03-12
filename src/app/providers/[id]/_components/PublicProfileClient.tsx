@@ -4,11 +4,14 @@ import { useState, useCallback } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import toast from "react-hot-toast";
+import dynamic from "next/dynamic";
 import {
   Star, Sparkles, Briefcase, Timer, Clock, CheckCircle2,
   XCircle, MapPin, Calendar, TrendingUp, Award, MessageSquare,
-  Flame, User, Share2, Check, ShieldCheck, BookOpen,
+  Flame, User, Share2, Check, ShieldCheck, BookOpen, Building2,
 } from "lucide-react";
+
+const DirectJobModal = dynamic(() => import("@/components/client/DirectJobModal"), { ssr: false });
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { apiFetch } from "@/lib/fetchClient";
 
@@ -33,6 +36,7 @@ export interface ProviderProfileData {
   serviceAreas?: ServiceArea[];
   schedule?: Record<string, WorkSlot>;
   isLocalProCertified?: boolean;
+  agency?: { name: string; staffCount: number; plan: string } | null;
   pesoVerificationTags?: string[];
   pesoReferredBy?: string | null;
   certifications?: { title: string; issuer: string; issuedAt: string }[];
@@ -227,6 +231,7 @@ export default function PublicProfileClient({
   providerId: string;
 }) {
   const [tab, setTab] = useState<Tab>("overview");
+  const [showDirectHire, setShowDirectHire] = useState(false);
   const [reviews, setReviews] = useState<ReviewData[]>(initialReviews);
   const [reviewsTotal, setReviewsTotal] = useState(totalReviews);
   const [reviewPage, setReviewPage] = useState(1);
@@ -321,6 +326,11 @@ export default function PublicProfileClient({
                       <Flame className="h-3 w-3" /> {profile.streak}-star streak
                     </span>
                   )}
+                  {profile.agency && (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded bg-violet-100 text-violet-700 border border-violet-200 whitespace-nowrap">
+                      <Building2 className="h-3 w-3" /> {profile.agency.name} &middot; {profile.agency.staffCount} staff
+                    </span>
+                  )}
                 </div>
 
                 <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${availabilityConfig[avail].classes}`}>
@@ -340,13 +350,13 @@ export default function PublicProfileClient({
               {/* Actions - always top-right */}
               <div className="flex gap-1.5 sm:gap-2 flex-shrink-0">
                 <ShareButton />
-                <Link
-                  href={`/login?next=/providers/${providerId}`}
+                <button
+                  onClick={() => setShowDirectHire(true)}
                   className="flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-lg bg-primary text-white text-sm font-semibold hover:bg-primary/90 transition-colors"
                 >
                   <Sparkles className="h-4 w-4" />
                   <span className="hidden sm:inline">Hire</span>
-                </Link>
+                </button>
               </div>
             </div>
           </div>
@@ -620,6 +630,14 @@ export default function PublicProfileClient({
       <div className="pt-2 pb-8">
         <HireCTA name={name} />
       </div>
+
+      {showDirectHire && (
+        <DirectJobModal
+          providerId={providerId}
+          providerName={name}
+          onClose={() => setShowDirectHire(false)}
+        />
+      )}
     </div>
   );
 }

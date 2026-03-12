@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { BookOpen, Scale, TrendingUp, LayoutDashboard } from "lucide-react";
+import { BookOpen, Scale, TrendingUp, LayoutDashboard, PenLine } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import AccountingClient from "./AccountingClient";
 import LedgerEntriesClient from "./LedgerEntriesClient";
+import ManualEntryForm from "./ManualEntryForm";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -30,6 +31,7 @@ const TABS = [
   { id: "trial",    label: "Trial Balance",    icon: Scale          },
   { id: "income",   label: "Income Statement", icon: TrendingUp     },
   { id: "balance",  label: "Balance Summary",  icon: LayoutDashboard },
+  { id: "manual",   label: "Manual Entry",     icon: PenLine        },
 ] as const;
 
 type TabId = typeof TABS[number]["id"];
@@ -231,6 +233,8 @@ export default function AccountingTabs(props: Props) {
       {tab === "balance" && (
         <BalanceSummaryPanel {...props} />
       )}
+
+      {tab === "manual" && <ManualEntryForm />}
     </div>
   );
 }
