@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "postbuild": "node scripts/seed-settings.mjs",
     "start": "next start",
     "lint": "next lint",
     "db:reset": "node --env-file=.env.local scripts/db-reset.mjs",
