@@ -21,19 +21,19 @@ import {
 } from "./constants";
 import type { BoardData } from "./types";
 
-import { LiveClock }                  from "./components/LiveClock";
-import { JobActivityFeed }            from "./components/JobActivityFeed";
-import { JobCard }                    from "./components/JobCard";
-import { LeaderboardCard }            from "./components/LeaderboardCard";
-import { AnnouncementTicker }         from "./components/AnnouncementTicker";
-import { UrgentJobsStrip }            from "./components/UrgentJobsStrip";
-import { CategoryDemandWidget }       from "./components/CategoryDemandWidget";
-import { EstimatedEarningsWidget }    from "./components/EstimatedEarningsWidget";
+import { LiveClock } from "./components/LiveClock";
+import { JobActivityFeed } from "./components/JobActivityFeed";
+import { JobCard } from "./components/JobCard";
+import { LeaderboardCard } from "./components/LeaderboardCard";
+import { AnnouncementTicker } from "./components/AnnouncementTicker";
+import { UrgentJobsStrip } from "./components/UrgentJobsStrip";
+import { CategoryDemandWidget } from "./components/CategoryDemandWidget";
+import { EstimatedEarningsWidget } from "./components/EstimatedEarningsWidget";
 import { ProviderAchievementsWidget } from "./components/ProviderAchievementsWidget";
-import { TrainingCTA }                from "./components/TrainingCTA";
-import { BottomStrip }                from "./components/BottomStrip";
-import { AchievementFeed }           from "./components/AchievementFeed";
-import { CompletionToast }           from "./components/CompletionToast";
+import { TrainingCTA } from "./components/TrainingCTA";
+import { BottomStrip } from "./components/BottomStrip";
+import { AchievementFeed } from "./components/AchievementFeed";
+import { CompletionToast } from "./components/CompletionToast";
 
 // ─── Main board ───────────────────────────────────────────────────────────────
 
@@ -60,7 +60,7 @@ export default function BoardPage() {
   useEffect(() => {
     const id = setInterval(() => setQrCopyIdx((i) => (i + 1) % QR_COPY_LINES.length), 8_000);
     return () => clearInterval(id);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [QR_COPY_LINES.length]);
 
   const fetchData = useCallback(async () => {
@@ -174,7 +174,20 @@ export default function BoardPage() {
           to   { width: 100%; }
         }
       `}</style>
-
+      {/* ── Floating Info Strip — absolute overlay, hidden on mobile ── */}
+      {data && (
+        <div className="hidden md:flex flex-col absolute top-0 inset-x-0 z-20">
+          {/* Slide down container */}
+          <div
+            className="overflow-hidden transition-all duration-1000 ease-in-out"
+            style={{ maxHeight: showBottomStrip ? "600px" : "0px" }}
+          >
+            <div className="opacity-80 backdrop-blur-sm">
+              <BottomStrip stats={data.stats} features={data.features} />
+            </div>
+          </div>
+        </div>
+      )}
       {/* ── Header ─────────────────────────────────────────────────────── */}
       <header className="flex-shrink-0 bg-[#1e3a5f] border-b border-white/10 px-3 sm:px-4 md:px-6 py-2.5 md:py-3 flex flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-4 shadow-sm">
         {/* Brand */}
@@ -258,98 +271,100 @@ export default function BoardPage() {
       {/* ── Main content ─────────────────────────────────────────────────── */}
       <main className="flex-1 overflow-y-auto flex flex-col md:flex-row gap-0 min-h-0 bg-gradient-to-b from-[#14243a] to-[#1a3050] relative">
 
+
+
         {/* ── Left Panel: Job Listings + side widgets ────────────────────── */}
         <section className="flex flex-1 min-w-0 border-b md:border-b-0 md:border-r border-white/10 overflow-hidden">
 
           {/* Jobs column */}
           <div className="flex flex-col flex-1 min-w-0 p-2 sm:p-3 md:p-4 gap-2 md:gap-3 overflow-y-auto">
 
-          {/* Section header — title + inline activity feed + pagination */}
-          <div className="flex items-center justify-between flex-shrink-0 gap-2 mb-1">
-            {/* Title + count */}
-            <div className="flex items-center gap-1.5 md:gap-2 flex-shrink-0">
-              <Briefcase className="h-5 w-5 text-blue-400" />
-              <h2 className="text-base font-bold text-white uppercase tracking-wider">
-                Jobs Available
-              </h2>
-              {data && (
-                <span className="inline-flex items-center justify-center h-5 px-2 rounded-full bg-emerald-500/20 text-emerald-300 text-[11px] font-bold border border-emerald-500/30">
-                  {data.stats.openJobs}
-                </span>
+            {/* Section header — title + inline activity feed + pagination */}
+            <div className="flex items-center justify-between flex-shrink-0 gap-2 mb-1">
+              {/* Title + count */}
+              <div className="flex items-center gap-1.5 md:gap-2 flex-shrink-0">
+                <Briefcase className="h-5 w-5 text-blue-400" />
+                <h2 className="text-base font-bold text-white uppercase tracking-wider">
+                  Jobs Available
+                </h2>
+                {data && (
+                  <span className="inline-flex items-center justify-center h-5 px-2 rounded-full bg-emerald-500/20 text-emerald-300 text-[11px] font-bold border border-emerald-500/30">
+                    {data.stats.openJobs}
+                  </span>
+                )}
+              </div>
+
+              {/* Inline Live Activity feed */}
+              {data?.features?.activityFeed && (
+                <div className="flex-1 mx-3 h-8 bg-[#162d4a] border border-white/10 rounded-lg overflow-hidden hidden sm:block min-w-0">
+                  <JobActivityFeed />
+                </div>
+              )}
+
+              {/* Pagination controls */}
+              {totalJobPages > 1 && (
+                <div className="flex items-center gap-1.5 flex-shrink-0">
+                  <button
+                    onClick={() => setJobPage((p) => (p - 1 + totalJobPages) % totalJobPages)}
+                    className="p-1 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
+                    aria-label="Previous jobs page"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
+                  <span className="text-xs text-slate-400">
+                    {jobPage + 1} / {totalJobPages}
+                  </span>
+                  <button
+                    onClick={() => setJobPage((p) => (p + 1) % totalJobPages)}
+                    className="p-1 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
+                    aria-label="Next jobs page"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </div>
               )}
             </div>
 
-            {/* Inline Live Activity feed */}
-            {data?.features?.activityFeed && (
-              <div className="flex-1 mx-3 h-8 bg-[#162d4a] border border-white/10 rounded-lg overflow-hidden hidden sm:block min-w-0">
-                <JobActivityFeed />
-              </div>
-            )}
-
-            {/* Pagination controls */}
+            {/* Pagination progress bar — fills over JOB_PAGE_INTERVAL_MS, resets on page flip */}
             {totalJobPages > 1 && (
-              <div className="flex items-center gap-1.5 flex-shrink-0">
-                <button
-                  onClick={() => setJobPage((p) => (p - 1 + totalJobPages) % totalJobPages)}
-                  className="p-1 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
-                  aria-label="Previous jobs page"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </button>
-                <span className="text-xs text-slate-400">
-                  {jobPage + 1} / {totalJobPages}
-                </span>
-                <button
-                  onClick={() => setJobPage((p) => (p + 1) % totalJobPages)}
-                  className="p-1 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
-                  aria-label="Next jobs page"
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </button>
+              <div className="flex-shrink-0 h-0.5 rounded-full bg-white/5 overflow-hidden -mt-1">
+                <div
+                  key={jobPage}
+                  className="h-full bg-blue-400/60 rounded-full"
+                  style={{ animation: `fillbar ${JOB_PAGE_INTERVAL_MS}ms linear forwards` }}
+                />
               </div>
             )}
-          </div>
 
-          {/* Pagination progress bar — fills over JOB_PAGE_INTERVAL_MS, resets on page flip */}
-          {totalJobPages > 1 && (
-            <div className="flex-shrink-0 h-0.5 rounded-full bg-white/5 overflow-hidden -mt-1">
-              <div
-                key={jobPage}
-                className="h-full bg-blue-400/60 rounded-full"
-                style={{ animation: `fillbar ${JOB_PAGE_INTERVAL_MS}ms linear forwards` }}
-              />
-            </div>
-          )}
+            {/* Job cards grid */}
+            {data && visibleJobs.length > 0 ? (
+              <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2 md:gap-3 content-start overflow-hidden">
+                {visibleJobs.map((job) => (
+                  <JobCard key={job._id} job={job} />
+                ))}
+              </div>
+            ) : (
+              <div className="flex-1 flex flex-col items-center justify-center gap-2 md:gap-3 text-center min-h-[200px]">
+                <Cpu className="h-10 w-10 md:h-12 md:w-12 text-slate-600" />
+                <p className="text-slate-400 text-sm">No open jobs at the moment.</p>
+                <p className="text-slate-500 text-xs">Check back soon — new jobs are posted regularly.</p>
+              </div>
+            )}
 
-          {/* Job cards grid */}
-          {data && visibleJobs.length > 0 ? (
-            <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2 md:gap-3 content-start overflow-hidden">
-              {visibleJobs.map((job) => (
-                <JobCard key={job._id} job={job} />
-              ))}
-            </div>
-          ) : (
-            <div className="flex-1 flex flex-col items-center justify-center gap-2 md:gap-3 text-center min-h-[200px]">
-              <Cpu className="h-10 w-10 md:h-12 md:w-12 text-slate-600" />
-              <p className="text-slate-400 text-sm">No open jobs at the moment.</p>
-              <p className="text-slate-500 text-xs">Check back soon — new jobs are posted regularly.</p>
-            </div>
-          )}
-
-          {/* Page dots */}
-          {totalJobPages > 1 && (
-            <div className="flex-shrink-0 flex items-center justify-center gap-1 pt-1">
-              {Array.from({ length: totalJobPages }).map((_, i) => (
-                <button
-                  key={i}
-                  onClick={() => setJobPage(i)}
-                  className={`rounded-full transition-all focus:outline-none focus:ring-2 focus:ring-blue-400 ${i === jobPage ? "w-4 h-1.5 bg-blue-400" : "w-1.5 h-1.5 bg-white/20"
-                    }`}
-                  aria-label={`Go to jobs page ${i + 1}`}
-                />
-              ))}
-            </div>
-          )}
+            {/* Page dots */}
+            {totalJobPages > 1 && (
+              <div className="flex-shrink-0 flex items-center justify-center gap-1 pt-1">
+                {Array.from({ length: totalJobPages }).map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setJobPage(i)}
+                    className={`rounded-full transition-all focus:outline-none focus:ring-2 focus:ring-blue-400 ${i === jobPage ? "w-4 h-1.5 bg-blue-400" : "w-1.5 h-1.5 bg-white/20"
+                      }`}
+                    aria-label={`Go to jobs page ${i + 1}`}
+                  />
+                ))}
+              </div>
+            )}
 
           </div>{/* end jobs column */}
 
@@ -444,8 +459,8 @@ export default function BoardPage() {
                 Become a Provider
               </p>
               <p className="text-xs text-blue-300 font-medium leading-relaxed transition-all duration-700 min-h-[2.5rem] flex items-center justify-center text-center px-1">
-                  {QR_COPY_LINES[qrCopyIdx]}
-                </p>
+                {QR_COPY_LINES[qrCopyIdx]}
+              </p>
             </div>
 
             {/* URL pill */}
@@ -470,39 +485,6 @@ export default function BoardPage() {
         </aside>
 
       </main>
-
-      {/* ── Bottom Section — hidden on mobile ────────────────────────────── */}
-      {data && (
-        <div className="hidden md:flex flex-col">
-          {/* Toggle handle */}
-          <button
-            onClick={() => {
-              setShowBottomStrip((v) => !v);
-              // Reset the auto-toggle timer so it counts 30 s from the manual click
-              if (bottomStripTimer.current) clearInterval(bottomStripTimer.current);
-              bottomStripTimer.current = setInterval(() => {
-                setShowBottomStrip((v) => !v);
-              }, 30_000);
-            }}
-            className="flex-shrink-0 w-full flex items-center justify-center gap-1.5 py-0.5 bg-[#11202f] border-t border-white/10 hover:bg-white/5 transition-colors group"
-            aria-label={showBottomStrip ? "Hide info strip" : "Show info strip"}
-          >
-            <span className="text-[9px] font-bold text-slate-600 uppercase tracking-widest group-hover:text-slate-400 transition-colors">
-              {showBottomStrip ? "Hide Info Strip" : "Show Info Strip"}
-            </span>
-            {showBottomStrip
-              ? <ChevronDown className="h-3 w-3 text-slate-600 group-hover:text-slate-400 transition-colors" />
-              : <ChevronUp className="h-3 w-3 text-slate-600 group-hover:text-slate-400 transition-colors" />}
-          </button>
-          {/* Slide up/down container */}
-          <div
-            className="overflow-hidden transition-all duration-1000 ease-in-out"
-            style={{ maxHeight: showBottomStrip ? "600px" : "0px" }}
-          >
-            <BottomStrip stats={data.stats} features={data.features} />
-          </div>
-        </div>
-      )}
 
       {/* Completion toast — bottom-right corner pop-up */}
       <CompletionToast />
