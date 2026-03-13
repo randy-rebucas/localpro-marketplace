@@ -342,38 +342,43 @@ export default function DatabaseClient({ resetEnabled }: { resetEnabled: boolean
         />
       )}
 
-      <div className="space-y-6">
+      <div className="space-y-5">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-              <Database className="w-6 h-6 text-primary" />
-              Database Management
-            </h2>
-            <p className="text-slate-500 text-sm mt-0.5">
-              Collection stats, backup, restore, and reset tools for <strong>{stats?.dbName ?? "…"}</strong>
-            </p>
+        <div className="flex items-center justify-between gap-4 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-5 py-4 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-xl bg-violet-100 dark:bg-violet-900/30">
+              <Database className="w-5 h-5 text-violet-600 dark:text-violet-400" />
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-slate-800 dark:text-white">Database Management</h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Collection stats, backup, restore &amp; reset for{" "}
+                <span className="font-semibold text-slate-700 dark:text-slate-300">{stats?.dbName ?? "…"}</span>
+              </p>
+            </div>
           </div>
           <button
             onClick={handleRefresh}
             disabled={refreshing}
-            className="flex items-center gap-2 px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50 disabled:opacity-40"
+            className="p-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-40 transition-colors"
+            title="Refresh stats"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin" : ""}`} />
-            Refresh
+            <RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} />
           </button>
         </div>
 
         {/* Disabled warning */}
         {!resetEnabled && (
-          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
-            <Shield className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
+          <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-2xl px-5 py-4 flex items-start gap-3">
+            <div className="p-1.5 bg-amber-100 dark:bg-amber-900/40 rounded-lg mt-0.5 flex-shrink-0">
+              <Shield className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+            </div>
             <div>
-              <p className="font-semibold text-amber-800 text-sm">Reset &amp; Restore operations are disabled</p>
-              <p className="text-xs text-amber-700 mt-0.5">
-                Set <code className="bg-amber-100 px-1 rounded">DB_RESET_ENABLED=true</code> and{" "}
-                <code className="bg-amber-100 px-1 rounded">DB_RESET_TOKEN=&lt;secret&gt;</code> in your{" "}
-                <code className="bg-amber-100 px-1 rounded">.env.local</code> to enable. Backup is always available.
+              <p className="font-semibold text-amber-800 dark:text-amber-300 text-sm">Reset &amp; Restore operations are disabled</p>
+              <p className="text-xs text-amber-700 dark:text-amber-400 mt-0.5 leading-relaxed">
+                Set <code className="bg-amber-100 dark:bg-amber-900/50 px-1 rounded">DB_RESET_ENABLED=true</code> and{" "}
+                <code className="bg-amber-100 dark:bg-amber-900/50 px-1 rounded">DB_RESET_TOKEN=&lt;secret&gt;</code> in your{" "}
+                <code className="bg-amber-100 dark:bg-amber-900/50 px-1 rounded">.env.local</code> to enable. Backup is always available.
               </p>
             </div>
           </div>
@@ -382,39 +387,47 @@ export default function DatabaseClient({ resetEnabled }: { resetEnabled: boolean
         {/* DB overview cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {[
-            { label: "Database",        value: stats?.dbName ?? "—",                               icon: <Database  className="h-5 w-5" /> },
-            { label: "Total Documents", value: loading ? "…" : totalDocs.toLocaleString(),          icon: <Table     className="h-5 w-5" /> },
-            { label: "Data Size",       value: loading ? "…" : formatBytes(stats?.dataSize ?? 0),   icon: <HardDrive className="h-5 w-5" /> },
-            { label: "Index Size",      value: loading ? "…" : formatBytes(stats?.indexSize ?? 0),  icon: <HardDrive className="h-5 w-5" /> },
+            { label: "Database",        value: stats?.dbName ?? "—",                              icon: Database,  color: "text-violet-600 dark:text-violet-400", bg: "bg-violet-50 dark:bg-violet-900/30", ring: "ring-violet-100 dark:ring-violet-800" },
+            { label: "Total Documents", value: loading ? "…" : totalDocs.toLocaleString(),         icon: Table,     color: "text-blue-600 dark:text-blue-400",   bg: "bg-blue-50 dark:bg-blue-900/30",   ring: "ring-blue-100 dark:ring-blue-800"   },
+            { label: "Data Size",       value: loading ? "…" : formatBytes(stats?.dataSize ?? 0),  icon: HardDrive, color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-50 dark:bg-emerald-900/30", ring: "ring-emerald-100 dark:ring-emerald-800" },
+            { label: "Index Size",      value: loading ? "…" : formatBytes(stats?.indexSize ?? 0), icon: HardDrive, color: "text-amber-600 dark:text-amber-400",  bg: "bg-amber-50 dark:bg-amber-900/30",  ring: "ring-amber-100 dark:ring-amber-800"  },
           ].map((card) => (
-            <div key={card.label} className="bg-white rounded-xl border border-slate-200 shadow-card p-5 flex items-center gap-4">
-              <div className="p-2.5 bg-primary/10 rounded-xl text-primary flex-shrink-0">{card.icon}</div>
+            <div key={card.label} className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-4 flex items-center gap-4">
+              <div className={`${card.bg} ring-4 ${card.ring} p-2.5 rounded-xl flex-shrink-0`}>
+                <card.icon className={`h-5 w-5 ${card.color}`} />
+              </div>
               <div className="min-w-0">
-                <p className="text-xs text-slate-500 font-medium truncate">{card.label}</p>
-                <p className="text-xl font-bold text-slate-900 truncate">{card.value}</p>
+                <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider truncate">{card.label}</p>
+                <p className="text-xl font-bold text-slate-900 dark:text-white truncate mt-0.5">{card.value}</p>
               </div>
             </div>
           ))}
         </div>
 
         {/* Backup & Restore panel */}
-        <div className="bg-white rounded-xl border border-slate-200 shadow-card overflow-hidden">
-          <div className="px-5 py-4 border-b border-slate-100">
-            <h3 className="text-sm font-semibold text-slate-800">Backup &amp; Restore</h3>
-            <p className="text-xs text-slate-400 mt-0.5">Export a full JSON backup or restore from a previous backup file.</p>
+        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+          <div className="flex items-center gap-3 px-5 py-4 border-b border-slate-100 dark:border-slate-700">
+            <div className="p-1.5 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
+              <Download className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-slate-800 dark:text-white">Backup &amp; Restore</h3>
+              <p className="text-xs text-slate-400 dark:text-slate-500">Export a full JSON backup or restore from a previous backup file.</p>
+            </div>
           </div>
-          <div className="divide-y divide-slate-100">
+          <div className="divide-y divide-slate-100 dark:divide-slate-700">
             {/* Backup */}
             <div className="flex items-start justify-between gap-4 px-5 py-4">
               <div className="flex items-start gap-3">
-                <div className="p-2 bg-blue-50 rounded-lg mt-0.5">
-                  <Download className="w-4 h-4 text-blue-600" />
+                <div className="p-2 bg-blue-50 dark:bg-blue-900/30 rounded-lg mt-0.5">
+                  <Download className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-slate-800">Export Backup</p>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    Exports all collections as a timestamped <code className="bg-slate-100 px-1 rounded">localpro-backup-*.json</code> file —
-                    saved to <code className="bg-slate-100 px-1 rounded">backup/</code> in the codebase and downloaded to your browser.
+                  <p className="text-sm font-semibold text-slate-800 dark:text-white">Export Backup</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
+                    Exports all collections as a timestamped{" "}
+                    <code className="bg-slate-100 dark:bg-slate-700 px-1 rounded">localpro-backup-*.json</code> file —
+                    saved to <code className="bg-slate-100 dark:bg-slate-700 px-1 rounded">backup/</code> and downloaded to your browser.
                     No token required.
                   </p>
                 </div>
@@ -422,7 +435,7 @@ export default function DatabaseClient({ resetEnabled }: { resetEnabled: boolean
               <button
                 onClick={() => handleBackup()}
                 disabled={downloading || running}
-                className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 border border-blue-200 text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg text-xs font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
+                className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 border border-blue-200 text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg text-xs font-semibold disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >
                 {activeAction === "backup"
                   ? <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Exporting…</>
@@ -433,12 +446,12 @@ export default function DatabaseClient({ resetEnabled }: { resetEnabled: boolean
             {/* Restore */}
             <div className="flex items-start justify-between gap-4 px-5 py-4">
               <div className="flex items-start gap-3">
-                <div className="p-2 bg-indigo-50 rounded-lg mt-0.5">
-                  <Upload className="w-4 h-4 text-indigo-600" />
+                <div className="p-2 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg mt-0.5">
+                  <Upload className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-slate-800">Restore from Backup</p>
-                  <p className="text-xs text-slate-500 mt-0.5">
+                  <p className="text-sm font-semibold text-slate-800 dark:text-white">Restore from Backup</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
                     Upload a backup JSON file. Choose <strong>Upsert</strong> (safe — merges by _id) or{" "}
                     <strong>Replace</strong> (drops then re-inserts each collection).
                   </p>
@@ -447,7 +460,7 @@ export default function DatabaseClient({ resetEnabled }: { resetEnabled: boolean
               <button
                 onClick={() => setShowRestore(true)}
                 disabled={!resetEnabled || running || downloading}
-                className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 border border-indigo-200 text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-lg text-xs font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
+                className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 border border-indigo-200 text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-lg text-xs font-semibold disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >
                 {activeAction === "restore"
                   ? <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Restoring…</>
@@ -458,26 +471,31 @@ export default function DatabaseClient({ resetEnabled }: { resetEnabled: boolean
         </div>
 
         {/* Reset & Seed panel */}
-        <div className="bg-white rounded-xl border border-slate-200 shadow-card overflow-hidden">
-          <div className="px-5 py-4 border-b border-slate-100">
-            <h3 className="text-sm font-semibold text-slate-800">Reset &amp; Seed Actions</h3>
-            <p className="text-xs text-slate-400 mt-0.5">All destructive actions require a valid DB_RESET_TOKEN.</p>
+        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+          <div className="flex items-center gap-3 px-5 py-4 border-b border-slate-100 dark:border-slate-700">
+            <div className="p-1.5 bg-red-50 dark:bg-red-900/30 rounded-lg">
+              <Sprout className="w-3.5 h-3.5 text-red-600 dark:text-red-400" />
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-slate-800 dark:text-white">Reset &amp; Seed Actions</h3>
+              <p className="text-xs text-slate-400 dark:text-slate-500">All destructive actions require a valid DB_RESET_TOKEN.</p>
+            </div>
           </div>
-          <div className="divide-y divide-slate-100">
+          <div className="divide-y divide-slate-100 dark:divide-slate-700">
             <div className="flex items-start justify-between gap-4 px-5 py-4">
               <div className="flex items-start gap-3">
-                <div className="p-2 bg-green-50 rounded-lg mt-0.5">
-                  <Sprout className="w-4 h-4 text-green-600" />
+                <div className="p-2 bg-green-50 dark:bg-green-900/30 rounded-lg mt-0.5">
+                  <Sprout className="w-4 h-4 text-green-600 dark:text-green-400" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-slate-800">Seed Missing Data</p>
-                  <p className="text-xs text-slate-500 mt-0.5">Inserts missing categories and the default admin account without touching existing records.</p>
+                  <p className="text-sm font-semibold text-slate-800 dark:text-white">Seed Missing Data</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Inserts missing categories and the default admin account without touching existing records.</p>
                 </div>
               </div>
               <button
                 onClick={() => handleAction("seed_only")}
                 disabled={!resetEnabled || running || downloading}
-                className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 border border-green-200 text-green-700 bg-green-50 hover:bg-green-100 rounded-lg text-xs font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
+                className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 border border-green-200 text-green-700 bg-green-50 hover:bg-green-100 rounded-lg text-xs font-semibold disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >
                 {activeAction === "seed_only"
                   ? <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Seeding…</>
@@ -487,18 +505,18 @@ export default function DatabaseClient({ resetEnabled }: { resetEnabled: boolean
 
             <div className="flex items-start justify-between gap-4 px-5 py-4">
               <div className="flex items-start gap-3">
-                <div className="p-2 bg-amber-50 rounded-lg mt-0.5">
-                  <Sprout className="w-4 h-4 text-amber-600" />
+                <div className="p-2 bg-amber-50 dark:bg-amber-900/30 rounded-lg mt-0.5">
+                  <Sprout className="w-4 h-4 text-amber-600 dark:text-amber-400" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-slate-800">Seed App Settings</p>
-                  <p className="text-xs text-slate-500 mt-0.5">Inserts missing platform settings (commission rates, job limits, min amounts) without overwriting existing values.</p>
+                  <p className="text-sm font-semibold text-slate-800 dark:text-white">Seed App Settings</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Inserts missing platform settings (commission rates, job limits, min amounts) without overwriting existing values.</p>
                 </div>
               </div>
               <button
                 onClick={() => handleAction("seed_settings")}
                 disabled={!resetEnabled || running || downloading}
-                className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 border border-amber-200 text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-lg text-xs font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
+                className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 border border-amber-200 text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-lg text-xs font-semibold disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >
                 {activeAction === "seed_settings"
                   ? <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Seeding…</>
@@ -508,18 +526,18 @@ export default function DatabaseClient({ resetEnabled }: { resetEnabled: boolean
 
             <div className="flex items-start justify-between gap-4 px-5 py-4">
               <div className="flex items-start gap-3">
-                <div className="p-2 bg-amber-50 rounded-lg mt-0.5">
-                  <Sprout className="w-4 h-4 text-amber-600" />
+                <div className="p-2 bg-amber-50 dark:bg-amber-900/30 rounded-lg mt-0.5">
+                  <Sprout className="w-4 h-4 text-amber-600 dark:text-amber-400" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-slate-800">Seed Skills</p>
-                  <p className="text-xs text-slate-500 mt-0.5">Inserts the canonical skill list ({`>`}160 trades) without overwriting any existing skills.</p>
+                  <p className="text-sm font-semibold text-slate-800 dark:text-white">Seed Skills</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Inserts the canonical skill list (&gt;160 trades) without overwriting any existing skills.</p>
                 </div>
               </div>
               <button
                 onClick={() => handleAction("seed_skills")}
                 disabled={!resetEnabled || running || downloading}
-                className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 border border-amber-200 text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-lg text-xs font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
+                className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 border border-amber-200 text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-lg text-xs font-semibold disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >
                 {activeAction === "seed_skills"
                   ? <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Seeding…</>
@@ -529,13 +547,13 @@ export default function DatabaseClient({ resetEnabled }: { resetEnabled: boolean
 
             <div className="flex items-start justify-between gap-4 px-5 py-4">
               <div className="flex items-start gap-3">
-                <div className="p-2 bg-red-50 rounded-lg mt-0.5">
-                  <RotateCcw className="w-4 h-4 text-red-600" />
+                <div className="p-2 bg-red-50 dark:bg-red-900/30 rounded-lg mt-0.5">
+                  <RotateCcw className="w-4 h-4 text-red-600 dark:text-red-400" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-slate-800">Full Database Reset</p>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    <span className="text-red-600 font-medium">Destructive — </span>
+                  <p className="text-sm font-semibold text-slate-800 dark:text-white">Full Database Reset</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                    <span className="text-red-600 dark:text-red-400 font-medium">Destructive — </span>
                     Clears all collections then re-seeds categories and the admin account. All user data will be lost.
                   </p>
                 </div>
@@ -543,7 +561,7 @@ export default function DatabaseClient({ resetEnabled }: { resetEnabled: boolean
               <button
                 onClick={() => handleAction("full_reset")}
                 disabled={!resetEnabled || running || downloading}
-                className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 border border-red-200 text-red-700 bg-red-50 hover:bg-red-100 rounded-lg text-xs font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
+                className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 border border-red-200 text-red-700 bg-red-50 hover:bg-red-100 rounded-lg text-xs font-semibold disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >
                 {activeAction === "full_reset"
                   ? <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Resetting…</>
@@ -554,63 +572,63 @@ export default function DatabaseClient({ resetEnabled }: { resetEnabled: boolean
         </div>
 
         {/* Collection table */}
-        <div className="bg-white rounded-xl border border-slate-200 shadow-card overflow-hidden">
-          <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-slate-800 flex items-center gap-2">
-              <Table className="w-4 h-4 text-primary" />
-              Collections
-            </h3>
-            <span className="text-xs text-slate-400">{stats?.totalCollections ?? "—"} total in DB</span>
+        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-700">
+            <div className="flex items-center gap-3">
+              <div className="p-1.5 bg-slate-100 dark:bg-slate-700 rounded-lg">
+                <Table className="w-3.5 h-3.5 text-slate-600 dark:text-slate-400" />
+              </div>
+              <h3 className="text-sm font-semibold text-slate-800 dark:text-white">Collections</h3>
+            </div>
+            <span className="text-xs text-slate-400 dark:text-slate-500 tabular-nums">{stats?.totalCollections ?? "—"} total in DB</span>
           </div>
 
           {loading ? (
-            <div className="p-5 space-y-3">
+            <div className="p-5 space-y-3 animate-pulse">
               {[...Array(6)].map((_, i) => (
-                <div key={i} className="h-10 bg-slate-100 rounded animate-pulse" />
+                <div key={i} className="h-10 bg-slate-100 dark:bg-slate-700 rounded-xl" />
               ))}
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-slate-100">
-                    <th className="text-left px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wide">Collection</th>
-                    <th className="text-left px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wide hidden sm:table-cell">Key</th>
-                    <th className="text-right px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wide">Documents</th>
-                    <th className="px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wide text-right">Actions</th>
+                  <tr className="border-b border-slate-100 dark:border-slate-700">
+                    <th className="text-left px-5 py-3 text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Collection</th>
+                    <th className="text-left px-5 py-3 text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider hidden sm:table-cell">Key</th>
+                    <th className="text-right px-5 py-3 text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Documents</th>
+                    <th className="px-5 py-3 text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
                   {stats?.collections.map((col) => (
-                    <tr key={col.name} className="hover:bg-slate-50 transition-colors">
-                      <td className="px-5 py-3 font-medium text-slate-800">{col.label}</td>
-                      <td className="px-5 py-3 font-mono text-xs text-slate-400 hidden sm:table-cell">{col.name}</td>
+                    <tr key={col.name} className="hover:bg-slate-50 dark:hover:bg-slate-700/40 transition-colors">
+                      <td className="px-5 py-3 font-medium text-slate-800 dark:text-slate-200">{col.label}</td>
+                      <td className="px-5 py-3 font-mono text-xs text-slate-400 dark:text-slate-500 hidden sm:table-cell">{col.name}</td>
                       <td className="px-5 py-3 text-right tabular-nums">
                         {col.exists ? (
-                          <span className={`font-semibold ${col.count > 0 ? "text-slate-800" : "text-slate-400"}`}>
+                          <span className={`font-semibold ${col.count > 0 ? "text-slate-800 dark:text-slate-200" : "text-slate-400"}`}>
                             {col.count.toLocaleString()}
                           </span>
                         ) : (
-                          <span className="text-xs text-slate-300 italic">not found</span>
+                          <span className="text-xs text-slate-300 dark:text-slate-600 italic">not found</span>
                         )}
                       </td>
                       <td className="px-5 py-3 text-right">
                         <div className="flex items-center justify-end gap-1">
-                          {/* Per-collection backup */}
                           <button
                             onClick={() => handleBackup([col.name])}
                             disabled={downloading || !col.exists || col.count === 0}
                             title={`Backup ${col.name}`}
-                            className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium text-blue-600 hover:bg-blue-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                            className="inline-flex items-center gap-1 p-1.5 rounded-lg text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                           >
                             <Download className="w-3.5 h-3.5" />
                           </button>
-                          {/* Clear */}
                           <button
                             onClick={() => handleAction("clear_collection", col.name)}
                             disabled={!resetEnabled || running || !col.exists || col.count === 0}
                             title={`Clear ${col.name}`}
-                            className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium text-red-600 hover:bg-red-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                            className="inline-flex items-center gap-1 p-1.5 rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
@@ -626,23 +644,32 @@ export default function DatabaseClient({ resetEnabled }: { resetEnabled: boolean
 
         {/* Operation log */}
         {log.length > 0 && (
-          <div className={`rounded-xl border overflow-hidden ${logStatus === "error" ? "border-red-200" : "border-green-200"}`}>
+          <div className={`rounded-2xl border overflow-hidden ${
+            logStatus === "error"
+              ? "border-red-200 dark:border-red-800"
+              : "border-green-200 dark:border-green-800"
+          }`}>
             <button
               onClick={() => setExpandedLog((v) => !v)}
-              className={`w-full flex items-center justify-between px-5 py-3 text-sm font-semibold ${logStatus === "error" ? "bg-red-50 text-red-800" : "bg-green-50 text-green-800"}`}
+              className={`w-full flex items-center justify-between px-5 py-3 text-sm font-semibold transition-colors ${
+                logStatus === "error"
+                  ? "bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/30"
+                  : "bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-300 hover:bg-green-100 dark:hover:bg-green-900/30"
+              }`}
             >
               <span className="flex items-center gap-2">
                 {logStatus === "error" ? <XCircle className="w-4 h-4" /> : <CheckCircle className="w-4 h-4" />}
-                Operation {logStatus === "error" ? "failed" : "completed"} — {log.length} log {log.length === 1 ? "entry" : "entries"}
+                Operation {logStatus === "error" ? "failed" : "completed"}
+                <span className="font-normal opacity-70">— {log.length} {log.length === 1 ? "entry" : "entries"}</span>
               </span>
               <ChevronDown className={`w-4 h-4 transition-transform ${expandedLog ? "rotate-180" : ""}`} />
             </button>
             {expandedLog && (
-              <div className="bg-slate-900 p-4 font-mono text-xs text-slate-200 space-y-1 max-h-64 overflow-y-auto">
+              <div className="bg-slate-950 p-4 font-mono text-xs text-slate-300 space-y-1 max-h-64 overflow-y-auto">
                 {log.map((line, i) => (
-                  <p key={i} className="leading-relaxed">
-                    <span className="text-slate-500 select-none mr-2">{String(i + 1).padStart(2, "0")}</span>
-                    {line}
+                  <p key={i} className="leading-relaxed flex gap-3">
+                    <span className="text-slate-600 select-none tabular-nums flex-shrink-0">{String(i + 1).padStart(2, "0")}</span>
+                    <span className={line.startsWith("✓") ? "text-emerald-400" : line.startsWith("✗") || line.toLowerCase().includes("error") || line.toLowerCase().includes("fail") ? "text-red-400" : "text-slate-300"}>{line}</span>
                   </p>
                 ))}
               </div>
@@ -652,21 +679,21 @@ export default function DatabaseClient({ resetEnabled }: { resetEnabled: boolean
 
         {/* Running indicator */}
         {(running || downloading) && (() => {
-          const ACTION_LABELS: Record<string, { label: string; color: string; border: string }> = {
-            backup:           { label: "Exporting backup…",          color: "text-blue-700",   border: "border-blue-200 bg-blue-50"     },
-            restore:          { label: "Restoring from backup…",     color: "text-indigo-700", border: "border-indigo-200 bg-indigo-50"  },
-            seed_only:        { label: "Seeding data…",              color: "text-green-700",  border: "border-green-200 bg-green-50"   },
-            seed_settings:    { label: "Seeding app settings…",      color: "text-amber-700",  border: "border-amber-200 bg-amber-50"   },
-            seed_skills:      { label: "Seeding skills…",             color: "text-amber-700",  border: "border-amber-200 bg-amber-50"   },
-            full_reset:       { label: "Resetting database…",        color: "text-red-700",    border: "border-red-200 bg-red-50"       },
-            clear_collection: { label: "Clearing collection…",       color: "text-red-700",    border: "border-red-200 bg-red-50"       },
+          const ACTION_LABELS: Record<string, { label: string; color: string; bg: string; border: string }> = {
+            backup:           { label: "Exporting backup…",      color: "text-blue-700",   bg: "bg-blue-50",   border: "border-blue-200"   },
+            restore:          { label: "Restoring from backup…", color: "text-indigo-700", bg: "bg-indigo-50", border: "border-indigo-200" },
+            seed_only:        { label: "Seeding data…",          color: "text-green-700",  bg: "bg-green-50",  border: "border-green-200"  },
+            seed_settings:    { label: "Seeding app settings…", color: "text-amber-700",  bg: "bg-amber-50",  border: "border-amber-200"  },
+            seed_skills:      { label: "Seeding skills…",        color: "text-amber-700",  bg: "bg-amber-50",  border: "border-amber-200"  },
+            full_reset:       { label: "Resetting database…",   color: "text-red-700",    bg: "bg-red-50",    border: "border-red-200"    },
+            clear_collection: { label: "Clearing collection…",  color: "text-red-700",    bg: "bg-red-50",    border: "border-red-200"    },
           };
-          const meta = ACTION_LABELS[activeAction ?? ""] ?? { label: "Running operation…", color: "text-slate-600", border: "border-blue-200 bg-blue-50" };
+          const meta = ACTION_LABELS[activeAction ?? ""] ?? { label: "Running operation…", color: "text-blue-700", bg: "bg-blue-50", border: "border-blue-200" };
           return (
-            <div className={`flex items-center gap-3 text-sm ${meta.color} ${meta.border} border rounded-xl px-5 py-3`}>
+            <div className={`flex items-center gap-3 text-sm ${meta.color} ${meta.bg} ${meta.border} border rounded-2xl px-5 py-3.5`}>
               <RefreshCw className="w-4 h-4 animate-spin flex-shrink-0" />
-              <span className="font-medium">{meta.label}</span>
-              <span className="text-xs opacity-60 ml-auto">Please wait, do not close this page</span>
+              <span className="font-semibold">{meta.label}</span>
+              <span className="text-xs opacity-60 ml-auto hidden sm:block">Please wait · do not close this page</span>
             </div>
           );
         })()}

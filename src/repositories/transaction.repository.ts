@@ -184,6 +184,36 @@ export class TransactionRepository extends BaseRepository<TransactionDocument> {
     for (const r of rows) map.set(r.jobId.toString(), { gross: r.amount, net: r.netAmount });
     return map;
   }
+
+  /**
+   * Monthly earnings breakdown for a provider over the last `months` months.
+   * Returns one row per calendar month with gross/commission/net/job count.
+   */
+  async sumMonthlyByPayee(
+    payeeId: string,
+    months = 6
+  ): Promise<Array<{ year: number; month: number; gross: number; commission: number; net: number; jobs: number }>> {
+    await this.connect();
+    const since = new Date();
+    since.setMonth(since.getMonth() - months + 1);
+    since.setDate(1);
+    since.setHours(0, 0, 0, 0);
+
+    return Transaction.aggregate([
+      { $match: { payeeId: new Types.ObjectId(payeeId), status: "completed", createdAt: { $gte: since } } },
+      {
+        $group: {
+          _id: { year: { $year: "$createdAt" }, month: { $month: "$createdAt" } },
+          gross: { $sum: "$amount" },
+          commission: { $sum: "$commission" },
+          net: { $sum: "$netAmount" },
+          jobs: { $sum: 1 },
+        },
+      },
+      { $sort: { "_id.year": 1, "_id.month": 1 } },
+      { $project: { _id: 0, year: "$_id.year", month: "$_id.month", gross: 1, commission: 1, net: 1, jobs: 1 } },
+    ]);
+  }
 }
 
 export const transactionRepository = new TransactionRepository();

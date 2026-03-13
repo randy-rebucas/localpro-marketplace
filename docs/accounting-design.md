@@ -2,7 +2,7 @@
 
 > **Version:** 1.0
 > **Date:** 2026-03-09
-> **Status:** Design / Pre-implementation
+> **Status:** Implemented (Sprints A–D complete; Sprint E pending)
 > **Author:** Engineering team
 
 ---
@@ -465,28 +465,20 @@ LedgerEntry {
 
 #### Event: Client pays ₱1,000 escrow (PayMongo)
 
+> **Revenue recognition policy:** Commission and provider payable are deferred until escrow
+> is released (job completed). Only the gross receipt is recorded at funding time.
+
 ```
 Journal ID: escrow-fund-job-[jobId]
 
-Entry 1:
+Entry 1 (gross receipt):
   debit:   1000 Cash/Gateway Receivable   ₱1,000
   credit:  2000 Escrow Payable to Client  ₱1,000
   note:    "Client paid escrow for Job #[jobId]"
 
-Entry 2 (commission recognition — accrual basis):
-  debit:   2000 Escrow Payable to Client  ₱150
-  credit:  4000 Commission Revenue        ₱150
-  note:    "15% commission accrued on Job #[jobId]"
-
-Entry 3 (net payable to provider):
-  debit:   2000 Escrow Payable to Client  ₱850
-  credit:  2100 Earnings Payable          ₱850
-  note:    "₱850 earmarked for Provider #[providerId]"
-
-Verification: 2000 Escrow Payable to Client balance = 0 ✓
-              1000 Cash increased by ₱1,000 ✓
-              4000 Commission Revenue increased by ₱150 ✓
-              2100 Earnings Payable increased by ₱850 ✓
+Verification: 1000 Cash increased by ₱1,000 ✓
+              2000 Escrow Payable increased by ₱1,000 ✓
+              Commission and earnings NOT yet recognized (deferred until release)
 ```
 
 #### Event: Job completed — escrow released
@@ -494,12 +486,19 @@ Verification: 2000 Escrow Payable to Client balance = 0 ✓
 ```
 Journal ID: escrow-release-job-[jobId]
 
-Entry 1:
-  debit:   2100 Earnings Payable         ₱850
-  credit:  1100 Escrow Held              ₱850
-  note:    "Provider earnings confirmed, awaiting payout"
+Entry 1 (provider net earnings recognised):
+  debit:   2000 Escrow Payable to Client  ₱850
+  credit:  2100 Earnings Payable          ₱850
+  note:    "₱850 net payable to Provider #[providerId]"
 
-No additional entries needed — commission was already recognized at funding.
+Entry 2 (platform commission recognised):
+  debit:   2000 Escrow Payable to Client  ₱150
+  credit:  4000 Commission Revenue        ₱150
+  note:    "15% commission on Job #[jobId]"
+
+Verification: 2000 Escrow Payable reduced to 0 ✓
+              2100 Earnings Payable increased by ₱850 ✓
+              4000 Commission Revenue increased by ₱150 ✓
 ```
 
 #### Event: Provider payout sent (admin marks completed)
@@ -518,44 +517,40 @@ Verification: 2100 Earnings Payable decreases by ₱850 ✓
 
 #### Event: Dispute — full refund to client
 
+> **No commission reversal needed.** Because revenue is deferred to release,
+> commission was never recognised at funding — so the refund is a single clean entry.
+
 ```
 Journal ID: dispute-refund-job-[jobId]
 
-Entry 1 (reverse commission):
-  debit:   4000 Commission Revenue        ₱150
-  credit:  5000 Refunds Issued            ₱150
-  note:    "Commission reversed — dispute refund Job #[jobId]"
+Entry 1 (escrow returned to client wallet):
+  debit:   2000 Escrow Payable to Client  ₱1,000  ← escrow liability cleared
+  credit:  2200 Wallet Payable to Client  ₱1,000  ← full amount credited to wallet
+  note:    "Dispute refund — Job #[jobId]"
 
-Entry 2 (reverse earnings payable):
-  debit:   2100 Earnings Payable          ₱850
-  credit:  2200 Wallet Payable to Client  ₱850
-  note:    "Provider earning reversed — credited to client wallet"
-
-Entry 3 (move remainder to client wallet):
-  debit:   2000 Escrow Payable to Client  ₱0   ← already 0 after funding entries
-  credit:  2200 Wallet Payable to Client  ₱150
-  note:    "Commission portion refunded to client wallet"
-
-Net effect: Client wallet +₱1,000, Provider earns ₱0, Platform commission ₱0
+Verification: 2000 Escrow Payable reduced to 0 ✓
+              2200 Wallet Payable increased by ₱1,000 ✓
+              4000 Commission Revenue unchanged (never accrued) ✓
+              Net effect: Client wallet +₱1,000, provider earns ₱0, platform ₱0
 ```
 
 #### Event: Client funds escrow from wallet
 
+> **Revenue recognition policy:** Same deferred model as PayMongo flow. Commission
+> is not recognised at funding — only when escrow is released.
+
 ```
 Journal ID: wallet-escrow-fund-job-[jobId]
 
-Entry 1:
-  debit:   2200 Wallet Payable to Client  ₱1,000  ← Client's wallet liability decreases
-  credit:  1100 Escrow Held              ₱1,000   ← Money moves to escrow
+Entry 1 (internal transfer — wallet liability becomes escrow liability):
+  debit:   2200 Wallet Payable to Client  ₱1,000  ← wallet balance decreases
+  credit:  2000 Escrow Payable to Client  ₱1,000  ← escrow liability increases
   note:    "Wallet-funded escrow for Job #[jobId]"
 
-Entry 2 (commission accrual — same as PayMongo flow):
-  debit:   1100 Escrow Held              ₱150
-  credit:  4000 Commission Revenue       ₱150
-
-Entry 3:
-  debit:   1100 Escrow Held              ₱850
-  credit:  2100 Earnings Payable         ₱850
+Verification: 2200 Wallet Payable decreases by ₱1,000 ✓
+              2000 Escrow Payable increases by ₱1,000 ✓
+              No cash movement; 1000 Gateway Receivable unchanged ✓
+              Commission and earnings NOT yet recognized (deferred until release)
 ```
 
 ---
@@ -593,19 +588,15 @@ Account Code  Name                            Type        Normal Balance
 
 | Event | Debit | Credit | Amount | Notes |
 |---|---|---|---|---|
-| Client pays via PayMongo | 1000 Gateway Rcv | 2000 Escrow Payable | full | |
-| Commission accrual at funding | 2000 Escrow Payable | 4000 Commission Rev | commission | 15% or 20% |
-| Net earmarked to provider | 2000 Escrow Payable | 2100 Earnings Payable | netAmount | |
-| Client funds from wallet | 2200 Wallet Payable | 1100 Escrow Held | full | |
-| Wallet→Escrow commission accrual | 1100 Escrow Held | 4000 Commission Rev | commission | |
-| Wallet→Escrow net to provider | 1100 Escrow Held | 2100 Earnings Payable | netAmount | |
-| Escrow released (full) | (no new entries) | | | Commission already posted |
+| Client pays via PayMongo | 1000 Gateway Rcv | 2000 Escrow Payable | full | Revenue deferred |
+| Client funds from wallet | 2200 Wallet Payable | 2000 Escrow Payable | full | Internal transfer; revenue deferred |
+| Escrow released — net to provider | 2000 Escrow Payable | 2100 Earnings Payable | netAmount | Revenue recognition event |
+| Escrow released — commission | 2000 Escrow Payable | 4000 Commission Rev | commission | 15% or 20% |
 | Provider payout sent | 2100 Earnings Payable | 1000 Gateway Rcv | payout amt | |
 | Client wallet withdrawal sent | 2300 Withdrawal Payable | 1200 Wallet Funds | amount | |
 | Wallet withdrawal rejected | 1200 Wallet Funds | 2300 Withdrawal Payable | amount | Reversal |
-| Dispute — refund client | 4000 Commission Rev | 5000 Refunds Issued | commission | Reversal |
-| Dispute — refund client | 2100 Earnings Payable | 2200 Wallet Payable | netAmount | Credit client |
-| Dispute — release to provider | (no new entries) | | | Earnings already posted |
+| Dispute — refund client | 2000 Escrow Payable | 2200 Wallet Payable | full gross | No commission reversal needed |
+| Dispute — release to provider | (triggers normal escrow release) | | | Same entries as Flow 4 |
 | Client wallet top-up (future) | 1000 Gateway Rcv | 2200 Wallet Payable | amount | |
 | Admin credit adjustment | 1000 Gateway Rcv | 2200 Wallet Payable | amount | Manual |
 | Admin debit adjustment | 2200 Wallet Payable | 1000 Gateway Rcv | amount | Manual |
@@ -900,16 +891,17 @@ ledgerJournalId: { type: String, default: null },
 
 ### Sprint D — Reporting & Admin UI (Week 6–7)
 
-| Task | File | Description |
-|---|---|---|
-| Trial balance API | `src/app/api/admin/accounting/trial-balance/route.ts` | All account balances |
-| Income statement API | `src/app/api/admin/accounting/income-statement/route.ts` | Revenue - Expenses for period |
-| Balance sheet API | `src/app/api/admin/accounting/balance-sheet/route.ts` | Assets = Liabilities + Equity |
-| Escrow in-flight API | `src/app/api/admin/accounting/escrow-holdings/route.ts` | All funded-not-released jobs |
-| Provider payable API | `src/app/api/admin/accounting/provider-payable/route.ts` | Earnings owed to all providers |
-| Reconciliation cron | `src/app/api/cron/reconcile-ledger/route.ts` | Daily: verify balances match |
-| Admin accounting page | `src/app/(dashboard)/admin/accounting/page.tsx` | Trial balance + charts |
-| Backfill migration | `scripts/backfill-ledger.mjs` | Reconstruct history from existing data |
+| Task | File | Description | Status |
+|---|---|---|---|
+| Trial balance API | `src/app/api/admin/accounting/trial-balance/route.ts` | All account balances | ✅ Done |
+| Income statement API | `src/app/api/admin/accounting/income-statement/route.ts` | Revenue - Expenses for period | ✅ Done |
+| Balance sheet API | `src/app/api/admin/accounting/balance-sheet/route.ts` | Assets = Liabilities + Equity | ✅ Done |
+| Escrow in-flight API | `src/app/api/admin/accounting/escrow-holdings/route.ts` | All funded-not-released jobs | ✅ Done |
+| Provider payable API | `src/app/api/admin/accounting/provider-payable/route.ts` | Earnings owed to all providers | ✅ Done |
+| Reconciliation cron | `src/app/api/cron/reconcile-ledger/route.ts` | Daily: verify balances match | ✅ Done |
+| Webhook idempotency | `src/app/api/webhooks/paymongo/route.ts` | Guard duplicate event delivery | ✅ Done |
+| Admin accounting page | `src/app/(dashboard)/admin/accounting/page.tsx` | Trial balance + charts | ✅ Done |
+| Backfill migration | `scripts/backfill-ledger.mjs` | Reconstruct history from existing data | ⏳ Pending |
 
 ---
 
@@ -926,91 +918,170 @@ ledgerJournalId: { type: String, default: null },
 
 ## Appendix A — ledgerService API
 
+> All amount parameters are in **PHP (float)**; the service converts to integer centavos internally.
+
 ```typescript
 // src/services/ledger.service.ts
 
 interface JournalOptions {
-  journalId: string;
-  entityType: string;
-  entityId: ObjectId;
-  clientId?: ObjectId;
-  providerId?: ObjectId;
-  initiatedBy: ObjectId;
-  currency?: string;  // defaults to "PHP"
+  journalId:   string;
+  entityType:  LedgerEntityType;   // "job" | "payout" | "payment" | "dispute" | etc.
+  entityId:    string;             // MongoDB ObjectId as string
+  clientId?:   string | null;
+  providerId?: string | null;
+  initiatedBy: string;             // userId who triggered the event
+  currency?:   string;             // defaults to "PHP"
 }
 
-// Called when client pays escrow via PayMongo or wallet
-async function postEscrowFunded(
+// ── Escrow Funding ────────────────────────────────────────────────────────────
+
+// Flow 1: Client pays escrow via PayMongo checkout
+// DR 1000 Gateway Receivable  /  CR 2000 Escrow Payable
+async function postEscrowFundedGateway(
   opts: JournalOptions,
-  grossCentavos: number,
-  commissionCentavos: number,
-  netCentavos: number
+  grossPHP: number
 ): Promise<void>
 
-// Called when job is completed and escrow is released
+// Flow 2: Client funds escrow from wallet (internal transfer)
+// DR 2200 Wallet Payable  /  CR 2000 Escrow Payable
+async function postEscrowFundedWallet(
+  opts: JournalOptions,
+  grossPHP: number
+): Promise<void>
+
+// ── Escrow Release (Revenue Recognition) ─────────────────────────────────────
+
+// Flow 4 & 5: Job completed — escrow released (posts 2 entries)
+// DR 2000 Escrow Payable / CR 2100 Earnings Payable  (net)
+// DR 2000 Escrow Payable / CR 4000 Commission Revenue (commission)
 async function postEscrowReleased(
   opts: JournalOptions,
-  netCentavos: number
+  grossPHP: number,
+  commissionPHP: number,
+  netPHP: number
 ): Promise<void>
 
-// Called when admin marks payout as completed
+// Flow 5: Per-milestone release (same 2-entry pattern as full release)
+async function postMilestoneRelease(
+  opts: JournalOptions,
+  milestoneGrossPHP: number,
+  commissionPHP: number,
+  netPHP: number
+): Promise<void>
+
+// Flow 6: Partial release by admin (released portion + refunded portion)
+// Released: DR 2000 / CR 2100 (net) + DR 2000 / CR 4000 (commission)
+// Refunded: DR 2000 / CR 2200 (client wallet)
+async function postPartialRelease(
+  opts: JournalOptions,
+  releasedGrossPHP: number,
+  releasedCommissionPHP: number,
+  releasedNetPHP: number,
+  refundedGrossPHP: number
+): Promise<void>
+
+// ── Payouts ───────────────────────────────────────────────────────────────────
+
+// Flow 10: Admin marks payout as completed
+// DR 2100 Earnings Payable  /  CR 1000 Gateway Receivable
 async function postPayoutSent(
   opts: JournalOptions,
-  amountCentavos: number
+  amountPHP: number
 ): Promise<void>
 
-// Called when admin resolves dispute in client's favour
+// ── Disputes ──────────────────────────────────────────────────────────────────
+
+// Flow 7: Dispute resolved in client's favour — full escrow refunded to wallet
+// DR 2000 Escrow Payable  /  CR 2200 Wallet Payable  (single entry — no commission reversal needed)
 async function postDisputeRefund(
   opts: JournalOptions,
-  grossCentavos: number,
-  commissionCentavos: number,
-  netCentavos: number
+  grossPHP: number
 ): Promise<void>
 
-// Called when client wallet is debited (escrow funding)
-async function postWalletDebitEscrow(
+// Flow 8: Dispute resolved in provider's favour — same revenue recognition as normal release
+// DR 2000 Escrow Payable / CR 2100 Earnings Payable  (net)
+// DR 2000 Escrow Payable / CR 4000 Commission Revenue (commission)
+async function postDisputeReleaseToProvider(
   opts: JournalOptions,
-  amountCentavos: number
+  grossPHP: number,
+  commissionPHP: number,
+  netPHP: number
 ): Promise<void>
 
-// Called when client wallet is credited (refund)
-async function postWalletCredit(
+// ── Wallet Withdrawals ────────────────────────────────────────────────────────
+
+// Flow 11: Client requests wallet withdrawal
+// DR 2200 Wallet Payable  /  CR 2300 Withdrawal Payable
+async function postWalletWithdrawalRequested(
   opts: JournalOptions,
-  amountCentavos: number,
+  amountPHP: number
+): Promise<void>
+
+// Flow 11: Admin marks wallet withdrawal as completed
+// DR 2300 Withdrawal Payable  /  CR 1000 Gateway Receivable
+async function postWalletWithdrawalCompleted(
+  opts: JournalOptions,
+  amountPHP: number
+): Promise<void>
+
+// Flow 12: Admin rejects wallet withdrawal — reversal
+// DR 2300 Withdrawal Payable  /  CR 2200 Wallet Payable
+async function postWalletWithdrawalReversed(
+  opts: JournalOptions,
+  amountPHP: number
+): Promise<void>
+
+// ── Wallet Top-up (future) ────────────────────────────────────────────────────
+
+// Client tops up wallet via PayMongo
+// DR 1000 Gateway Receivable  /  CR 2200 Wallet Payable
+async function postWalletFundedGateway(
+  opts: JournalOptions,
+  amountPHP: number
+): Promise<void>
+
+// ── Admin Manual Adjustments ──────────────────────────────────────────────────
+
+// Admin credits a user's wallet (goodwill, compensation)
+// DR 1000 Gateway Receivable  /  CR 2200 Wallet Payable
+async function postAdminCredit(
+  opts: JournalOptions,
+  amountPHP: number,
   reason: string
 ): Promise<void>
 
-// Called when client requests wallet withdrawal
-async function postWalletWithdrawal(
+// Admin debits a user's wallet (correction, clawback)
+// DR 2200 Wallet Payable  /  CR 1000 Gateway Receivable
+async function postAdminDebit(
   opts: JournalOptions,
-  amountCentavos: number
-): Promise<void>
-
-// Called when admin rejects wallet withdrawal
-async function postWithdrawalReversed(
-  opts: JournalOptions,
-  amountCentavos: number
-): Promise<void>
-
-// Generic manual adjustment (admin)
-async function postAdminAdjustment(
-  opts: JournalOptions,
-  type: "credit" | "debit",
-  account: AccountCode,
-  amountCentavos: number,
+  amountPHP: number,
   reason: string
 ): Promise<void>
 
-// Get current balance for an account
-async function getAccountBalance(
-  accountCode: AccountCode,
-  currency?: string
-): Promise<number>
+// ── Reporting ─────────────────────────────────────────────────────────────────
+
+// Refresh cached AccountBalance records (called by daily reconciliation cron)
+async function refreshBalances(currency?: string): Promise<void>
 
 // Get full trial balance
 async function getTrialBalance(
   currency?: string
 ): Promise<{ account: AccountCode; name: string; balance: number }[]>
+
+// Get income statement for a date range
+async function getIncomeStatement(
+  from: Date,
+  to: Date,
+  currency?: string
+): Promise<{ revenue: number; expenses: number; net: number }>
+
+// Reconcile 2100 Earnings Payable against Transaction + Payout tables
+async function reconcileEarningsPayable(currency?: string): Promise<{
+  balanced: boolean;
+  ledgerBalance: number;
+  transactionBalance: number;
+  diff: number;
+}>
 ```
 
 ---
@@ -1030,7 +1101,7 @@ CHECK 2: Earnings payable matches provider owed
 - SUM(Payout.amount WHERE status = "completed")
 
 CHECK 3: Escrow in-flight matches pending transactions
-  Account 1100 balance
+  Account 2000 balance
 = SUM(Transaction.amount WHERE status = "pending")
 
 CHECK 4: Wallet payable matches wallet balances

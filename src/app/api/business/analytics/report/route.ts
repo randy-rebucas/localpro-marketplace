@@ -3,6 +3,8 @@ import { requireUser } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { ForbiddenError, ValidationError } from "@/lib/errors";
 import { businessService } from "@/services/business.service";
+import { businessOrganizationRepository } from "@/repositories/businessOrganization.repository";
+import { hasAnalyticsAccess } from "@/lib/businessPlan";
 
 /**
  * GET /api/business/analytics/report?orgId=xxx&months=12&format=csv|json
@@ -15,6 +17,11 @@ export const GET = withHandler(async (req: NextRequest) => {
   const { searchParams } = new URL(req.url);
   const orgId = searchParams.get("orgId");
   if (!orgId) throw new ValidationError("orgId query param required.");
+
+  const org = await businessOrganizationRepository.findOrgById(orgId);
+  if (!org || !hasAnalyticsAccess(org.plan)) {
+    throw new ForbiddenError("Analytics is not available on the Free plan. Upgrade to Growth or higher.");
+  }
 
   const months = Math.min(24, Math.max(1, parseInt(searchParams.get("months") ?? "12", 10) || 12));
   const format = searchParams.get("format") ?? "csv";

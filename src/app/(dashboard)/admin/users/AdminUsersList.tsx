@@ -247,55 +247,55 @@ export default function AdminUsersList({
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         <button
           onClick={() => router.push(buildUrl({ role: null, kyc: null, search: null, page: "1" }))}
-          className="flex items-center gap-2.5 px-3 py-2 bg-white rounded-xl border border-slate-200 shadow-card hover:border-primary/20 transition-colors text-left"
+          className="flex items-center gap-2.5 px-3 py-2 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm hover:border-primary/20 transition-colors text-left"
         >
           <Users className="h-4 w-4 text-slate-400 flex-shrink-0" />
           <div>
-            <p className="text-sm font-bold text-slate-900">{total.toLocaleString()}</p>
-            <p className="text-[11px] text-slate-500">In filter</p>
+            <p className="text-sm font-bold text-slate-900 dark:text-white">{total.toLocaleString()}</p>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400">In filter</p>
           </div>
         </button>
         <button
           onClick={() => router.push(buildUrl({ role: null, kyc: null, search: null, page: "1",
             ...(roleFilter !== "provider" ? { role: "provider" } : {}) }))}
-          className={`flex items-center gap-2.5 px-3 py-2 bg-white rounded-xl border shadow-card hover:border-amber-200 transition-colors text-left ${
-            userStats.pendingProviders > 0 ? "border-amber-200 bg-amber-50" : "border-slate-200"
+          className={`flex items-center gap-2.5 px-3 py-2 rounded-2xl border shadow-sm hover:border-amber-200 transition-colors text-left ${
+            userStats.pendingProviders > 0 ? "border-amber-200 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-800" : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700"
           }`}
         >
           <AlertTriangle className={`h-4 w-4 flex-shrink-0 ${userStats.pendingProviders > 0 ? "text-amber-500" : "text-slate-300"}`} />
           <div>
-            <p className={`text-sm font-bold ${userStats.pendingProviders > 0 ? "text-amber-700" : "text-slate-900"}`}>
+            <p className={`text-sm font-bold ${userStats.pendingProviders > 0 ? "text-amber-700 dark:text-amber-400" : "text-slate-900 dark:text-white"}`}>
               {userStats.pendingProviders}
             </p>
-            <p className="text-[11px] text-slate-500">Pending approval</p>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400">Pending approval</p>
           </div>
         </button>
         <button
           onClick={() => router.push(buildUrl({ kyc: "pending", page: "1" }))}
-          className={`flex items-center gap-2.5 px-3 py-2 bg-white rounded-xl border shadow-card hover:border-indigo-200 transition-colors text-left ${
-            userStats.pendingKyc > 0 ? "border-indigo-200 bg-indigo-50" : "border-slate-200"
+          className={`flex items-center gap-2.5 px-3 py-2 rounded-2xl border shadow-sm hover:border-indigo-200 transition-colors text-left ${
+            userStats.pendingKyc > 0 ? "border-indigo-200 bg-indigo-50 dark:bg-indigo-900/20 dark:border-indigo-800" : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700"
           }`}
         >
           <ShieldCheck className={`h-4 w-4 flex-shrink-0 ${userStats.pendingKyc > 0 ? "text-indigo-500" : "text-slate-300"}`} />
           <div>
-            <p className={`text-sm font-bold ${userStats.pendingKyc > 0 ? "text-indigo-700" : "text-slate-900"}`}>
+            <p className={`text-sm font-bold ${userStats.pendingKyc > 0 ? "text-indigo-700 dark:text-indigo-400" : "text-slate-900 dark:text-white"}`}>
               {userStats.pendingKyc}
             </p>
-            <p className="text-[11px] text-slate-500">KYC pending</p>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400">KYC pending</p>
           </div>
         </button>
         <button
           onClick={() => router.push(buildUrl({ role: null, kyc: null, search: null, page: "1" }))}
-          className={`flex items-center gap-2.5 px-3 py-2 bg-white rounded-xl border shadow-card hover:border-red-200 transition-colors text-left ${
-            userStats.suspended > 0 ? "border-red-200 bg-red-50" : "border-slate-200"
+          className={`flex items-center gap-2.5 px-3 py-2 rounded-2xl border shadow-sm hover:border-red-200 transition-colors text-left ${
+            userStats.suspended > 0 ? "border-red-200 bg-red-50 dark:bg-red-900/20 dark:border-red-800" : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700"
           }`}
         >
           <UserX className={`h-4 w-4 flex-shrink-0 ${userStats.suspended > 0 ? "text-red-500" : "text-slate-300"}`} />
           <div>
-            <p className={`text-sm font-bold ${userStats.suspended > 0 ? "text-red-700" : "text-slate-900"}`}>
+            <p className={`text-sm font-bold ${userStats.suspended > 0 ? "text-red-700 dark:text-red-400" : "text-slate-900 dark:text-white"}`}>
               {userStats.suspended}
             </p>
-            <p className="text-[11px] text-slate-500">Suspended</p>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400">Suspended</p>
           </div>
         </button>
       </div>
@@ -303,15 +303,15 @@ export default function AdminUsersList({
       {/* ── Toolbar ────────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
         {/* Role filter tabs */}
-        <div className="flex gap-1 bg-slate-100 p-1 rounded-xl w-fit">
+        <div className="flex gap-1 bg-slate-100 dark:bg-slate-700 p-1 rounded-xl w-fit">
           {ROLE_TABS.map((tab) => (
             <button
               key={tab.value}
               onClick={() => router.push(buildUrl({ role: tab.value !== "all" ? tab.value : null, page: "1" }))}
               className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                 roleFilter === tab.value
-                  ? "bg-white text-slate-900 shadow-sm"
-                  : "text-slate-500 hover:text-slate-700"
+                  ? "bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm"
+                  : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
               }`}
             >
               {tab.label}
@@ -333,7 +333,7 @@ export default function AdminUsersList({
               value={searchDraft}
               onChange={handleSearchChange}
               placeholder="Search name, email, phone…"
-              className="pl-7 pr-7 py-1.5 rounded-lg border border-slate-200 text-xs placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/30 w-52 bg-white"
+              className="pl-7 pr-7 py-1.5 rounded-lg border border-slate-200 dark:border-slate-600 text-xs placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-primary/30 w-52 bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
             />
             {searchDraft && (
               <button onClick={clearSearch} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
@@ -348,7 +348,7 @@ export default function AdminUsersList({
             <select
               value={sort}
               onChange={(e) => router.push(buildUrl({ sort: e.target.value, page: "1" }))}
-              className="pl-7 pr-6 py-1.5 rounded-lg border border-slate-200 text-xs bg-white appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/30"
+              className="pl-7 pr-6 py-1.5 rounded-lg border border-slate-200 dark:border-slate-600 text-xs bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/30"
             >
               {(Object.keys(SORT_LABELS) as UserSortOption[]).map((k) => (
                 <option key={k} value={k}>{SORT_LABELS[k]}</option>
@@ -362,13 +362,13 @@ export default function AdminUsersList({
               ...(searchDraft.trim()  ? [["search", searchDraft.trim()]] : []),
             ]).toString()}`}
             download
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition-colors"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-600 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 hover:border-slate-300 transition-colors"
             title={`Export ${roleFilter === "all" ? "all" : roleFilter} users as CSV`}
           >
             <Download className="h-3.5 w-3.5" />Export CSV
           </a>
           <button type="button" onClick={() => setShowImport(true)}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition-colors">
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-600 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 hover:border-slate-300 transition-colors">
             <Upload className="h-3.5 w-3.5" />Import CSV
           </button>
           <button type="button" onClick={() => setShowCreate(true)}
@@ -456,28 +456,28 @@ export default function AdminUsersList({
       )}
 
       {/* ── Table ─────────────────────────────────────────────────────── */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-card overflow-hidden">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-slate-100 bg-slate-50/50">
+              <tr className="border-b border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-700/50">
                 <th className="px-4 py-3 w-10">
                   <input type="checkbox" checked={allSelected} onChange={toggleAll}
                     className="rounded border-slate-300 text-primary focus:ring-primary/30"
                     aria-label="Select all" />
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500">User</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500">Role</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500">Status</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500">Profile</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500">Joined</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500">Actions</th>
+                <th className="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">User</th>
+                <th className="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Role</th>
+                <th className="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Status</th>
+                <th className="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Profile</th>
+                <th className="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Joined</th>
+                <th className="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
               {users.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-10 text-center text-slate-400 text-sm">
+                  <td colSpan={7} className="px-6 py-10 text-center text-slate-400 dark:text-slate-500 text-sm">
                     No {roleFilter === "all" ? "" : roleFilter} users
                     {searchQuery ? ` matching "${searchQuery}"` : ""} found.
                   </td>
@@ -490,9 +490,9 @@ export default function AdminUsersList({
                 const isSelected = selectedIds.has(uid);
                 return (
                   <tr key={uid}
-                    className={`hover:bg-slate-50/50 transition-colors ${
-                      isPendingProvider ? "bg-amber-50/30 border-l-2 border-amber-400" : ""
-                    } ${isSelected ? "bg-primary/5" : ""}`}
+                    className={`hover:bg-slate-50/50 dark:hover:bg-slate-700/40 transition-colors ${
+                      isPendingProvider ? "bg-amber-50/30 dark:bg-amber-900/10 border-l-2 border-amber-400" : ""
+                    } ${isSelected ? "bg-primary/5 dark:bg-primary/10" : ""}`}
                   >
                     <td className="px-4 py-3.5">
                       <input type="checkbox" checked={isSelected} onChange={() => toggleOne(uid)}
@@ -507,8 +507,8 @@ export default function AdminUsersList({
                             : <span className="text-xs font-bold text-primary">{initials}</span>}
                         </div>
                         <div className="min-w-0">
-                          <p className="font-medium text-slate-900 truncate">{u.name}</p>
-                          <p className="text-xs text-slate-400 truncate">{u.email}</p>
+                          <p className="font-semibold text-slate-900 dark:text-white truncate">{u.name}</p>
+                          <p className="text-xs text-slate-400 dark:text-slate-500 truncate">{u.email}</p>
                         </div>
                       </div>
                     </td>
@@ -536,7 +536,7 @@ export default function AdminUsersList({
                     </td>
                     <td className="px-6 py-3.5"><CompletenessCell u={u} /></td>
                     <td className="px-6 py-3.5">
-                      <div className="flex items-center gap-1 text-xs text-slate-400">
+                      <div className="flex items-center gap-1 text-xs text-slate-400 dark:text-slate-500">
                         <Clock size={11} className="flex-shrink-0" />{formatDate(u.createdAt)}
                       </div>
                     </td>
@@ -563,16 +563,16 @@ export default function AdminUsersList({
 
         {/* ── Pagination footer ─────────────────────────────────────── */}
         {totalPages > 1 && (
-          <div className="px-4 py-3 border-t border-slate-100 flex items-center justify-between gap-3 flex-wrap">
-            <div className="flex items-center gap-2 text-xs text-slate-500">
+          <div className="px-4 py-3 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between gap-3 flex-wrap dark:bg-slate-700/30">
+            <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
               <span>Page {page} of {totalPages} · {total.toLocaleString()} users</span>
-              <span className="text-slate-300">·</span>
+              <span className="text-slate-300 dark:text-slate-600">·</span>
               <span>Per page:</span>
               {([25, 50, 100] as const).map((l) => (
                 <button key={l}
                   onClick={() => router.push(buildUrl({ limit: l, page: "1" }))}
                   className={`px-2 py-0.5 rounded text-xs font-semibold transition-colors ${
-                    limit === l ? "bg-primary text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                    limit === l ? "bg-primary text-white" : "bg-slate-100 dark:bg-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-500"
                   }`}
                 >{l}</button>
               ))}
@@ -580,17 +580,17 @@ export default function AdminUsersList({
             <div className="flex gap-1 items-center">
               {page > 1 && (
                 <Link href={buildUrl({ page: page - 1 })}
-                  className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 transition-colors text-xs font-medium">
+                  className="px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors text-xs font-medium text-slate-600 dark:text-slate-300">
                   ← Prev
                 </Link>
               )}
               {pagination.map((p, i) =>
                 p === "..." ? (
-                  <span key={`ellipsis-${i}`} className="px-1.5 text-slate-400 text-xs">…</span>
+                  <span key={`ellipsis-${i}`} className="px-1.5 text-slate-400 dark:text-slate-500 text-xs">…</span>
                 ) : (
                   <Link key={p} href={buildUrl({ page: p })}
                     className={`w-8 h-8 flex items-center justify-center rounded-lg text-xs font-medium transition-colors ${
-                      p === page ? "bg-primary text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                      p === page ? "bg-primary text-white" : "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600"
                     }`}>
                     {p}
                   </Link>
@@ -598,7 +598,7 @@ export default function AdminUsersList({
               )}
               {page < totalPages && (
                 <Link href={buildUrl({ page: page + 1 })}
-                  className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 transition-colors text-xs font-medium">
+                  className="px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors text-xs font-medium text-slate-600 dark:text-slate-300">
                   Next →
                 </Link>
               )}

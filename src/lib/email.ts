@@ -690,6 +690,68 @@ export async function sendProviderRejectedEmail(to: string, name: string): Promi
   await sendEmail(to, "Your LocalPro provider application status", html);
 }
 
+// ─── Agency emails ────────────────────────────────────────────────────────────
+
+/** Send a staff invite link to join an agency. */
+export async function sendAgencyInviteEmail(
+  to: string,
+  recipientName: string | null,
+  agencyName: string,
+  role: string,
+  token: string
+): Promise<void> {
+  const acceptUrl = `${APP_URL}/agency/invite/${token}`;
+  const nameDisplay = recipientName ?? "there";
+  const html = baseTemplate(
+    `You're invited to join ${escHtml(agencyName)}`,
+    greeting(nameDisplay)
+      + p(`<strong>${escHtml(agencyName)}</strong> has invited you to join their team on LocalPro as a <strong>${escHtml(role)}</strong>.`)
+      + callout(`This invite link expires in <strong>48 hours</strong>. You must have a LocalPro provider account to accept.`, "info")
+      + p("If you weren't expecting this invitation, you can safely ignore this email."),
+    acceptUrl,
+    "Accept Invitation"
+  );
+  await sendEmail(to, `You're invited to join ${agencyName} on LocalPro`, html);
+}
+
+/** Notify a staff member they have been assigned a job by their agency. */
+export async function sendAgencyJobAssignedEmail(
+  to: string,
+  workerName: string,
+  agencyName: string,
+  jobTitle: string,
+  jobId: string
+): Promise<void> {
+  const jobUrl = `${APP_URL}/provider/jobs/${jobId}`;
+  const html = baseTemplate(
+    "You've been assigned a job",
+    greeting(workerName)
+      + p(`Your agency <strong>${escHtml(agencyName)}</strong> has assigned you to: <strong>${escHtml(jobTitle)}</strong>.`)
+      + callout("Please check the job details and proceed when ready.", "success"),
+    jobUrl,
+    "View Job"
+  );
+  await sendEmail(to, `New job assignment: ${jobTitle}`, html);
+}
+
+/** Notify a preferred provider when a business they work with posts a new job. */
+export async function sendBusinessJobInviteEmail(
+  to: string,
+  providerName: string,
+  businessName: string,
+  jobTitle: string
+): Promise<void> {
+  const html = baseTemplate(
+    "A business you work with has a new job",
+    greeting(providerName)
+      + p(`<strong>${escHtml(businessName)}</strong> \u2014 one of your preferred business clients \u2014 has a new job: <strong>${escHtml(jobTitle)}</strong>.`)
+      + callout("As a preferred provider, you're among the first to see this. Submit your quote before it fills up.", "success"),
+    `${APP_URL}/provider/marketplace`,
+    "View Marketplace"
+  );
+  await sendEmail(to, `New job from ${businessName}: ${jobTitle}`, html);
+}
+
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 /** Send a single transactional email. Non-blocking — errors are swallowed and logged. */

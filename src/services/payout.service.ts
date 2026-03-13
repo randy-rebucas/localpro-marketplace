@@ -1,6 +1,7 @@
 import { payoutRepository } from "@/repositories/payout.repository";
 import { transactionRepository, activityRepository } from "@/repositories";
 import { ledgerService } from "@/services/ledger.service";
+import { getAppSetting } from "@/lib/appSettings";
 import {
   NotFoundError,
   ForbiddenError,
@@ -38,6 +39,10 @@ export class PayoutService {
     if (!amount || amount <= 0) {
       throw new UnprocessableError("Amount must be greater than zero.");
     }
+    const minPayout = await getAppSetting("payments.minPayoutAmount", 100) as number;
+    if (amount < minPayout) {
+      throw new UnprocessableError(`Minimum payout amount is ₱${minPayout.toLocaleString()}.`);
+    }
     if (!bankName?.trim() || !accountNumber?.trim() || !accountName?.trim()) {
       throw new UnprocessableError("Bank name, account number, and account name are required.");
     }
@@ -58,6 +63,24 @@ export class PayoutService {
       accountName: accountName.trim(),
     });
 
+    // Post ledger entry: ring-fence provider's earnings as in-flight (DR 2100 / CR 2400)
+    try {
+      await ledgerService.postPayoutRequested(
+        {
+          journalId: `payout-requested-${payout._id?.toString()}`,
+          entityType: "payout",
+          entityId: payout._id?.toString() ?? "",
+          providerId: user.userId,
+          initiatedBy: user.userId,
+        },
+        amount
+      );
+      await payoutRepository.updateById(
+        payout._id?.toString() ?? "",
+        { ledgerJournalId: `payout-requested-${payout._id?.toString()}` }
+      );
+    } catch { /* non-critical */ }
+
     await activityRepository.log({
       userId: user.userId,
       eventType: "payout_requested",
@@ -76,12 +99,23 @@ export class PayoutService {
     return payout;
   }
 
-  /** List payouts for the authenticated provider. */
+  /** List payouts for the authenticated provider, with accounting stats. */
   async listProviderPayouts(user: TokenPayload) {
     if (user.role !== "provider") throw new ForbiddenError();
-    const payouts = await payoutRepository.findByProvider(user.userId);
-    const available = await this.getAvailableBalance(user.userId);
-    return { payouts, availableBalance: available };
+    const [payouts, available, netEarned, pendingEscrow, payoutStats] = await Promise.all([
+      payoutRepository.findByProvider(user.userId),
+      this.getAvailableBalance(user.userId),
+      transactionRepository.sumCompletedByPayee(user.userId),
+      transactionRepository.sumPendingByPayee(user.userId),
+      payoutRepository.getProviderStats(user.userId),
+    ]);
+    return {
+      payouts,
+      availableBalance: available,
+      totalNetEarned:   netEarned.net,
+      pendingInEscrow:  pendingEscrow,
+      payoutStats,
+    };
   }
 
   /** Admin: list all payout requests. */
@@ -123,6 +157,23 @@ export class PayoutService {
           p.amount
         );
         await payoutRepository.updateById(payoutId, { ledgerJournalId: `payout-sent-${payoutId}` });
+      } catch { /* non-critical */ }
+    }
+
+    // Post ledger reversal when payout is rejected (DR 2400 / CR 2100 — in-flight cleared, earnings restored)
+    if (data.status === "rejected") {
+      try {
+        await ledgerService.postPayoutRejected(
+          {
+            journalId: `payout-rejected-${payoutId}`,
+            entityType: "payout",
+            entityId: payoutId,
+            providerId: p.providerId.toString(),
+            initiatedBy: admin.userId,
+          },
+          p.amount
+        );
+        await payoutRepository.updateById(payoutId, { ledgerJournalId: `payout-rejected-${payoutId}` });
       } catch { /* non-critical */ }
     }
 

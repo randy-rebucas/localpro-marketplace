@@ -171,13 +171,13 @@ export default function AnnouncementsClient({ initialAnnouncements }: Props) {
   return (
     <>
       {/* Table card */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-card overflow-hidden">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
         {/* Toolbar */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-          <p className="text-sm text-slate-500">{items.length} announcement{items.length !== 1 ? "s" : ""}</p>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-700">
+          <p className="text-xs text-slate-400 dark:text-slate-500 font-medium">{items.length} announcement{items.length !== 1 ? "s" : ""}</p>
           <button
             onClick={openCreate}
-            className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl text-sm font-semibold hover:bg-primary/90 transition-colors"
           >
             <Plus className="h-4 w-4" />
             Add Announcement
@@ -185,55 +185,57 @@ export default function AnnouncementsClient({ initialAnnouncements }: Props) {
         </div>
 
         {items.length === 0 ? (
-          <div className="flex flex-col items-center gap-3 py-16 text-slate-400">
-            <Megaphone className="h-10 w-10 opacity-20" />
-            <p className="text-sm">No announcements yet</p>
+          <div className="flex flex-col items-center gap-3 py-16 text-slate-400 dark:text-slate-500">
+            <div className="p-4 rounded-2xl bg-slate-100 dark:bg-slate-700 ring-8 ring-slate-100 dark:ring-slate-700">
+              <Megaphone className="h-8 w-8 text-slate-400 dark:text-slate-500" />
+            </div>
+            <p className="text-sm font-medium">No announcements yet</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
-                <tr>
-                  <th className="px-6 py-3 text-left font-medium">Title</th>
-                  <th className="px-4 py-3 text-left font-medium">Type</th>
-                  <th className="px-4 py-3 text-left font-medium">Audience</th>
-                  <th className="px-4 py-3 text-left font-medium">Expires</th>
-                  <th className="px-4 py-3 text-left font-medium">Status</th>
-                  <th className="px-4 py-3 text-left font-medium">Created</th>
+              <thead>
+                <tr className="border-b border-slate-100 dark:border-slate-700">
+                  <th className="px-5 py-3 text-left text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Title</th>
+                  <th className="px-4 py-3 text-left text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Type</th>
+                  <th className="px-4 py-3 text-left text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Audience</th>
+                  <th className="px-4 py-3 text-left text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Expires</th>
+                  <th className="px-4 py-3 text-left text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Status</th>
+                  <th className="px-4 py-3 text-left text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Created</th>
                   <th className="px-4 py-3" />
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
                 {items.map((a) => (
-                  <tr key={a._id} className="hover:bg-slate-50 transition-colors">
-                    <td className="px-6 py-4">
-                      <p className="font-medium text-slate-900 truncate max-w-[200px]">{a.title}</p>
-                      <p className="text-xs text-slate-400 truncate max-w-[200px] mt-0.5">{a.message}</p>
+                  <tr key={a._id} className="hover:bg-slate-50 dark:hover:bg-slate-700/40 transition-colors">
+                    <td className="px-5 py-4">
+                      <p className="font-semibold text-slate-900 dark:text-slate-100 truncate max-w-[200px]">{a.title}</p>
+                      <p className="text-xs text-slate-400 dark:text-slate-500 truncate max-w-[200px] mt-0.5">{a.message}</p>
                     </td>
                     <td className="px-4 py-4">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${TYPE_CHIP[a.type]}`}>
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${TYPE_CHIP[a.type]}`}>
                         {TYPE_LABELS[a.type]}
                       </span>
                     </td>
                     <td className="px-4 py-4">
                       <div className="flex flex-wrap gap-1">
                         {a.targetRoles.map((r) => (
-                          <span key={r} className="text-xs px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 font-medium capitalize">
+                          <span key={r} className="text-xs px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 font-medium capitalize">
                             {r}
                           </span>
                         ))}
                       </div>
                     </td>
-                    <td className="px-4 py-4 text-slate-500 text-xs whitespace-nowrap">
+                    <td className="px-4 py-4 text-slate-500 dark:text-slate-400 text-xs whitespace-nowrap">
                       {a.expiresAt
                         ? new Date(a.expiresAt).toLocaleDateString()
-                        : <span className="text-slate-300">—</span>}
+                        : <span className="text-slate-300 dark:text-slate-600">—</span>}
                     </td>
                     <td className="px-4 py-4">
                       <button
                         onClick={() => handleToggle(a)}
-                        className={`inline-flex items-center gap-1.5 text-xs font-medium transition-colors ${
-                          a.isActive ? "text-green-600 hover:text-green-800" : "text-slate-400 hover:text-slate-600"
+                        className={`inline-flex items-center gap-1.5 text-xs font-semibold transition-colors ${
+                          a.isActive ? "text-green-600 hover:text-green-700" : "text-slate-400 dark:text-slate-500 hover:text-slate-600"
                         }`}
                       >
                         {a.isActive
@@ -242,23 +244,23 @@ export default function AnnouncementsClient({ initialAnnouncements }: Props) {
                         {a.isActive ? "Active" : "Inactive"}
                       </button>
                     </td>
-                    <td className="px-4 py-4 text-slate-400 text-xs whitespace-nowrap">
+                    <td className="px-4 py-4 text-slate-400 dark:text-slate-500 text-xs whitespace-nowrap">
                       {new Date(a.createdAt).toLocaleDateString()}
                     </td>
                     <td className="px-4 py-4">
-                      <div className="flex items-center gap-2 justify-end">
+                      <div className="flex items-center gap-1.5 justify-end">
                         <button
                           onClick={() => openEdit(a)}
-                          className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+                          className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
                         >
-                          <Pencil className="h-4 w-4" />
+                          <Pencil className="h-3.5 w-3.5" />
                         </button>
                         <button
                           onClick={() => handleDelete(a._id)}
                           disabled={deletingId === a._id}
-                          className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+                          className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors disabled:opacity-50"
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Trash2 className="h-3.5 w-3.5" />
                         </button>
                       </div>
                     </td>
@@ -274,10 +276,10 @@ export default function AnnouncementsClient({ initialAnnouncements }: Props) {
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={closeModal} />
-          <div className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
+          <div className="relative w-full max-w-lg bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
             {/* Header */}
-            <div className="px-6 py-4 border-b border-slate-100">
-              <h3 className="font-semibold text-slate-900">
+            <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-700">
+              <h3 className="font-semibold text-slate-900 dark:text-white">
                 {editing ? "Edit Announcement" : "New Announcement"}
               </h3>
             </div>
@@ -286,35 +288,35 @@ export default function AnnouncementsClient({ initialAnnouncements }: Props) {
             <div className="px-6 py-5 space-y-4">
               {/* Title */}
               <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">Title</label>
+                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Title</label>
                 <input
                   value={form.title}
                   onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
                   placeholder="e.g. Scheduled maintenance on Saturday"
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                  className="w-full border border-slate-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
                 />
               </div>
 
               {/* Message */}
               <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">Message</label>
+                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Message</label>
                 <textarea
                   value={form.message}
                   onChange={(e) => setForm((f) => ({ ...f, message: e.target.value }))}
                   rows={3}
                   placeholder="Details visible to users…"
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary resize-none"
+                  className="w-full border border-slate-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary resize-none"
                 />
               </div>
 
-              {/* Type + Active row */}
+              {/* Type + Expires row */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-medium text-slate-600 mb-1">Type</label>
+                  <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Type</label>
                   <select
                     value={form.type}
                     onChange={(e) => setForm((f) => ({ ...f, type: e.target.value as AnnouncementType }))}
-                    className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary bg-white"
+                    className="w-full border border-slate-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
                   >
                     {(Object.keys(TYPE_LABELS) as AnnouncementType[]).map((t) => (
                       <option key={t} value={t}>{TYPE_LABELS[t]}</option>
@@ -322,29 +324,29 @@ export default function AnnouncementsClient({ initialAnnouncements }: Props) {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-600 mb-1">Expires (optional)</label>
+                  <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Expires (optional)</label>
                   <input
                     type="datetime-local"
                     value={form.expiresAt}
                     onChange={(e) => setForm((f) => ({ ...f, expiresAt: e.target.value }))}
-                    className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                    className="w-full border border-slate-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
                   />
                 </div>
               </div>
 
               {/* Target audience */}
               <div>
-                <label className="block text-xs font-medium text-slate-600 mb-2">Audience</label>
+                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-2">Audience</label>
                 <div className="flex flex-wrap gap-2">
                   {TARGET_OPTIONS.map(({ value, label }) => (
                     <button
                       key={value}
                       type="button"
                       onClick={() => toggleTarget(value)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+                      className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-colors ${
                         form.targetRoles.includes(value)
                           ? "bg-primary text-white border-primary"
-                          : "bg-white text-slate-600 border-slate-200 hover:border-slate-300"
+                          : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600 hover:border-slate-300"
                       }`}
                     >
                       {label}
@@ -361,22 +363,22 @@ export default function AnnouncementsClient({ initialAnnouncements }: Props) {
                   onChange={(e) => setForm((f) => ({ ...f, isActive: e.target.checked }))}
                   className="w-4 h-4 accent-primary"
                 />
-                <span className="text-sm text-slate-700">Active immediately</span>
+                <span className="text-sm text-slate-700 dark:text-slate-300">Active immediately</span>
               </label>
             </div>
 
             {/* Footer */}
-            <div className="px-6 py-4 border-t border-slate-100 flex justify-end gap-3">
+            <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-700 flex justify-end gap-3">
               <button
                 onClick={closeModal}
-                className="px-4 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 transition-colors"
+                className="px-4 py-2 rounded-xl text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className="px-4 py-2 rounded-lg text-sm font-medium bg-primary text-white hover:bg-primary/90 transition-colors disabled:opacity-60"
+                className="px-4 py-2 rounded-xl text-sm font-semibold bg-primary text-white hover:bg-primary/90 transition-colors disabled:opacity-60"
               >
                 {saving ? "Saving…" : editing ? "Save Changes" : "Create"}
               </button>

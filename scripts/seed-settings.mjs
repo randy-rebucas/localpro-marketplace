@@ -13,6 +13,26 @@
  */
 
 import mongoose from "mongoose";
+import { readFileSync, existsSync } from "fs";
+import { resolve, dirname } from "path";
+import { fileURLToPath } from "url";
+
+// ─── Auto-load .env.local (works even without --env-file flag) ────────────────
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const envPath   = resolve(__dirname, "../.env.local");
+if (existsSync(envPath)) {
+  for (const line of readFileSync(envPath, "utf8").split("\n")) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+    const eqIdx = trimmed.indexOf("=");
+    if (eqIdx === -1) continue;
+    const key = trimmed.slice(0, eqIdx).trim();
+    const raw = trimmed.slice(eqIdx + 1).trim();
+    // Strip surrounding single or double quotes
+    const val = /^(["']).*\1$/.test(raw) ? raw.slice(1, -1) : raw;
+    if (!(key in process.env)) process.env[key] = val;
+  }
+}
 
 // ─── CLI flags ────────────────────────────────────────────────────────────────
 const FORCE = process.argv.includes("--force");
@@ -20,7 +40,7 @@ const FORCE = process.argv.includes("--force");
 // ─── Config ───────────────────────────────────────────────────────────────────
 const MONGODB_URI = process.env.MONGODB_URI;
 if (!MONGODB_URI) {
-  console.error("❌  MONGODB_URI is not set. Run with: node --env-file=.env.local scripts/seed-settings.mjs");
+  console.error("❌  MONGODB_URI is not set. Ensure .env.local exists with MONGODB_URI=<connection-string>");
   process.exit(1);
 }
 
@@ -108,6 +128,90 @@ const DEFAULT_SETTINGS = [
     key: "limits.maxActiveJobsPerClient",
     value: 10,
     description: "Maximum number of concurrent open/assigned/in-progress jobs a client can have.",
+  },
+  {
+    key: "limits.escrowAutoReleaseDays",
+    value: 7,
+    description: "Days after job completion before escrow is auto-released to the provider if the client does not act.",
+  },
+  {
+    key: "limits.jobExpiryDays",
+    value: 30,
+    description: "Days an open job listing waits for an accepted quote before it is automatically expired.",
+  },
+  {
+    key: "limits.disputeEscalationDays",
+    value: 5,
+    description: "Days a dispute can remain open/investigating before admins receive an escalation notification.",
+  },
+  {
+    key: "limits.consultationExpiryDays",
+    value: 7,
+    description: "Days before an unanswered consultation request automatically expires.",
+  },
+  {
+    key: "limits.dailyConsultationLimitClient",
+    value: 10,
+    description: "Maximum number of consultation requests a client can send per day.",
+  },
+  {
+    key: "limits.dailyConsultationLimitProvider",
+    value: 5,
+    description: "Maximum number of consultation requests a provider can send per day.",
+  },
+
+  // ── Loyalty ───────────────────────────────────────────────────────────────
+  {
+    key: "loyalty.pointsPerPeso",
+    value: 0.1,
+    description: "Loyalty points earned per ₱1 of job spend. Default 0.1 = 1 point per ₱10.",
+  },
+  {
+    key: "loyalty.pesoPerHundredPoints",
+    value: 10,
+    description: "Peso cashback value when a client redeems 100 loyalty points.",
+  },
+  {
+    key: "loyalty.minRedemptionPoints",
+    value: 500,
+    description: "Minimum loyalty points needed to initiate a redemption request.",
+  },
+  {
+    key: "loyalty.firstJobBonusPoints",
+    value: 100,
+    description: "Bonus points awarded to a client on completion of their first ever job.",
+  },
+  {
+    key: "loyalty.tierThresholdSilver",
+    value: 500,
+    description: "Lifetime points required to reach Silver loyalty tier.",
+  },
+  {
+    key: "loyalty.tierThresholdGold",
+    value: 2000,
+    description: "Lifetime points required to reach Gold loyalty tier.",
+  },
+  {
+    key: "loyalty.tierThresholdPlatinum",
+    value: 5000,
+    description: "Lifetime points required to reach Platinum loyalty tier.",
+  },
+
+  // ── Fraud & Security ──────────────────────────────────────────────────────
+  {
+    key: "fraud.jobFlagScore",
+    value: 50,
+    description: "Risk score (0-100) at or above which a new job posting is flagged for admin review.",
+  },
+  {
+    key: "fraud.jobBlockScore",
+    value: 80,
+    description: "Risk score (0-100) at or above which a new job posting is automatically rejected.",
+  },
+  {
+    key: "fraud.highBudgetThreshold",
+    value: 5000,
+    description: "Job budgets (₱) above this value incur an elevated fraud risk score.",
   },
 ];
 

@@ -1,5 +1,6 @@
 import { loyaltyRepository } from "@/repositories/loyalty.repository";
-import { TIER_MULTIPLIER, pointsToCredits } from "@/lib/loyalty";
+import { TIER_MULTIPLIER } from "@/lib/loyalty";
+import { getAppSetting } from "@/lib/appSettings";
 import { UnprocessableError, NotFoundError } from "@/lib/errors";
 import type { LoyaltyAccountDocument } from "@/models/LoyaltyAccount";
 
@@ -25,7 +26,8 @@ export class LoyaltyService {
     const account = await loyaltyRepository.findOrCreate(userId);
     const multiplier = TIER_MULTIPLIER[account.tier];
 
-    const basePoints = Math.floor(jobAmount / 10);
+    const pointsPerPeso = await getAppSetting<number>("loyalty.pointsPerPeso", 0.1);
+    const basePoints = Math.floor(jobAmount * (pointsPerPeso as number));
     const multipliedPoints = Math.round(basePoints * multiplier);
 
     if (multipliedPoints > 0) {
@@ -40,14 +42,14 @@ export class LoyaltyService {
     }
 
     if (isFirstJob) {
-      const bonusPoints = 100;
+      const bonusPoints = await getAppSetting<number>("loyalty.firstJobBonusPoints", 100) as number;
       await loyaltyRepository.addPoints(userId, bonusPoints, bonusPoints);
       await loyaltyRepository.addLedgerEntry({
         userId,
         type: "earned_first_job",
         points: bonusPoints,
         jobId,
-        description: "First job bonus: +100 pts",
+        description: `First job bonus: +${bonusPoints} pts`,
       });
     }
 
@@ -105,8 +107,10 @@ export class LoyaltyService {
    * Minimum 500 pts per redemption = ₱50.
    */
   async redeemPoints(userId: string, pointsToRedeem: number): Promise<LoyaltyAccountDocument> {
-    if (pointsToRedeem < 500) {
-      throw new UnprocessableError("Minimum redemption is 500 points (₱50)");
+    const minRedemption = await getAppSetting<number>("loyalty.minRedemptionPoints", 500) as number;
+    if (pointsToRedeem < minRedemption) {
+      const creditValue = Math.floor(minRedemption / 100) * (await getAppSetting<number>("loyalty.pesoPerHundredPoints", 10) as number);
+      throw new UnprocessableError(`Minimum redemption is ${minRedemption} points (₱${creditValue})`);
     }
     if (pointsToRedeem % 100 !== 0) {
       throw new UnprocessableError("Points must be redeemed in multiples of 100");
@@ -118,7 +122,8 @@ export class LoyaltyService {
       throw new UnprocessableError("Insufficient points");
     }
 
-    const creditAmount = pointsToCredits(pointsToRedeem);
+    const pesoPerHundred = await getAppSetting<number>("loyalty.pesoPerHundredPoints", 10) as number;
+    const creditAmount = Math.floor(pointsToRedeem / 100) * pesoPerHundred;
 
     const updated = await loyaltyRepository.deductPoints(userId, pointsToRedeem);
     await loyaltyRepository.addCredits(userId, creditAmount);

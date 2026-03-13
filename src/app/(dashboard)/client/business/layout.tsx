@@ -34,30 +34,63 @@ export default function BusinessLayout({
   const pathname = usePathname();
 
   return (
-    <div className="space-y-4">
-      {/* Sub-navigation */}
-      <nav className="sticky top-0 z-20 -mx-4 sm:-mx-6 px-4 sm:px-6 py-2.5 bg-white border-b border-slate-100">
-        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none">
+    // Negative margin breaks out of DashboardShell's p-4/p-6 so the sidebar
+    // can run edge-to-edge against the shell border.
+    <div className="flex -m-4 sm:-m-6 min-h-full">
+
+      {/* ── Left sidebar (desktop) ── */}
+      <aside className="hidden lg:flex w-56 flex-shrink-0 flex-col border-r border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
+
+        {/* Sidebar header */}
+        <div className="flex items-center gap-3 px-5 py-5 border-b border-slate-100 dark:border-slate-700">
+          <div className="p-1.5 rounded-lg bg-blue-100 dark:bg-blue-900/30">
+            <Building2 className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+          </div>
+          <span className="text-sm font-semibold text-slate-800 dark:text-white leading-tight">
+            Business
+          </span>
+        </div>
+
+        {/* Nav items */}
+        <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
           {NAV.map(({ label, href, icon: Icon }) => {
             const exact = href === "/client/business";
-            const active = exact
-              ? pathname === href
-              : pathname.startsWith(href);
-
+            const active = exact ? pathname === href : pathname.startsWith(href);
             return (
               <Link
                 key={href}
                 href={href}
                 aria-current={active ? "page" : undefined}
-                className={`
-                  flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-sm font-medium
-                  whitespace-nowrap transition-colors
-                  ${
-                    active
-                      ? "bg-primary text-white shadow-sm"
-                      : "text-slate-500 hover:text-slate-800 hover:bg-slate-100"
-                  }
-                `}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all w-full ${
+                  active
+                    ? "bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
+                    : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/40 hover:text-slate-800 dark:hover:text-slate-200"
+                }`}
+              >
+                <Icon className={`h-4 w-4 flex-shrink-0 ${active ? "text-blue-500 dark:text-blue-400" : ""}`} />
+                <span>{label}</span>
+              </Link>
+            );
+          })}
+        </nav>
+      </aside>
+
+      {/* ── Mobile top nav ── */}
+      <nav className="lg:hidden sticky top-0 z-20 px-4 py-2.5 bg-white dark:bg-slate-800 border-b border-slate-100 dark:border-slate-700 w-full">
+        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none">
+          {NAV.map(({ label, href, icon: Icon }) => {
+            const exact = href === "/client/business";
+            const active = exact ? pathname === href : pathname.startsWith(href);
+            return (
+              <Link
+                key={href}
+                href={href}
+                aria-current={active ? "page" : undefined}
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+                  active
+                    ? "bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
+                    : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700"
+                }`}
               >
                 <Icon className="h-3.5 w-3.5 flex-shrink-0" />
                 {label}
@@ -67,8 +100,10 @@ export default function BusinessLayout({
         </div>
       </nav>
 
-      {/* Page content */}
-      <div>{children}</div>
+      {/* ── Page content ── */}
+      <div className="flex-1 min-w-0 p-4 sm:p-6">{children}</div>
+
     </div>
   );
 }
+

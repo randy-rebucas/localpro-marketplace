@@ -3,6 +3,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { getAllArticles } from "@/lib/knowledge";
 import KnowledgeAdminView from "./KnowledgeAdminView";
 import PageGuide from "@/components/shared/PageGuide";
+import { BookOpen } from "lucide-react";
 
 export const metadata: Metadata = { title: "Knowledge Base" };
 
@@ -25,8 +26,11 @@ export default async function AdminKnowledgePage() {
     updatedAt: a.updatedAt,
   }));
 
+  const clientCount   = articles.filter((a) => a.folder === "client").length;
+  const providerCount = articles.filter((a) => a.folder === "provider").length;
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <PageGuide
         pageKey="admin-knowledge"
         title="How the Knowledge Base works"
@@ -37,19 +41,30 @@ export default async function AdminKnowledgePage() {
           { icon: "🎯", title: "Audience", description: "Choose 'client' or 'provider' to control which portal sees the article." },
         ]}
       />
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-slate-900">Knowledge Base</h2>
-          <p className="text-slate-500 text-sm mt-0.5">
-            Articles stored as Markdown files in{" "}
-            <code className="text-xs bg-slate-100 px-1.5 py-0.5 rounded font-mono">content/knowledge/</code>
-          </p>
+
+      {/* Header */}
+      <div className="flex items-center justify-between gap-4 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-5 py-4 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-xl bg-emerald-100 dark:bg-emerald-900/30">
+            <BookOpen className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+          </div>
+          <div>
+            <h2 className="text-base font-bold text-slate-800 dark:text-white">Knowledge Base</h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Markdown files in{" "}
+              <code className="bg-slate-100 dark:bg-slate-700 px-1 rounded font-mono">content/knowledge/</code>
+            </p>
+          </div>
         </div>
-        <div className="text-right text-sm text-slate-500">
-          <p className="font-medium text-slate-700">{articles.length} articles</p>
-          <p className="text-xs">{articles.filter((a) => a.folder === "client").length} client · {articles.filter((a) => a.folder === "provider").length} provider</p>
+        <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+          <span className="hidden sm:inline font-semibold text-slate-700 dark:text-slate-200">{articles.length}</span>
+          <span className="hidden sm:inline">articles</span>
+          <span className="hidden sm:inline text-slate-300 dark:text-slate-600">·</span>
+          <span className="px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 font-semibold">{clientCount} client</span>
+          <span className="px-2 py-0.5 rounded-full bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-400 font-semibold">{providerCount} provider</span>
         </div>
       </div>
+
       <KnowledgeAdminView initialArticles={articles} />
     </div>
   );

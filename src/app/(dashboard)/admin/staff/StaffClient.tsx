@@ -11,6 +11,8 @@ export type StaffCapability =
   | "manage_kyc"
   | "manage_disputes"
   | "manage_users"
+  | "manage_agencies"
+  | "manage_businesses"
   | "view_revenue"
   | "manage_payouts"
   | "manage_categories"
@@ -31,14 +33,16 @@ const CAPABILITY_META: Record<
   StaffCapability,
   { label: string; description: string; color: string }
 > = {
-  manage_jobs:       { label: "Manage Jobs",       description: "Approve or reject job postings",       color: "bg-blue-100 text-blue-800" },
-  manage_kyc:        { label: "Manage KYC",        description: "Review provider KYC submissions",       color: "bg-purple-100 text-purple-800" },
-  manage_disputes:   { label: "Manage Disputes",   description: "Resolve platform disputes",             color: "bg-red-100 text-red-800" },
-  manage_users:      { label: "Manage Users",      description: "Suspend or verify user accounts",       color: "bg-orange-100 text-orange-800" },
-  view_revenue:      { label: "View Revenue",      description: "Access financial reports and GMV data", color: "bg-green-100 text-green-800" },
-  manage_payouts:    { label: "Manage Payouts",    description: "Process provider payout requests",      color: "bg-emerald-100 text-emerald-800" },
-  manage_categories: { label: "Manage Categories", description: "Add, edit, or reorder service categories", color: "bg-slate-100 text-slate-800" },
-  manage_support:    { label: "Manage Support",    description: "Handle user support tickets",           color: "bg-cyan-100 text-cyan-800" },
+  manage_jobs:       { label: "Manage Jobs",        description: "Approve or reject job postings",               color: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300" },
+  manage_kyc:        { label: "Manage KYC",         description: "Review provider KYC submissions",               color: "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300" },
+  manage_disputes:   { label: "Manage Disputes",    description: "Resolve platform disputes",                     color: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300" },
+  manage_users:      { label: "Manage Users",       description: "Suspend or verify user accounts",               color: "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300" },
+  manage_agencies:   { label: "Manage Agencies",    description: "View and manage provider agency accounts",      color: "bg-violet-100 text-violet-800 dark:bg-violet-900/30 dark:text-violet-300" },
+  manage_businesses: { label: "Manage Businesses",  description: "View and manage client business organizations",  color: "bg-sky-100 text-sky-800 dark:bg-sky-900/30 dark:text-sky-300" },
+  view_revenue:      { label: "View Revenue",       description: "Access financial reports and GMV data",         color: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300" },
+  manage_payouts:    { label: "Manage Payouts",     description: "Process provider payout requests",              color: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300" },
+  manage_categories: { label: "Manage Categories",  description: "Add, edit, or reorder service categories",     color: "bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300" },
+  manage_support:    { label: "Manage Support",     description: "Handle user support tickets",                   color: "bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-300" },
 };
 
 const ALL_CAPABILITIES = Object.keys(CAPABILITY_META) as StaffCapability[];
@@ -81,7 +85,9 @@ function CapabilityCheckboxes({
           <label
             key={cap}
             className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
-              checked ? "border-primary-500 bg-primary-50" : "border-slate-200 hover:border-slate-300"
+              checked
+                ? "border-primary-500 bg-primary-50 dark:border-primary-400 dark:bg-primary-900/20"
+                : "border-slate-200 dark:border-slate-600 hover:border-slate-300 dark:hover:border-slate-500"
             }`}
           >
             <input
@@ -94,7 +100,7 @@ function CapabilityCheckboxes({
               <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${meta.color} mb-0.5`}>
                 {meta.label}
               </span>
-              <p className="text-xs text-slate-500">{meta.description}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">{meta.description}</p>
             </div>
           </label>
         );
@@ -145,10 +151,10 @@ function AddStaffModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col">
-        <div className="flex items-center justify-between px-6 py-4 border-b">
-          <h3 className="text-lg font-semibold text-slate-900">Add Staff Member</h3>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col">
+        <div className="flex items-center justify-between px-6 py-4 border-b dark:border-slate-700">
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Add Staff Member</h3>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300">
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -156,31 +162,31 @@ function AddStaffModal({
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
           <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Full Name</label>
+              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">Full Name</label>
               <input
                 type="text"
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Jane Smith"
-                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="w-full border border-slate-300 dark:border-slate-600 rounded-xl px-3 py-2 text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Email Address</label>
+              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">Email Address</label>
               <input
                 type="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="jane@company.com"
-                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="w-full border border-slate-300 dark:border-slate-600 rounded-xl px-3 py-2 text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Temporary Password</label>
+              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">Temporary Password</label>
               <div className="relative">
                 <input
                   type={showPassword ? "text" : "password"}
@@ -189,12 +195,12 @@ function AddStaffModal({
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Min. 8 characters"
-                  className="w-full border border-slate-300 rounded-lg px-3 py-2 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="w-full border border-slate-300 dark:border-slate-600 rounded-xl px-3 py-2 pr-10 text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword((v) => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300"
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
@@ -202,23 +208,23 @@ function AddStaffModal({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">Capabilities</label>
+              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Capabilities</label>
               <CapabilityCheckboxes selected={capabilities} onChange={setCapabilities} />
             </div>
           </div>
 
-          <div className="flex gap-3 px-6 py-4 border-t">
+          <div className="flex gap-3 px-6 py-4 border-t dark:border-slate-700">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 border border-slate-300 rounded-lg py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              className="flex-1 border border-slate-300 dark:border-slate-600 rounded-xl py-2 text-sm font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 bg-primary-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-primary-700 disabled:opacity-60"
+              className="flex-1 bg-primary-600 text-white rounded-xl py-2 text-sm font-semibold hover:bg-primary-700 disabled:opacity-60"
             >
               {loading ? "Creating…" : "Create Staff Member"}
             </button>
@@ -270,13 +276,13 @@ function EditStaffModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col">
-        <div className="flex items-center justify-between px-6 py-4 border-b">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col">
+        <div className="flex items-center justify-between px-6 py-4 border-b dark:border-slate-700">
           <div>
-            <h3 className="text-lg font-semibold text-slate-900">Edit Staff Member</h3>
-            <p className="text-sm text-slate-500">{staff.name} · {staff.email}</p>
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Edit Staff Member</h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400">{staff.name} · {staff.email}</p>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600">
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300">
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -284,14 +290,14 @@ function EditStaffModal({
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
           <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">Capabilities</label>
+              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Capabilities</label>
               <CapabilityCheckboxes selected={capabilities} onChange={setCapabilities} />
             </div>
 
-            <div className="flex items-center justify-between p-3 rounded-lg border border-slate-200">
+            <div className="flex items-center justify-between p-3 rounded-lg border border-slate-200 dark:border-slate-600 dark:bg-slate-800/50">
               <div>
-                <p className="text-sm font-medium text-slate-700">Suspend Account</p>
-                <p className="text-xs text-slate-500">Suspended staff cannot log in</p>
+                <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">Suspend Account</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Suspended staff cannot log in</p>
               </div>
               <button
                 type="button"
@@ -309,18 +315,18 @@ function EditStaffModal({
             </div>
           </div>
 
-          <div className="flex gap-3 px-6 py-4 border-t">
+          <div className="flex gap-3 px-6 py-4 border-t dark:border-slate-700">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 border border-slate-300 rounded-lg py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              className="flex-1 border border-slate-300 dark:border-slate-600 rounded-xl py-2 text-sm font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 bg-primary-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-primary-700 disabled:opacity-60"
+              className="flex-1 bg-primary-600 text-white rounded-xl py-2 text-sm font-semibold hover:bg-primary-700 disabled:opacity-60"
             >
               {loading ? "Saving…" : "Save Changes"}
             </button>
@@ -391,10 +397,10 @@ export default function StaffClient({ initialStaff }: { initialStaff: StaffMembe
     <>
       {/* Header row */}
       <div className="flex items-center justify-between">
-        <p className="text-sm text-slate-500">{staff.length} staff member{staff.length !== 1 ? "s" : ""}</p>
+        <p className="text-sm text-slate-500 dark:text-slate-400">{staff.length} staff member{staff.length !== 1 ? "s" : ""}</p>
         <button
           onClick={() => setShowAddModal(true)}
-          className="inline-flex items-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary-700 transition-colors"
+          className="inline-flex items-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-primary-700 transition-colors"
         >
           <Plus className="h-4 w-4" />
           Add Staff Member
@@ -403,10 +409,12 @@ export default function StaffClient({ initialStaff }: { initialStaff: StaffMembe
 
       {/* Empty state */}
       {staff.length === 0 && (
-        <div className="text-center py-16 bg-white rounded-2xl border border-slate-200">
-          <UserCog className="mx-auto h-10 w-10 text-slate-300 mb-3" />
-          <p className="text-slate-500 font-medium">No staff members yet</p>
-          <p className="text-slate-400 text-sm mt-1">
+        <div className="flex flex-col items-center justify-center py-16 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700">
+          <div className="p-4 rounded-2xl bg-slate-100 dark:bg-slate-700 ring-8 ring-slate-100 dark:ring-slate-700 mb-4">
+            <UserCog className="h-7 w-7 text-slate-400 dark:text-slate-500" />
+          </div>
+          <p className="text-slate-600 dark:text-slate-300 font-semibold">No staff members yet</p>
+          <p className="text-slate-400 dark:text-slate-500 text-sm mt-1">
             Add staff members to delegate specific admin capabilities.
           </p>
         </div>
@@ -414,51 +422,51 @@ export default function StaffClient({ initialStaff }: { initialStaff: StaffMembe
 
       {/* Staff table */}
       {staff.length > 0 && (
-        <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-slate-50 border-b border-slate-200">
-                <th className="text-left px-4 py-3 font-medium text-slate-600">Name</th>
-                <th className="text-left px-4 py-3 font-medium text-slate-600">Email</th>
-                <th className="text-left px-4 py-3 font-medium text-slate-600">Capabilities</th>
-                <th className="text-left px-4 py-3 font-medium text-slate-600">Status</th>
-                <th className="text-left px-4 py-3 font-medium text-slate-600">Joined</th>
+              <tr className="bg-slate-50 dark:bg-slate-700/50 border-b border-slate-200 dark:border-slate-700">
+                <th className="text-left px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Name</th>
+                <th className="text-left px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Email</th>
+                <th className="text-left px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Capabilities</th>
+                <th className="text-left px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Status</th>
+                <th className="text-left px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Joined</th>
                 <th className="px-4 py-3" />
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
               {staff.map((s) => (
-                <tr key={s._id} className="hover:bg-slate-50 transition-colors">
-                  <td className="px-4 py-3 font-medium text-slate-900">{s.name}</td>
-                  <td className="px-4 py-3 text-slate-500">{s.email}</td>
-                  <td className="px-4 py-3">
+                <tr key={s._id} className="hover:bg-slate-50 dark:hover:bg-slate-700/40 transition-colors">
+                  <td className="px-4 py-3.5 font-semibold text-slate-900 dark:text-white">{s.name}</td>
+                  <td className="px-4 py-3.5 text-slate-500 dark:text-slate-400">{s.email}</td>
+                  <td className="px-4 py-3.5">
                     <div className="flex flex-wrap gap-1">
                       {s.capabilities.length === 0 ? (
-                        <span className="text-slate-400 text-xs italic">None</span>
+                        <span className="text-slate-400 dark:text-slate-500 text-xs italic">None</span>
                       ) : (
                         s.capabilities.map((cap) => <CapChip key={cap} cap={cap} />)
                       )}
                     </div>
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3.5">
                     {s.isSuspended ? (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
                         <Ban className="h-3 w-3" /> Suspended
                       </span>
                     ) : (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
                         <CheckCircle2 className="h-3 w-3" /> Active
                       </span>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-slate-500">
+                  <td className="px-4 py-3.5 text-slate-500 dark:text-slate-400">
                     {new Date(s.createdAt).toLocaleDateString("en-US", {
                       month: "short",
                       day: "numeric",
                       year: "numeric",
                     })}
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3.5">
                     <div className="flex items-center gap-2 justify-end">
                       <button
                         onClick={() => setEditTarget(s)}

@@ -7,7 +7,7 @@ import toast from "react-hot-toast";
 import {
   Star, Heart, Sparkles, Briefcase, Timer, Clock, CheckCircle2,
   XCircle, MapPin, Calendar, ChevronLeft, TrendingUp, Award,
-  MessageSquare, Flame, User,
+  MessageSquare, Flame, User, Building2,
 } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { apiFetch } from "@/lib/fetchClient";
@@ -36,6 +36,7 @@ export interface ProviderProfileData {
   serviceAreas?: ServiceArea[];
   schedule?: Record<string, WorkSlot>;
   isLocalProCertified?: boolean;
+  agency?: { name: string; staffCount: number; plan: string } | null;
   breakdown?: {
     quality: number; professionalism: number;
     punctuality: number; communication: number; count: number;
@@ -272,6 +273,11 @@ export default function ProfileClient({
               {(profile.streak ?? 0) >= 3 && (
                 <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded bg-orange-100 text-orange-700 border border-orange-200">
                   <Flame className="h-3 w-3" /> {profile.streak}-star streak
+                </span>
+              )}
+              {profile.agency && (
+                <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded bg-violet-100 text-violet-700 border border-violet-200">
+                  <Building2 className="h-3 w-3" /> {profile.agency.name} &middot; {profile.agency.staffCount} staff
                 </span>
               )}
             </div>

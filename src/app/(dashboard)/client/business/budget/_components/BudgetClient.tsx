@@ -155,10 +155,15 @@ export default function BudgetClient() {
     <div className="space-y-5">
 
       {/* ══ Row 1 — Header ══════════════════════════════════════════════════ */}
-      <div className="flex items-start sm:items-center justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">Budget Tracking</h1>
-          <p className="text-slate-500 text-sm mt-0.5">{org.name}</p>
+      <div className="flex items-center justify-between gap-4 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-5 py-4 shadow-sm flex-wrap">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-xl bg-emerald-100 dark:bg-emerald-900/30">
+            <Wallet className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+          </div>
+          <div>
+            <h1 className="text-base font-bold text-slate-800 dark:text-white">Budget Tracking</h1>
+            <p className="text-xs text-slate-500 dark:text-slate-400">{org.name}</p>
+          </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-xs font-medium bg-slate-100 text-slate-600 px-3 py-1.5 rounded-full">

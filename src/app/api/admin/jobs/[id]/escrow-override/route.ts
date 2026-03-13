@@ -6,6 +6,7 @@ import { ValidationError, NotFoundError, UnprocessableError } from "@/lib/errors
 import { jobRepository, transactionRepository, activityRepository, notificationRepository, quoteRepository } from "@/repositories";
 import { calculateCommission, getCommissionRate } from "@/lib/commission";
 import { pushStatusUpdateMany, pushNotification } from "@/lib/events";
+import { ledgerService } from "@/services/ledger.service";
 import type { IJob } from "@/types";
 
 const OverrideSchema = z.object({
@@ -108,6 +109,27 @@ export const POST = withHandler(async (
       );
     }
 
+    // Post ledger: admin escrow release (same flow as normal release)
+    try {
+      const tx = existingTxn ?? await transactionRepository.findOneByJobId(id);
+      const { commission, netAmount } = tx
+        ? { commission: (tx as unknown as { commission: number }).commission, netAmount: (tx as unknown as { netAmount: number }).netAmount }
+        : calculateCommission(job.budget, getCommissionRate(job.category));
+      await ledgerService.postEscrowReleased(
+        {
+          journalId: `admin-release-${id}`,
+          entityType: "job",
+          entityId: id,
+          clientId: job.clientId.toString(),
+          providerId: job.providerId?.toString(),
+          initiatedBy: user.userId,
+        },
+        job.budget,
+        commission,
+        netAmount
+      );
+    } catch { /* non-critical */ }
+
     const notifBase = { data: { jobId: id }, type: "escrow_released" as const };
     const clientNote = await notificationRepository.create({
       userId: job.clientId.toString(),
@@ -136,13 +158,30 @@ export const POST = withHandler(async (
 
     const { walletService } = await import("@/services/wallet.service");
     const { paymentRepository } = await import("@/repositories");
+    const refundAmount = (job as unknown as { budget: number }).budget;
+    const refundJournalId = `admin-refund-${id}`;
     await walletService.credit(
       job.clientId.toString(),
-      (job as unknown as { budget: number }).budget,
+      refundAmount,
       `Admin escrow refund — Job #${id.slice(-6)}`,
-      { jobId: id, silent: true }
+      { jobId: id, silent: true, journalId: refundJournalId }
     );
     await paymentRepository.markRefundedByJobId(id);
+
+    // Post ledger: admin escrow refund to client wallet
+    try {
+      await ledgerService.postDisputeRefund(
+        {
+          journalId: refundJournalId,
+          entityType: "job",
+          entityId: id,
+          clientId: job.clientId.toString(),
+          providerId: job.providerId?.toString(),
+          initiatedBy: user.userId,
+        },
+        refundAmount
+      );
+    } catch { /* non-critical */ }
 
     const clientNote = await notificationRepository.create({
       userId: job.clientId.toString(),

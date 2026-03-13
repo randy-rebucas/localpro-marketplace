@@ -173,9 +173,28 @@ export class LedgerService {
   }
 
   /**
-   * Flow 9 & 10: Admin marks provider payout as completed (bank transfer sent).
+   * Flow 9: Provider submits payout request — moves the claimed amount in-flight.
    *
-   * DR 2100 Earnings Payable     amount  ← liability settled
+   * DR 2100 Earnings Payable     amount  ← provider's earnings ring-fenced
+   * CR 2400 Payout In-Flight     amount  ← in-flight liability created
+   */
+  async postPayoutRequested(opts: JournalOptions, amountPHP: number): Promise<void> {
+    const amountC = toCentavos(amountPHP);
+
+    await ledgerRepository.postJournal([
+      buildEntry(opts, "payout_requested",
+        ACCOUNT_CODES.EARNINGS_PAYABLE,
+        ACCOUNT_CODES.PAYOUT_IN_FLIGHT,
+        amountC,
+        `Payout requested by provider — Payout ${opts.entityId}`
+      ),
+    ]);
+  }
+
+  /**
+   * Flow 10: Admin marks provider payout as completed (bank transfer sent).
+   *
+   * DR 2400 Payout In-Flight     amount  ← in-flight cleared
    * CR 1000 Gateway Receivable   amount  ← cash leaves platform
    */
   async postPayoutSent(opts: JournalOptions, amountPHP: number): Promise<void> {
@@ -183,10 +202,29 @@ export class LedgerService {
 
     await ledgerRepository.postJournal([
       buildEntry(opts, "payout_sent",
-        ACCOUNT_CODES.EARNINGS_PAYABLE,
+        ACCOUNT_CODES.PAYOUT_IN_FLIGHT,
         ACCOUNT_CODES.GATEWAY_RECEIVABLE,
         amountC,
         `Payout sent to provider — Payout ${opts.entityId}`
+      ),
+    ]);
+  }
+
+  /**
+   * Flow 10b: Admin rejects payout request — reverses the in-flight reservation.
+   *
+   * DR 2400 Payout In-Flight     amount  ← in-flight cleared
+   * CR 2100 Earnings Payable     amount  ← earnings restored to provider
+   */
+  async postPayoutRejected(opts: JournalOptions, amountPHP: number): Promise<void> {
+    const amountC = toCentavos(amountPHP);
+
+    await ledgerRepository.postJournal([
+      buildEntry(opts, "payout_rejected",
+        ACCOUNT_CODES.PAYOUT_IN_FLIGHT,
+        ACCOUNT_CODES.EARNINGS_PAYABLE,
+        amountC,
+        `Payout rejected — earnings restored — Payout ${opts.entityId}`
       ),
     ]);
   }

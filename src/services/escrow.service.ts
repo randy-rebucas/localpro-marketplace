@@ -158,18 +158,24 @@ export class EscrowService {
     try {
       const tx = await transactionRepository.findOneByJobId(job._id!.toString());
       if (tx) {
-        const t = tx as unknown as { amount: number; commission: number; netAmount: number };
-        await ledgerService.postEscrowReleased(
-          {
-            journalId: `escrow-release-${job._id!.toString()}`,
-            entityType: "job",
-            entityId: job._id!.toString(),
-            clientId: job.clientId.toString(),
-            providerId: job.providerId?.toString(),
-            initiatedBy: user.userId,
-          },
-          t.amount, t.commission, t.netAmount
-        );
+        const t = tx as unknown as { _id: { toString(): string }; amount: number; commission: number; netAmount: number };
+        // Guard: skip ledger write if amounts are missing/invalid (shouldn't happen)
+        if (t.amount > 0 && t.commission >= 0 && t.netAmount >= 0) {
+          const releaseJournalId = `escrow-release-${job._id!.toString()}`;
+          await ledgerService.postEscrowReleased(
+            {
+              journalId: releaseJournalId,
+              entityType: "job",
+              entityId: job._id!.toString(),
+              clientId: job.clientId.toString(),
+              providerId: job.providerId?.toString(),
+              initiatedBy: user.userId,
+            },
+            t.amount, t.commission, t.netAmount
+          );
+          // Stamp the release journal on the Transaction for end-to-end traceability
+          await transactionRepository.updateById(t._id.toString(), { ledgerJournalId: releaseJournalId });
+        }
       }
     } catch {
       // Non-critical — do not fail escrow release if ledger write fails
@@ -205,6 +211,54 @@ export class EscrowService {
         message: "The client approved the job. Your payment has been released.",
         data: { jobId: job._id!.toString() },
       });
+    }
+
+    // ── Agency staff payout split record ──────────────────────────────────────
+    if (job.providerId) {
+      try {
+        const UserModel = (await import("@/models/User")).default;
+        const worker = await UserModel.findById(job.providerId.toString(), "agencyId").lean();
+
+        if (worker?.agencyId) {
+          const AgencyProfile = (await import("@/models/AgencyProfile")).default;
+          const AgencyStaffPayout = (await import("@/models/AgencyStaffPayout")).default;
+
+          const agency = await AgencyProfile.findById(worker.agencyId).lean();
+          if (agency) {
+            const staffEntry = agency.staff.find(
+              (s: { userId: { toString(): string }; workerSharePct: number }) =>
+                s.userId.toString() === job.providerId!.toString()
+            );
+
+            const sharePct =
+              (staffEntry?.workerSharePct ?? 0) > 0
+                ? (staffEntry!.workerSharePct)
+                : (agency.defaultWorkerSharePct ?? 60);
+
+            // Determine gross amount from the job transaction
+            const tx = await transactionRepository.findOneByJobId(job._id!.toString());
+            const grossAmount = (tx as unknown as { netAmount?: number } | null)?.netAmount ?? job.budget;
+
+            const workerAmount = Math.round(grossAmount * (sharePct / 100) * 100) / 100;
+            const agencyAmount = Math.round((grossAmount - workerAmount) * 100) / 100;
+
+            await AgencyStaffPayout.create({
+              agencyId: agency._id,
+              agencyOwnerId: agency.providerId,
+              workerId: job.providerId.toString(),
+              jobId: job._id!.toString(),
+              grossAmount,
+              workerAmount,
+              agencyAmount,
+              workerSharePct: sharePct,
+              status: "pending",
+            });
+          }
+        }
+      } catch (err) {
+        // Non-critical — do not fail escrow release if payout split fails
+        console.error("[PAYOUT_SPLIT] Failed to create staff payout record:", err);
+      }
     }
 
     pushStatusUpdateMany(

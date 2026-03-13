@@ -5,10 +5,11 @@ import Image from "next/image";
 import {
   MapPin, Plus, Pencil, Trash2, ToggleLeft, ToggleRight,
   Wallet, Bell, Users, X, BarChart2, Briefcase, Star,
-  ChevronRight, AlertTriangle, CheckCircle2, Clock,
+  ChevronRight, AlertTriangle, CheckCircle2, Clock, Lock, ArrowUpRight,
 } from "lucide-react";
 import { fetchClient } from "@/lib/fetchClient";
 import type { IBusinessOrganization, IBusinessLocation, IBusinessMember } from "@/types";
+import { LOCATION_LIMITS, PLAN_LABELS, PLAN_UPGRADE_NEXT, isAtLocationLimit } from "@/lib/businessPlan";
 import { formatCurrency } from "@/lib/utils";
 import LocationAutocomplete from "@/components/shared/LocationAutocomplete";
 import toast from "react-hot-toast";
@@ -128,6 +129,7 @@ export default function LocationsClient() {
   }, [detailLocId, org?._id?.toString()]);
 
   function openAdd() {
+    if (org && isAtLocationLimit(org.plan, org.locations.length)) return;
     setEditingId(null);
     setForm(EMPTY_FORM);
     setShowForm(true);
@@ -246,31 +248,69 @@ export default function LocationsClient() {
 
   const activeCount   = org.locations.filter((l) => l.isActive).length;
   const inactiveCount = org.locations.length - activeCount;
+  const locationLimit  = LOCATION_LIMITS[org.plan];
+  const atLimit        = isAtLocationLimit(org.plan, org.locations.length);
+  const planLabel      = PLAN_LABELS[org.plan];
+  const nextPlan       = PLAN_UPGRADE_NEXT[org.plan];
 
   return (
     <div className="space-y-6">
 
       {/* ── Header ── */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold text-slate-900">Locations</h1>
-          <p className="text-sm text-slate-500 mt-0.5">
-            {org.name}
-            {org.locations.length > 0 && (
-              <span className="ml-2 text-slate-400">
-                · {activeCount} active{inactiveCount > 0 ? `, ${inactiveCount} inactive` : ""}
-              </span>
-            )}
-          </p>
+      <div className="flex items-center justify-between gap-4 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-5 py-4 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-xl bg-blue-100 dark:bg-blue-900/30">
+            <MapPin className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+          </div>
+          <div>
+            <h1 className="text-base font-bold text-slate-800 dark:text-white">Locations</h1>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              {org.name}{org.locations.length > 0 && ` · ${activeCount} active${inactiveCount > 0 ? `, ${inactiveCount} inactive` : ""}`}
+            </p>
+          </div>
         </div>
-        <button
-          onClick={showForm ? () => setShowForm(false) : openAdd}
-          className="btn-primary flex items-center gap-2 flex-shrink-0"
-        >
-          <Plus className="h-4 w-4" />
-          {showForm ? "Cancel" : "Add Location"}
-        </button>
+        <div className="flex items-center gap-3 flex-shrink-0">
+          {/* Plan quota badge */}
+          <span className={`hidden sm:inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full border ${
+            atLimit
+              ? "bg-red-50 border-red-200 text-red-700"
+              : "bg-slate-50 border-slate-200 text-slate-500"
+          }`}>
+            <MapPin className="h-3 w-3" />
+            {org.locations.length} / {locationLimit === Infinity ? "∞" : locationLimit} · {planLabel}
+          </span>
+          <button
+            onClick={showForm ? () => setShowForm(false) : openAdd}
+            disabled={!showForm && atLimit}
+            className="btn-primary flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {!showForm && atLimit ? <Lock className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+            {showForm ? "Cancel" : "Add Location"}
+          </button>
+        </div>
       </div>
+
+      {/* ── Plan limit upgrade banner ── */}
+      {atLimit && !showForm && (
+        <div className="flex items-center justify-between gap-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+          <div className="flex items-center gap-2.5 text-sm text-amber-800">
+            <Lock className="h-4 w-4 shrink-0" />
+            <span>
+              You&apos;ve reached the <strong>{planLabel}</strong> plan limit of{" "}
+              <strong>{locationLimit} branch{locationLimit === 1 ? "" : "es"}</strong>.
+              {nextPlan && ` Upgrade to ${PLAN_LABELS[nextPlan]} to add more.`}
+            </span>
+          </div>
+          {nextPlan && (
+            <a
+              href="/client/business/plan"
+              className="shrink-0 inline-flex items-center gap-1 text-xs font-semibold text-amber-700 hover:text-amber-900 underline underline-offset-2"
+            >
+              Upgrade <ArrowUpRight className="h-3.5 w-3.5" />
+            </a>
+          )}
+        </div>
+      )}
 
       {/* ── Add / Edit form ── */}
       {showForm && (
@@ -386,11 +426,24 @@ export default function LocationsClient() {
 
       {/* ── Location list ── */}
       {org.locations.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16 bg-white rounded-2xl border border-slate-200 gap-3">
-          <MapPin className="h-8 w-8 text-slate-300" />
-          <p className="text-sm text-slate-400">
-            No locations yet. Click <strong className="text-slate-600">Add Location</strong> to get started.
-          </p>
+        <div className="flex flex-col items-center justify-center py-16 bg-white rounded-2xl border border-dashed border-slate-200 gap-5 text-center px-6">
+          <div className="w-14 h-14 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-center">
+            <MapPin className="h-6 w-6 text-slate-400" />
+          </div>
+          <div className="space-y-1.5 max-w-xs">
+            <p className="text-sm font-semibold text-slate-700">No locations yet</p>
+            <p className="text-xs text-slate-400 leading-relaxed">
+              Add your first business location to start tracking budgets, assigning managers, and monitoring jobs per site.
+            </p>
+          </div>
+          <button
+            onClick={() => { if (!atLimit) { setShowForm(true); setEditingId(null); setForm(EMPTY_FORM); } }}
+            disabled={atLimit}
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary text-white text-sm font-semibold hover:bg-primary-700 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {atLimit ? <Lock className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+            {atLimit ? `Plan limit reached (${locationLimit})` : "Add your first location"}
+          </button>
         </div>
       ) : (
         <div className="space-y-3">

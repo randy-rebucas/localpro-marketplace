@@ -5,6 +5,7 @@ export type WalletTxType =
   | "escrow_payment"     // wallet used to fund escrow
   | "withdrawal"         // withdrawal request deducted
   | "withdrawal_reversed"// rejection reverses a pending withdrawal
+  | "topup"              // client tops up wallet via PayMongo
   | "admin_credit"
   | "admin_debit";
 
@@ -16,6 +17,7 @@ export interface IWalletTransactionDoc {
   description: string;
   jobId?: mongoose.Types.ObjectId | null;
   refId?: string | null;  // e.g. withdrawalId or PayMongo refundId
+  ledgerJournalId?: string | null;
   createdAt: Date;
 }
 
@@ -31,7 +33,7 @@ const WalletTransactionSchema = new Schema<WalletTransactionDocument>(
     },
     type: {
       type: String,
-      enum: ["refund_credit", "escrow_payment", "withdrawal", "withdrawal_reversed", "admin_credit", "admin_debit"],
+      enum: ["refund_credit", "escrow_payment", "withdrawal", "withdrawal_reversed", "topup", "admin_credit", "admin_debit"],
       required: true,
     },
     amount:       { type: Number, required: true },
@@ -39,6 +41,7 @@ const WalletTransactionSchema = new Schema<WalletTransactionDocument>(
     description:  { type: String, required: true },
     jobId:        { type: Schema.Types.ObjectId, ref: "Job", default: null },
     refId:        { type: String, default: null },
+    ledgerJournalId: { type: String, default: null },
   },
   { timestamps: { createdAt: true, updatedAt: false } }
 );

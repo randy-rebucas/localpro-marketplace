@@ -9,6 +9,7 @@ import { calculateCommission, getCommissionRate } from "@/lib/commission";
 import { pushStatusUpdateMany } from "@/lib/events";
 import { activityRepository, transactionRepository } from "@/repositories";
 import { NotFoundError, ForbiddenError, UnprocessableError } from "@/lib/errors";
+import { ledgerService } from "@/services/ledger.service";
 import type { IJob, IMilestone } from "@/types";
 
 type Ctx = { params: Promise<{ id: string; mId: string }> };
@@ -84,7 +85,7 @@ export const POST = withHandler(async (
   }
 
   // Record the transaction
-  await Transaction.create({
+  const milestoneTx = await Transaction.create({
     jobId: job._id,
     payerId: user.userId,
     payeeId: job.providerId,
@@ -92,7 +93,30 @@ export const POST = withHandler(async (
     commission,
     netAmount,
     status: "completed",
+    chargeType: "milestone_release",
   });
+
+  // Post double-entry ledger journal for this milestone
+  try {
+    const journalId = `milestone-release-${job._id!.toString()}-${mId}`;
+    await ledgerService.postMilestoneRelease(
+      {
+        journalId,
+        entityType: "job",
+        entityId: job._id!.toString(),
+        clientId: job.clientId.toString(),
+        providerId: job.providerId?.toString() ?? null,
+        initiatedBy: user.userId,
+      },
+      milestone.amount,
+      commission,
+      netAmount
+    );
+    // Link transaction to ledger journal
+    await Transaction.updateOne({ _id: milestoneTx._id }, { ledgerJournalId: journalId });
+  } catch {
+    // Non-critical — do not fail milestone release if ledger write fails
+  }
 
   // Update provider metrics if escrow fully released
   if (allReleased && job.providerId) {

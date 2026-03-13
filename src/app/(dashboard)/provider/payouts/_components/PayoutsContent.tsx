@@ -1,6 +1,6 @@
 import { payoutService } from "@/services/payout.service";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import { Wallet, Clock, CheckCircle2, XCircle, Loader2 } from "lucide-react";
+import { Wallet, Clock, CheckCircle2, XCircle, Loader2, CircleDollarSign, ArrowUpRight, TrendingUp } from "lucide-react";
 import type { IPayout, PayoutStatus } from "@/types";
 import RequestPayoutModal from "@/components/payment/RequestPayoutModal";
 import type { TokenPayload } from "@/lib/auth";
@@ -29,10 +29,67 @@ const statusConfig: Record<PayoutStatus, { label: string; classes: string; icon:
 };
 
 export async function PayoutsContent({ user }: { user: TokenPayload }) {
-  const { payouts, availableBalance } = await payoutService.listProviderPayouts(user);
+  const { payouts, availableBalance, totalNetEarned, pendingInEscrow, payoutStats } =
+    await payoutService.listProviderPayouts(user);
+
+  const totalInflight = payoutStats.totalPending + payoutStats.totalProcessing;
 
   return (
     <>
+      {/* Accounting stat cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-xs text-slate-500">Total Net Earned</p>
+              <p className="text-xl sm:text-2xl font-bold text-slate-900 mt-1">{formatCurrency(totalNetEarned)}</p>
+              <p className="text-xs text-slate-400 mt-0.5">All completed jobs</p>
+            </div>
+            <div className="p-2.5 bg-primary/10 rounded-xl text-primary">
+              <CircleDollarSign className="h-5 w-5" />
+            </div>
+          </div>
+        </div>
+        <div className="bg-amber-50 rounded-xl border border-amber-200 shadow-sm p-5">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-xs text-amber-600 font-medium">Pending in Escrow</p>
+              <p className="text-xl sm:text-2xl font-bold text-amber-700 mt-1">{formatCurrency(pendingInEscrow)}</p>
+              <p className="text-xs text-amber-500 mt-0.5">Awaiting client release</p>
+            </div>
+            <div className="p-2.5 bg-amber-100 rounded-xl text-amber-600">
+              <Clock className="h-5 w-5" />
+            </div>
+          </div>
+        </div>
+        <div className="bg-green-50 rounded-xl border border-green-200 shadow-sm p-5">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-xs text-green-600 font-medium">Total Paid Out</p>
+              <p className="text-xl sm:text-2xl font-bold text-green-700 mt-1">{formatCurrency(payoutStats.totalCompleted)}</p>
+              <p className="text-xs text-green-500 mt-0.5">Completed withdrawals</p>
+            </div>
+            <div className="p-2.5 bg-green-100 rounded-xl text-green-600">
+              <TrendingUp className="h-5 w-5" />
+            </div>
+          </div>
+        </div>
+        <div className={`rounded-xl border shadow-sm p-5 ${availableBalance > 0 ? "bg-primary/5 border-primary/20" : "bg-slate-50 border-slate-200"}`}>
+          <div className="flex items-start justify-between">
+            <div>
+              <p className={`text-xs font-medium ${availableBalance > 0 ? "text-primary" : "text-slate-500"}`}>Available to Withdraw</p>
+              <p className={`text-xl sm:text-2xl font-bold mt-1 ${availableBalance > 0 ? "text-primary" : "text-slate-400"}`}>{formatCurrency(availableBalance)}</p>
+              <p className={`text-xs mt-0.5 ${totalInflight > 0 ? "text-slate-400" : availableBalance > 0 ? "text-primary/70" : "text-slate-400"}`}>
+                {totalInflight > 0 ? `₱${totalInflight.toLocaleString()} in-flight` : "Ready now"}
+              </p>
+            </div>
+            <div className={`p-2.5 rounded-xl ${availableBalance > 0 ? "bg-primary/10 text-primary" : "bg-slate-100 text-slate-400"}`}>
+              <ArrowUpRight className="h-5 w-5" />
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Available balance banner */}
       {availableBalance > 0 && (
         <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">

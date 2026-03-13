@@ -43,6 +43,17 @@ export class QuoteService {
       throw new ForbiddenError("You cannot quote on your own job");
     }
 
+    // ── Agency staff check ──────────────────────────────────────────────────
+    // Staff workers belonging to an agency must not quote independently.
+    // Jobs for agency staff are dispatched by the agency owner, not self-submitted.
+    const providerUser = await userRepository.findById(user.userId);
+    const agencyId = (providerUser as { agencyId?: unknown } | null)?.agencyId;
+    if (agencyId) {
+      throw new ForbiddenError(
+        "You are a member of an agency. Your agency owner dispatches jobs to you — you cannot quote independently."
+      );
+    }
+
     const existing = await quoteRepository.findPendingByProvider(input.jobId, user.userId);
     if (existing) throw new ConflictError("You have already submitted a quote for this job");
 

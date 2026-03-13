@@ -4,7 +4,9 @@ import { paymentService } from "@/services";
 import { checkRateLimit } from "@/lib/rateLimit";
 import { connectDB } from "@/lib/db";
 import User from "@/models/User";
+import Payment from "@/models/Payment";
 import { businessOrganizationRepository } from "@/repositories";
+import { walletService } from "@/services/wallet.service";
 import type { BusinessPlan } from "@/types";
 
 /**
@@ -46,6 +48,7 @@ export async function POST(req: NextRequest) {
 
   let event: {
     data: {
+      id: string;  // PayMongo webhook event ID — used for idempotency
       attributes: {
         type: string;
         data: {
@@ -73,13 +76,24 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const eventType = event.data.attributes.type;
+  const eventType    = event.data.attributes.type;
   const resourceData = event.data.attributes.data;
+  const webhookEventId = event.data.id ?? "";  // Idempotency key
 
   try {
     // ── Checkout Session paid ────────────────────────────────────────────────
     if (eventType === "checkout_session.payment.paid") {
       const metadata = resourceData.attributes.metadata ?? {};
+
+      // ── Idempotency guard — skip if this exact webhook event was already processed
+      if (webhookEventId) {
+        await connectDB();
+        const alreadyProcessed = await Payment.findOne({ webhookEventId }).lean();
+        if (alreadyProcessed) {
+          console.log(`[PAYMONGO WEBHOOK] Duplicate event ${webhookEventId} — skipping`);
+          return NextResponse.json({ received: true, duplicate: true });
+        }
+      }
 
       // ── Branch A: subscription plan upgrade ───────────────────────────────
       if (metadata.type === "subscription" && metadata.orgId && metadata.plan) {
@@ -97,11 +111,36 @@ export async function POST(req: NextRequest) {
         });
         console.log(`[PAYMONGO] Subscription plan "${metadata.plan}" activated for org ${metadata.orgId}`);
 
-      // ── Branch B: escrow job payment ─────────────────────────────────────
+      // ── Branch B: wallet top-up ───────────────────────────────────────────
+      } else if (metadata.type === "wallet_topup" && metadata.userId) {
+        const sessionId = resourceData.id;
+        const amountPHP = parseFloat(metadata.amountPHP ?? "0");
+        if (amountPHP <= 0) {
+          console.error(`[PAYMONGO WEBHOOK] wallet_topup missing amountPHP — session ${sessionId}`);
+        } else {
+          await walletService.topUpConfirm(
+            metadata.userId,
+            amountPHP,
+            sessionId,
+            metadata.userId
+          );
+          console.log(`[PAYMONGO] Wallet top-up ₱${amountPHP} confirmed for user ${metadata.userId} — session ${sessionId}`);
+        }
+
+      // ── Branch C: escrow job payment ─────────────────────────────────────
       } else {
         const sessionId = resourceData.id;
         const paymentIntentId = resourceData.attributes.payment_intent?.id ?? "";
         await paymentService.confirmEscrowFunding(sessionId, paymentIntentId, "checkout");
+
+        // Stamp webhookEventId so duplicate deliveries are caught above
+        if (webhookEventId) {
+          await connectDB();
+          await Payment.findOneAndUpdate(
+            { paymentIntentId: sessionId },
+            { webhookEventId },
+          );
+        }
 
         // Save card PM for future recurring auto-pay
         const payments = resourceData.attributes.payments ?? [];

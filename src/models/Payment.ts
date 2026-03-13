@@ -25,6 +25,8 @@ const PaymentSchema = new Schema<PaymentDocument>(
     refundedAt:     { type: Date,   default: null },
     /** PayMongo webhook event ID for idempotency */
     webhookEventId: { type: String, default: null },
+    /** Double-entry ledger journal ID (escrow_funded_gateway) */
+    ledgerJournalId: { type: String, default: null },
   },
   { timestamps: true }
 );

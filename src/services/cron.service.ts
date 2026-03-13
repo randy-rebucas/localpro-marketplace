@@ -3,6 +3,7 @@ import { payoutRepository } from "@/repositories/payout.repository";
 import { providerProfileRepository } from "@/repositories/providerProfile.repository";
 import { notificationService } from "@/services/notification.service";
 import { pushStatusUpdate, pushStatusUpdateMany } from "@/lib/events";
+import { getAppSetting } from "@/lib/appSettings";
 import type { JobDocument } from "@/models/Job";
 import type { QuoteDocument } from "@/models/Quote";
 import type { DisputeDocument } from "@/models/Dispute";
@@ -26,10 +27,11 @@ function hoursAgo(hours: number): Date {
 export class CronService {
   /**
    * Marks open jobs older than `days` as expired and notifies their clients.
-   * Runs daily. Default threshold: 30 days.
+   * Runs daily. Default threshold: 30 days (configurable via limits.jobExpiryDays).
    */
-  async expireStaleJobs(days = 30): Promise<{ expired: number }> {
-    const cutoff = daysAgo(days);
+  async expireStaleJobs(days?: number): Promise<{ expired: number }> {
+    const threshold = days ?? (await getAppSetting<number>("limits.jobExpiryDays", 30));
+    const cutoff = daysAgo(threshold);
     const staleJobs = await jobRepository.findStaleOpen(cutoff);
     if (staleJobs.length === 0) return { expired: 0 };
 
@@ -41,14 +43,14 @@ export class CronService {
         userId: "system",
         eventType: "job_expired",
         jobId: j._id.toString(),
-        metadata: { daysOpen: days },
+        metadata: { daysOpen: threshold },
       });
 
       await notificationService.push({
         userId: j.clientId.toString(),
         type: "job_expired",
         title: "Job listing expired",
-        message: `Your job "${j.title}" expired after ${days} days with no accepted quote. You can repost it anytime.`,
+        message: `Your job "${j.title}" expired after ${threshold} days with no accepted quote. You can repost it anytime.`,
         data: { jobId: j._id.toString() },
       });
 
@@ -60,10 +62,11 @@ export class CronService {
 
   /**
    * Releases escrow for completed jobs older than `days` where payment hasn't been manually released.
-   * Runs daily. Default threshold: 7 days.
+   * Runs daily. Default threshold: 7 days (configurable via limits.escrowAutoReleaseDays).
    */
-  async releaseStaleEscrow(days = 7): Promise<{ released: number }> {
-    const cutoff = daysAgo(days);
+  async releaseStaleEscrow(days?: number): Promise<{ released: number }> {
+    const threshold = days ?? (await getAppSetting<number>("limits.escrowAutoReleaseDays", 7));
+    const cutoff = daysAgo(threshold);
     const jobs = await jobRepository.findCompletedPendingRelease(cutoff);
     if (jobs.length === 0) return { released: 0 };
 
@@ -84,7 +87,7 @@ export class CronService {
         userId: "system",
         eventType: "escrow_released",
         jobId: j._id.toString(),
-        metadata: { autoReleased: true, daysAfterCompletion: days },
+        metadata: { autoReleased: true, daysAfterCompletion: threshold },
       });
 
       // Notify provider
@@ -103,7 +106,7 @@ export class CronService {
         userId: j.clientId.toString(),
         type: "escrow_auto_released",
         title: "Escrow auto-released",
-        message: `Payment for "${j.title}" was automatically released to the provider after ${days} days.`,
+        message: `Payment for "${j.title}" was automatically released to the provider after ${threshold} days.`,
         data: { jobId: j._id.toString() },
       });
 
@@ -285,8 +288,9 @@ export class CronService {
       reviewCount++;
     }
 
-    // ── Stale-dispute escalations (open/investigating > 5 days) ────────────
-    const disputeCutoff = daysAgo(5);
+    // ── Stale-dispute escalations (configurable via limits.disputeEscalationDays) ──
+    const disputeEscalationDays = await getAppSetting<number>("limits.disputeEscalationDays", 5);
+    const disputeCutoff = daysAgo(disputeEscalationDays);
     const staleDisputes = await disputeRepository.findStale(disputeCutoff);
 
     for (const dispute of staleDisputes) {
@@ -304,7 +308,7 @@ export class CronService {
       await notificationService.notifyAdmins(
         "reminder_stale_dispute",
         "Dispute needs attention",
-        `A dispute on "${jobTitle}" has been ${d.status} for over 5 days with no resolution.`,
+        `A dispute on "${jobTitle}" has been ${d.status} for over ${disputeEscalationDays} days with no resolution.`,
         { disputeId }
       );
     }

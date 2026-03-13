@@ -14,7 +14,7 @@ import Link from "next/link";
 import {
   CircleDollarSign, BarChart3, Lock, AlertTriangle, ClipboardCheck,
   Users, ShieldAlert, ShieldCheck, TrendingUp, Activity,
-  Briefcase, FileText, Flag, CreditCard, ChevronRight,
+  Briefcase, FileText, Flag, CreditCard, ChevronRight, LayoutDashboard,
 } from "lucide-react";
 import PageGuide from "@/components/shared/PageGuide";
 import type { JobStatus } from "@/types";
@@ -83,23 +83,23 @@ function AdminDashboardSkeleton() {
     <div className="space-y-5 animate-pulse">
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[...Array(4)].map((_, i) => (
-          <div key={i} className="h-10 bg-slate-100 rounded-xl" />
+          <div key={i} className="h-10 bg-slate-100 dark:bg-slate-700 rounded-xl" />
         ))}
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div className="h-20 bg-amber-50 rounded-xl border border-amber-100" />
-        <div className="h-20 bg-red-50 rounded-xl border border-red-100" />
+        <div className="h-20 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-100 dark:border-amber-800" />
+        <div className="h-20 bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-100 dark:border-red-800" />
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[...Array(4)].map((_, i) => (
-          <div key={i} className="h-28 bg-white rounded-xl border border-slate-200" />
+          <div key={i} className="h-28 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700" />
         ))}
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-2 h-64 bg-white rounded-xl border border-slate-200" />
+        <div className="lg:col-span-2 h-64 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700" />
         <div className="space-y-3">
           {[...Array(3)].map((_, i) => (
-            <div key={i} className="h-[72px] bg-white rounded-xl border border-slate-200" />
+            <div key={i} className="h-[72px] bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700" />
           ))}
         </div>
       </div>
@@ -119,23 +119,23 @@ function QuickAction({
   countColor?: "amber" | "red" | "rose" | "indigo" | "slate";
 }) {
   const colorMap = {
-    amber:  "bg-amber-100 text-amber-700",
-    red:    "bg-red-100 text-red-700",
-    rose:   "bg-rose-100 text-rose-700",
-    indigo: "bg-indigo-100 text-indigo-700",
-    slate:  "bg-slate-100 text-slate-600",
+    amber:  "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400",
+    red:    "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400",
+    rose:   "bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400",
+    indigo: "bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400",
+    slate:  "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300",
   };
 
   return (
     <Link
       href={href}
-      className="group flex items-center justify-between px-4 py-3 bg-white rounded-xl border border-slate-200 shadow-card hover:border-primary/30 hover:shadow-card-hover transition-all"
+      className="group flex items-center justify-between px-4 py-3 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm hover:border-primary/30 dark:hover:border-primary/40 hover:shadow-md transition-all"
     >
       <div className="flex items-center gap-3">
-        <div className="w-8 h-8 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-500 group-hover:text-primary group-hover:bg-primary/5 transition-colors">
+        <div className="w-8 h-8 rounded-xl bg-slate-50 dark:bg-slate-700 border border-slate-100 dark:border-slate-600 flex items-center justify-center text-slate-500 dark:text-slate-400 group-hover:text-primary group-hover:bg-primary/5 dark:group-hover:bg-primary/10 transition-colors">
           {icon}
         </div>
-        <span className="text-sm font-medium text-slate-700 group-hover:text-primary transition-colors">{label}</span>
+        <span className="text-sm font-semibold text-slate-700 dark:text-slate-200 group-hover:text-primary transition-colors">{label}</span>
       </div>
       <div className="flex items-center gap-2">
         {count !== undefined && count > 0 && (
@@ -143,7 +143,7 @@ function QuickAction({
             {count}
           </span>
         )}
-        <ChevronRight className="h-3.5 w-3.5 text-slate-300 group-hover:text-primary transition-colors" />
+        <ChevronRight className="h-3.5 w-3.5 text-slate-300 dark:text-slate-600 group-hover:text-primary transition-colors" />
       </div>
     </Link>
   );
@@ -155,10 +155,10 @@ function StatPill({ icon, label, value, href }: {
   icon: React.ReactNode; label: string; value: string | number; href?: string;
 }) {
   const inner = (
-    <div className="flex items-center gap-2 px-3 py-2 bg-white rounded-xl border border-slate-200 shadow-card hover:border-primary/20 transition-colors">
-      <span className="text-slate-400">{icon}</span>
-      <span className="text-xs text-slate-500">{label}</span>
-      <span className="text-xs font-bold text-slate-800 ml-auto">{value}</span>
+    <div className="flex items-center gap-2 px-3 py-2 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm hover:border-primary/20 dark:hover:border-primary/30 transition-colors">
+      <span className="text-slate-400 dark:text-slate-500">{icon}</span>
+      <span className="text-xs text-slate-500 dark:text-slate-400">{label}</span>
+      <span className="text-xs font-bold text-slate-800 dark:text-white ml-auto">{value}</span>
     </div>
   );
   return href ? <Link href={href}>{inner}</Link> : inner;
@@ -226,45 +226,45 @@ async function AdminDashboardContent({
       {showBanners && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {can("manage_jobs") && stats.pendingJobs > 0 && (
-            <Link href="/admin/jobs" className="group bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-center justify-between hover:bg-amber-100 transition-colors">
+            <Link href="/admin/jobs" className="group bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-2xl p-4 flex items-center justify-between hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-amber-200 flex items-center justify-center flex-shrink-0">
-                  <ClipboardCheck className="h-5 w-5 text-amber-700" />
+                <div className="w-9 h-9 rounded-xl bg-amber-200 dark:bg-amber-800/50 flex items-center justify-center flex-shrink-0">
+                  <ClipboardCheck className="h-5 w-5 text-amber-700 dark:text-amber-400" />
                 </div>
                 <div>
-                  <p className="font-semibold text-amber-800 text-sm">{stats.pendingJobs} job{stats.pendingJobs !== 1 ? "s" : ""} awaiting review</p>
-                  <p className="text-amber-600 text-xs mt-0.5">Approve or reject submissions</p>
+                  <p className="font-semibold text-amber-800 dark:text-amber-300 text-sm">{stats.pendingJobs} job{stats.pendingJobs !== 1 ? "s" : ""} awaiting review</p>
+                  <p className="text-amber-600 dark:text-amber-500 text-xs mt-0.5">Approve or reject submissions</p>
                 </div>
               </div>
-              <span className="text-amber-600 text-sm font-medium group-hover:underline">Review →</span>
+              <span className="text-amber-600 dark:text-amber-400 text-sm font-semibold group-hover:underline">Review →</span>
             </Link>
           )}
           {can("manage_disputes") && stats.openDisputes > 0 && (
-            <Link href="/admin/disputes" className="group bg-red-50 border border-red-200 rounded-xl p-4 flex items-center justify-between hover:bg-red-100 transition-colors">
+            <Link href="/admin/disputes" className="group bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-2xl p-4 flex items-center justify-between hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-red-200 flex items-center justify-center flex-shrink-0">
-                  <ShieldAlert className="h-5 w-5 text-red-700" />
+                <div className="w-9 h-9 rounded-xl bg-red-200 dark:bg-red-800/50 flex items-center justify-center flex-shrink-0">
+                  <ShieldAlert className="h-5 w-5 text-red-700 dark:text-red-400" />
                 </div>
                 <div>
-                  <p className="font-semibold text-red-800 text-sm">{stats.openDisputes} active dispute{stats.openDisputes !== 1 ? "s" : ""}</p>
-                  <p className="text-red-600 text-xs mt-0.5">Pending resolution</p>
+                  <p className="font-semibold text-red-800 dark:text-red-300 text-sm">{stats.openDisputes} active dispute{stats.openDisputes !== 1 ? "s" : ""}</p>
+                  <p className="text-red-600 dark:text-red-500 text-xs mt-0.5">Pending resolution</p>
                 </div>
               </div>
-              <span className="text-red-600 text-sm font-medium group-hover:underline">Resolve →</span>
+              <span className="text-red-600 dark:text-red-400 text-sm font-semibold group-hover:underline">Resolve →</span>
             </Link>
           )}
           {can("manage_kyc") && stats.pendingKyc > 0 && (
-            <Link href="/admin/kyc" className="group bg-indigo-50 border border-indigo-200 rounded-xl p-4 flex items-center justify-between hover:bg-indigo-100 transition-colors">
+            <Link href="/admin/kyc" className="group bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-2xl p-4 flex items-center justify-between hover:bg-indigo-100 dark:hover:bg-indigo-900/30 transition-colors">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-indigo-200 flex items-center justify-center flex-shrink-0">
-                  <ShieldCheck className="h-5 w-5 text-indigo-700" />
+                <div className="w-9 h-9 rounded-xl bg-indigo-200 dark:bg-indigo-800/50 flex items-center justify-center flex-shrink-0">
+                  <ShieldCheck className="h-5 w-5 text-indigo-700 dark:text-indigo-400" />
                 </div>
                 <div>
-                  <p className="font-semibold text-indigo-800 text-sm">{stats.pendingKyc} KYC submission{stats.pendingKyc !== 1 ? "s" : ""} pending</p>
-                  <p className="text-indigo-600 text-xs mt-0.5">Identity verification queue</p>
+                  <p className="font-semibold text-indigo-800 dark:text-indigo-300 text-sm">{stats.pendingKyc} KYC submission{stats.pendingKyc !== 1 ? "s" : ""} pending</p>
+                  <p className="text-indigo-600 dark:text-indigo-500 text-xs mt-0.5">Identity verification queue</p>
                 </div>
               </div>
-              <span className="text-indigo-600 text-sm font-medium group-hover:underline">Review →</span>
+              <span className="text-indigo-600 dark:text-indigo-400 text-sm font-semibold group-hover:underline">Review →</span>
             </Link>
           )}
         </div>
@@ -282,19 +282,18 @@ async function AdminDashboardContent({
 
         {/* Chart panel */}
         {can("manage_jobs") && (
-          <div className="lg:col-span-2 bg-white rounded-xl border border-slate-200 shadow-card p-5">
-            {/* Tab toggle */}
+          <div className="lg:col-span-2 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm p-5">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold text-slate-900 text-sm">Platform Insights</h3>
+              <h3 className="font-semibold text-slate-900 dark:text-white text-sm">Platform Insights</h3>
             </div>
             <div className="space-y-5">
               <div>
-                <p className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-2">Jobs by Status</p>
+                <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2">Jobs by Status</p>
                 <AdminJobsChart data={jobsChartData} />
               </div>
               {can("view_revenue") && stats.revenueChartData.length > 0 && (
                 <div>
-                  <p className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-2">Revenue Trend — last 6 months</p>
+                  <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2">Revenue Trend — last 6 months</p>
                   <AdminRevenueChart data={stats.revenueChartData} />
                 </div>
               )}
@@ -309,36 +308,36 @@ async function AdminDashboardContent({
             {can("manage_users") && (
               <Link
                 href="/admin/users"
-                className="col-span-3 flex items-center gap-3 bg-white rounded-xl border border-slate-200 shadow-card p-4 hover:border-primary/30 hover:shadow-card-hover transition-all"
+                className="col-span-3 flex items-center gap-3 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm p-4 hover:border-primary/30 dark:hover:border-primary/40 hover:shadow-md transition-all"
               >
-                <div className="w-9 h-9 rounded-xl bg-violet-100 flex items-center justify-center">
-                  <Users className="h-5 w-5 text-violet-600" />
+                <div className="w-9 h-9 rounded-xl bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center">
+                  <Users className="h-5 w-5 text-violet-600 dark:text-violet-400" />
                 </div>
                 <div className="flex-1">
-                  <p className="text-xl font-bold text-slate-900">{stats.totalUsers.toLocaleString()}</p>
-                  <p className="text-xs text-slate-500">Total users</p>
+                  <p className="text-xl font-bold text-slate-900 dark:text-white">{stats.totalUsers.toLocaleString()}</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Total users</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-xs font-semibold text-green-600">+{stats.newUsersThisMonth} this month</p>
+                  <p className="text-xs font-semibold text-green-600 dark:text-green-400">+{stats.newUsersThisMonth} this month</p>
                 </div>
               </Link>
             )}
-            <div className="bg-white rounded-xl border border-slate-200 shadow-card p-3 text-center">
-              <p className="text-xl font-bold text-slate-900">{stats.activeJobs}</p>
-              <p className="text-[11px] text-slate-500 mt-0.5">Active</p>
+            <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm p-3 text-center">
+              <p className="text-xl font-bold text-slate-900 dark:text-white">{stats.activeJobs}</p>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Active</p>
             </div>
-            <div className="bg-white rounded-xl border border-slate-200 shadow-card p-3 text-center">
-              <p className="text-xl font-bold text-slate-900">{stats.jobsByStatus.completed ?? 0}</p>
-              <p className="text-[11px] text-slate-500 mt-0.5">Completed</p>
+            <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm p-3 text-center">
+              <p className="text-xl font-bold text-slate-900 dark:text-white">{stats.jobsByStatus.completed ?? 0}</p>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Completed</p>
             </div>
-            <div className="bg-white rounded-xl border border-slate-200 shadow-card p-3 text-center">
-              <p className="text-xl font-bold text-slate-900">{stats.activityCounts.week}</p>
-              <p className="text-[11px] text-slate-500 mt-0.5">Events/wk</p>
+            <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm p-3 text-center">
+              <p className="text-xl font-bold text-slate-900 dark:text-white">{stats.activityCounts.week}</p>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Events/wk</p>
             </div>
           </div>
 
           {/* Quick navigation */}
-          <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-1 pt-1">Quick access</p>
+          <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest px-1 pt-1">Quick access</p>
           <div className="space-y-1.5">
             {can("manage_jobs")     && <QuickAction href="/admin/all-jobs"  icon={<Briefcase className="h-4 w-4" />}  label="All Jobs"         count={stats.pendingJobs} countColor="amber" />}
             {can("manage_users")    && <QuickAction href="/admin/users"     icon={<Users className="h-4 w-4" />}      label="Users" />}
@@ -367,6 +366,17 @@ export default async function AdminDashboardPage() {
 
   return (
     <div className="space-y-5">
+      {/* Header */}
+      <div className="flex items-center gap-4 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-5 py-4 shadow-sm">
+        <div className="p-2 rounded-xl bg-violet-100 dark:bg-violet-900/30">
+          <LayoutDashboard className="h-5 w-5 text-violet-600 dark:text-violet-400" />
+        </div>
+        <div>
+          <h2 className="text-base font-bold text-slate-800 dark:text-white">Admin Dashboard</h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400">Platform overview and key metrics</p>
+        </div>
+      </div>
+
       <PageGuide
         pageKey="admin-dashboard"
         title="How the Admin Dashboard works"
@@ -377,10 +387,6 @@ export default async function AdminDashboardPage() {
           { icon: "🔗", title: "Quick navigation", description: "Jump to Users, Jobs, Disputes, Revenue, Payouts, KYC, or Fraud directly from the right-side panel." },
         ]}
       />
-      <div>
-        <h2 className="text-2xl font-bold text-slate-900">Admin Dashboard</h2>
-        <p className="text-slate-500 text-sm mt-0.5">Platform overview and key metrics.</p>
-      </div>
       <Suspense fallback={<AdminDashboardSkeleton />}>
         <AdminDashboardContent capabilities={capabilities} isAdmin={isAdmin} />
       </Suspense>

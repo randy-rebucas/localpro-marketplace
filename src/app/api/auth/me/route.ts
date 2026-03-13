@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import mongoose from "mongoose";
 import { userRepository } from "@/repositories";
 import { requireUser } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
+import { connectDB } from "@/lib/db";
 import { ValidationError, NotFoundError } from "@/lib/errors";
+import AgencyProfile from "@/models/AgencyProfile";
 
 const UpdateMeSchema = z.object({
   name: z.string().min(2).max(100).optional(),
@@ -49,8 +52,20 @@ export const PUT = withHandler(async (req: NextRequest) => {
 export const GET = withHandler(async () => {
   const tokenUser = await requireUser();
 
+  await connectDB();
   const user = await userRepository.findById(tokenUser.userId);
   if (!user) throw new NotFoundError("User");
+
+  // For providers: derive agencyId from a live AgencyProfile staff lookup
+  // This is the source of truth — avoids stale values on the user document.
+  let agencyId: string | null = null;
+  if (user.role === "provider") {
+    const agency = await AgencyProfile.findOne(
+      { "staff.userId": new mongoose.Types.ObjectId(String(user._id)) },
+      "_id"
+    ).lean();
+    agencyId = agency ? String(agency._id) : null;
+  }
 
   return NextResponse.json({
     _id: user._id,
@@ -62,7 +77,7 @@ export const GET = withHandler(async () => {
     avatar: user.avatar ?? null,
     addresses: user.addresses ?? [],
     accountType: user.accountType ?? "personal",
+    agencyId,
     createdAt: user.createdAt,
-
   });
 });

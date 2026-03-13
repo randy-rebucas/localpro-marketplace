@@ -4,6 +4,7 @@ import { userRepository } from "@/repositories/user.repository";
 import type { UserSortOption } from "@/repositories/user.repository";
 import AdminUsersList from "./AdminUsersList";
 import PageGuide from "@/components/shared/PageGuide";
+import { Users } from "lucide-react";
 import type { IUser } from "@/types";
 
 export const dynamic = "force-dynamic";
@@ -67,7 +68,16 @@ export default async function AdminUsersPage({
   const totalPages = Math.ceil(total / limit);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
+      <div className="flex items-center gap-4 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-5 py-4 shadow-sm">
+        <div className="p-2 rounded-xl bg-indigo-100 dark:bg-indigo-900/30">
+          <Users className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+        </div>
+        <div>
+          <h2 className="text-base font-bold text-slate-800 dark:text-white">User Management</h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400">{total.toLocaleString()} user{total !== 1 ? "s" : ""} in current filter</p>
+        </div>
+      </div>
       <PageGuide
         pageKey="admin-users"
         title="How User Management works"
@@ -78,10 +88,6 @@ export default async function AdminUsersPage({
           { icon: "📄", title: "Export / import",       description: "Download a filtered CSV of users, or import users from a spreadsheet in bulk." },
         ]}
       />
-      <div>
-        <h2 className="text-2xl font-bold text-slate-900">User Management</h2>
-        <p className="text-slate-500 text-sm mt-0.5">{total.toLocaleString()} user{total !== 1 ? "s" : ""} in current filter</p>
-      </div>
       <AdminUsersList
         users={users}
         total={total}

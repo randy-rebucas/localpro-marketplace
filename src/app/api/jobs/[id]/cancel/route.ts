@@ -12,6 +12,7 @@ import {
   paymentRepository,
 } from "@/repositories";
 import { pushStatusUpdateMany, pushNotification } from "@/lib/events";
+import { ledgerService } from "@/services/ledger.service";
 import type { IJob } from "@/types";
 
 const CancelSchema = z.object({
@@ -85,13 +86,32 @@ export const POST = withHandler(async (
   // If escrow was funded, credit the client's wallet instead of reversing via PayMongo
   if (hadFundedEscrow) {
     const { walletService } = await import("@/services/wallet.service");
+    const cancelJournalId = `cancel-refund-${id}`;
     await walletService.credit(
       user.userId,
       (job as unknown as { budget: number }).budget,
       `Refund — job cancelled`,
-      { jobId: id, silent: true }
+      { jobId: id, silent: true, journalId: cancelJournalId }
     );
     await paymentRepository.markRefundedByJobId(id);
+    // Post ledger: DR 2000 Escrow Payable → CR 2200 Wallet Payable (escrow returned to client)
+    try {
+      const { transactionRepository } = await import("@/repositories");
+      const tx = await transactionRepository.findOneByJobId(id);
+      const refundAmount = tx
+        ? (tx as unknown as { amount: number }).amount
+        : (job as unknown as { budget: number }).budget;
+      await ledgerService.postDisputeRefund(
+        {
+          journalId: cancelJournalId,
+          entityType: "job",
+          entityId: id,
+          clientId: user.userId,
+          initiatedBy: user.userId,
+        },
+        refundAmount
+      );
+    } catch { /* non-critical */ }
   }
 
   // Reject all pending/accepted quotes for this job (open = multiple providers, assigned = one)

@@ -118,12 +118,12 @@ export class WalletRepository {
 
   // ── Transactions history ──────────────────────────────────────────────────
 
-  async listTransactions(userId: string, limit = 50): Promise<WalletTransactionDocument[]> {
+  async listTransactions(userId: string, limit = 0): Promise<WalletTransactionDocument[]> {
     await connectDB();
-    return WalletTransaction.find({ userId: new mongoose.Types.ObjectId(userId) })
-      .sort({ createdAt: -1 })
-      .limit(limit)
-      .lean() as unknown as WalletTransactionDocument[];
+    const query = WalletTransaction.find({ userId: new mongoose.Types.ObjectId(userId) })
+      .sort({ createdAt: -1 });
+    if (limit > 0) query.limit(limit);
+    return query.lean() as unknown as WalletTransactionDocument[];
   }
 
   // ── Withdrawals ───────────────────────────────────────────────────────────
@@ -177,6 +177,65 @@ export class WalletRepository {
       .sort({ createdAt: -1 })
       .populate("userId", "name email")
       .lean() as unknown as WalletWithdrawalDocument[];
+  }
+
+  async setWithdrawalLedgerJournalId(id: string, journalId: string): Promise<void> {
+    await connectDB();
+    await WalletWithdrawal.findByIdAndUpdate(id, { ledgerJournalId: journalId });
+  }
+
+  /** Stamp a ledger journal ID onto an existing WalletTransaction record. */
+  async setTransactionLedgerJournalId(txId: string, journalId: string): Promise<void> {
+    await connectDB();
+    await WalletTransaction.findByIdAndUpdate(txId, { ledgerJournalId: journalId });
+  }
+
+  /**
+   * Atomically commits a pending withdrawal reservation:
+   *   - decrements both `balance` and `reservedAmount` on the Wallet
+   *   - creates a `WalletTransaction` record of type "withdrawal"
+   * Used when an admin marks a wallet withdrawal as completed.
+   */
+  async commitReservationWithTx(
+    userId: string,
+    amount: number,
+    description: string,
+    opts?: { refId?: string }
+  ): Promise<{ txDoc: WalletTransactionDocument }> {
+    await connectDB();
+
+    const session = await mongoose.startSession();
+    let txDoc!: WalletTransactionDocument;
+    let newBalance = 0;
+
+    try {
+      await session.withTransaction(async () => {
+        const updated = await Wallet.findOneAndUpdate(
+          { userId: new mongoose.Types.ObjectId(userId) },
+          { $inc: { balance: -amount, reservedAmount: -amount } },
+          { new: true, session }
+        ).lean() as { balance: number };
+
+        newBalance = updated?.balance ?? 0;
+
+        const [created] = await WalletTransaction.create(
+          [{
+            userId:       new mongoose.Types.ObjectId(userId),
+            type:         "withdrawal",
+            amount,
+            balanceAfter: newBalance,
+            description,
+            refId:        opts?.refId ?? null,
+          }],
+          { session }
+        );
+        txDoc = created as unknown as WalletTransactionDocument;
+      });
+    } finally {
+      await session.endSession();
+    }
+
+    return { txDoc };
   }
 
   async sumPendingWithdrawals(userId: string): Promise<number> {

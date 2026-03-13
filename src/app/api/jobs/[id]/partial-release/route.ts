@@ -14,6 +14,7 @@ import {
   UnprocessableError,
   ValidationError,
 } from "@/lib/errors";
+import { ledgerService } from "@/services/ledger.service";
 import type { IJob } from "@/types";
 
 export const POST = withHandler(async (
@@ -56,7 +57,7 @@ export const POST = withHandler(async (
   // Resolve the original pending transaction created at escrow funding time,
   // then create a new completed transaction recording the actual partial payout.
   await transactionRepository.setPending(id, "refunded");
-  await Transaction.create({
+  const partialTx = await Transaction.create({
     jobId: job._id,
     payerId: user.userId,
     payeeId: job.providerId,
@@ -64,7 +65,31 @@ export const POST = withHandler(async (
     commission,
     netAmount,
     status: "completed",
+    chargeType: "partial_release",
   });
+
+  // Post double-entry ledger journal for the partial release
+  try {
+    const refundedAmount = fundedAmount - releaseAmount;
+    const journalId = `partial-release-${job._id!.toString()}`;
+    await ledgerService.postPartialRelease(
+      {
+        journalId,
+        entityType: "job",
+        entityId: job._id!.toString(),
+        clientId: job.clientId.toString(),
+        providerId: job.providerId?.toString(),
+        initiatedBy: user.userId,
+      },
+      releaseAmount,
+      commission,
+      netAmount,
+      refundedAmount
+    );
+    await Transaction.updateOne({ _id: partialTx._id }, { ledgerJournalId: journalId });
+  } catch {
+    // Non-critical — do not fail partial release if ledger write fails
+  }
 
   // Update provider performance metrics
   if (job.providerId) {

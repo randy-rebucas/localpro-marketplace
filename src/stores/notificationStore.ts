@@ -64,6 +64,12 @@ const TOAST_EMOJI: Record<string, string> = {
   reminder_profile_incomplete:"📌",
   // Admin
   admin_message:              "📢",
+  // Wallet
+  wallet_credited:            "💰",
+  wallet_withdrawal_update:   "🏦",
+  // Agency
+  agency_job_assigned:        "📋",
+  agency_staff_invited:       "🏢",
 };
 
 interface NotificationState {

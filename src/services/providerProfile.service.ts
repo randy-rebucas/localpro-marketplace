@@ -20,10 +20,23 @@ export interface UpdateProfileInput {
 
 export class ProviderProfileService {
   async getProfile(userId: string) {
-    const [profile, ratingStats] = await Promise.all([
+    const agencyQuery = (async () => {
+      try {
+        const { default: AgencyProfile } = await import("@/models/AgencyProfile");
+        return AgencyProfile.findOne({ providerId: userId }, "name plan staff").lean();
+      } catch { return null; }
+    })();
+
+    const [profile, ratingStats, agencyDoc] = await Promise.all([
       providerProfileRepository.findByUserIdPopulated(userId),
       reviewRepository.getProviderRatingSummary(userId),
+      agencyQuery,
     ]);
+
+    type AgencyLean = { name: string; plan?: string; staff?: unknown[] };
+    const agency = agencyDoc
+      ? { name: (agencyDoc as AgencyLean).name, staffCount: (agencyDoc as AgencyLean).staff?.length ?? 0, plan: (agencyDoc as AgencyLean).plan ?? "starter" }
+      : null;
 
     if (profile) {
       // Overlay cached stats with live aggregation so the modal always reflects
@@ -31,6 +44,7 @@ export class ProviderProfileService {
       const liveProfile = profile as unknown as Record<string, unknown>;
       liveProfile.avgRating = Math.round(ratingStats.avgRating * 10) / 10;
       liveProfile.completedJobCount = ratingStats.count;
+      liveProfile.agency = agency;
       return profile;
     }
 
@@ -51,6 +65,7 @@ export class ProviderProfileService {
       completedJobCount: ratingStats.count,
       availabilityStatus: "available" as const,
       schedule: undefined,
+      agency,
     };
   }
 

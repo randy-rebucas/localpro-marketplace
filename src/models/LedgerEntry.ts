@@ -10,6 +10,7 @@ export const ACCOUNT_CODES = {
   EARNINGS_PAYABLE:         "2100",
   WALLET_PAYABLE_CLIENTS:   "2200",
   WITHDRAWAL_PAYABLE:       "2300",
+  PAYOUT_IN_FLIGHT:          "2400",
   // Equity
   PLATFORM_EQUITY:          "3000",
   // Revenue
@@ -32,6 +33,7 @@ export const ACCOUNT_NAMES: Record<AccountCode, string> = {
   "2100": "Earnings Payable — Providers",
   "2200": "Wallet Payable — Clients",
   "2300": "Withdrawal Payable — Clients",
+  "2400": "Payout In-Flight — Providers",
   "3000": "Platform Equity",
   "4000": "Commission Revenue",
   "4100": "Subscription Revenue",
@@ -49,6 +51,7 @@ export const ACCOUNT_TYPES: Record<AccountCode, "asset" | "liability" | "equity"
   "2100": "liability",
   "2200": "liability",
   "2300": "liability",
+  "2400": "liability",
   "3000": "equity",
   "4000": "revenue",
   "4100": "revenue",
@@ -64,7 +67,9 @@ export type LedgerEntryType =
   | "commission_accrued"
   | "earnings_earmarked"
   | "escrow_released"
+  | "payout_requested"
   | "payout_sent"
+  | "payout_rejected"
   | "wallet_funded_gateway"
   | "wallet_debited_escrow"
   | "wallet_withdrawal_requested"
@@ -84,6 +89,7 @@ export type LedgerEntityType =
   | "payout"
   | "payment"
   | "wallet_withdrawal"
+  | "wallet_topup"
   | "dispute"
   | "transaction"
   | "recurring_schedule"
@@ -125,7 +131,9 @@ const LedgerEntrySchema = new Schema<LedgerEntryDocument>(
         "commission_accrued",
         "earnings_earmarked",
         "escrow_released",
+        "payout_requested",
         "payout_sent",
+        "payout_rejected",
         "wallet_funded_gateway",
         "wallet_debited_escrow",
         "wallet_withdrawal_requested",
@@ -159,7 +167,7 @@ const LedgerEntrySchema = new Schema<LedgerEntryDocument>(
     entityType: {
       type: String,
       required: true,
-      enum: ["job", "payout", "payment", "wallet_withdrawal", "dispute", "transaction", "recurring_schedule", "manual"] as LedgerEntityType[],
+      enum: ["job", "payout", "payment", "wallet_withdrawal", "wallet_topup", "dispute", "transaction", "recurring_schedule", "manual"] as LedgerEntityType[],
     },
     entityId: { type: Schema.Types.ObjectId, required: true },
 

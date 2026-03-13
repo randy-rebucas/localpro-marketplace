@@ -6,9 +6,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireUser, requireRole } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
-import { ValidationError, ConflictError, NotFoundError } from "@/lib/errors";
+import { ValidationError, ConflictError, NotFoundError, ForbiddenError } from "@/lib/errors";
 import { jobApplicationRepository } from "@/repositories/jobApplication.repository";
 import { jobRepository } from "@/repositories";
+import { connectDB } from "@/lib/db";
+import User from "@/models/User";
 
 const ApplySchema = z.object({
   jobId:        z.string().min(1),
@@ -24,6 +26,15 @@ export const POST = withHandler(async (req: NextRequest) => {
   const body = await req.json();
   const parsed = ApplySchema.safeParse(body);
   if (!parsed.success) throw new ValidationError(parsed.error.errors[0].message);
+
+  // Agency staff cannot apply to jobs independently
+  await connectDB();
+  const providerUser = await User.findById(user.userId, "agencyId").lean();
+  if ((providerUser as { agencyId?: unknown } | null)?.agencyId) {
+    throw new ForbiddenError(
+      "Agency staff members cannot apply to jobs independently. Your agency owner will dispatch assignments to you."
+    );
+  }
 
   const { jobId, coverLetter, availability, resumeUrl } = parsed.data;
 

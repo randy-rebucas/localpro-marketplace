@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { apiFetch } from "@/lib/fetchClient";
 import { ChevronDown, RefreshCw, BookOpen, ChevronLeft, ChevronRight } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 
@@ -45,6 +46,7 @@ const ACCOUNT_NAMES: Record<string, string> = {
   "5000": "Refunds Issued",
   "5100": "Payment Processing Fees",
   "5200": "Bad Debt / Write-offs",
+  "2400": "Payout In-Flight — Providers",
 };
 
 const ENTRY_TYPE_LABELS: Record<string, string> = {
@@ -67,6 +69,7 @@ const ENTRY_TYPE_LABELS: Record<string, string> = {
   admin_credit:                "Admin Credit",
   admin_debit:                 "Admin Debit",
   reversal:                    "Reversal",
+  payout_requested:            "Payout Requested"
 };
 
 const TYPE_COLORS: Record<string, string> = {
@@ -226,7 +229,7 @@ export default function LedgerEntriesClient({ embedded = false }: { embedded?: b
     try {
       const params = new URLSearchParams({ page: String(page), limit: String(LIMIT) });
       if (entity) params.set("entity", entity);
-      const res = await fetch(`/api/admin/accounting/entries?${params}`);
+      const res = await apiFetch(`/api/admin/accounting/entries?${params}`);
       if (!res.ok) throw new Error();
       const data = await res.json();
       setJournals(data.journals ?? []);

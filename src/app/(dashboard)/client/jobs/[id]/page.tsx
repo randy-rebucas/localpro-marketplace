@@ -32,11 +32,15 @@ export async function generateMetadata({
 }: {
   params: Promise<{ id: string }>;
 }): Promise<Metadata> {
-  const user = await getCurrentUser();
-  if (!user) return { title: "Job Details" };
-  const { id } = await params;
-  const job = await jobRepository.findByClientAndId(user.userId, id);
-  return { title: job ? `${job.title} — Job Details` : "Job Details" };
+  try {
+    const user = await getCurrentUser();
+    if (!user) return { title: "Job Details" };
+    const { id } = await params;
+    const job = await jobRepository.findByClientAndId(user.userId, id);
+    return { title: job ? `${job.title} — Job Details` : "Job Details" };
+  } catch {
+    return { title: "Job Details" };
+  }
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────

@@ -1,55 +1,72 @@
-import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { walletService } from "@/services/wallet.service";
 import { formatCurrency } from "@/lib/utils";
-import { Wallet, ArrowDownCircle, ArrowUpCircle, Clock, CheckCircle, XCircle, AlertCircle } from "lucide-react";
+import {
+  Wallet, Clock, CheckCircle, XCircle,
+  PlusCircle, BadgeCheck, AlertTriangle, BookOpen,
+} from "lucide-react";
 import WalletWithdrawForm from "./_components/WalletWithdrawForm";
-import type { IWalletTransaction, IWalletWithdrawal } from "@/types";
+import WalletTopUpForm from "./_components/WalletTopUpForm";
+import WalletTopUpConfirm from "./_components/WalletTopUpConfirm";
+import WalletLedgerTable from "./_components/WalletLedgerTable";
+import WalletWithdrawalList from "./_components/WalletWithdrawalList";
+import type { IWalletWithdrawal } from "@/types";
 
-export const metadata: Metadata = { title: "Wallet" };
+export const dynamic = "force-dynamic";
+export async function generateMetadata() {
+  return { title: "Wallet" };
+}
 
-const TX_ICON: Record<string, React.ReactNode> = {
-  refund_credit:       <ArrowDownCircle className="h-4 w-4 text-emerald-500" />,
-  escrow_payment:      <ArrowUpCircle   className="h-4 w-4 text-rose-500"    />,
-  withdrawal:          <ArrowUpCircle   className="h-4 w-4 text-amber-500"   />,
-  withdrawal_reversed: <ArrowDownCircle className="h-4 w-4 text-violet-500"  />,
-  admin_credit:        <ArrowDownCircle className="h-4 w-4 text-blue-500"    />,
-  admin_debit:         <ArrowUpCircle   className="h-4 w-4 text-slate-500"   />,
-};
 
-const STATUS_BADGE: Record<string, string> = {
-  pending:    "bg-amber-100 text-amber-700",
-  processing: "bg-blue-100 text-blue-700",
-  completed:  "bg-emerald-100 text-emerald-700",
-  rejected:   "bg-red-100 text-red-700",
-};
-
-const STATUS_ICON: Record<string, React.ReactNode> = {
-  pending:    <Clock         className="h-3.5 w-3.5" />,
-  processing: <AlertCircle   className="h-3.5 w-3.5" />,
-  completed:  <CheckCircle   className="h-3.5 w-3.5" />,
-  rejected:   <XCircle       className="h-3.5 w-3.5" />,
-};
-
-export default async function WalletPage() {
+export default async function WalletPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ topup?: string }>;
+}) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
-  const { balance, pendingWithdrawals, availableBalance, transactions, withdrawals } =
+  const { topup: topupStatus } = await searchParams;
+
+  const { balance, pendingWithdrawals, availableBalance, withdrawals } =
     await walletService.getWallet(user.userId);
+
+  const serialisedWithdrawals = JSON.parse(JSON.stringify(withdrawals)) as IWalletWithdrawal[];
+  const unaccountedWithdrawals = serialisedWithdrawals.filter((w) => !w.ledgerJournalId).length;
 
   return (
     <div className="space-y-8">
-      {/* Header */}
+
+      {/* ── Invisible client component: reads sessionStorage, calls verify, refreshes ── */}
+      {topupStatus === "success" && <WalletTopUpConfirm />}
+
+      {/* ── Page header ──────────────────────────────────────────────────────────────── */}
       <div>
         <h1 className="text-2xl font-bold text-slate-900">Wallet</h1>
         <p className="text-slate-500 text-sm mt-1">
-          Refunds from cancelled or disputed jobs land here. Use your balance to fund escrow or withdraw to your bank.
+          Refunds from cancelled or disputed jobs land here. Top up, use your balance to fund escrow, or withdraw to your bank.
         </p>
       </div>
 
-      {/* Balance cards */}
+      {/* ── Contextual status banners ─────────────────────────────────────────────────── */}
+      {topupStatus === "success" && (
+        <div className="flex items-center gap-3 rounded-xl bg-emerald-50 border border-emerald-200 px-5 py-4 text-emerald-800">
+          <CheckCircle className="h-5 w-5 text-emerald-500 flex-shrink-0" />
+          <div>
+            <p className="font-semibold text-sm">Top-up successful!</p>
+            <p className="text-xs text-emerald-600">Your wallet is being credited. Your updated balance will appear momentarily.</p>
+          </div>
+        </div>
+      )}
+      {topupStatus === "cancelled" && (
+        <div className="flex items-center gap-3 rounded-xl bg-amber-50 border border-amber-200 px-5 py-4 text-amber-800">
+          <XCircle className="h-5 w-5 text-amber-500 flex-shrink-0" />
+          <p className="text-sm">Top-up was cancelled. No charge was made.</p>
+        </div>
+      )}
+
+      {/* ── 1. Balance overview ───────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm flex items-center gap-4">
           <div className="flex h-11 w-11 items-center justify-center rounded-full bg-violet-100">
@@ -62,16 +79,6 @@ export default async function WalletPage() {
         </div>
 
         <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm flex items-center gap-4">
-          <div className="flex h-11 w-11 items-center justify-center rounded-full bg-amber-100">
-            <Clock className="h-5 w-5 text-amber-600" />
-          </div>
-          <div>
-            <p className="text-xs text-slate-500 font-medium uppercase tracking-wide">Pending Withdrawals</p>
-            <p className="text-2xl font-bold text-slate-900">{formatCurrency(pendingWithdrawals)}</p>
-          </div>
-        </div>
-
-        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm flex items-center gap-4">
           <div className="flex h-11 w-11 items-center justify-center rounded-full bg-emerald-100">
             <CheckCircle className="h-5 w-5 text-emerald-600" />
           </div>
@@ -80,77 +87,84 @@ export default async function WalletPage() {
             <p className="text-2xl font-bold text-slate-900">{formatCurrency(availableBalance)}</p>
           </div>
         </div>
-      </div>
 
-      {/* Withdraw form */}
-      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm space-y-4">
-        <h2 className="text-base font-semibold text-slate-800">Withdraw to Bank</h2>
-        <p className="text-sm text-slate-500">Minimum withdrawal is ₱100. Processing may take 1–3 business days.</p>
-        <WalletWithdrawForm available={availableBalance} />
-      </div>
-
-      {/* Transaction history */}
-      <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-        <div className="px-6 py-4 border-b border-slate-100">
-          <h2 className="text-base font-semibold text-slate-800">Transaction History</h2>
-        </div>
-        {transactions.length === 0 ? (
-          <div className="px-6 py-10 text-center text-sm text-slate-400">No transactions yet.</div>
-        ) : (
-          <div className="divide-y divide-slate-100">
-            {(transactions as IWalletTransaction[]).map((tx) => (
-              <div key={String(tx._id)} className="flex items-center justify-between gap-4 px-6 py-4">
-                <div className="flex items-center gap-3">
-                  <span className="flex-shrink-0">
-                    {TX_ICON[tx.type] ?? <Wallet className="h-4 w-4 text-slate-400" />}
-                  </span>
-                  <div>
-                    <p className="text-sm font-medium text-slate-800">{tx.description}</p>
-                    <p className="text-xs text-slate-400">
-                      {new Date(tx.createdAt!).toLocaleDateString("en-PH", { year: "numeric", month: "short", day: "numeric" })}
-                    </p>
-                  </div>
-                </div>
-                <div className="text-right flex-shrink-0">
-                  <p className={`text-sm font-semibold ${["refund_credit","withdrawal_reversed","admin_credit"].includes(tx.type) ? "text-emerald-600" : "text-rose-600"}`}>
-                    {["refund_credit","withdrawal_reversed","admin_credit"].includes(tx.type) ? "+" : "−"}{formatCurrency(tx.amount)}
-                  </p>
-                  <p className="text-xs text-slate-400">Balance: {formatCurrency(tx.balanceAfter)}</p>
-                </div>
-              </div>
-            ))}
+        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm flex items-center gap-4">
+          <div className="flex h-11 w-11 items-center justify-center rounded-full bg-amber-100">
+            <Clock className="h-5 w-5 text-amber-600" />
           </div>
-        )}
-      </div>
-
-      {/* Withdrawals */}
-      {withdrawals.length > 0 && (
-        <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-          <div className="px-6 py-4 border-b border-slate-100">
-            <h2 className="text-base font-semibold text-slate-800">Withdrawal Requests</h2>
-          </div>
-          <div className="divide-y divide-slate-100">
-            {(withdrawals as IWalletWithdrawal[]).map((w) => (
-              <div key={String(w._id)} className="flex items-center justify-between gap-4 px-6 py-4">
-                <div>
-                  <p className="text-sm font-medium text-slate-800">
-                    {w.bankName} — {w.accountNumber}
-                  </p>
-                  <p className="text-xs text-slate-400">{w.accountName}</p>
-                  {w.notes && <p className="text-xs text-slate-500 mt-0.5 italic">{w.notes}</p>}
-                </div>
-                <div className="text-right flex-shrink-0">
-                  <p className="text-sm font-semibold text-slate-800">{formatCurrency(w.amount)}</p>
-                  <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium mt-1 ${STATUS_BADGE[w.status] ?? "bg-slate-100 text-slate-600"}`}>
-                    {STATUS_ICON[w.status]}
-                    {w.status.charAt(0).toUpperCase() + w.status.slice(1)}
-                  </span>
-                </div>
-              </div>
-            ))}
+          <div>
+            <p className="text-xs text-slate-500 font-medium uppercase tracking-wide">Pending Withdrawals</p>
+            <p className="text-2xl font-bold text-slate-900">{formatCurrency(pendingWithdrawals)}</p>
           </div>
         </div>
-      )}
+      </div>
+
+      {/* ── 2 & 3. Two-column: ledger (left) + actions (right) ────────────────────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-6 items-start">
+        <div className="space-y-6">
+          {/* ── LEFT: Transaction ledger ──────────────────────────────────────────────── */}
+          <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center gap-2">
+              <BookOpen className="h-4 w-4 text-slate-500" />
+              <h2 className="text-base font-semibold text-slate-800">Transaction Ledger</h2>
+            </div>
+            <WalletLedgerTable />
+          </div>
+          <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+            {serialisedWithdrawals.length > 0 && (
+              <>
+                <div className="mt-4 px-6 py-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between gap-3">
+                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Requests</p>
+                  {unaccountedWithdrawals > 0 ? (
+                    <span className="inline-flex items-center gap-1.5 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2.5 py-1 font-medium">
+                      <AlertTriangle className="h-3 w-3" />
+                      {unaccountedWithdrawals} missing ledger
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2.5 py-1 font-medium">
+                      <BadgeCheck className="h-3 w-3" />
+                      All accounted
+                    </span>
+                  )}
+                </div>
+                <WalletWithdrawalList withdrawals={serialisedWithdrawals} />
+              </>
+            )}
+          </div>
+        </div>
+        {/* ── RIGHT: Top up + Withdraw ──────────────────────────────────────────────── */}
+        <div className="space-y-4">
+
+          {/* Top Up */}
+          <div className="rounded-xl border border-violet-200 bg-violet-50 p-6 shadow-sm space-y-4">
+            <div className="flex items-center gap-2">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-violet-100">
+                <PlusCircle className="h-4 w-4 text-violet-600" />
+              </div>
+              <div>
+                <h2 className="text-base font-semibold text-slate-800">Top Up Wallet</h2>
+                <p className="text-xs text-slate-500">Add funds via GCash, Maya, or card.</p>
+              </div>
+            </div>
+            <WalletTopUpForm currentBalance={balance} />
+          </div>
+
+          {/* Withdraw + pending requests */}
+          <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+            <div className="p-6 space-y-4">
+              <div>
+                <h2 className="text-base font-semibold text-slate-800">Withdraw to Bank</h2>
+                <p className="text-sm text-slate-500 mt-1">Minimum ₱100. Processing takes 1–3 business days.</p>
+              </div>
+              <WalletWithdrawForm available={availableBalance} />
+            </div>
+
+
+          </div>
+
+        </div>
+      </div>
+
     </div>
   );
 }

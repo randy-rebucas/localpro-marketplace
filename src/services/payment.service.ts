@@ -16,7 +16,7 @@ import {
 import { connectDB } from "@/lib/db";
 import User from "@/models/User";
 import { calculateCommission } from "@/lib/commission";
-import { getDbCommissionRate } from "@/lib/serverCommission";
+import { getEffectiveCommissionRate } from "@/lib/serverCommission";
 import { canTransitionEscrow } from "@/lib/jobLifecycle";
 import {
   NotFoundError,
@@ -45,10 +45,8 @@ export class PaymentService {
     const check = canTransitionEscrow(job, "funded");
     if (!check.allowed) throw new UnprocessableError(check.reason!);
 
-    if (overrideAmount !== undefined && overrideAmount > job.budget * 1.2) {
-      throw new UnprocessableError(
-        "Override amount cannot exceed 120% of the job budget"
-      );
+    if (overrideAmount !== undefined && overrideAmount <= 0) {
+      throw new UnprocessableError("Escrow amount must be greater than zero.");
     }
 
     const amount = overrideAmount ?? job.budget;
@@ -58,7 +56,7 @@ export class PaymentService {
       job.escrowStatus = "funded";
       await jobDoc.save();
 
-      const rate = await getDbCommissionRate(job.category);
+      const rate = await getEffectiveCommissionRate(job.category, user.userId);
       const { commission, netAmount } = calculateCommission(amount, rate);
       const tx = await transactionRepository.create({
         jobId: job._id,
@@ -138,7 +136,9 @@ export class PaymentService {
       },
     });
 
-    await paymentRepository.create({
+    // Upsert — if a previous checkout was abandoned, update the existing
+    // awaiting_payment record instead of inserting a duplicate (unique index).
+    await paymentRepository.upsertAwaitingPayment({
       jobId: job._id,
       clientId: user.userId,
       providerId: job.providerId,
@@ -147,7 +147,6 @@ export class PaymentService {
       amount,
       amountInCentavos: Math.round(amount * 100),
       currency: "PHP",
-      status: "awaiting_payment",
     });
 
     return {
@@ -230,7 +229,7 @@ export class PaymentService {
     job.escrowStatus = "funded";
     await jobDoc.save();
 
-    const rate = await getDbCommissionRate(job.category);
+    const rate = await getEffectiveCommissionRate(job.category, p.clientId.toString());
     const { commission, netAmount } = calculateCommission(p.amount, rate);
     const tx = await transactionRepository.create({
       jobId: p.jobId,
@@ -258,8 +257,9 @@ export class PaymentService {
       p.amount
     );
     await transactionRepository.updateById((tx as { _id: { toString(): string } })._id.toString(), { ledgerJournalId: journalId });
-    // Mark payment with confirmedAt timestamp
-    await paymentRepository.updateByPaymentIntentId(paymentIntentId, { confirmedAt: new Date() });
+    // Mark payment with confirmedAt timestamp and ledger journal reference.
+    // Payment.paymentIntentId stores the checkout sessionId (cs_xxx), not the pi_xxx.
+    await paymentRepository.updateByPaymentIntentId(sessionId, { confirmedAt: new Date(), ledgerJournalId: journalId });
 
     await activityRepository.log({
       userId: p.clientId.toString(),
@@ -328,7 +328,7 @@ export class PaymentService {
     job.escrowStatus = "funded";
     await jobDoc.save();
 
-    const rate = await getDbCommissionRate(job.category);
+    const rate = await getEffectiveCommissionRate(job.category, clientId);
     const { commission, netAmount } = calculateCommission(job.budget, rate);
     await connectDB();
     const tx = await transactionRepository.create({
@@ -468,7 +468,7 @@ export class PaymentService {
     if (!jobDoc) return;
 
     const job = jobDoc as unknown as IJob;
-    const rate = await getDbCommissionRate(job.category);
+    const rate = await getEffectiveCommissionRate(job.category, p.clientId.toString());
     const { commission, netAmount } = calculateCommission(p.amount, rate);
 
     await ledgerService.postEscrowFundedGateway(
@@ -489,6 +489,12 @@ export class PaymentService {
         (tx as unknown as { _id: { toString(): string } })._id.toString(),
         { ledgerJournalId: journalId }
       );
+    }
+    // Also stamp the journal ID on the Payment record for traceability
+    const paymentDoc = await paymentRepository.findByPaymentIntentId(sessionId);
+    if (paymentDoc) {
+      const pd = paymentDoc as unknown as { paymentIntentId: string };
+      await paymentRepository.updateByPaymentIntentId(pd.paymentIntentId, { ledgerJournalId: journalId });
     }
   }
 }

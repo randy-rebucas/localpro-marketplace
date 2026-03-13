@@ -3,6 +3,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { announcementRepository } from "@/repositories/announcement.repository";
 import AnnouncementsClient from "./AnnouncementsClient";
 import PageGuide from "@/components/shared/PageGuide";
+import { Megaphone } from "lucide-react";
 
 export const metadata: Metadata = { title: "Announcements" };
 
@@ -14,7 +15,7 @@ export default async function AdminAnnouncementsPage() {
   const announcements = JSON.parse(JSON.stringify(docs));
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <PageGuide
         pageKey="admin-announcements"
         title="How Announcements work"
@@ -25,12 +26,18 @@ export default async function AdminAnnouncementsPage() {
           { icon: "✅", title: "Activate / deactivate", description: "Toggle any announcement on or off without deleting it. Users dismiss banners per-device." },
         ]}
       />
-      <div>
-        <h2 className="text-2xl font-bold text-slate-900">Announcements</h2>
-        <p className="text-slate-500 text-sm mt-0.5">
-          Broadcast messages displayed as banners across user dashboards
-        </p>
+
+      {/* Header */}
+      <div className="flex items-center gap-3 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-5 py-4 shadow-sm">
+        <div className="p-2 rounded-xl bg-amber-100 dark:bg-amber-900/30">
+          <Megaphone className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+        </div>
+        <div>
+          <h2 className="text-base font-bold text-slate-800 dark:text-white">Announcements</h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400">Broadcast messages displayed as banners across user dashboards</p>
+        </div>
       </div>
+
       <AnnouncementsClient initialAnnouncements={announcements} />
     </div>
   );

@@ -49,6 +49,8 @@ const EMAIL_ALWAYS: Set<NotificationType> = new Set([
   "reminder_leave_review",
   "reminder_stale_dispute",
   "reminder_pending_validation",
+  // Agency — staff invited notification (email sent separately via sendAgencyInviteEmail)
+  // agency_job_assigned email is sent directly from the assign route via sendAgencyJobAssignedEmail
   // admin_message is intentionally excluded — the admin message routes (single + bulk)
   // call sendEmail() directly, so letting it pass through here would double-send.
 ]);
@@ -94,11 +96,11 @@ export class NotificationService {
     input: PushNotificationInput
   ): Promise<void> {
     const d = input.data ?? {};
-    let jobTitle: string | undefined;
+    let jobTitle: string | undefined = d.jobTitle;
     let amount: number | undefined = d.estimateAmount;
 
-    // Look up job title when a jobId is available
-    if (d.jobId) {
+    // Look up job title when a jobId is available and title wasn't passed in data
+    if (d.jobId && !jobTitle) {
       try {
         const { jobRepository } = await import("@/repositories");
         const job = await jobRepository.findById(d.jobId);

@@ -26,6 +26,7 @@ interface PlanDef {
   branches:    string;
   members:     string;
   jobs:        string;
+  commission:  string;
   analytics:   boolean;
   bulkUpload:  boolean;
   recurring:   boolean;
@@ -36,25 +37,25 @@ const PLANS: PlanDef[] = [
   {
     key: "starter", label: "Starter", price: 0,    priceLabel: "Free",
     color: "bg-slate-100",   textColor: "text-slate-700",
-    branches: "2", members: "5",   jobs: "10 / mo",
+    branches: "2", members: "5",   jobs: "10 / mo", commission: "15%",
     analytics: false, bulkUpload: false, recurring: false, priority: false,
   },
   {
     key: "growth",  label: "Growth",  price: 999,  priceLabel: "₱999 / mo",
     color: "bg-blue-100",    textColor: "text-blue-700",
-    branches: "5", members: "15",  jobs: "50 / mo",
+    branches: "5", members: "15",  jobs: "50 / mo", commission: "12%",
     analytics: true,  bulkUpload: false, recurring: false, priority: false,
   },
   {
     key: "pro",     label: "Pro",     price: 2499, priceLabel: "₱2,499 / mo",
     color: "bg-violet-100",  textColor: "text-violet-700",
-    branches: "15", members: "50",  jobs: "Unlimited",
-    analytics: true,  bulkUpload: true,  recurring: true,  priority: false,
+    branches: "15", members: "50",  jobs: "Unlimited", commission: "10%",
+    analytics: true,  bulkUpload: true,  recurring: true,  priority: true,
   },
   {
     key: "enterprise", label: "Enterprise", price: 4999, priceLabel: "₱4,999 / mo",
     color: "bg-amber-100",   textColor: "text-amber-700",
-    branches: "Unlimited", members: "Unlimited", jobs: "Unlimited",
+    branches: "Unlimited", members: "Unlimited", jobs: "Unlimited", commission: "8%",
     analytics: true,  bulkUpload: true,  recurring: true,  priority: true,
   },
 ];
@@ -337,19 +338,23 @@ export default function BillingClient() {
       )}
 
       {/* ── Header ─────────────────────────────────────────────────────────── */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <ReceiptText className="h-6 w-6 text-violet-600" />
-            <h1 className="text-2xl font-bold text-slate-900">Subscription &amp; Billing</h1>
+      <div className="flex items-center justify-between gap-4 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-5 py-4 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-xl bg-violet-100 dark:bg-violet-900/30">
+            <ReceiptText className="h-5 w-5 text-violet-600 dark:text-violet-400" />
           </div>
-          <p className="text-sm text-slate-500">{org.name}</p>
+          <div>
+            <h1 className="text-base font-bold text-slate-800 dark:text-white">Subscription &amp; Billing</h1>
+            <p className="text-xs text-slate-500 dark:text-slate-400">{org.name}</p>
+          </div>
         </div>
         <button
           onClick={load}
-          className="flex items-center gap-1.5 text-sm text-slate-600 hover:text-violet-600 border border-slate-200 rounded-lg px-3 py-1.5 transition-colors"
+          title="Refresh"
+          aria-label="Refresh"
+          className="p-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-500 hover:text-slate-800 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
         >
-          <RefreshCw className="h-4 w-4" /> Refresh
+          <RefreshCw className="h-4 w-4" />
         </button>
       </div>
 
@@ -370,6 +375,7 @@ export default function BillingClient() {
             <li>🏢 {currentPlan.branches} branches</li>
             <li>👥 {currentPlan.members} members</li>
             <li>📋 {currentPlan.jobs}</li>
+            <li>💳 {currentPlan.commission} commission</li>
           </ul>
           {data?.planExpiresAt && currentPlanKey !== "starter" && (
             <p className="mt-2 text-xs text-slate-500">
@@ -500,6 +506,7 @@ export default function BillingClient() {
                     `🏢 ${plan.branches} branches`,
                     `👥 ${plan.members} members`,
                     `📋 ${plan.jobs}`,
+                    `💳 ${plan.commission} commission`,
                   ].map((f) => <li key={f}>{f}</li>)}
                   {(["analytics", "bulkUpload", "recurring", "priority"] as const).map((feat) => (
                     <li key={feat} className="flex items-center gap-1">
@@ -510,7 +517,7 @@ export default function BillingClient() {
                         {feat === "analytics"  && "AI Analytics"}
                         {feat === "bulkUpload" && "Bulk CSV Upload"}
                         {feat === "recurring"  && "Recurring Scheduler"}
-                        {feat === "priority"   && "Priority Support"}
+                        {feat === "priority"   && "Priority Listings"}
                       </span>
                     </li>
                   ))}

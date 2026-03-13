@@ -9,6 +9,8 @@ export type StaffCapability =
   | "manage_kyc"
   | "manage_disputes"
   | "manage_users"
+  | "manage_agencies"
+  | "manage_businesses"
   | "view_revenue"
   | "manage_payouts"
   | "manage_categories"
@@ -82,6 +84,8 @@ export interface IUser {
   flaggedJobCount?: number;
   /** Active fraud/suspicious-behaviour flags */
   fraudFlags?: string[];
+  /** Agency this provider belongs to as a staff member (null = solo / owner) */
+  agencyId?: Types.ObjectId | string | null;
   /** Saved card PM ID for recurring auto-pay (card only) */
   savedPaymentMethodId?: string | null;
   savedPaymentMethodLast4?: string | null;
@@ -296,7 +300,8 @@ export type ActivityEventType =
   | "recurring_created"
   | "recurring_cancelled"
   | "recurring_job_spawned"
-  | "job_cancelled";
+  | "job_cancelled"
+  | "admin_ledger_entry";
 
 export interface IActivityLog {
   _id: Types.ObjectId | string;
@@ -446,7 +451,9 @@ export type NotificationType =
   | "payment_reminder"
   | "admin_message"
   | "wallet_credited"
-  | "wallet_withdrawal_update";
+  | "wallet_withdrawal_update"
+  | "agency_job_assigned"
+  | "agency_staff_invited";
 
 export interface INotification {
   _id: Types.ObjectId | string;
@@ -456,6 +463,7 @@ export interface INotification {
   message: string;
   data?: {
     jobId?: string;
+    jobTitle?: string;
     quoteId?: string;
     disputeId?: string;
     messageThreadId?: string;
@@ -634,6 +642,8 @@ export interface IPayment {
   refundedAt?: Date | null;
   /** PayMongo webhook event ID for idempotency */
   webhookEventId?: string | null;
+  /** Double-entry ledger journal ID (escrow_funded_gateway) */
+  ledgerJournalId?: string | null;
   createdAt: Date;
   updatedAt: Date;
 } 
@@ -672,6 +682,7 @@ export type WalletTxType =
   | "escrow_payment"
   | "withdrawal"
   | "withdrawal_reversed"
+  | "topup"
   | "admin_credit"
   | "admin_debit";
 
@@ -684,6 +695,7 @@ export interface IWalletTransaction {
   description: string;
   jobId?: Types.ObjectId | string | null;
   refId?: string | null;
+  ledgerJournalId?: string | null;
   createdAt: Date;
 }
 
@@ -699,6 +711,7 @@ export interface IWalletWithdrawal {
   accountName: string;
   notes?: string | null;
   processedAt?: Date | null;
+  ledgerJournalId?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
