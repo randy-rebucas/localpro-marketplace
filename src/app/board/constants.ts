@@ -4,7 +4,7 @@ export const CITY = process.env.NEXT_PUBLIC_BOARD_CITY ?? "Your City";
 export const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://www.localpro.asia";
 export const PROVIDER_SIGNUP_URL = `${APP_URL}/register?role=provider`;
 
-export const JOBS_PER_PAGE = 6;
+export const JOBS_PER_PAGE = 8;
 export const JOB_PAGE_INTERVAL_MS = 12_000; // paginate jobs every 12s
 export const DATA_REFRESH_MS = 60_000;      // re-fetch board data every 60s
 

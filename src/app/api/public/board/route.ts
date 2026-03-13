@@ -57,7 +57,7 @@ export async function GET() {
         // Open jobs — scoped by board.lguFilterEnabled setting
         Job.find(jobFilter)
           .sort({ createdAt: -1 })
-          .limit(20)
+          .limit(24)
           .select("_id title category location budget scheduleDate createdAt jobSource jobTags isPriority pesoPostedBy")
           .lean(),
 
