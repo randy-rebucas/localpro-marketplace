@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { marked } from "marked";
 import {
   MapPin,
   CalendarDays,
@@ -309,9 +310,10 @@ export default async function JobDetailPage(
               <Briefcase className="h-4 w-4" />
               About this Job
             </h2>
-            <p className="text-[15px] text-slate-200 leading-relaxed whitespace-pre-line">
-              {job.description}
-            </p>
+            <div
+              className="prose prose-sm prose-invert max-w-none text-slate-200 leading-relaxed"
+              dangerouslySetInnerHTML={{ __html: marked(job.description ?? "") as string }}
+            />
           </section>
 
           {/* Special instructions */}
@@ -321,9 +323,10 @@ export default async function JobDetailPage(
                 <Clock className="h-4 w-4" />
                 Special Instructions
               </h2>
-              <p className="text-[15px] text-amber-100/80 leading-relaxed whitespace-pre-line">
-                {job.specialInstructions}
-              </p>
+              <div
+                className="prose prose-sm prose-invert max-w-none text-amber-100/80 leading-relaxed"
+                dangerouslySetInnerHTML={{ __html: marked(job.specialInstructions ?? "") as string }}
+              />
             </section>
           )}
 
