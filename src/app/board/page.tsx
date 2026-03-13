@@ -46,7 +46,7 @@ export default function BoardPage() {
   const [showBottomStrip, setShowBottomStrip] = useState(true);
   const [online, setOnline] = useState(true);
   const autoPageTimer = useRef<ReturnType<typeof setInterval> | null>(null);
-  const bottomStripTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const bottomStripTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Rotating provider QR motivational copy
   const QR_COPY_LINES = [
@@ -143,13 +143,21 @@ export default function BoardPage() {
     };
   }, [data?.jobs.length]);
 
-  // Auto-toggle bottom strip every 30 seconds
+  // Show strip for 10 s every 1 minute
   useEffect(() => {
-    bottomStripTimer.current = setInterval(() => {
-      setShowBottomStrip((v) => !v);
-    }, 30_000);
+    function scheduleShow() {
+      bottomStripTimer.current = setTimeout(() => {
+        setShowBottomStrip(true);
+        bottomStripTimer.current = setTimeout(() => {
+          setShowBottomStrip(false);
+          scheduleShow();
+        }, 10_000);
+      }, 60_000);
+    }
+    setShowBottomStrip(false);
+    scheduleShow();
     return () => {
-      if (bottomStripTimer.current) clearInterval(bottomStripTimer.current);
+      if (bottomStripTimer.current) clearTimeout(bottomStripTimer.current);
     };
   }, []);
 
