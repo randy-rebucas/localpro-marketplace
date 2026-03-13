@@ -11,6 +11,7 @@ interface MdEditorProps {
   required?: boolean;
   minLength?: number;
   id?: string;
+  error?: boolean;
 }
 
 type ToolbarAction = {
@@ -35,6 +36,7 @@ export default function MdEditor({
   required,
   minLength,
   id,
+  error,
 }: MdEditorProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -66,7 +68,11 @@ export default function MdEditor({
   }
 
   return (
-    <div className="mt-1 rounded-lg border border-slate-200 focus-within:ring-1 focus-within:ring-blue-400 transition overflow-hidden">
+    <div className={`mt-1 rounded-lg border focus-within:ring-1 transition overflow-hidden ${
+      error
+        ? "border-red-400 focus-within:ring-red-200"
+        : "border-slate-200 focus-within:ring-blue-400"
+    }`}>
       {/* Toolbar */}
       <div className="flex items-center justify-between bg-slate-50 border-b border-slate-200 px-2 py-1">
         <div className="flex items-center gap-0.5">

@@ -1,6 +1,7 @@
 import dynamic from "next/dynamic";
 import { Sparkles, LocateFixed, Info } from "lucide-react";
 import type { FormData, BudgetHint } from "../types";
+import MdEditor from "@/components/ui/MdEditor";
 
 const LocationAutocomplete = dynamic(
   () => import("@/components/shared/LocationAutocomplete"),
@@ -142,11 +143,11 @@ export function BudgetSchedule({
           Special Instructions
           <span className="ml-1.5 text-xs font-normal text-slate-400">(optional)</span>
         </label>
-        <textarea
-          className="input w-full min-h-[80px] resize-y"
-          placeholder="e.g. Call before arriving · dog on premises · use the side entrance · bring own tools…"
+        <MdEditor
           value={form.specialInstructions}
-          onChange={(e) => update("specialInstructions", e.target.value)}
+          onChange={(v) => update("specialInstructions", v)}
+          placeholder="e.g. Call before arriving · dog on premises · use the side entrance · bring own tools…"
+          rows={4}
         />
       </div>
     </div>

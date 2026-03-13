@@ -1,6 +1,7 @@
 import { Sparkles, Lightbulb } from "lucide-react";
 import type { FormData } from "../types";
 import type { ICategory } from "@/types";
+import MdEditor from "@/components/ui/MdEditor";
 
 interface Props {
   form: FormData;
@@ -90,11 +91,12 @@ export function JobDetails({
             {isGenerating ? "Generating…" : "AI Generate"}
           </button>
         </div>
-        <textarea
-          className={`input w-full min-h-[130px] resize-y ${errors.description ? "border-red-400" : ""}`}
-          placeholder="Describe the work needed in detail — what, where, any special requirements or concerns…"
+        <MdEditor
           value={form.description}
-          onChange={(e) => update("description", e.target.value)}
+          onChange={(v) => update("description", v)}
+          placeholder="Describe the work needed in detail — what, where, any special requirements or concerns…"
+          rows={6}
+          error={!!errors.description}
         />
         {/* Character meter */}
         <div className="mt-1.5 flex items-center gap-2">
