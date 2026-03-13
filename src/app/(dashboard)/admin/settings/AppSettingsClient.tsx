@@ -4,19 +4,64 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
   CheckCircle2,
+  ChevronDown,
+  ChevronUp,
   Gift,
   LayoutDashboard,
   Monitor,
+  Pencil,
+  Plus,
   RefreshCw,
   RotateCcw,
   Save,
   Server,
   Settings2,
   Shield,
+  Trash2,
   Wallet,
+  X,
 } from "lucide-react";
 
 type AppSettings = Record<string, unknown>;
+
+// ─── Ad Slide types ──────────────────────────────────────────────────────────
+type AdTheme = "blue" | "emerald" | "violet" | "amber" | "cyan" | "yellow" | "teal" | "indigo" | "rose" | "slate";
+
+interface ManagedAd {
+  id: string;
+  eyebrow: string;
+  headline: string;
+  sub: string;
+  cta?: string;
+  url?: string;
+  theme: AdTheme;
+}
+
+const THEME_PRESETS: Record<AdTheme, { gradient: string; accent: string; border: string; dot: string }> = {
+  blue:    { gradient: "from-blue-900 via-[#0d2340] to-[#1a3050]",    accent: "text-blue-300",    border: "border-blue-400/30",    dot: "bg-blue-400" },
+  emerald: { gradient: "from-emerald-900 via-[#0d2340] to-[#1a3050]", accent: "text-emerald-300", border: "border-emerald-400/30", dot: "bg-emerald-400" },
+  violet:  { gradient: "from-violet-900 via-[#0d2340] to-[#1a3050]",  accent: "text-violet-300",  border: "border-violet-400/30",  dot: "bg-violet-400" },
+  amber:   { gradient: "from-amber-900 via-[#0d2340] to-[#1a3050]",   accent: "text-amber-300",   border: "border-amber-400/30",   dot: "bg-amber-400" },
+  cyan:    { gradient: "from-cyan-900 via-[#0d2340] to-[#1a3050]",    accent: "text-cyan-300",    border: "border-cyan-400/30",    dot: "bg-cyan-400" },
+  yellow:  { gradient: "from-yellow-900 via-[#0d2340] to-[#1a3050]",  accent: "text-yellow-300",  border: "border-yellow-400/30",  dot: "bg-yellow-400" },
+  teal:    { gradient: "from-teal-900 via-[#0d2340] to-[#1a3050]",    accent: "text-teal-300",    border: "border-teal-400/30",    dot: "bg-teal-400" },
+  indigo:  { gradient: "from-indigo-900 via-[#0d2340] to-[#1a3050]",  accent: "text-indigo-300",  border: "border-indigo-400/30",  dot: "bg-indigo-400" },
+  rose:    { gradient: "from-rose-900 via-[#0d2340] to-[#1a3050]",    accent: "text-rose-300",    border: "border-rose-400/30",    dot: "bg-rose-400" },
+  slate:   { gradient: "from-slate-800 via-[#0d2340] to-[#1a3050]",   accent: "text-slate-300",   border: "border-slate-400/30",   dot: "bg-slate-400" },
+};
+
+const DEFAULT_ADS: ManagedAd[] = [
+  { id: "provider-signup", theme: "blue",    eyebrow: "🚀  Join the Platform",        headline: "Become a Verified Provider",           sub: "Set your own rates. Get paid securely via escrow. Thousands of clients are waiting for skilled workers like you.", cta: "Sign up free →", url: "/register?role=provider" },
+  { id: "client-post",     theme: "emerald", eyebrow: "📋  Need Work Done?",           headline: "Post a Job in 60 Seconds",             sub: "Describe your task, set your budget, and get quotes from vetted local providers — no upfront cost, no hidden fees.", cta: "Post a job →", url: "/client/post-job" },
+  { id: "escrow",          theme: "violet",  eyebrow: "🔒  Safe & Secure",             headline: "Every Payment is Escrow-Protected",      sub: "Your money is held safely until the job is complete and you're satisfied. No more payment disputes or ghosted workers.", cta: "Learn more →", url: "/how-it-works" },
+  { id: "ratings",         theme: "amber",   eyebrow: "⭐  Quality Guaranteed",        headline: "Hire Only Rated & Verified Providers",  sub: "Every provider on LocalPro has verified identity, reviewed work history, and a public rating you can trust.", cta: "Browse providers →", url: "/providers" },
+  { id: "plumbing",        theme: "cyan",    eyebrow: "🔧  Plumbing Services",         headline: "Leaky Faucet? Clogged Drain?",          sub: "Find trusted plumbers in Ormoc City available today. Fixed-price quotes, no surprise charges, guaranteed workmanship.", cta: "Find a plumber →", url: "/providers?category=Plumbing" },
+  { id: "electrical",      theme: "yellow",  eyebrow: "⚡  Electrical Services",        headline: "Safe, Licensed Electricians Near You",  sub: "Wiring, panel upgrades, outlets, and lighting — LocalPro electricians are PRC-licensed and background-checked.", cta: "Book an electrician →", url: "/providers?category=Electrical" },
+  { id: "cleaning",        theme: "teal",    eyebrow: "🧹  Cleaning Services",          headline: "Spotless Home, Stress-Free Life",        sub: "Professional deep cleaning, regular housekeeping, and move-in/move-out cleaning. Book in minutes, pay after.", cta: "Book a cleaner →", url: "/providers?category=Cleaning" },
+  { id: "peso-jobs",       theme: "indigo",  eyebrow: "🏛️  PESO Job Listings",         headline: "Government & LGU Jobs Available Now",   sub: "Browse PESO-posted employment opportunities, government programs, and LGU-funded livelihood projects in Ormoc City.", cta: "View PESO jobs →", url: "/jobs?source=peso" },
+  { id: "top-earners",     theme: "rose",    eyebrow: "💰  Top Provider Earnings",      headline: "Skilled Workers Earn ₱18,000+/Month",   sub: "Our top-rated providers in Ormoc are earning more than minimum wage — on their own schedule, with zero boss.", cta: "Start earning →", url: "/register?role=provider" },
+  { id: "business",        theme: "slate",   eyebrow: "🏢  For Businesses",             headline: "Hire at Scale with a Business Account", sub: "Property managers, BPOs, and local businesses use LocalPro to manage recurring service jobs with one team dashboard.", cta: "Get a business account →", url: "/register?role=client&plan=business" },
+];
 
 const DEFAULTS: AppSettings = {
   // Platform
@@ -24,6 +69,8 @@ const DEFAULTS: AppSettings = {
   "platform.newRegistrations": true,
   "platform.kycRequired": false,
   // Job Board
+  "board.ads": DEFAULT_ADS,
+  "board.adsEnabled": true,
   "board.lguFilterEnabled": true,
   "board.activityFeed": false,
   "board.earningsWidget": false,
@@ -107,6 +154,12 @@ const SETTING_META: Record<string, SettingMeta> = {
     type: "boolean",
   },
   // ── Job Board ────────────────────────────────────────────────────────────────
+  "board.adsEnabled": {
+    label: "Ad Flash Enabled",
+    description:
+      "Enable the fullscreen ad overlay that cycles through promotional slides on the public job board. Disable to suppress all ads without deleting them.",
+    type: "boolean",
+  },
   "board.lguFilterEnabled": {
     label: "LGU Filter (Ormoc Only)",
     description:
@@ -408,6 +461,8 @@ const TABS: Tab[] = [
     label: "Job Board",
     icon: <LayoutDashboard className="h-4 w-4" />,
     keys: [
+      "board.ads",
+      "board.adsEnabled",
       "board.lguFilterEnabled",
       "board.activityFeed",
       "board.earningsWidget",
@@ -526,6 +581,173 @@ function SkeletonRow() {
 // ─── Dangerous keys that warrant amber highlight ──────────────────────────────
 const DANGER_KEYS = new Set(["platform.maintenanceMode"]);
 
+// ─── Ads Manager ─────────────────────────────────────────────────────────────
+const EMPTY_AD: Omit<ManagedAd, "id"> = { theme: "blue", eyebrow: "", headline: "", sub: "", cta: "", url: "" };
+
+function AdsManager({ ads, onChange }: { ads: ManagedAd[]; onChange: (ads: ManagedAd[]) => void }) {
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [draft, setDraft]         = useState<Omit<ManagedAd, "id">>(EMPTY_AD);
+  const [adding, setAdding]       = useState(false);
+  const [newDraft, setNewDraft]   = useState<Omit<ManagedAd, "id">>(EMPTY_AD);
+
+  function startEdit(ad: ManagedAd) {
+    setEditingId(ad.id);
+    setDraft({ theme: ad.theme, eyebrow: ad.eyebrow, headline: ad.headline, sub: ad.sub, cta: ad.cta ?? "", url: ad.url ?? "" });
+  }
+
+  function saveEdit() {
+    onChange(ads.map((a) => a.id === editingId ? { ...a, ...draft } : a));
+    setEditingId(null);
+  }
+
+  function deleteAd(id: string) { onChange(ads.filter((a) => a.id !== id)); }
+
+  function moveUp(idx: number) {
+    if (idx === 0) return;
+    const next = [...ads];
+    [next[idx - 1], next[idx]] = [next[idx], next[idx - 1]];
+    onChange(next);
+  }
+
+  function moveDown(idx: number) {
+    if (idx === ads.length - 1) return;
+    const next = [...ads];
+    [next[idx], next[idx + 1]] = [next[idx + 1], next[idx]];
+    onChange(next);
+  }
+
+  function addAd() {
+    if (!newDraft.headline.trim()) return;
+    onChange([...ads, { ...newDraft, id: `ad-${Date.now()}` }]);
+    setNewDraft(EMPTY_AD);
+    setAdding(false);
+  }
+
+  function AdForm({ value, onChange: onDraftChange, onSave, onCancel, saveLabel }: {
+    value: Omit<ManagedAd, "id">;
+    onChange: (v: Omit<ManagedAd, "id">) => void;
+    onSave: () => void;
+    onCancel: () => void;
+    saveLabel: string;
+  }) {
+    const f = (field: keyof Omit<ManagedAd, "id">) =>
+      (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
+        onDraftChange({ ...value, [field]: e.target.value });
+    return (
+      <div className="p-4 bg-slate-50 dark:bg-slate-700/40 border border-slate-200 dark:border-slate-600 rounded-xl space-y-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Eyebrow <span className="text-slate-400">(with emoji)</span></label>
+            <input className="w-full text-sm border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-1.5 bg-white dark:bg-slate-800 text-slate-800 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500" value={value.eyebrow} onChange={f("eyebrow")} placeholder="🚀  Join the Platform" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Theme</label>
+            <select className="w-full text-sm border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-1.5 bg-white dark:bg-slate-800 text-slate-800 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500" value={value.theme} onChange={f("theme")}>
+              {(Object.keys(THEME_PRESETS) as AdTheme[]).map((t) => (
+                <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Headline <span className="text-red-400">*</span></label>
+          <input className="w-full text-sm border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-1.5 bg-white dark:bg-slate-800 text-slate-800 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500" value={value.headline} onChange={f("headline")} placeholder="Become a Verified Provider" />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Body text</label>
+          <textarea rows={2} className="w-full text-sm border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-1.5 bg-white dark:bg-slate-800 text-slate-800 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500 resize-none" value={value.sub} onChange={f("sub")} placeholder="Short description that appears under the headline…" />
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">CTA label <span className="text-slate-400">(optional)</span></label>
+            <input className="w-full text-sm border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-1.5 bg-white dark:bg-slate-800 text-slate-800 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500" value={value.cta ?? ""} onChange={f("cta")} placeholder="Sign up free →" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">URL <span className="text-slate-400">(optional)</span></label>
+            <input className="w-full text-sm border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-1.5 bg-white dark:bg-slate-800 text-slate-800 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500" value={value.url ?? ""} onChange={f("url")} placeholder="/register?role=provider" />
+          </div>
+        </div>
+        <div className="flex items-center justify-end gap-2 pt-1">
+          <button type="button" onClick={onCancel} className="inline-flex items-center gap-1 text-xs text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-colors px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700">
+            <X className="h-3 w-3" /> Cancel
+          </button>
+          <button type="button" onClick={onSave} disabled={!value.headline.trim()} className="inline-flex items-center gap-1 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed px-3 py-1.5 rounded-lg transition-colors">
+            <Save className="h-3 w-3" /> {saveLabel}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm overflow-hidden">
+      <div className="px-5 py-3.5 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between gap-2">
+        <div>
+          <h2 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Ad Flash Slides</h2>
+          <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Full-screen ads shown on the public board. Cycle order follows the list below.</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => { setAdding(true); setNewDraft(EMPTY_AD); }}
+          disabled={adding}
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 px-3 py-1.5 rounded-lg transition-colors flex-shrink-0"
+        >
+          <Plus className="h-3.5 w-3.5" /> Add Ad
+        </button>
+      </div>
+
+      <div className="divide-y divide-slate-100 dark:divide-slate-700">
+        {ads.length === 0 && !adding && (
+          <div className="px-5 py-8 text-center text-sm text-slate-400 dark:text-slate-500">
+            No ads configured. Click <span className="font-semibold">Add Ad</span> to create one.
+          </div>
+        )}
+
+        {ads.map((ad, idx) => {
+          const theme = THEME_PRESETS[ad.theme] ?? THEME_PRESETS.blue;
+          const isEditing = editingId === ad.id;
+          return (
+            <div key={ad.id} className="px-5 py-3">
+              {isEditing ? (
+                <AdForm value={draft} onChange={setDraft} onSave={saveEdit} onCancel={() => setEditingId(null)} saveLabel="Save" />
+              ) : (
+                <div className="flex items-start gap-3">
+                  <span className={`mt-1.5 h-2.5 w-2.5 rounded-full flex-shrink-0 ${theme.dot}`} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-slate-400 dark:text-slate-500 truncate">{ad.eyebrow || <i className="not-italic text-slate-300">no eyebrow</i>}</p>
+                    <p className="text-sm font-semibold text-slate-800 dark:text-white truncate">{ad.headline || <i className="not-italic text-slate-400">no headline</i>}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-1 mt-0.5">{ad.sub}</p>
+                  </div>
+                  <div className="flex-shrink-0 flex items-center gap-0.5">
+                    <button type="button" onClick={() => moveUp(idx)} disabled={idx === 0} title="Move up" className="p-1 rounded text-slate-400 hover:text-slate-700 dark:hover:text-white disabled:opacity-30 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                      <ChevronUp className="h-3.5 w-3.5" />
+                    </button>
+                    <button type="button" onClick={() => moveDown(idx)} disabled={idx === ads.length - 1} title="Move down" className="p-1 rounded text-slate-400 hover:text-slate-700 dark:hover:text-white disabled:opacity-30 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                      <ChevronDown className="h-3.5 w-3.5" />
+                    </button>
+                    <button type="button" onClick={() => startEdit(ad)} title="Edit" className="p-1 rounded text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
+                      <Pencil className="h-3.5 w-3.5" />
+                    </button>
+                    <button type="button" onClick={() => deleteAd(ad.id)} title="Delete" className="p-1 rounded text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+
+        {adding && (
+          <div className="px-5 py-4">
+            <AdForm value={newDraft} onChange={setNewDraft} onSave={addAd} onCancel={() => setAdding(false)} saveLabel="Add" />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
 export default function AppSettingsClient() {
   const [settings, setSettings] = useState<AppSettings>(DEFAULTS);
@@ -610,6 +832,10 @@ export default function AppSettingsClient() {
     setSettings((prev) => ({ ...prev, ...patch }));
   }
 
+  function setAds(ads: ManagedAd[]) {
+    setSettings((prev) => ({ ...prev, "board.ads": ads }));
+  }
+
   // Dirty detection helpers
   const isDirty = useMemo(
     () => JSON.stringify(settings) !== JSON.stringify(savedSettings),
@@ -617,7 +843,7 @@ export default function AppSettingsClient() {
   );
 
   function isTabDirty(tab: Tab) {
-    return tab.keys.some((k) => settings[k] !== savedSettings[k]);
+    return tab.keys.some((k) => JSON.stringify(settings[k]) !== JSON.stringify(savedSettings[k]));
   }
 
   const currentTab = TABS.find((t) => t.id === activeTab)!;
@@ -872,6 +1098,14 @@ export default function AppSettingsClient() {
               })
             )}
           </div>
+
+          {/* Ad Flash manager — board tab only */}
+          {activeTab === "board" && (
+            <AdsManager
+              ads={(settings["board.ads"] as ManagedAd[] | undefined) ?? DEFAULT_ADS}
+              onChange={setAds}
+            />
+          )}
 
         </div>
       </div>

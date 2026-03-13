@@ -55,6 +55,8 @@ export interface BoardData {
     businessCta: boolean;
     partners: boolean;
     jobAlerts: boolean;
+    adsEnabled: boolean;
   };
+  ads?: import("./components/AdFlash").ManagedAd[] | null;
   generatedAt: string;
 }

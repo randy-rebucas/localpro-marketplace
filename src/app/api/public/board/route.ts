@@ -32,6 +32,8 @@ const BOARD_FEATURE_KEYS = [
   "board.businessCta",
   "board.partners",
   "board.jobAlerts",
+  "board.ads",
+  "board.adsEnabled",
 ] as const;
 
 export async function GET() {
@@ -138,7 +140,9 @@ export async function GET() {
         businessCta:       features["board.businessCta"] === true,
         partners:          features["board.partners"] === true,
         jobAlerts:         features["board.jobAlerts"] === true,
+        adsEnabled:        features["board.adsEnabled"] !== false,
       },
+      ads: Array.isArray(features["board.ads"]) ? features["board.ads"] : null,
       generatedAt: new Date().toISOString(),
     });
   } catch (err) {

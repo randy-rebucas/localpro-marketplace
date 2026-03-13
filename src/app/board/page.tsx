@@ -34,6 +34,7 @@ import { TrainingCTA } from "./components/TrainingCTA";
 import { BottomStrip } from "./components/BottomStrip";
 import { AchievementFeed } from "./components/AchievementFeed";
 import { CompletionToast } from "./components/CompletionToast";
+import { AdFlash } from "./components/AdFlash";
 
 // ─── Main board ───────────────────────────────────────────────────────────────
 
@@ -496,6 +497,11 @@ export default function BoardPage() {
 
       {/* Completion toast — bottom-right corner pop-up */}
       <CompletionToast />
+
+      {/* Ad flash — full-screen overlay, cycles every 2 min, shows for 8 s */}
+      {data?.features?.adsEnabled && (
+        <AdFlash intervalMs={120_000} displayMs={8_000} ads={data?.ads ?? undefined} />
+      )}
 
       {/* ── Footer: Announcement ticker ──────────────────────────────────── */}
       <footer className="flex-shrink-0 h-10 bg-[#1a3050] border-t border-white/10 overflow-hidden shadow-inner">

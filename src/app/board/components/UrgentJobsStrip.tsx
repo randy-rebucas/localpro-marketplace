@@ -117,22 +117,6 @@ export function UrgentJobsStrip({ jobs }: { jobs: BoardJob[] }) {
                   {formatPeso(job.budget)}
                 </span>
               </div>
-
-              {/* Tags */}
-              {hasTags && (
-                <div className="flex items-center flex-wrap gap-1 mt-2 pl-1">
-                  {job.jobTags!.map((tag) => (
-                    <span
-                      key={tag}
-                      className={`inline-block px-1.5 py-0.5 rounded-full border text-[9px] font-semibold ${
-                        TAG_COLORS[tag] ?? "bg-white/10 text-slate-400 border-white/10"
-                      }`}
-                    >
-                      {TAG_LABELS[tag] ?? tag}
-                    </span>
-                  ))}
-                </div>
-              )}
             </div>
           );
           })

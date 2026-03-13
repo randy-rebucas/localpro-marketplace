@@ -165,22 +165,6 @@ export function JobCard({ job }: { job: BoardJob }) {
             </div>
           </div>
 
-          {/* Job tags */}
-          {job.jobTags && job.jobTags.length > 0 && (
-            <div className="flex items-center flex-wrap gap-1">
-              <Tag className="h-2.5 w-2.5 text-slate-500 flex-shrink-0" />
-              {job.jobTags.map((tag) => (
-                <span
-                  key={tag}
-                  className={`inline-block px-1.5 py-0.5 rounded border text-[10px] font-semibold ${
-                    JOB_TAG_COLORS[tag] ?? "bg-white/10 text-slate-400 border-white/10"
-                  }`}
-                >
-                  {JOB_TAG_LABELS[tag] ?? tag}
-                </span>
-              ))}
-            </div>
-          )}
         </div>
       </div>
 
