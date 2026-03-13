@@ -4,6 +4,7 @@ import { requireUser } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { connectDB } from "@/lib/db";
 import { ForbiddenError, NotFoundError } from "@/lib/errors";
+import { hasAnalyticsAccess } from "@/lib/businessPlan";
 import AgencyProfile from "@/models/AgencyProfile";
 import Job from "@/models/Job";
 import Transaction from "@/models/Transaction";
@@ -22,9 +23,14 @@ export const GET = withHandler(async (req: NextRequest) => {
 
   const agency = await AgencyProfile.findOne(
     { providerId: user.userId },
-    "name staff"
+    "name staff plan"
   ).lean();
   if (!agency) throw new NotFoundError("AgencyProfile");
+
+  // Check if plan has analytics access
+  if (!hasAnalyticsAccess(agency.plan)) {
+    throw new ForbiddenError("Analytics is only available on Growth, Pro, and Enterprise plans. Please upgrade your plan.");
+  }
 
   const ownerOid = new mongoose.Types.ObjectId(user.userId);
 

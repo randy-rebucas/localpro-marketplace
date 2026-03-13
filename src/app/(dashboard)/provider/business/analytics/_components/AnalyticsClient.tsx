@@ -6,15 +6,23 @@ import Link from "next/link";
 import {
   TrendingUp, PieChart, BarChart2, Users, RefreshCw,
   Clock, Repeat, Star, Briefcase, DollarSign, AlertCircle,
+  Lock, ArrowUpRight,
 } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
 } from "recharts";
 import { fetchClient } from "@/lib/fetchClient";
+import { hasAnalyticsAccess, PLAN_LABELS, PLAN_UPGRADE_NEXT } from "@/lib/businessPlan";
 import { formatCurrency } from "@/lib/utils";
 import toast from "react-hot-toast";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
+
+interface AgencyProfile {
+  _id: string;
+  name: string;
+  plan: "starter" | "growth" | "pro" | "enterprise";
+}
 
 interface KPI {
   totalJobs:    number;
@@ -88,6 +96,7 @@ function RevenueTooltip({ active, payload, label }: {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function AnalyticsClient() {
+  const [agency, setAgency]       = useState<AgencyProfile | null>(null);
   const [data, setData]           = useState<AnalyticsData | null>(null);
   const [loading, setLoading]     = useState(true);
   const [loadError, setLoadError] = useState(false);
@@ -97,6 +106,15 @@ export default function AnalyticsClient() {
     setLoading(true);
     setLoadError(false);
     try {
+      const agencyData = await fetchClient<{ agency: AgencyProfile | null }>("/api/provider/agency/profile");
+      if (agencyData.agency) setAgency(agencyData.agency);
+
+      // Skip analytics fetch if plan doesn't have access
+      if (!agencyData.agency || !hasAnalyticsAccess(agencyData.agency.plan)) {
+        setLoading(false);
+        return;
+      }
+
       const res = await fetchClient<AnalyticsData>(`/api/provider/agency/analytics?months=${m}`);
       setData(res);
     } catch {
@@ -141,7 +159,57 @@ export default function AnalyticsClient() {
     );
   }
 
-  if (!data) {
+  // ── Plan gate: Analytics requires Growth or higher ───────────────────────────────
+  if (agency && !hasAnalyticsAccess(agency.plan)) {
+    const nextPlan = PLAN_UPGRADE_NEXT[agency.plan];
+    return (
+      <div className="flex flex-col items-center justify-center gap-6 py-24 text-center px-6">
+        <div className="w-16 h-16 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center">
+          <Lock className="h-7 w-7 text-amber-500" />
+        </div>
+        <div className="space-y-2 max-w-md">
+          <h2 className="text-lg font-bold text-slate-800">Analytics &amp; Insights</h2>
+          <p className="text-sm text-slate-500 leading-relaxed">
+            Performance metrics, revenue trends, and staff analytics are available on the{" "}
+            <strong>Growth, Pro,</strong> and <strong>Enterprise</strong> plans.
+            Your current plan is <strong>{PLAN_LABELS[agency.plan]}</strong>.
+          </p>
+        </div>
+        <div className="flex flex-col sm:flex-row gap-3">
+          {nextPlan && (
+            <a
+              href="/provider/business/plan"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary-700 transition-colors shadow-sm"
+            >
+              Upgrade to {PLAN_LABELS[nextPlan]}
+              <ArrowUpRight className="h-4 w-4" />
+            </a>
+          )}
+          <a
+            href="/provider/business"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50 transition-colors"
+          >
+            Back to Dashboard
+          </a>
+        </div>
+        {/* Preview of what they'll unlock */}
+        <div className="grid sm:grid-cols-3 gap-4 mt-4 w-full max-w-xl opacity-40 pointer-events-none select-none">
+          {[
+            { icon: TrendingUp, label: "Revenue Trends" },
+            { icon: BarChart2, label: "Category Breakdown" },
+            { icon: Users, label: "Staff Performance" },
+          ].map(({ icon: Icon, label }) => (
+            <div key={label} className="flex flex-col items-center gap-2 p-4 bg-white rounded-xl border border-slate-200">
+              <Icon className="h-6 w-6 text-slate-400" />
+              <span className="text-xs text-slate-400 font-medium text-center">{label}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (!agency) {
     return (
       <div className="flex flex-col items-center justify-center py-24 gap-3 text-center">
         <BarChart2 className="h-10 w-10 text-slate-300" />
@@ -149,6 +217,15 @@ export default function AnalyticsClient() {
           No agency profile found.{" "}
           <Link href="/provider/business" className="text-primary underline">Create one first.</Link>
         </p>
+      </div>
+    );
+  }
+
+  if (!data) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 gap-3 text-center">
+        <BarChart2 className="h-10 w-10 text-slate-300" />
+        <p className="text-slate-500">No analytics data available.</p>
       </div>
     );
   }

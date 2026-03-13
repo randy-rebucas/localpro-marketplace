@@ -27,6 +27,7 @@ interface PlanDef {
   staff:       string;
   services:    string;
   equipment:   string;
+  commission:  string;
   analytics:   boolean;
   priorityList:boolean;
   bulkOnboard: boolean;
@@ -41,7 +42,7 @@ const PLANS: PlanDef[] = [
     label: "Starter", tagline: "For solo providers & micro-agencies",
     price: 0, priceLabel: "Free",
     color: "bg-slate-50", textColor: "text-slate-700", borderColor: "border-slate-200",
-    staff: "5", services: "10", equipment: "10",
+    staff: "5", services: "10", equipment: "10", commission: "15%",
     analytics: false, priorityList: false, bulkOnboard: false, scheduler: false, support: false,
     popular: false,
   },
@@ -50,7 +51,7 @@ const PLANS: PlanDef[] = [
     label: "Growth", tagline: "For growing local agencies",
     price: 999, priceLabel: "₱999 / mo",
     color: "bg-blue-50", textColor: "text-blue-700", borderColor: "border-blue-200",
-    staff: "15", services: "30", equipment: "50",
+    staff: "15", services: "30", equipment: "50", commission: "12%",
     analytics: true, priorityList: false, bulkOnboard: false, scheduler: false, support: false,
     popular: false,
   },
@@ -59,7 +60,7 @@ const PLANS: PlanDef[] = [
     label: "Pro", tagline: "For established agencies scaling up",
     price: 2499, priceLabel: "₱2,499 / mo",
     color: "bg-violet-50", textColor: "text-violet-700", borderColor: "border-violet-300",
-    staff: "50", services: "Unlimited", equipment: "Unlimited",
+    staff: "50", services: "Unlimited", equipment: "Unlimited", commission: "10%",
     analytics: true, priorityList: true, bulkOnboard: true, scheduler: true, support: false,
     popular: true,
   },
@@ -68,7 +69,7 @@ const PLANS: PlanDef[] = [
     label: "Enterprise", tagline: "For large organizations & franchises",
     price: 4999, priceLabel: "₱4,999 / mo",
     color: "bg-amber-50", textColor: "text-amber-700", borderColor: "border-amber-200",
-    staff: "Unlimited", services: "Unlimited", equipment: "Unlimited",
+    staff: "Unlimited", services: "Unlimited", equipment: "Unlimited", commission: "8%",
     analytics: true, priorityList: true, bulkOnboard: true, scheduler: true, support: true,
     popular: false,
   },
@@ -307,11 +308,11 @@ export default function AgencyBillingClient() {
   }
 
   return (
-    <div className="p-6 space-y-8 max-w-6xl">
+    <div className="p-6 space-y-5">
 
       {/* ── Past-due / cancelled banner ─────────────────────────────────── */}
       {planStatus !== "active" && (
-        <div className={`rounded-xl border px-5 py-4 flex items-center gap-3 ${
+        <div className={`rounded-2xl border px-5 py-4 flex items-center gap-3 ${
           planStatus === "past_due"
             ? "bg-amber-50 border-amber-200"
             : "bg-red-50 border-red-200"
@@ -359,10 +360,10 @@ export default function AgencyBillingClient() {
       </div>
 
       {/* ── Current Plan + KPI strip ────────────────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-3">
 
         {/* Current plan card */}
-        <div className={`rounded-xl p-5 ${currentPlan.color} border ${currentPlan.borderColor} col-span-1`}>
+        <div className={`rounded-2xl p-5 ${currentPlan.color} border ${currentPlan.borderColor} col-span-1`}>
           <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Current Plan</p>
           <div className="flex items-center gap-2 flex-wrap">
             <p className={`text-2xl font-extrabold ${currentPlan.textColor}`}>{currentPlan.label}</p>
@@ -421,7 +422,7 @@ export default function AgencyBillingClient() {
             bg:    "bg-amber-50",
           },
         ].map((kpi) => (
-          <div key={kpi.label} className={`rounded-xl p-5 ${kpi.bg} border border-slate-200`}>
+          <div key={kpi.label} className={`rounded-2xl p-5 ${kpi.bg} border border-slate-200`}>
             <div className="flex items-center justify-between mb-2">
               <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">{kpi.label}</p>
               {kpi.icon}
@@ -438,7 +439,7 @@ export default function AgencyBillingClient() {
           Commission Breakdown
           <span className="text-slate-400 font-normal text-sm ml-1">(last 12 months)</span>
         </h2>
-        <div className="rounded-xl border border-slate-200 overflow-hidden">
+        <div className="rounded-2xl border border-slate-200 overflow-hidden">
           <table className="w-full text-sm">
             <thead className="bg-slate-50 border-b border-slate-200">
               <tr>
@@ -487,7 +488,7 @@ export default function AgencyBillingClient() {
             return (
               <div
                 key={plan.key}
-                className={`relative rounded-xl border-2 p-5 flex flex-col gap-3 ${
+                className={`relative rounded-2xl border-2 p-5 flex flex-col gap-3 ${
                   isCurrent
                     ? "border-violet-500 shadow-md"
                     : plan.popular
@@ -539,6 +540,10 @@ export default function AgencyBillingClient() {
                     <CheckCircle2 className="h-3.5 w-3.5 text-slate-400 shrink-0" />
                     <span><strong>{plan.equipment}</strong> equipment slots</span>
                   </li>
+                  <li className="flex items-center gap-1.5">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+                    <span><strong>{plan.commission}</strong> commission rate</span>
+                  </li>
                 </ul>
 
                 {/* Feature toggles */}
@@ -561,13 +566,13 @@ export default function AgencyBillingClient() {
 
                 {/* CTA */}
                 {isCurrent ? (
-                  <div className="mt-1 w-full text-xs font-semibold rounded-lg py-2 text-center bg-violet-50 text-violet-600 border border-violet-200">
+                  <div className="mt-1 w-full text-xs font-semibold rounded-xl py-2 text-center bg-violet-50 text-violet-600 border border-violet-200">
                     Current Plan
                   </div>
                 ) : (
                   <button
                     disabled={isDowngrade || isFree || !!paying}
-                    className={`mt-1 w-full text-xs font-semibold rounded-lg py-2 transition-colors flex items-center justify-center gap-1.5 ${
+                    className={`mt-1 w-full text-xs font-semibold rounded-xl py-2 transition-colors flex items-center justify-center gap-1.5 ${
                       isDowngrade || isFree
                         ? "bg-slate-100 text-slate-400 cursor-not-allowed"
                         : paying
@@ -603,7 +608,7 @@ export default function AgencyBillingClient() {
           <h2 className="text-base font-semibold text-slate-800">Add-ons &amp; Features</h2>
           <p className="text-xs text-slate-400 mt-0.5">Features included in your current plan are shown as enabled.</p>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {ADD_ONS.map((addon) => {
             const enabled      = addon.includedIn.includes(currentPlanKey);
             const firstPlanKey = addon.includedIn[0];
@@ -612,7 +617,7 @@ export default function AgencyBillingClient() {
             return (
               <div
                 key={addon.key}
-                className={`rounded-xl border p-5 flex gap-4 items-start transition-colors ${
+                className={`rounded-2xl border p-5 flex gap-4 items-start transition-colors ${
                   enabled ? "border-emerald-200 bg-emerald-50" : "border-slate-200 bg-white"
                 }`}
               >

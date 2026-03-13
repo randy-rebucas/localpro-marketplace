@@ -5,6 +5,7 @@ import { requireUser } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { connectDB } from "@/lib/db";
 import { ForbiddenError, NotFoundError, ValidationError, ConflictError } from "@/lib/errors";
+import { isAtMemberLimit, getMemberLimit, PLAN_LABELS } from "@/lib/businessPlan";
 import AgencyProfile from "@/models/AgencyProfile";
 import User from "@/models/User";
 
@@ -58,6 +59,15 @@ export const POST = withHandler(async (req: NextRequest) => {
 
   const agency = await AgencyProfile.findOne({ providerId: user.userId });
   if (!agency) throw new NotFoundError("AgencyProfile");
+
+  // Check staff limit based on plan
+  if (isAtMemberLimit(agency.plan, agency.staff.length)) {
+    const limit = getMemberLimit(agency.plan);
+    const label = PLAN_LABELS[agency.plan];
+    throw new ForbiddenError(
+      `Your ${label} plan allows up to ${limit} staff member${limit === 1 ? "" : "s"}. Upgrade your plan to add more staff.`
+    );
+  }
 
   const alreadyMember = agency.staff.some(
     (s) => String(s.userId) === parsed.data.userId

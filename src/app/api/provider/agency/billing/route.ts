@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 import { requireUser } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { connectDB } from "@/lib/db";
-import { ForbiddenError, NotFoundError } from "@/lib/errors";
+import { ForbiddenError } from "@/lib/errors";
 import { BASE_COMMISSION_RATE } from "@/lib/commission";
 import AgencyProfile from "@/models/AgencyProfile";
 import Transaction from "@/models/Transaction";
@@ -20,7 +20,28 @@ export const GET = withHandler(async (req: NextRequest) => {
   const months = Math.min(24, Math.max(1, Number(searchParams.get("months") || "12")));
 
   const agency = await AgencyProfile.findOne({ providerId: user.userId }).lean();
-  if (!agency) throw new NotFoundError("AgencyProfile");
+
+  // No agency profile yet — return a zeroed default so the billing page still renders
+  if (!agency) {
+    return NextResponse.json({
+      agencyName:          "",
+      staffCount:          0,
+      serviceCount:        0,
+      plan:                "starter",
+      planStatus:          "active",
+      planActivatedAt:     null,
+      planExpiresAt:       null,
+      pendingPlan:         null,
+      commissionRate:      BASE_COMMISSION_RATE,
+      totalGrossEarned:    0,
+      totalCommissionPaid: 0,
+      totalNetEarned:      0,
+      totalJobsCompleted:  0,
+      thisMonthGross:      0,
+      thisMonthCommission: 0,
+      commissionHistory:   [],
+    });
+  }
 
   const ownerOid = new mongoose.Types.ObjectId(user.userId);
   const staffIds = [ownerOid, ...agency.staff.map((s) => s.userId)];

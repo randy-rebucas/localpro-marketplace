@@ -73,6 +73,46 @@ export function isAtJobLimit(plan: BusinessPlan, monthlyCount: number): boolean 
   return limit !== Infinity && monthlyCount >= limit;
 }
 
+// ─── Service limits per plan ────────────────────────────────────────────────
+
+export const SERVICE_LIMITS: Record<BusinessPlan, number> = {
+  starter:    10,
+  growth:     30,
+  pro:        Infinity,
+  enterprise: Infinity,
+};
+
+/** Return the maximum number of services allowed for a given plan. */
+export function getServiceLimit(plan: BusinessPlan): number {
+  return SERVICE_LIMITS[plan];
+}
+
+/** True when the agency has reached (or exceeded) its service quota. */
+export function isAtServiceLimit(plan: BusinessPlan, currentCount: number): boolean {
+  const limit = SERVICE_LIMITS[plan];
+  return limit !== Infinity && currentCount >= limit;
+}
+
+// ─── Equipment limits per plan ──────────────────────────────────────────────
+
+export const EQUIPMENT_LIMITS: Record<BusinessPlan, number> = {
+  starter:    10,
+  growth:     50,
+  pro:        Infinity,
+  enterprise: Infinity,
+};
+
+/** Return the maximum number of equipment slots allowed for a given plan. */
+export function getEquipmentLimit(plan: BusinessPlan): number {
+  return EQUIPMENT_LIMITS[plan];
+}
+
+/** True when the agency has reached (or exceeded) its equipment quota. */
+export function isAtEquipmentLimit(plan: BusinessPlan, currentCount: number): boolean {
+  const limit = EQUIPMENT_LIMITS[plan];
+  return limit !== Infinity && currentCount >= limit;
+}
+
 // ─── Feature gates ─────────────────────────────────────────────────────────────
 
 /** Plans that include access to Business Analytics (AI Insights, expense reports, provider performance). */
@@ -89,6 +129,14 @@ const BULK_RECURRING_PLANS: BusinessPlan[] = ["pro", "enterprise"];
 /** True when the plan unlocks bulk CSV upload and recurring job scheduling. */
 export function hasBulkAndRecurringAccess(plan: BusinessPlan): boolean {
   return BULK_RECURRING_PLANS.includes(plan);
+}
+
+/** Plans that include Priority Listings (featured job placement). */
+const PRIORITY_LISTINGS_PLANS: BusinessPlan[] = ["pro", "enterprise"];
+
+/** True when the plan unlocks priority job listings (featured placement). */
+export function hasPriorityListingsAccess(plan: BusinessPlan): boolean {
+  return PRIORITY_LISTINGS_PLANS.includes(plan);
 }
 
 /** Plans that include Priority Support (dedicated account manager, 4-hour SLA). */

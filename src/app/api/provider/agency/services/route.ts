@@ -5,6 +5,7 @@ import { requireUser } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { connectDB } from "@/lib/db";
 import { ForbiddenError, NotFoundError, ValidationError } from "@/lib/errors";
+import { isAtServiceLimit, getServiceLimit, PLAN_LABELS } from "@/lib/businessPlan";
 import AgencyProfile from "@/models/AgencyProfile";
 
 const ServiceSchema = z.object({
@@ -63,8 +64,17 @@ export const POST = withHandler(async (req: NextRequest) => {
   const providerId = toOid(user.userId);
 
   // Verify agency exists and check for duplicate title
-  const agency = await AgencyProfile.findOne({ providerId }, "services.title").lean();
+  const agency = await AgencyProfile.findOne({ providerId }, "services.title plan").lean();
   if (!agency) throw new NotFoundError("AgencyProfile");
+
+  // Check service limit based on plan
+  if (isAtServiceLimit(agency.plan, (agency.services ?? []).length)) {
+    const limit = getServiceLimit(agency.plan);
+    const label = PLAN_LABELS[agency.plan];
+    throw new ForbiddenError(
+      `Your ${label} plan allows up to ${limit} service${limit === 1 ? "" : "s"}. Upgrade your plan to add more services.`
+    );
+  }
 
   const titleLower = parsed.data.title.toLowerCase();
   const duplicate  = (agency.services ?? []).some(

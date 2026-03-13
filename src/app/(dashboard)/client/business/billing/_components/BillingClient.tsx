@@ -50,7 +50,7 @@ const PLANS: PlanDef[] = [
     key: "pro",     label: "Pro",     price: 2499, priceLabel: "₱2,499 / mo",
     color: "bg-violet-100",  textColor: "text-violet-700",
     branches: "15", members: "50",  jobs: "Unlimited", commission: "10%",
-    analytics: true,  bulkUpload: true,  recurring: true,  priority: false,
+    analytics: true,  bulkUpload: true,  recurring: true,  priority: true,
   },
   {
     key: "enterprise", label: "Enterprise", price: 4999, priceLabel: "₱4,999 / mo",
@@ -517,7 +517,7 @@ export default function BillingClient() {
                         {feat === "analytics"  && "AI Analytics"}
                         {feat === "bulkUpload" && "Bulk CSV Upload"}
                         {feat === "recurring"  && "Recurring Scheduler"}
-                        {feat === "priority"   && "Priority Support"}
+                        {feat === "priority"   && "Priority Listings"}
                       </span>
                     </li>
                   ))}

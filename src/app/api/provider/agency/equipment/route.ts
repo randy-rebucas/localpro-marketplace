@@ -5,6 +5,7 @@ import { requireUser } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { connectDB } from "@/lib/db";
 import { ForbiddenError, NotFoundError, ValidationError } from "@/lib/errors";
+import { isAtEquipmentLimit, getEquipmentLimit, PLAN_LABELS } from "@/lib/businessPlan";
 import AgencyProfile from "@/models/AgencyProfile";
 
 const EquipmentSchema = z.object({
@@ -57,9 +58,18 @@ export const POST = withHandler(async (req: NextRequest) => {
 
   const providerId = toOid(user.userId);
 
-  // Verify agency exists
-  const exists = await AgencyProfile.exists({ providerId });
-  if (!exists) throw new NotFoundError("AgencyProfile");
+  // Verify agency exists and check equipment limit
+  const agency = await AgencyProfile.findOne({ providerId }, "equipment plan");
+  if (!agency) throw new NotFoundError("AgencyProfile");
+
+  // Check equipment limit based on plan
+  if (isAtEquipmentLimit(agency.plan, (agency.equipment ?? []).length)) {
+    const limit = getEquipmentLimit(agency.plan);
+    const label = PLAN_LABELS[agency.plan];
+    throw new ForbiddenError(
+      `Your ${label} plan allows up to ${limit} equipment slot${limit === 1 ? "" : "s"}. Upgrade your plan to add more equipment.`
+    );
+  }
 
   // Build item with explicit _id so we can return it without a second DB read
   const newId   = new mongoose.Types.ObjectId();

@@ -2,8 +2,9 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import Link from "next/link";
-import { Wrench, Plus, Pencil, Trash2, X, Save, RefreshCw, Building2, Search, AlertCircle } from "lucide-react";
+import { Wrench, Plus, Pencil, Trash2, X, Save, RefreshCw, Building2, Search, AlertCircle, Lock, ArrowUpRight } from "lucide-react";
 import { fetchClient } from "@/lib/fetchClient";
+import { EQUIPMENT_LIMITS, PLAN_LABELS, PLAN_UPGRADE_NEXT, isAtEquipmentLimit, getEquipmentLimit } from "@/lib/businessPlan";
 import toast from "react-hot-toast";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -17,6 +18,11 @@ interface Equipment {
   serialNo: string;
   status: EqStatus;
   notes: string;
+}
+
+interface Agency {
+  _id: string;
+  plan: "starter" | "growth" | "pro" | "enterprise";
 }
 
 const EMPTY_FORM = { name: "", type: "", serialNo: "", status: "available" as EqStatus, notes: "" };
@@ -42,6 +48,7 @@ const EQ_TYPES = ["Vehicle", "Tool", "Device", "Safety Gear", "Cleaning Equipmen
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function EquipmentClient() {
+  const [agency, setAgency]         = useState<Agency | null>(null);
   const [items, setItems]           = useState<Equipment[]>([]);
   const [hasAgency, setHasAgency]   = useState<boolean | null>(null);
   const [loading, setLoading]       = useState(true);
@@ -59,6 +66,8 @@ export default function EquipmentClient() {
     setLoading(true);
     setLoadError(false);
     try {
+      const agencyData = await fetchClient<{ agency: Agency | null }>("/api/provider/agency/profile");
+      if (agencyData.agency) setAgency(agencyData.agency);
       const data = await fetchClient<{ equipment: Equipment[]; hasAgency: boolean }>("/api/provider/agency/equipment");
       setItems(data.equipment);
       setHasAgency(data.hasAgency);
@@ -74,6 +83,14 @@ export default function EquipmentClient() {
   useEffect(() => { load(); }, [load]);
 
   function openNew() {
+    const limit = agency ? EQUIPMENT_LIMITS[agency.plan] : Infinity;
+    const atLimit = agency ? isAtEquipmentLimit(agency.plan, items.length) : false;
+    const planLabel = agency ? PLAN_LABELS[agency.plan] : "";
+
+    if (atLimit) {
+      toast.error(`You've reached the ${planLabel} plan limit of ${limit} equipment slots. Upgrade your plan to add more.`);
+      return;
+    }
     setEditing(null);
     setForm(EMPTY_FORM);
     setShowForm(true);
@@ -146,6 +163,12 @@ export default function EquipmentClient() {
     status: s, count: items.filter((i) => i.status === s).length,
   }));
 
+  // Plan limit calculations
+  const equipmentLimit = agency ? EQUIPMENT_LIMITS[agency.plan] : Infinity;
+  const atLimit = agency ? isAtEquipmentLimit(agency.plan, items.length) : false;
+  const planLabel = agency ? PLAN_LABELS[agency.plan] : "";
+  const nextPlan = agency ? PLAN_UPGRADE_NEXT[agency.plan] : undefined;
+
   const filtered = items
     .filter((i) => !filterStatus || i.status === filterStatus)
     .filter((i) => !search || i.name.toLowerCase().includes(search.toLowerCase()) || i.type.toLowerCase().includes(search.toLowerCase()));
@@ -196,7 +219,7 @@ export default function EquipmentClient() {
     <div className="space-y-5">
 
       {/* ── Header ── */}
-      <div className="flex items-center justify-between gap-4 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-5 py-4 shadow-sm">
+      <div className="flex items-center justify-between gap-4 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-5 py-4 shadow-sm flex-wrap">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-xl bg-orange-100 dark:bg-orange-900/30">
             <Wrench className="h-5 w-5 text-orange-600 dark:text-orange-400" />
@@ -207,6 +230,17 @@ export default function EquipmentClient() {
           </div>
         </div>
         <div className="flex gap-2">
+          {/* Plan quota badge */}
+          {agency && (
+            <span className={`hidden sm:inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full border ${
+              atLimit
+                ? "bg-red-50 border-red-200 text-red-700"
+                : "bg-slate-50 border-slate-200 text-slate-500"
+            }`}>
+              <Wrench className="h-3 w-3" />
+              {items.length} / {equipmentLimit === Infinity ? "\u221e" : equipmentLimit} &middot; {planLabel}
+            </span>
+          )}
           <button
             onClick={load}
             className="p-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
@@ -214,8 +248,12 @@ export default function EquipmentClient() {
           >
             <RefreshCw className="h-4 w-4" />
           </button>
-          <button onClick={openNew} className="btn-primary flex items-center gap-2">
-            <Plus className="h-4 w-4" /> Add Equipment
+          <button
+            onClick={openNew}
+            disabled={atLimit}
+            className="btn-primary flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {atLimit ? <Lock className="h-4 w-4" /> : <Plus className="h-4 w-4" />} Add Equipment
           </button>
         </div>
       </div>
@@ -247,6 +285,28 @@ export default function EquipmentClient() {
             </button>
           ))}
         </div>        </div>      )}
+
+      {/* Plan limit upgrade banner */}
+      {atLimit && !showForm && (
+        <div className="flex items-center justify-between gap-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+          <div className="flex items-center gap-2.5 text-sm text-amber-800">
+            <Lock className="h-4 w-4 shrink-0" />
+            <span>
+              You&apos;ve reached the <strong>{planLabel}</strong> plan limit of{" "}
+              <strong>{equipmentLimit} equipment slot{equipmentLimit === 1 ? "" : "s"}</strong>.
+              {nextPlan && ` Upgrade to ${PLAN_LABELS[nextPlan]} to add more.`}
+            </span>
+          </div>
+          {nextPlan && (
+            <a
+              href="/provider/business/plan"
+              className="shrink-0 inline-flex items-center gap-1 text-xs font-semibold text-amber-700 hover:text-amber-900 underline underline-offset-2"
+            >
+              Upgrade <ArrowUpRight className="h-3.5 w-3.5" />
+            </a>
+          )}
+        </div>
+      )}
 
       {/* ── Form ── */}
       {showForm && (

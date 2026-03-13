@@ -90,15 +90,6 @@ export default function UpgradeAgencyClient({ userName }: { userName: string }) 
   return (
     <div className="max-w-xl mx-auto px-4 py-8 space-y-6">
 
-      {/* Back link */}
-      <button
-        onClick={() => router.back()}
-        className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-300 transition-colors"
-      >
-        <ChevronLeft className="h-3.5 w-3.5" />
-        Back
-      </button>
-
       {/* Hero */}
       <div className="rounded-2xl border border-emerald-700 bg-emerald-950/60 p-6 text-center space-y-3">
         <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-emerald-900 border border-emerald-700 mb-1">

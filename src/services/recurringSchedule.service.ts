@@ -1,11 +1,13 @@
 import { recurringScheduleRepository, activityRepository } from "@/repositories";
 import { jobRepository } from "@/repositories";
 import { ForbiddenError, NotFoundError, UnprocessableError } from "@/lib/errors";
+import { hasBulkAndRecurringAccess, PLAN_LABELS } from "@/lib/businessPlan";
 import { connectDB } from "@/lib/db";
 import User from "@/models/User";
 import type { TokenPayload } from "@/lib/auth";
 import type { RecurringFrequency } from "@/types";
 import { RECURRING_CATEGORIES } from "@/types";
+import { businessOrganizationRepository } from "@/repositories/businessOrganization.repository";
 
 export interface CreateRecurringInput {
   title: string;
@@ -42,6 +44,14 @@ function nearestFutureOccurrence(frequency: RecurringFrequency): Date {
 export class RecurringScheduleService {
   async create(user: TokenPayload, input: CreateRecurringInput) {
     if (user.role !== "client") throw new ForbiddenError();
+
+    // ── Plan feature gate: Recurring scheduler requires Pro or Enterprise ────────────
+    const org = await businessOrganizationRepository.findByOwner(user.userId);
+    if (!org || !hasBulkAndRecurringAccess(org.plan)) {
+      throw new ForbiddenError(
+        `Recurring job scheduling is available on the Pro and Enterprise plans. Your current plan is ${org ? PLAN_LABELS[org.plan] : "Free"}. Upgrade your plan to use this feature.`
+      );
+    }
 
     // Soft-validate category (warn but don't block — future categories may expand)
     const eligible = (RECURRING_CATEGORIES as readonly string[]).map((c) =>
