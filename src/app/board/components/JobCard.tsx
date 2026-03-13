@@ -77,7 +77,7 @@ export function JobCard({ job }: { job: BoardJob }) {
   }
 
   return (
-    <div className="bg-white/[0.07] border border-white/10 rounded-2xl p-4 flex flex-col gap-3 hover:bg-white/[0.10] transition-colors">
+    <div className="bg-white/[0.07] border border-white/10 rounded-2xl p-2 flex flex-col gap-3 hover:bg-white/[0.10] transition-colors">
       {/* Top row: QR + details */}
       <div className="flex gap-3">
         {/* QR code */}
