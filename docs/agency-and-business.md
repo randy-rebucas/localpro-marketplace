@@ -1,5 +1,8 @@
 # Agency & Business Organization — Full Documentation
 
+**Version:** 1.1  
+**Last Updated:** 2026-03-14
+
 This document covers the two organization account types on LocalPro Marketplace: **Agencies** (provider-side) and **Business Organizations** (client-side). Although they share some billing concepts, they are completely separate systems serving opposite ends of the marketplace.
 
 ---
@@ -381,9 +384,10 @@ Staff members (any user with `User.agencyId` set) are blocked from the following
 | Action | Reason |
 |---|---|
 | `POST /api/provider/upgrade-agency` | Cannot create their own agency while a member of another. Must leave first. |
-| Applying to PESO/LGU job posts | PESO and LGU jobs require direct individual service providers; agency staff cannot apply on behalf of themselves. |
+| Applying to PESO / LGU job posts | PESO and LGU jobs require direct individual service providers; agency staff cannot apply on behalf of themselves. |
 | Creating consultations as the provider | Consultations flow from an individual provider; agency staff cannot initiate them as their own. |
 | Accessing provider upgrade page | Server-side redirect: if `user.agencyId` is set, redirected to `/provider/dashboard`. |
+| PESO staff role access | Users with an `agencyId` cannot hold a PESO officer role simultaneously. |
 
 ---
 
@@ -672,7 +676,7 @@ Admins with the appropriate staff capabilities can manage agencies and businesse
 ### Admin Agency Actions (`/api/admin/agencies/[id]`)
 
 ```
-PATCH /api/admin/agencies/:id
+PATCH /api/admin/agencies/[id]
 
 Body:
 {
@@ -688,7 +692,7 @@ Body:
 ### Admin Business Actions (`/api/admin/businesses/[id]`)
 
 ```
-PATCH /api/admin/businesses/:id
+PATCH /api/admin/businesses/[id]
 
 Body:
 {
@@ -728,7 +732,7 @@ Both return paginated results with owner details populated (`name`, `email`, `is
 | `GET` | `/api/provider/agency/invites` | Provider (owner) | List pending email invites |
 | `POST` | `/api/provider/agency/invites` | Provider (owner) | Send an email invite |
 | `DELETE` | `/api/provider/agency/invites?id=x` | Provider (owner) | Revoke a pending invite |
-| `POST` | `/api/agency/invite/[token]/accept` | Provider | Accept an invite via token |
+| `POST /api/agency/invite/[token]/accept` | Provider | Accept an invite via token |
 | `GET` | `/api/provider/agency/payouts` | Provider | View payout split records |
 | `GET` | `/api/provider/agency/earnings` | Provider | Earnings summary and analytics |
 | `GET` | `/api/provider/agency/dashboard` | Provider | Agency dashboard metrics |

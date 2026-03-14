@@ -1,7 +1,7 @@
 # LocalPro Marketplace — Global Expansion Feature Roadmap
 
-> **Version:** 1.0
-> **Date:** 2026-03-09
+> **Version:** 1.1
+> **Date:** 2026-03-14
 > **Status:** Proposal
 > **Scope:** Features required to make LocalPro viable for businesses across different countries
 
@@ -39,7 +39,7 @@
 
 ## Executive Summary
 
-LocalPro Marketplace is a mature, feature-rich 3-sided service marketplace (Clients, Providers, Admin) built on Next.js 16, MongoDB, and PayMongo. While the platform is well-engineered — with a clean service/repository architecture, escrow payments, AI job matching, real-time chat, and a PESO government workforce module — it is currently scoped exclusively to the **Philippines**.
+LocalPro Marketplace is a mature, feature-rich 3-sided service marketplace (Clients, Providers, Admin) built on Next.js 16.1.6, MongoDB, and PayMongo. The platform is well-engineered — with a clean service/repository architecture, escrow payments (PayMongo + wallet), milestone & partial payments, double-entry accounting ledger, AI job matching, real-time chat (SSE), provider-side agency accounts (with staff and payout splitting), client-side business organizations (multi-location), a PESO government workforce module, recurring jobs, consultations, and featured listing boosts — but it is currently scoped exclusively to the **Philippines**.
 
 This document outlines 20 feature areas required to expand the platform for use by businesses in **any country**. Proposals are ordered by strategic importance and grouped into: foundational (must-do first), market-unlocking (per-region revenue), and value-adding (retention and differentiation).
 
@@ -52,17 +52,24 @@ This document outlines 20 feature areas required to expand the platform for use 
 | Area | Status |
 |---|---|
 | Core marketplace (3-sided) | ✅ Complete |
-| Escrow & payments | ✅ PayMongo only (Philippines) |
+| Escrow & payments | ✅ PayMongo + wallet path (Philippines) |
+| Milestone & partial payments | ✅ Complete |
+| Provider withdrawal from assigned job | ✅ Complete |
 | Real-time chat & notifications | ✅ SSE-based |
 | AI job matching & classification | ✅ OpenAI GPT-4o-mini |
 | Loyalty & rewards program | ✅ Tiered points |
 | Wallet & payout system | ✅ Manual approvals |
-| Business / multi-location accounts | ✅ Enterprise tier |
+| Agency accounts (provider-side orgs) | ✅ Staff, payout splitting, plan tiers |
+| Business accounts (client-side orgs) | ✅ Multi-location, budget alerts, member roles |
+| Provider featured listings / boost | ✅ Wallet + PayMongo paths, expiry cron |
 | Recurring jobs & auto-pay | ✅ Cron-based |
 | Consultations & site inspections | ✅ Converts to jobs |
 | KYC document verification | ✅ Manual admin review |
 | Dispute resolution | ✅ Admin-moderated escrow hold |
 | PESO government workforce module | ✅ Philippines-specific |
+| Knowledge base (5 audiences) | ✅ client, provider, business, agency, peso |
+| Double-entry accounting / ledger | ✅ Sprints A–D complete; Sprint E (centavos standardisation) pending |
+| Additional job charges / fee support | ✅ Complete |
 | Internationalization (i18n) | ❌ All text hardcoded in English |
 | Multi-currency | ❌ PHP only |
 | Multi-payment gateway | ❌ PayMongo only |
@@ -501,13 +508,13 @@ No insurance verification or coverage offering. In many markets (UK, US, Austral
 ### 9. Franchise / Agency Model
 
 **Priority:** 🟡 Medium — Common go-to-market in developing markets
-**Effort:** Medium
+**Effort:** Low (core already exists — needs generalisation)
 **Markets unlocked:** Latin America, Africa, Southeast Asia, Middle East
 
-#### Problem
-In many markets, service businesses are organized through agencies (cleaning companies, security firms, event staffing, delivery fleets) rather than independent freelancers. There is no way to model this.
+#### Current State
+A complete agency model already exists on the platform (`AgencyProfile`, `AgencyInvite`, `AgencyStaffPayout`). Provider-side agencies can manage staff rosters, assign workers to jobs, configure payout splits, and manage compliance documents. See `docs/agency-and-business.md` for the full spec.
 
-#### Solution
+#### What's Missing for Global Scale
 
 **`Agency` model**
 ```typescript
@@ -1079,7 +1086,7 @@ In markets like Nigeria, Kenya, rural Indonesia, and rural Philippines, internet
 | `PricingRule` | Surge pricing (#12) |
 | `ProviderPlan` | Subscription tiers (#13) |
 | `Contract` | SLA contracts (#10) |
-| `Agency` | Franchise model (#9) |
+| `Agency` | Franchise model (#9) — core implemented; needs `tenantId` and multi-currency earnings |
 | `InstantBookRate` | Instant book (#16) |
 | `CommunityPost` | Forum (#17) |
 

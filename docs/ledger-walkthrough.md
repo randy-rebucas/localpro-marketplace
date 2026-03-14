@@ -1,7 +1,7 @@
 # LocalPro Marketplace — Real-Case Ledger Walkthrough
 
-> **Version:** 1.0
-> **Date:** 2026-03-12
+> **Version:** 1.1
+> **Date:** 2026-03-14
 > **Status:** Reference / Training Document
 > **Purpose:** Trace a complete real-world transaction through every financial stage,
 > showing which accounts are debited and credited at each step and verifying the
@@ -93,9 +93,12 @@ CR 2200  Wallet Payable        +₱500    ← Ana's wallet balance increases
 
 ## Event 3 — Ana Confirms Job Complete — Escrow Released to Ben
 
-**Flow:** Escrow Release / Revenue Recognition (Flow 4)
-**Trigger:** Ana clicks "Mark Complete" on the job
+**Flow:** Escrow Release / Revenue Recognition (Flow 3)
+**Trigger:** Ana clicks "Release Payment" on the completed job (after reviewing before/after photos)
 **Route:** `PATCH /api/jobs/JOB001/complete`
+
+> Note: Ben (the provider) previously called `PATCH /api/jobs/JOB001/mark-complete` to set
+> `job.status = "completed"`. Ana's action here releases the escrow — a separate step.
 
 ```
 Journal ID: escrow-release-JOB001
@@ -128,7 +131,7 @@ DR 2000  Escrow Payable        −₱150   CR 4000  Commission Revenue   +₱150
 
 ## Event 4 — Ben Requests Payout of ₱850
 
-**Flow:** Provider Payout Request (Flow 9)
+**Flow:** Provider Payout Request (Flow 4)
 **Trigger:** Ben navigates to Earnings → Request Payout
 **Route:** `POST /api/payouts`
 
@@ -154,7 +157,7 @@ DR 2100  Earnings Payable      −₱850   CR 2400  Payout In-Flight     +₱850
 
 ## Event 5 — Admin Marks Ben's Payout Completed (Bank Transfer Sent)
 
-**Flow:** Admin Approves Payout (Flow 10)
+**Flow:** Admin Approves Payout (Flow 5)
 **Trigger:** Admin confirms bank transfer done in admin panel
 **Route:** `PATCH /api/admin/payouts/PAY001`
 
@@ -182,7 +185,7 @@ DR 2400  Payout In-Flight      −₱850   CR 1000  Gateway Receivable   −₱8
 
 ## Event 6 — Ana Requests Bank Withdrawal of ₱300 from Her Wallet
 
-**Flow:** Client Wallet Withdrawal (Flow 11)
+**Flow:** Client Wallet Withdrawal (Flow 8)
 **Trigger:** Ana submits withdrawal form
 **Route:** `POST /api/wallet/withdraw`
 
@@ -209,7 +212,7 @@ DR 2200  Wallet Payable        −₱300   CR 2300  Withdrawal Payable   +₱300
 
 ## Event 7A — Admin Approves Ana's Withdrawal (Happy Path)
 
-**Flow:** Withdrawal Completed (Flow 11)
+**Flow:** Withdrawal Completed (Flow 9)
 **Trigger:** Admin confirms bank transfer done
 **Route:** `PATCH /api/admin/wallet/withdrawals/WDR001` → `status: "completed"`
 
@@ -237,7 +240,7 @@ DR 2300  Withdrawal Payable    −₱300   CR 1000  Gateway Receivable   −₱3
 
 ## Event 7B — Admin Rejects Ana's Withdrawal (Alternate Path)
 
-**Flow:** Withdrawal Rejected / Reversed (Flow 12)
+**Flow:** Withdrawal Rejected / Reversed (Flow 10)
 **Trigger:** Admin rejects the withdrawal request
 **Route:** `PATCH /api/admin/wallet/withdrawals/WDR001` → `status: "rejected"`
 

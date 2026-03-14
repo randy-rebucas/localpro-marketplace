@@ -1,8 +1,8 @@
 # LocalPro Marketplace — Accounting System Design
 
-> **Version:** 1.0
-> **Date:** 2026-03-09
-> **Status:** Implemented (Sprints A–D complete; Sprint E pending)
+> **Version:** 1.1
+> **Date:** 2026-03-14
+> **Status:** Implemented (Sprints A–D complete; Sprint E — amount standardisation — pending)
 > **Author:** Engineering team
 
 ---
@@ -67,7 +67,8 @@ CLIENT                 PLATFORM               PROVIDER
 ```
 Trigger: Client pays via PayMongo checkout
 
-Step 1 — POST /api/payments
+Step 1 — PATCH /api/jobs/[id]/fund
+  → POST to PayMongo API → checkout URL returned to client
   → Payment { status: "awaiting_payment", paymentIntentId, amount }
 
 Step 2 — User completes PayMongo checkout page
@@ -98,7 +99,7 @@ Step 4 (optional) — Save card token to User if paid by card
 
 ```
 Trigger: Client clicks "Fund from Wallet"
-Route: POST /api/jobs/:id/fund-wallet
+Route: PATCH /api/jobs/[id]/fund-wallet
 
 Step 1 — Validate available balance
   Wallet.balance - SUM(pending WalletWithdrawals) >= jobBudget
@@ -143,7 +144,7 @@ Service: paymentService.autoChargeEscrow()
 
 ```
 Trigger: Client confirms job complete
-Route: PATCH /api/jobs/:id/complete → escrowService.releaseEscrow()
+Route: PATCH /api/jobs/[id]/complete → escrowService.releaseEscrow()
 
 → Job         { escrowStatus: "released", status: "completed" }
 → Transaction { status: "completed" }  ← provider earnings confirmed
@@ -158,7 +159,7 @@ Route: PATCH /api/jobs/:id/complete → escrowService.releaseEscrow()
 
 ```
 Trigger: Client releases each milestone
-Route: POST /api/jobs/:id/milestones/:mId/release
+Route: PATCH /api/jobs/[id]/milestones/[mId]/release
 
 Per milestone (e.g., ₱1,000 of ₱3,000 job):
   → Job.milestones[i] { status: "released", releasedAt: now }
@@ -181,7 +182,7 @@ When ALL milestones released:
 
 ```
 Trigger: Admin orders partial release
-Route: POST /api/jobs/:id/partial-release
+Route: POST /api/jobs/[id]/partial-release
 
 → Job {
     escrowStatus: "released" (partial),
@@ -198,7 +199,7 @@ Route: POST /api/jobs/:id/partial-release
 
 ```
 Trigger: Admin resolves dispute in client's favour
-Route: PATCH /api/admin/disputes/:id (action: refund)
+Route: PATCH /api/admin/disputes/[id] (action: refund)
 
 → Job         { status: "refunded", escrowStatus: "refunded" }
 → Transaction { status: "refunded" }
@@ -229,7 +230,7 @@ Trigger: Admin resolves dispute in provider's favour
 
 ```
 Trigger: Provider navigates to earnings → requests payout
-Route: POST /api/payouts
+Route: POST /api/payouts  (availableBalance guard via repository)
 
 Calculation:
   available = SUM(Transaction.netAmount WHERE payeeId=me AND status="completed")
@@ -252,7 +253,7 @@ Note: No money moved in DB — just a request record
 
 ```
 Trigger: Admin reviews payout queue
-Route: PATCH /api/admin/payouts/:id
+Route: PATCH /api/admin/payouts/[id]
 
 → Payout { status: "processing" or "completed" or "rejected" }
 
@@ -267,6 +268,7 @@ Note: Actual bank transfer is MANUAL / external to the system.
 ```
 Trigger: Client requests bank withdrawal of wallet balance
 Route: POST /api/wallet/withdraw
+         PATCH /api/admin/wallet/withdrawals/[id] (admin approves/rejects)
 
 Step 1 — Deduct immediately
   → Wallet { balance: balance - amount }  ← atomic $inc
@@ -902,6 +904,8 @@ ledgerJournalId: { type: String, default: null },
 | Webhook idempotency | `src/app/api/webhooks/paymongo/route.ts` | Guard duplicate event delivery | ✅ Done |
 | Admin accounting page | `src/app/(dashboard)/admin/accounting/page.tsx` | Trial balance + charts | ✅ Done |
 | Backfill migration | `scripts/backfill-ledger.mjs` | Reconstruct history from existing data | ⏳ Pending |
+
+**Note:** Sprint D reporting APIs are live in production. The backfill migration script (`scripts/backfill-ledger.mjs`) must be run once to populate historic `LedgerEntry` records from pre-existing `Transaction` and `WalletTransaction` data before the reconciliation cron reports accurate history.
 
 ---
 
