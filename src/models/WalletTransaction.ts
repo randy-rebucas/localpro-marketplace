@@ -1,11 +1,16 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
 
 export type WalletTxType =
-  | "refund_credit"      // escrow refunded back to wallet
-  | "escrow_payment"     // wallet used to fund escrow
-  | "withdrawal"         // withdrawal request deducted
-  | "withdrawal_reversed"// rejection reverses a pending withdrawal
-  | "topup"              // client tops up wallet via PayMongo
+  | "refund_credit"          // escrow refunded back to wallet
+  | "escrow_payment"         // wallet used to fund escrow
+  | "withdrawal"             // withdrawal request deducted
+  | "withdrawal_reversed"    // rejection reverses a pending withdrawal
+  | "topup"                  // client tops up wallet via PayMongo
+  | "featured_listing_payment" // provider paid for a boost from wallet
+  | "lead_fee_payment"       // provider wallet debited for pay-per-lead
+  | "lead_subscription_payment" // provider wallet debited for monthly lead subscription
+  | "bid_credit_purchase"    // provider wallet debited to buy bid credit tokens
+  | "training_course_payment" // provider wallet debited for a training course
   | "admin_credit"
   | "admin_debit";
 
@@ -33,7 +38,7 @@ const WalletTransactionSchema = new Schema<WalletTransactionDocument>(
     },
     type: {
       type: String,
-      enum: ["refund_credit", "escrow_payment", "withdrawal", "withdrawal_reversed", "topup", "admin_credit", "admin_debit"],
+      enum: ["refund_credit", "escrow_payment", "withdrawal", "withdrawal_reversed", "topup", "featured_listing_payment", "lead_fee_payment", "lead_subscription_payment", "bid_credit_purchase", "training_course_payment", "admin_credit", "admin_debit"],
       required: true,
     },
     amount:       { type: Number, required: true },

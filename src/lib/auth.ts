@@ -21,6 +21,7 @@ export const STAFF_CAPABILITIES: StaffCapability[] = [
   "manage_payouts",
   "manage_categories",
   "manage_support",
+  "manage_courses",
 ];
 
 export interface TokenPayload {
@@ -56,18 +57,30 @@ export function setAuthCookies(
 ): void {
   const isProd = process.env.NODE_ENV === "production";
 
+  // SECURITY NOTE — JWT revocation gap:
+  // Access tokens are stateless and cannot be individually revoked before they
+  // expire (15 min). If a token must be invalidated immediately (e.g. account
+  // ban, password change), the only current mitigation is the short lifetime.
+  // TODO: implement a Redis-backed token deny-list checked in `requireUser`
+  // to enable instant revocation when needed.
+
+  // L2: secure is always true in production. Set to false only in local dev
+  //     over plain HTTP (e.g., http://localhost). In staging and prod, HTTPS
+  //     is enforced so secure:true is always safe.
+  const isSecure = isProd || process.env.ALLOW_INSECURE_COOKIES !== "true";
+
   response.cookies.set("access_token", accessToken, {
     httpOnly: true,
-    secure: isProd,
-    sameSite: "lax",
+    secure: isSecure,
+    sameSite: "strict", // L1: "strict" prevents CSRF via cross-site requests
     maxAge: 60 * 15, // 15 minutes
     path: "/",
   });
 
   response.cookies.set("refresh_token", refreshToken, {
     httpOnly: true,
-    secure: isProd,
-    sameSite: "lax",
+    secure: isSecure,
+    sameSite: "strict", // L1
     maxAge: 60 * 60 * 24 * 7, // 7 days
     path: "/",
   });

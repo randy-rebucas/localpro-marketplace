@@ -13,7 +13,11 @@ const UpdateMeSchema = z.object({
   phone: z.string().regex(/^\+[1-9]\d{6,14}$/, "Phone must be in E.164 format (e.g. +639123456789)").nullable().optional(),
   currentPassword: z.string().optional(),
   newPassword: z.string().min(8).max(128).optional(),
-  avatar: z.string().url().optional(),
+  avatar: z
+    .string()
+    .url()
+    .refine((u) => /^https:\/\/res\.cloudinary\.com\//.test(u), "Avatar must be a Cloudinary URL")
+    .optional(),
 });
 
 export const PUT = withHandler(async (req: NextRequest) => {

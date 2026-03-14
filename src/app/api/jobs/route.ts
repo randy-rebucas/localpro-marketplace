@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { isValidObjectId } from "mongoose";
 import { jobService } from "@/services";
 import { requireUser } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
@@ -28,7 +29,8 @@ const CreateJobSchema = z.object({
     type: z.literal("Point"),
     coordinates: z.tuple([z.number(), z.number()]),
   }).optional(),
-  invitedProviderId: z.string().optional(),
+  invitedProviderId: z.string().refine((v) => isValidObjectId(v), { message: "invitedProviderId must be a valid ObjectId" }).optional(),
+  urgency: z.enum(["standard", "same_day", "rush"]).optional().default("standard"),
 });
 
 export const GET = withHandler(async (req: NextRequest) => {
@@ -44,7 +46,7 @@ export const GET = withHandler(async (req: NextRequest) => {
     status,
     category: searchParams.get("category") ?? undefined,
     page:  Math.max(1, parseInt(searchParams.get("page")  ?? "1",  10) || 1),
-    limit: Math.max(1, parseInt(searchParams.get("limit") ?? "20", 10) || 20),
+    limit: Math.max(1, Math.min(100, parseInt(searchParams.get("limit") ?? "20", 10) || 20)),
     aiRank: searchParams.get("aiRank") === "true",
   });
 

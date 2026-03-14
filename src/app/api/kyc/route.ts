@@ -6,11 +6,17 @@ import { ValidationError } from "@/lib/errors";
 import { userRepository, notificationRepository } from "@/repositories";
 import { pushNotification } from "@/lib/events";
 
+/** Cloudinary-only URL pattern for uploaded KYC documents */
+const CLOUDINARY_URL_RE = /^https:\/\/res\.cloudinary\.com\//;
+
 const SubmitKycSchema = z.object({
   documents: z.array(
     z.object({
       type: z.enum(["government_id", "tesda_certificate", "business_permit", "selfie_with_id", "other"]),
-      url: z.string().url("Invalid document URL"),
+      url: z
+        .string()
+        .url("Invalid document URL")
+        .refine((u) => CLOUDINARY_URL_RE.test(u), "Document URL must be a Cloudinary URL"),
     })
   ).min(1, "At least one document is required"),
 });

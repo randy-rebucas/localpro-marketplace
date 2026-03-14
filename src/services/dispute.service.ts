@@ -7,7 +7,9 @@ import {
 } from "@/repositories";
 import { ledgerService } from "@/services/ledger.service";
 import { pushNotification, pushStatusUpdateMany } from "@/lib/events";
-import { NotFoundError, ForbiddenError, UnprocessableError } from "@/lib/errors";
+import { NotFoundError, ForbiddenError, UnprocessableError, assertObjectId } from "@/lib/errors";
+import { getPaymentSettings } from "@/lib/appSettings";
+import { calculateDisputeHandlingFee } from "@/lib/commission";
 import type { TokenPayload } from "@/lib/auth";
 import type { IJob } from "@/types";
 
@@ -21,6 +23,10 @@ export interface ResolveDisputeInput {
   status: "investigating" | "resolved";
   resolutionNotes?: string;
   escrowAction?: "release" | "refund";
+  /** When true (and dispute was escalated), charge the flat case handling fee. */
+  chargeHandlingFee?: boolean;
+  /** Which party to charge: client, provider, or both. */
+  handlingFeeChargedTo?: "client" | "provider" | "both";
 }
 
 export class DisputeService {
@@ -30,6 +36,7 @@ export class DisputeService {
   }
 
   async openDispute(user: TokenPayload, input: OpenDisputeInput) {
+    assertObjectId(input.jobId, "jobId");
     const jobDoc = await jobRepository.getDocById(input.jobId);
     if (!jobDoc) throw new NotFoundError("Job");
 
@@ -43,8 +50,23 @@ export class DisputeService {
     const isProvider = job.providerId?.toString() === user.userId;
     if (!isClient && !isProvider) throw new ForbiddenError();
 
+    // Disputes cannot be raised once escrow has been released (C7 — phantom refund prevention)
+    if (job.escrowStatus === "released") {
+      throw new UnprocessableError("A dispute cannot be raised after escrow has already been released");
+    }
+
     if (!["assigned", "in_progress", "completed"].includes(job.status)) {
       throw new UnprocessableError("Disputes can only be raised on active jobs");
+    }
+
+    // Check for existing open/investigating dispute from this user on this job (C6)
+    const existingDispute = await disputeRepository.findOne({
+      jobId: input.jobId,
+      raisedBy: user.userId,
+      status: { $in: ["open", "investigating"] },
+    } as never);
+    if (existingDispute) {
+      throw new UnprocessableError("You already have an open dispute for this job");
     }
 
     const dispute = await disputeRepository.create({
@@ -103,8 +125,17 @@ export class DisputeService {
       resolutionNotes: string;
       jobId: { toString(): string };
       raisedBy: { toString(): string };
+      wasEscalated: boolean;
+      losingParty: string | null;
+      handlingFeeAmount: number;
+      handlingFeePaid: boolean;
       save(): Promise<void>;
     };
+
+    // Track escalation: once a dispute reaches "investigating", the handling fee becomes eligible
+    if (input.status === "investigating") {
+      d.wasEscalated = true;
+    }
 
     d.status = input.status;
     if (input.resolutionNotes) d.resolutionNotes = input.resolutionNotes;
@@ -192,15 +223,88 @@ export class DisputeService {
         job.providerId?.toString(),
       ].filter(Boolean) as string[];
 
+      // ── Dispute Handling Fee ──────────────────────────────────────────────
+      let feeCharged = false;
+      let feeAmount  = 0;
+
+      if (
+        input.status === "resolved" &&
+        d.wasEscalated &&
+        input.chargeHandlingFee &&
+        input.handlingFeeChargedTo
+      ) {
+        const paySettings = await getPaymentSettings();
+        const { fee, isCharged } = calculateDisputeHandlingFee(
+          true,
+          paySettings["payments.disputeHandlingFee"]
+        );
+
+        if (isCharged && fee > 0) {
+          const { walletService } = await import("@/services/wallet.service");
+          const partiesToCharge: Array<{ party: "client" | "provider"; userId: string }> = [];
+
+          if (input.handlingFeeChargedTo === "client" || input.handlingFeeChargedTo === "both") {
+            partiesToCharge.push({ party: "client", userId: job.clientId.toString() });
+          }
+          if (
+            (input.handlingFeeChargedTo === "provider" || input.handlingFeeChargedTo === "both") &&
+            job.providerId
+          ) {
+            partiesToCharge.push({ party: "provider", userId: job.providerId.toString() });
+          }
+
+          for (const { party, userId } of partiesToCharge) {
+            try {
+              const result = await walletService.debit(
+                userId,
+                fee,
+                `Dispute case handling fee — Job #${job._id!.toString()}`,
+                { silent: true }
+              );
+              if (result.success) {
+                feeCharged = true;
+                feeAmount = fee;
+                await ledgerService.postDisputeHandlingFee(
+                  {
+                    journalId:   `dispute-handling-fee-${disputeId}-${party}`,
+                    entityType:  "dispute",
+                    entityId:    disputeId,
+                    clientId:    job.clientId.toString(),
+                    providerId:  job.providerId?.toString(),
+                    initiatedBy: adminUserId,
+                  },
+                  fee,
+                  party
+                );
+              }
+            } catch { /* non-critical — skip silently */ }
+          }
+
+          // Persist fee metadata on the dispute record
+          if (feeCharged) {
+            d.losingParty      = input.handlingFeeChargedTo;
+            d.handlingFeeAmount = feeAmount;
+            d.handlingFeePaid   = true;
+            await disputeDoc.save();
+          }
+        }
+      }
+
       for (const userId of recipients) {
+        const feeMsg = feeCharged && feeAmount > 0 && (
+          (userId === job.clientId.toString() && (input.handlingFeeChargedTo === "client" || input.handlingFeeChargedTo === "both")) ||
+          (userId === job.providerId?.toString() && (input.handlingFeeChargedTo === "provider" || input.handlingFeeChargedTo === "both"))
+        ) ? ` A case handling fee of ₱${feeAmount.toLocaleString()} was deducted from your wallet.` : "";
+
         const notification = await notificationRepository.create({
           userId,
           type: "dispute_resolved",
           title: "Dispute resolved",
-          message:
+          message: (
             input.escrowAction === "release"
               ? "The dispute was resolved. Payment has been released to the provider."
-              : "The dispute was resolved. A refund has been issued.",
+              : "The dispute was resolved. A refund has been issued."
+          ) + feeMsg,
           data: { jobId: d.jobId.toString(), disputeId },
         });
         pushNotification(userId, notification);

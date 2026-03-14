@@ -49,3 +49,15 @@ export class ValidationError extends AppError {
     super(message, 400);
   }
 }
+
+/**
+ * Validates that `id` is a syntactically valid MongoDB ObjectId string.
+ * Throws a 400 ValidationError if not, preventing downstream Mongoose
+ * `CastError` exceptions and potential injection risks.
+ */
+export function assertObjectId(id: string | undefined | null, field = "id"): asserts id is string {
+  const { isValidObjectId } = require("mongoose");
+  if (!id || !isValidObjectId(id)) {
+    throw new ValidationError(`Invalid ${field}: must be a valid ObjectId`);
+  }
+}

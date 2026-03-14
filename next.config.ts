@@ -20,6 +20,9 @@ const securityHeaders = [
     key: "Content-Security-Policy",
     value: [
       "default-src 'self'",
+      // NOTE: 'unsafe-inline' and 'unsafe-eval' are required for Next.js HMR in dev and some third-party libraries.
+      // TODO: Replace with a nonce-based CSP (using Next.js middleware) to remove both unsafe directives.
+      // See: https://nextjs.org/docs/app/building-your-application/configuring/content-security-policy
       "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://maps.googleapis.com https://js.paymongo.com https://www.googletagmanager.com https://vercel.live https://*.vercel.live https://va.vercel-scripts.com",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://vercel.live https://*.vercel.live",
       "font-src 'self' https://fonts.gstatic.com https://vercel.live https://*.vercel.live",

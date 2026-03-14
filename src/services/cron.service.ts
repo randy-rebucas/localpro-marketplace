@@ -61,6 +61,71 @@ export class CronService {
   }
 
   /**
+   * Reverts assigned jobs whose escrow was never funded back to "open" status.
+   *
+   * When a client opens a PayMongo checkout and it expires without payment, the Job
+   * stays "assigned" + escrowStatus "not_funded" indefinitely. This cron detects
+   * those stale assignments and reopens the job so it can receive new quotes.
+   *
+   * Runs together with expireStaleJobs. Default threshold: 48 hours.
+   */
+  async revertStaleAssignments(hours?: number): Promise<{ reverted: number }> {
+    const threshold = hours ?? (await getAppSetting<number>("limits.staleAssignmentHours", 48));
+    const cutoff = hoursAgo(threshold);
+    const staleJobs = await jobRepository.findAssignedUnfunded(cutoff);
+    if (staleJobs.length === 0) return { reverted: 0 };
+
+    for (const job of staleJobs) {
+      const j = job as unknown as JobDocument & {
+        _id: { toString(): string };
+        clientId: { toString(): string };
+        providerId?: { toString(): string } | null;
+        title: string;
+      };
+
+      // Reset to open and clear assigned provider
+      await jobRepository.updateMany(
+        { _id: j._id } as never,
+        { status: "open", providerId: null }
+      );
+
+      // Reject any accepted quotes so providers can re-bid
+      await quoteRepository.rejectAllPending(j._id.toString());
+
+      await activityRepository.log({
+        userId: "system",
+        eventType: "job_reopened" as never,
+        jobId: j._id.toString(),
+        metadata: { reason: "stale_assignment_unfunded", thresholdHours: threshold },
+      });
+
+      // Notify client
+      await notificationService.push({
+        userId: j.clientId.toString(),
+        type: "job_expired" as never,
+        title: "Job reopened — payment not completed",
+        message: `Your job "${j.title}" was reopened because escrow was not funded within ${threshold} hours. Providers can quote again.`,
+        data: { jobId: j._id.toString() },
+      });
+
+      // Notify the provider that was previously assigned
+      if (j.providerId) {
+        await notificationService.push({
+          userId: j.providerId.toString(),
+          type: "job_expired" as never,
+          title: "Job assignment cancelled",
+          message: `The client did not fund escrow for "${j.title}" within ${threshold} hours, so the job has been reopened.`,
+          data: { jobId: j._id.toString() },
+        });
+      }
+
+      pushStatusUpdate(j.clientId.toString(), { entity: "job", id: j._id.toString(), status: "open" });
+    }
+
+    return { reverted: staleJobs.length };
+  }
+
+  /**
    * Releases escrow for completed jobs older than `days` where payment hasn't been manually released.
    * Runs daily. Default threshold: 7 days (configurable via limits.escrowAutoReleaseDays).
    */

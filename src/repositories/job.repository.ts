@@ -181,6 +181,8 @@ export class JobRepository extends BaseRepository<JobDocument> {
     afterPhoto?: string[];
     providerId?: { _id: { toString(): string }; name: string; email: string; isVerified: boolean } | null;
     milestones?: import("@/types").IMilestone[];
+    urgency?: "standard" | "same_day" | "rush";
+    urgencyFee?: number;
   } | null> {
     await this.connect();
     return Job.findOne({

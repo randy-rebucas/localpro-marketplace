@@ -151,10 +151,17 @@ export class RecurringScheduleService {
       throw new UnprocessableError("Only paused schedules can be resumed");
     }
 
-    const nextRunAt = nearestFutureOccurrence(
-      schedule.frequency as RecurringFrequency
-    );
-    return recurringScheduleRepository.resume(id, nextRunAt);
+    // Advance from the schedule's last known nextRunAt so that the cadence
+    // (day-of-week for weekly, day-of-month for monthly) is preserved.
+    const baseDate = schedule.nextRunAt ? new Date(schedule.nextRunAt) : new Date();
+    const nextRunAt = nextOccurrence(baseDate, schedule.frequency as RecurringFrequency);
+    // If the computed next run is in the past, keep advancing until it's future.
+    let advance = nextRunAt;
+    const now = new Date();
+    while (advance <= now) {
+      advance = nextOccurrence(advance, schedule.frequency as RecurringFrequency);
+    }
+    return recurringScheduleRepository.resume(id, advance);
   }
 
   async cancel(user: TokenPayload, id: string) {
@@ -187,10 +194,28 @@ export class RecurringScheduleService {
     for (const schedule of due) {
       try {
         const clientId = schedule.clientId.toString();
+        const scheduleRunAt = new Date(schedule.nextRunAt);
         const nextRunAt = nextOccurrence(
-          new Date(schedule.nextRunAt),
+          scheduleRunAt,
           schedule.frequency as RecurringFrequency
         );
+
+        // ── Idempotency guard: skip if a job was already spawned for this
+        //    schedule+date window (prevents double-spawn on cron restart / overlap) ──
+        await connectDB();
+        const Job = (await import("@/models/Job")).default;
+        // Use a 6-hour window around the scheduled run time
+        const windowStart = new Date(scheduleRunAt.getTime() - 6 * 60 * 60 * 1000);
+        const windowEnd   = new Date(scheduleRunAt.getTime() + 6 * 60 * 60 * 1000);
+        const existingJob = await Job.exists({
+          recurringScheduleId: schedule._id,
+          scheduleDate: { $gte: windowStart, $lte: windowEnd },
+        });
+        if (existingJob) {
+          // Already spawned (e.g. by a concurrent cron replica) — advance schedule and continue
+          await recurringScheduleRepository.advanceNextRun(schedule._id!.toString(), nextRunAt);
+          continue;
+        }
 
         // Create the job directly (skip the daily-limit check — cron bypasses it)
         const job = await jobRepository.create({
@@ -201,7 +226,7 @@ export class RecurringScheduleService {
           description: schedule.description,
           budget: schedule.budget,
           location: schedule.location,
-          scheduleDate: new Date(schedule.nextRunAt),
+          scheduleDate: scheduleRunAt,
           specialInstructions: [
             schedule.specialInstructions,
             `[Auto-scheduled — ${schedule.frequency} recurring]`,
@@ -244,42 +269,30 @@ export class RecurringScheduleService {
           data: { jobId: job._id!.toString() },
         });
 
-        // ── Auto-pay: try off-session card charge ─────────────────────────────
+        // ── Auto-pay: only attempt once admin validates the job (H11).
+        //    When the job is approved, its status moves to "open" (or "assigned"
+        //    if a provider is already pinned). The admin approval route at
+        //    /api/admin/jobs/[id]/approve calls paymentService.autoChargeEscrow
+        //    directly with the schedule's savedPaymentMethodId.
+        //    At spawn time, we simply notify the client and leave funding to the
+        //    post-validation webhook/cron.
         if (schedule.autoPayEnabled) {
-          await connectDB();
-          const userDoc = await User.findById(clientId)
-            .select("savedPaymentMethodId")
-            .lean() as { savedPaymentMethodId?: string | null } | null;
-          const savedPmId = userDoc?.savedPaymentMethodId;
-
-          if (savedPmId) {
-            const { paymentService } = await import("@/services/payment.service");
-            const chargeResult = await paymentService.autoChargeEscrow(
-              job._id!.toString(),
-              clientId,
-              savedPmId
-            );
-
-            if (!chargeResult.success) {
-              // Auto-charge failed (3DS, expired card, etc.) — prompt manual payment
-              await notificationService.push({
-                userId: clientId,
-                type: "payment_reminder",
-                title: "Auto-pay failed — fund escrow manually",
-                message: `Auto-pay for "₱${schedule.budget.toLocaleString()} — ${schedule.title}" could not be processed (${chargeResult.reason ?? "unknown error"}). Please fund escrow manually.`,
-                data: { jobId: job._id!.toString() },
-              });
-            }
-          } else {
-            // No saved card — send manual fund prompt
-            await notificationService.push({
-              userId: clientId,
-              type: "payment_reminder",
-              title: "Fund escrow for your recurring job",
-              message: `Please fund the ₱${schedule.budget.toLocaleString()} escrow for "${schedule.title}" to activate the job.`,
-              data: { jobId: job._id!.toString() },
-            });
-          }
+          await notificationService.push({
+            userId: clientId,
+            type: "payment_reminder",
+            title: "Recurring job pending admin review",
+            message: `Your recurring "${schedule.title}" job has been submitted for review. Auto-pay will be triggered once it's approved.`,
+            data: { jobId: job._id!.toString() },
+          });
+        } else {
+          // Manual fund notification
+          await notificationService.push({
+            userId: clientId,
+            type: "payment_reminder",
+            title: "Fund escrow for your recurring job",
+            message: `Please fund the ₱${schedule.budget.toLocaleString()} escrow for "${schedule.title}" to activate the job.`,
+            data: { jobId: job._id!.toString() },
+          });
         }
 
         await activityRepository.log({

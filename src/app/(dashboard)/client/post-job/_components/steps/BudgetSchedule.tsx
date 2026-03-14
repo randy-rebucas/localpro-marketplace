@@ -1,7 +1,8 @@
 import dynamic from "next/dynamic";
-import { Sparkles, LocateFixed, Info } from "lucide-react";
+import { Sparkles, LocateFixed, Info, Zap, Clock } from "lucide-react";
 import type { FormData, BudgetHint } from "../types";
 import MdEditor from "@/components/ui/MdEditor";
+import { DEFAULT_URGENCY_FEE_SAME_DAY, DEFAULT_URGENCY_FEE_RUSH } from "@/lib/commission";
 
 const LocationAutocomplete = dynamic(
   () => import("@/components/shared/LocationAutocomplete"),
@@ -149,6 +150,38 @@ export function BudgetSchedule({
           placeholder="e.g. Call before arriving · dog on premises · use the side entrance · bring own tools…"
           rows={4}
         />
+      </div>
+
+      {/* Urgency selector */}
+      <div>
+        <label className="label block mb-2 font-medium text-slate-700">
+          Booking Urgency
+          <span className="ml-1.5 text-xs font-normal text-slate-400">(optional fee applies)</span>
+        </label>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          {([
+            { value: "standard", label: "Standard",    icon: null,                fee: 0,                            desc: "Flexible scheduling" },
+            { value: "same_day", label: "Same Day",    icon: <Zap  className="h-4 w-4 text-amber-500" />, fee: DEFAULT_URGENCY_FEE_SAME_DAY, desc: `+₱${DEFAULT_URGENCY_FEE_SAME_DAY} non-refundable` },
+            { value: "rush",     label: "2-Hour Rush", icon: <Clock className="h-4 w-4 text-red-500" />,  fee: DEFAULT_URGENCY_FEE_RUSH,     desc: `+₱${DEFAULT_URGENCY_FEE_RUSH} non-refundable` },
+          ] as const).map(({ value, label, icon, desc }) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => update("urgency", value)}
+              className={`flex items-center gap-2 rounded-xl border px-4 py-3 text-left transition-colors ${
+                form.urgency === value
+                  ? "border-primary bg-primary/5 ring-1 ring-primary"
+                  : "border-slate-200 bg-white hover:border-slate-300"
+              }`}
+            >
+              {icon}
+              <div>
+                <p className="text-sm font-semibold text-slate-800">{label}</p>
+                <p className="text-xs text-slate-500">{desc}</p>
+              </div>
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   );

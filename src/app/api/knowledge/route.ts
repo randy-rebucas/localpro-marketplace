@@ -8,11 +8,14 @@ import { knowledgeArticleRepository } from "@/repositories/knowledgeArticle.repo
 export const GET = withHandler(async () => {
   const user = await requireUser();
 
-  if (user.role !== "client" && user.role !== "provider") {
+  const ALLOWED_ROLES = ["client", "provider", "business", "agency", "peso"];
+  if (!ALLOWED_ROLES.includes(user.role)) {
     throw new ForbiddenError();
   }
 
-  const docs = await knowledgeArticleRepository.findPublishedForAudience(user.role);
+  // Map role to the folder name (all map 1-to-1 now)
+  const folder = user.role as "client" | "provider" | "business" | "agency" | "peso";
+  const docs = await knowledgeArticleRepository.findPublishedForAudience(folder);
 
   const articles = docs.map((a) => ({
     _id:         String(a._id),

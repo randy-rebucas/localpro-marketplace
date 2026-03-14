@@ -13,8 +13,27 @@ const LoginSchema = z.object({
 
 // 10 attempts per 15 minutes per email address
 const LOGIN_LIMIT = { windowMs: 15 * 60_000, max: 10 };
+// 30 attempts per 15 minutes per IP (looser — allows multiple accounts from same IP)
+const LOGIN_IP_LIMIT = { windowMs: 15 * 60_000, max: 30 };
 
 export const POST = withHandler(async (req: NextRequest) => {
+  const ip = req.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? req.headers.get("x-real-ip") ?? "unknown";
+
+  // Per-IP gate (first — cheapest check before DB)
+  const ipRl = checkRateLimit(`login-ip:${ip}`, LOGIN_IP_LIMIT);
+  if (!ipRl.ok) {
+    return new Response(
+      JSON.stringify({ error: "Too many login attempts from this IP. Please try again later." }),
+      {
+        status: 429,
+        headers: {
+          "Content-Type": "application/json",
+          "Retry-After": String(Math.ceil((ipRl.resetAt - Date.now()) / 1000)),
+        },
+      }
+    );
+  }
+
   const body = await req.json();
   const parsed = LoginSchema.safeParse(body);
   if (!parsed.success) throw new ValidationError(parsed.error.errors[0].message);

@@ -15,7 +15,7 @@ import {
 import { ValidationError, NotFoundError, ConflictError } from "@/lib/errors";
 import type { KnowledgeFolder } from "@/lib/knowledge";
 
-const FOLDERS = ["client", "provider"] as const;
+const FOLDERS = ["client", "provider", "business", "agency", "peso"] as const;
 
 const UpdateSchema = z.object({
   title:   z.string().min(2).max(200).optional(),
@@ -33,7 +33,8 @@ function parseId(id: string): { folder: KnowledgeFolder; slug: string } {
   if (sep === -1) throw new ValidationError("Invalid article id");
   const folder = id.slice(0, sep) as KnowledgeFolder;
   const slug = id.slice(sep + 2);
-  if (folder !== "client" && folder !== "provider") throw new ValidationError("Invalid folder in id");
+  const valid = ["client", "provider", "business", "agency", "peso"];
+  if (!valid.includes(folder)) throw new ValidationError("Invalid folder in id");
   return { folder, slug };
 }
 

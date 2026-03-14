@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireUser, requireCapability } from "@/lib/auth";
+import { requireUser, requireRole } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { userRepository, providerProfileRepository } from "@/repositories";
 
@@ -19,7 +19,8 @@ const MAX_EXPORT  = 10_000;
 
 export const GET = withHandler(async (req: NextRequest) => {
   const admin = await requireUser();
-  requireCapability(admin, "manage_users");
+  // L4: bulk PII export is restricted to full admins only (not staff with manage_users)
+  requireRole(admin, "admin");
 
   const { searchParams } = new URL(req.url);
   const roleParam = searchParams.get("role") ?? "all";
@@ -31,7 +32,9 @@ export const GET = withHandler(async (req: NextRequest) => {
       : {};
 
   if (searchQuery) {
-    const regex = { $regex: searchQuery, $options: "i" };
+    // Escape regex metacharacters before using in $regex to prevent ReDoS (H7)
+    const escapedQuery = searchQuery.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const regex = { $regex: escapedQuery, $options: "i" };
     filter.$or = [{ name: regex }, { email: regex }, { phone: regex }];
   }
 

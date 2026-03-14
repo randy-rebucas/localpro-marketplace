@@ -34,23 +34,28 @@ export class LoyaltyRepository {
     return LoyaltyAccount.findOne({ referralCode: code.toUpperCase().trim() });
   }
 
-  /** Add earned points (both redeemable and lifetime), recalculate tier. */
+  /** Add earned points (both redeemable and lifetime), recalculate tier atomically. */
   async addPoints(userId: string, pts: number, lifetimePts: number): Promise<LoyaltyAccountDocument> {
     await this.connect();
+
+    // Step 1: atomically increment points
     const account = await LoyaltyAccount.findOneAndUpdate(
       { userId },
-      {
-        $inc: { points: pts, lifetimePoints: lifetimePts },
-      },
+      { $inc: { points: pts, lifetimePoints: lifetimePts } },
       { new: true, upsert: false }
     );
     if (!account) throw new Error("LoyaltyAccount not found");
 
-    // Recalculate tier after increment
+    // Step 2: if tier needs to change, update it atomically using a
+    // conditional write so concurrent calls can't both promote/demote.
     const newTier = tierFromPoints(account.lifetimePoints);
     if (account.tier !== newTier) {
-      account.tier = newTier;
-      await account.save();
+      const promoted = await LoyaltyAccount.findOneAndUpdate(
+        { userId, tier: account.tier },         // only update if tier hasn't changed yet
+        { $set: { tier: newTier } },
+        { new: true }
+      );
+      return promoted ?? account;
     }
     return account;
   }
@@ -87,6 +92,36 @@ export class LoyaltyRepository {
     await LoyaltyAccount.findOneAndUpdate({ userId }, { referralBonusAwarded: true });
   }
 
+  /**
+   * Atomically claims the first-job bonus for a user.
+   * Uses a findOneAndUpdate with `lifetimePoints: 0` as a CAS condition so only
+   * one concurrent call wins. Returns true if this call claimed it, false if
+   * another caller already awarded points (lifetimePoints > 0).
+   */
+  async claimFirstJobBonus(userId: string): Promise<boolean> {
+    await this.connect();
+    const result = await LoyaltyAccount.findOneAndUpdate(
+      { userId, lifetimePoints: 0 },
+      { $set: { _firstJobBonusClaimed: true } }, // sentinel field (just needs to match)
+      { new: false }
+    );
+    return result !== null;
+  }
+
+  /**
+   * Atomically marks the referral bonus as awarded.
+   * Returns true if this call claimed it (was false before), false if already awarded.
+   */
+  async atomicClaimReferralBonus(userId: string): Promise<boolean> {
+    await this.connect();
+    const result = await LoyaltyAccount.findOneAndUpdate(
+      { userId, referralBonusAwarded: false },
+      { $set: { referralBonusAwarded: true } },
+      { new: false }
+    );
+    return result !== null;
+  }
+
   async setReferredBy(userId: string, referrerId: string): Promise<void> {
     await this.connect();
     await LoyaltyAccount.findOneAndUpdate({ userId }, { referredBy: referrerId });
@@ -109,6 +144,13 @@ export class LoyaltyRepository {
       jobId: data.jobId ?? null,
       description: data.description,
     });
+  }
+
+  /** Returns true if a ledger entry of the given type for the given jobId already exists. */
+  async hasLedgerEntry(userId: string, type: LoyaltyTransactionType, jobId: string): Promise<boolean> {
+    await this.connect();
+    const exists = await LoyaltyTransaction.exists({ userId, type, jobId });
+    return !!exists;
   }
 
   async getLedger(userId: string, limit = 20): Promise<LoyaltyTransactionDocument[]> {

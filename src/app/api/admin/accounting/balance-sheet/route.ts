@@ -7,7 +7,7 @@ import type { AccountCode } from "@/models/LedgerEntry";
 const ASSET_CODES:     AccountCode[] = ["1000", "1100", "1200"];
 const LIABILITY_CODES: AccountCode[] = ["2000", "2100", "2200", "2300", "2400"];
 const EQUITY_CODES:    AccountCode[] = ["3000"];
-const REVENUE_CODES:   AccountCode[] = ["4000", "4100", "4200"];
+const REVENUE_CODES:   AccountCode[] = ["4000", "4100", "4200", "4300", "4400", "4500", "4600", "4700", "4800", "4900", "4950", "4960", "4970"];
 const EXPENSE_CODES:   AccountCode[] = ["5000", "5100", "5200"];
 
 const LABELS: Record<AccountCode, string> = {
@@ -23,6 +23,16 @@ const LABELS: Record<AccountCode, string> = {
   "4000": "Commission Revenue",
   "4100": "Subscription Revenue",
   "4200": "Late Fee Revenue",
+  "4300": "Escrow Fee Revenue",
+  "4400": "Processing Fee Revenue",
+  "4500": "Withdrawal Fee Revenue",
+  "4600": "Urgency Booking Fee Revenue",
+  "4700": "Featured Listing Revenue",
+  "4800": "Lead Fee Revenue",
+  "4900": "Bid Credit Revenue",
+  "4950": "Cancellation Fee Revenue",
+  "4960": "Dispute Handling Fee Revenue",
+  "4970": "Training Course Revenue",
   "5000": "Refunds Issued",
   "5100": "Payment Processing Fees",
   "5200": "Bad Debt / Write-offs",

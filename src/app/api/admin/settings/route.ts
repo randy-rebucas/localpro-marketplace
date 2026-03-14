@@ -34,6 +34,12 @@ const DEFAULTS: Record<string, unknown> = {
   "payments.highCommissionRate": 20,
   "payments.minJobBudget": 500,
   "payments.minPayoutAmount": 100,
+  "payments.escrowServiceFeeRate": 2,
+  "payments.processingFeeRate": 2,
+  "payments.withdrawalFeeBank": 20,
+  "payments.withdrawalFeeGcash": 15,
+  "payments.urgencyFeeSameDay": 50,
+  "payments.urgencyFeeRush": 100,
   // Limits
   "limits.maxQuotesPerJob": 5,
   "limits.quoteValidityDays": 7,

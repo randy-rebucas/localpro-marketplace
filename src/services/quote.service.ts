@@ -11,8 +11,11 @@ import {
   ForbiddenError,
   ConflictError,
   UnprocessableError,
+  assertObjectId,
 } from "@/lib/errors";
 import type { TokenPayload } from "@/lib/auth";
+import { connectDB } from "@/lib/db";
+import mongoose from "mongoose";
 
 export interface CreateQuoteInput {
   jobId: string;
@@ -46,7 +49,12 @@ export class QuoteService {
     // ── Agency staff check ──────────────────────────────────────────────────
     // Staff workers belonging to an agency must not quote independently.
     // Jobs for agency staff are dispatched by the agency owner, not self-submitted.
+    //
+    // L22: providerUser must exist — if the account was deleted between auth token
+    // verification and this call, reject immediately rather than silently skipping
+    // the agency check (which could allow a deleted agency worker to submit quotes).
     const providerUser = await userRepository.findById(user.userId);
+    if (!providerUser) throw new ForbiddenError("User account not found.");
     const agencyId = (providerUser as { agencyId?: unknown } | null)?.agencyId;
     if (agencyId) {
       throw new ForbiddenError(
@@ -96,6 +104,12 @@ export class QuoteService {
   }
 
   async acceptQuote(user: TokenPayload, quoteId: string) {
+    assertObjectId(quoteId, "quoteId");
+    await connectDB();
+    const Quote = mongoose.model("JobApplication");
+    const Job   = mongoose.model("Job");
+
+    // ── 1. Load and pre-validate quote ────────────────────────────────────
     const quote = await quoteRepository.getDocById(quoteId);
     if (!quote) throw new NotFoundError("Quote");
 
@@ -103,11 +117,17 @@ export class QuoteService {
       status: string;
       jobId: { toString(): string };
       providerId: { toString(): string } | null;
+      proposedAmount: number;
+      expiresAt?: Date | null;
       _id: { toString(): string };
-      save(): Promise<void>;
     };
 
     if (q.status !== "pending") throw new UnprocessableError("This quote has already been processed");
+
+    // Reject expired quotes (L10)
+    if (q.expiresAt && q.expiresAt < new Date()) {
+      throw new UnprocessableError("This quote has expired");
+    }
 
     const job = await jobRepository.getDocById(q.jobId.toString());
     if (!job) throw new NotFoundError("Job");
@@ -118,7 +138,6 @@ export class QuoteService {
       title: string;
       providerId: unknown;
       _id: { toString(): string };
-      save(): Promise<void>;
     };
 
     if (j.clientId.toString() !== user.userId) throw new ForbiddenError();
@@ -132,14 +151,29 @@ export class QuoteService {
       }
     }
 
-    q.status = "accepted";
-    await quote.save();
+    // ── 2. Atomically accept quote (CAS: status must still be "pending") ──
+    const acceptedQuote = await Quote.findOneAndUpdate(
+      { _id: quote._id, status: "pending" },
+      { $set: { status: "accepted" } },
+      { new: true }
+    );
+    if (!acceptedQuote) {
+      throw new ConflictError("Quote was already accepted or rejected by a concurrent request");
+    }
 
     await quoteRepository.rejectOthers(q.jobId.toString(), q._id.toString());
 
-    j.providerId = q.providerId;
-    j.status = "assigned";
-    await job.save();
+    // ── 3. Atomically assign job (also updates budget to accepted amount — H8) ──
+    const acceptedJob = await Job.findOneAndUpdate(
+      { _id: job._id, status: "open" },
+      { $set: { providerId: q.providerId, status: "assigned", budget: q.proposedAmount } },
+      { new: true }
+    );
+    if (!acceptedJob) {
+      // Rollback quote acceptance — job was concurrently modified
+      await Quote.findByIdAndUpdate(quote._id, { $set: { status: "pending" } });
+      throw new ConflictError("Job is no longer available for assignment");
+    }
 
     await activityRepository.log({
       userId: user.userId,
@@ -168,7 +202,7 @@ export class QuoteService {
       pushStatusUpdate(q.providerId.toString(), { entity: "quote", id: q._id.toString(), status: "accepted" });
     }
 
-    return { quote, job };
+    return { quote: acceptedQuote, job: acceptedJob };
   }
 
   async rejectQuote(user: TokenPayload, quoteId: string) {

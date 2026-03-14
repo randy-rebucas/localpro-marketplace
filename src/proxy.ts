@@ -83,9 +83,16 @@ export async function proxy(req: NextRequest) {
     const vercelUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null;
     const internalBase = process.env.NEXT_INTERNAL_URL ?? vercelUrl ?? "http://localhost:3000";
     const refreshUrl = new URL("/api/auth/refresh", internalBase);
+
+    // L8: only forward the auth cookies — do not forward all cookies (e.g. analytics,
+    // tracking, or session cookies) to the internal refresh endpoint.
+    const authCookieHeader = [`refresh_token=${refreshToken}`];
+    const accessToken = req.cookies.get("access_token")?.value;
+    if (accessToken) authCookieHeader.push(`access_token=${accessToken}`);
+
     const refreshRes = await fetch(refreshUrl.toString(), {
       method: "POST",
-      headers: { cookie: req.headers.get("cookie") ?? "" },
+      headers: { cookie: authCookieHeader.join("; ") },
     });
 
     if (refreshRes.ok) {

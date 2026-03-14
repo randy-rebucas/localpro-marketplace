@@ -22,6 +22,7 @@ export const EVENT_CONFIG: Record<ActivityEventType, { label: string; color: str
   quote_expired:    { label: "Quote Expired",     color: "bg-slate-100 text-slate-500 border-slate-200",       dot: "bg-slate-400" },
   escrow_funded:    { label: "Escrow Funded",     color: "bg-amber-100 text-amber-700 border-amber-200",       dot: "bg-amber-500" },
   escrow_released:  { label: "Escrow Released",   color: "bg-teal-100 text-teal-700 border-teal-200",          dot: "bg-teal-500" },
+  provider_withdrew: { label: "Provider Withdrew", color: "bg-orange-100 text-orange-700 border-orange-200",   dot: "bg-orange-500" },
   dispute_opened:   { label: "Dispute Opened",    color: "bg-red-100 text-red-700 border-red-200",             dot: "bg-red-500" },
   dispute_resolved: { label: "Dispute Resolved",  color: "bg-orange-100 text-orange-700 border-orange-200",    dot: "bg-orange-500" },
   review_submitted: { label: "Review Submitted",  color: "bg-yellow-100 text-yellow-700 border-yellow-200",    dot: "bg-yellow-500" },

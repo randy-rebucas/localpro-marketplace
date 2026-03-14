@@ -14,7 +14,8 @@ export type StaffCapability =
   | "view_revenue"
   | "manage_payouts"
   | "manage_categories"
-  | "manage_support";
+  | "manage_support"
+  | "manage_courses";
 
 export interface IAddress {
   _id: string;
@@ -162,6 +163,18 @@ export interface IJob {
   pesoPostedBy?: Types.ObjectId | string | IUser | null;
   /** Priority jobs are pinned to the top of the provider marketplace */
   isPriority?: boolean;
+  /** Urgency level selected at job creation: standard (free), same_day (+₱50), rush (+₱100) */
+  urgency?: "standard" | "same_day" | "rush";
+  /** Flat urgent booking fee locked in at creation from AppSettings (PHP) */
+  urgencyFee?: number;
+  /** Cancellation fee charged when the client cancels an assigned job (PHP). Set at cancellation time. */
+  cancellationFee?: number;
+  /** Escrow service fee (2%) snapshot locked in at escrow funding (PHP) */
+  escrowFee?: number;
+  /** Payment processing fee (2%) snapshot locked in at escrow funding (PHP) */
+  processingFee?: number;
+  /** Client-side platform service fee (5%) snapshot locked in at escrow funding (PHP) */
+  platformServiceFee?: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -269,6 +282,14 @@ export interface IDispute {
   evidence?: string[];
   status: DisputeStatus;
   resolutionNotes?: string;
+  /** True once the dispute status has reached "investigating" — gates the handling fee charge. */
+  wasEscalated?: boolean;
+  /** Who was charged the case handling fee: client, provider, or both. Set at resolution. */
+  losingParty?: "client" | "provider" | "both" | null;
+  /** Flat handling fee charged in PHP (0 when not charged). */
+  handlingFeeAmount?: number;
+  /** True if the wallet deduction for the handling fee succeeded. */
+  handlingFeePaid?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -301,6 +322,7 @@ export type ActivityEventType =
   | "recurring_cancelled"
   | "recurring_job_spawned"
   | "job_cancelled"
+  | "provider_withdrew"
   | "admin_ledger_entry";
 
 export interface IActivityLog {
@@ -328,7 +350,7 @@ export interface PaginatedResponse<T> {
 
 // ─── Knowledge Base ───────────────────────────────────────────────────────────
 
-export type KnowledgeAudience = "client" | "provider" | "both";
+export type KnowledgeAudience = "client" | "provider" | "business" | "agency" | "peso" | "both";
 
 export interface IKnowledgeArticle {
   _id: Types.ObjectId | string;
@@ -453,7 +475,8 @@ export type NotificationType =
   | "wallet_credited"
   | "wallet_withdrawal_update"
   | "agency_job_assigned"
-  | "agency_staff_invited";
+  | "agency_staff_invited"
+  | "system_notice";
 
 export interface INotification {
   _id: Types.ObjectId | string;
@@ -472,6 +495,8 @@ export interface INotification {
     consultationId?: string;
     initiatorId?: string;
     estimateAmount?: number;
+    listingId?: string;
+    page?: string;
   };
   readAt?: Date | null;
   createdAt: Date;
@@ -607,6 +632,61 @@ export interface IProviderProfile {
   livelihoodProgram?: string;
   /** Account subtype for categorising youth or cooperative providers */
   accountSubtype?: "standard" | "youth" | "cooperative";
+  /** LocalPro-issued certification badges earned by completing training courses */
+  earnedBadges?: IProviderEarnedBadge[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// ─── Training / Upskilling ─────────────────────────────────────────────────────────────
+
+export type TrainingCourseCategory = "basic" | "advanced" | "safety" | "custom";
+export type TrainingEnrollmentStatus = "enrolled" | "completed" | "refunded";
+
+export interface IProviderEarnedBadge {
+  badgeSlug: string;
+  courseTitle: string;
+  earnedAt: Date;
+}
+
+export interface ITrainingLesson {
+  _id: Types.ObjectId | string;
+  title: string;
+  content: string;           // Markdown
+  durationMinutes: number;
+  order: number;
+}
+
+export interface ITrainingCourse {
+  _id: Types.ObjectId | string;
+  title: string;
+  slug: string;
+  description: string;
+  category: TrainingCourseCategory;
+  price: number;
+  durationMinutes: number;
+  badgeSlug: string;
+  isPublished: boolean;
+  lessons: ITrainingLesson[];
+  enrollmentCount: number;
+  createdBy: Types.ObjectId | string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface ITrainingEnrollment {
+  _id: Types.ObjectId | string;
+  providerId: Types.ObjectId | string;
+  courseId: Types.ObjectId | string | ITrainingCourse;
+  courseTitle: string;
+  amountPaid: number;
+  status: TrainingEnrollmentStatus;
+  completedLessons: Array<Types.ObjectId | string>;
+  completedAt: Date | null;
+  badgeGranted: boolean;
+  walletTxId?: string | null;
+  paymongoSessionId?: string | null;
+  ledgerJournalId?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -644,6 +724,16 @@ export interface IPayment {
   webhookEventId?: string | null;
   /** Double-entry ledger journal ID (escrow_funded_gateway) */
   ledgerJournalId?: string | null;
+  /** Non-refundable escrow service fee charged to the client (PHP). Default 0 for legacy records. */
+  escrowFee?: number;
+  /** Non-refundable payment processing fee charged to the client (PHP). Default 0 for legacy records. */
+  processingFee?: number;
+  /** Flat urgent booking fee charged at checkout (PHP). Non-refundable. Default 0 for legacy records. */
+  urgencyFee?: number;
+  /** Non-refundable client-side platform service fee charged at checkout (PHP). Default 0 for legacy records. */
+  platformServiceFee?: number;
+  /** Total amount charged at checkout = amount (service price) + escrowFee + processingFee + urgencyFee + platformServiceFee (PHP). */
+  totalCharge?: number;
   createdAt: Date;
   updatedAt: Date;
 } 
@@ -663,6 +753,10 @@ export interface IPayout {
   processedAt?: Date;
   currency?: string;
   ledgerJournalId?: string | null;
+  /** L21: Journal ID for the rejection ledger reversal. Stored separately to preserve the original ledgerJournalId. */
+  rejectionJournalId?: string | null;
+  /** Flat withdrawal fee deducted from the payout amount (PHP). Net to provider = amount − withdrawalFee. */
+  withdrawalFee?: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -918,3 +1012,53 @@ export interface BudgetAlertRow {
   status: 'ok' | 'warning' | 'critical';
   threshold: number;
 }
+
+// ─── Featured Listing ─────────────────────────────────────────────────────────
+
+export type FeaturedListingType =
+  | "featured_provider"   // Provider appears at top of search results with a "Featured" badge
+  | "top_search"          // Provider pinned to top of category search pages
+  | "homepage_highlight"; // Provider card displayed in the homepage highlight strip
+
+export type FeaturedListingStatus = "active" | "expired" | "cancelled";
+
+export interface IFeaturedListing {
+  _id?: string;
+  /** The provider (User._id) who purchased this boost */
+  providerId: string;
+  type: FeaturedListingType;
+  status: FeaturedListingStatus;
+  /** UTC timestamp when the boost became active */
+  startsAt: Date;
+  /** UTC timestamp when the boost expires (startsAt + 7 days) */
+  expiresAt: Date;
+  /** PHP amount charged for this listing (snapshot of price at purchase time) */
+  amountPaid: number;
+  /** WalletTransaction._id — set when paid via wallet */
+  walletTxId?: string | null;
+  /** PayMongo checkout session ID — set when paid via gateway */
+  paymongoSessionId?: string | null;
+  /** Ledger journal ID linking to the double-entry record */
+  ledgerJournalId?: string | null;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+/** Pricing config constants (mirrors AppSettings defaults; used client-side) */
+export const FEATURED_LISTING_PRICES: Record<FeaturedListingType, number> = {
+  featured_provider:  199,
+  top_search:         299,
+  homepage_highlight: 499,
+} as const;
+
+export const FEATURED_LISTING_LABELS: Record<FeaturedListingType, string> = {
+  featured_provider:  "Featured Provider",
+  top_search:         "Top Search Placement",
+  homepage_highlight: "Homepage Highlight",
+} as const;
+
+export const FEATURED_LISTING_DESCRIPTIONS: Record<FeaturedListingType, string> = {
+  featured_provider:  "Appear at the top of marketplace search results with a 'Featured' badge, boosting click-through rates.",
+  top_search:         "Your profile is pinned at the top of category-filtered searches so clients see you first.",
+  homepage_highlight: "Your provider card is shown in the featured strip on the homepage, reaching all active clients.",
+} as const;

@@ -9,6 +9,10 @@ const UpdateDisputeSchema = z.object({
   status: z.enum(["investigating", "resolved"]),
   resolutionNotes: z.string().min(10).optional(),
   escrowAction: z.enum(["release", "refund"]).optional(),
+  /** When true and dispute was escalated, charge the case handling fee to `handlingFeeChargedTo`. */
+  chargeHandlingFee: z.boolean().optional(),
+  /** Who pays the case handling fee. Required when chargeHandlingFee is true. */
+  handlingFeeChargedTo: z.enum(["client", "provider", "both"]).optional(),
 });
 
 export const GET = withHandler(async (

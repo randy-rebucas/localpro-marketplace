@@ -174,6 +174,8 @@ export default async function JobDetailPage({
           acceptedAmount={acceptedQuoteAmount}
           fundedAmount={fundedAmount}
           category={job.category}
+          urgencyFee={job.urgencyFee ?? 0}
+          urgency={job.urgency ?? "standard"}
         />
         {job.status === "completed" && job.escrowStatus === "funded" && (
           <PartialReleaseButton jobId={job._id.toString()} budget={job.budget} />
@@ -220,6 +222,8 @@ export default async function JobDetailPage({
         acceptedAmount={acceptedQuoteAmount}
         fundedAmount={fundedAmount}
         category={job.category}
+        urgencyFee={job.urgencyFee ?? 0}
+        urgency={job.urgency ?? "standard"}
       />
     </div>
   );

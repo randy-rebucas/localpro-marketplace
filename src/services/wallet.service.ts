@@ -68,6 +68,43 @@ export class WalletService {
     return newBalance;
   }
 
+  /**
+   * Debit a user's wallet (e.g. for a dispute handling fee).
+   * Returns { success: false } silently if the balance is insufficient.
+   */
+  async debit(
+    userId: string,
+    amount: number,
+    description: string,
+    opts?: { refId?: string; silent?: boolean }
+  ): Promise<{ success: boolean; newBalance: number }> {
+    if (amount <= 0) throw new UnprocessableError("Debit amount must be positive");
+
+    const balance = await walletRepository.getBalance(userId);
+    if (balance < amount) return { success: false, newBalance: balance };
+
+    const { newBalance } = await walletRepository.applyTransaction(
+      userId,
+      -amount,
+      "admin_debit",
+      description,
+      { refId: opts?.refId }
+    );
+
+    if (!opts?.silent) {
+      const note = await notificationRepository.create({
+        userId,
+        type: "wallet_debited" as never,
+        title: "Wallet debited",
+        message: `₱${amount.toLocaleString()} has been deducted from your wallet. ${description}`,
+        data: {},
+      });
+      pushNotification(userId, note);
+    }
+
+    return { success: true, newBalance };
+  }
+
   // ── Escrow funding from wallet ────────────────────────────────────────────
 
   async fundEscrowFromWallet(user: TokenPayload, jobId: string, overrideAmount?: number) {

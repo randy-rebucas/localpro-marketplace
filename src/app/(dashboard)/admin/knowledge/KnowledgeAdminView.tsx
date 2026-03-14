@@ -24,6 +24,9 @@ interface ArticleRow {
 const FOLDER_CHIP: Record<KnowledgeFolder, string> = {
   client:   "bg-blue-100 text-blue-700",
   provider: "bg-violet-100 text-violet-700",
+  business: "bg-amber-100 text-amber-700",
+  agency:   "bg-teal-100 text-teal-700",
+  peso:     "bg-emerald-100 text-emerald-700",
 };
 
 const EMPTY_FORM = {
@@ -210,8 +213,8 @@ export default function KnowledgeAdminView({ initialArticles }: Props) {
               className="w-full pl-9 pr-4 py-2 border border-slate-200 dark:border-slate-700 rounded-xl text-sm bg-white dark:bg-slate-800 dark:text-slate-200 dark:placeholder-slate-500 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
             />
           </div>
-          <div className="flex gap-1.5">
-            {(["all", "client", "provider"] as const).map((f) => (
+          <div className="flex gap-1.5 flex-wrap">
+            {(["all", "client", "provider", "business", "agency", "peso"] as const).map((f) => (
               <button
                 key={f}
                 onClick={() => setFilterFolder(f)}
@@ -229,7 +232,12 @@ export default function KnowledgeAdminView({ initialArticles }: Props) {
 
         <div className="flex items-center gap-3">
           <span className="text-xs text-slate-400 dark:text-slate-500 hidden lg:block">
-            {items.length} articles · {items.filter(a => a.folder === "client").length} client · {items.filter(a => a.folder === "provider").length} provider
+            {items.length} articles
+            {" · "}{items.filter(a => a.folder === "client").length} client
+            {" · "}{items.filter(a => a.folder === "provider").length} provider
+            {" · "}{items.filter(a => a.folder === "business").length} business
+            {" · "}{items.filter(a => a.folder === "agency").length} agency
+            {" · "}{items.filter(a => a.folder === "peso").length} peso
           </span>
           <button
             onClick={openCreate}
@@ -354,7 +362,7 @@ export default function KnowledgeAdminView({ initialArticles }: Props) {
                   <div>
                     <label className="block text-xs font-medium text-slate-600 mb-1">Audience</label>
                     <div className="flex gap-2">
-                      {(["client", "provider"] as KnowledgeFolder[]).map((f) => (
+                      {(["client", "provider", "business", "agency", "peso"] as KnowledgeFolder[]).map((f) => (
                         <button
                           key={f}
                           type="button"

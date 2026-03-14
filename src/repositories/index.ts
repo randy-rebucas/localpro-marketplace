@@ -25,3 +25,8 @@ export { walletRepository } from "./wallet.repository";
 export { pesoRepository } from "./peso.repository";
 export { ledgerRepository } from "./ledger.repository";
 export { jobApplicationRepository } from "./jobApplication.repository";
+export { featuredListingRepository } from "./featuredListing.repository";
+export { leadSubscriptionRepository } from "./leadSubscription.repository";
+export { bidCreditAccountRepository } from "./bidCreditAccount.repository";
+export { trainingCourseRepository } from "./trainingCourse.repository";
+export { trainingEnrollmentRepository } from "./trainingEnrollment.repository";

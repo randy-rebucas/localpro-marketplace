@@ -9,6 +9,9 @@ export async function GET(req: NextRequest) {
   }
 
   await connectDB();
-  const result = await cronService.expireStaleJobs();
-  return Response.json({ ok: true, ...result });
+  const [expireResult, revertResult] = await Promise.all([
+    cronService.expireStaleJobs(),
+    cronService.revertStaleAssignments(),
+  ]);
+  return Response.json({ ok: true, ...expireResult, ...revertResult });
 }

@@ -6,7 +6,7 @@ import toast from "react-hot-toast";
 import Button from "@/components/ui/Button";
 import { apiFetch } from "@/lib/fetchClient";
 import Modal from "@/components/ui/Modal";
-import { calculateCommission, getCommissionRate } from "@/lib/commission";
+import { calculateCommission, getCommissionRate, calculateClientFees, DEFAULT_ESCROW_FEE_RATE_PERCENT, DEFAULT_PROCESSING_FEE_RATE_PERCENT, DEFAULT_PLATFORM_SERVICE_FEE_RATE_PERCENT } from "@/lib/commission";
 import { formatCurrency } from "@/lib/utils";
 import { ShieldCheck, Info, AlertTriangle, Wallet } from "lucide-react";
 import type { JobStatus, EscrowStatus } from "@/types";
@@ -19,9 +19,11 @@ interface Props {
   acceptedAmount?: number;
   fundedAmount?: number;
   category?: string;
+  urgencyFee?: number;
+  urgency?: string;
 }
 
-export default function JobActionButtons({ jobId, status, escrowStatus, budget, acceptedAmount, fundedAmount, category }: Props) {
+export default function JobActionButtons({ jobId, status, escrowStatus, budget, acceptedAmount, fundedAmount, category, urgencyFee, urgency }: Props) {
   const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
   const [walletBalance, setWalletBalance] = useState<number | null>(null);
@@ -55,6 +57,10 @@ export default function JobActionButtons({ jobId, status, escrowStatus, budget, 
   const commissionRate = getCommissionRate(category);
   const breakdown = useMemo(() => calculateCommission(parsedAmount || budget, commissionRate), [parsedAmount, budget, commissionRate]);
   const releaseBreakdown = useMemo(() => calculateCommission(fundedAmount ?? budget, commissionRate), [fundedAmount, budget, commissionRate]);
+  const clientFees = useMemo(
+    () => calculateClientFees(parsedAmount || budget, DEFAULT_ESCROW_FEE_RATE_PERCENT, DEFAULT_PROCESSING_FEE_RATE_PERCENT, urgencyFee ?? 0, DEFAULT_PLATFORM_SERVICE_FEE_RATE_PERCENT),
+    [parsedAmount, budget, urgencyFee]
+  );
 
   useEffect(() => {
     apiFetch("/api/wallet")
@@ -412,11 +418,43 @@ export default function JobActionButtons({ jobId, status, escrowStatus, budget, 
           {/* Breakdown */}
           <div className="rounded-lg border border-slate-200 overflow-hidden text-sm">
             <div className="flex justify-between px-4 py-2.5 bg-slate-50">
-              <span className="text-slate-500">Escrow amount</span>
+              <span className="text-slate-500">Service price</span>
               <span className="font-semibold text-slate-900">{formatCurrency(breakdown.gross)}</span>
             </div>
             <div className="flex justify-between px-4 py-2.5 border-t border-slate-100">
-              <span className="text-slate-500">Platform fee ({(breakdown.rate * 100).toFixed(0)}%)</span>
+              <span className="text-slate-500 flex items-center gap-1">
+                Escrow protection fee ({DEFAULT_ESCROW_FEE_RATE_PERCENT}%)
+                <span className="text-xs text-slate-400">(non-refundable)</span>
+              </span>
+              <span className="text-slate-700">+{formatCurrency(clientFees.escrowFee)}</span>
+            </div>
+            <div className="flex justify-between px-4 py-2.5 border-t border-slate-100">
+              <span className="text-slate-500 flex items-center gap-1">
+                Payment processing fee ({DEFAULT_PROCESSING_FEE_RATE_PERCENT}%)
+                <span className="text-xs text-slate-400">(non-refundable)</span>
+              </span>
+              <span className="text-slate-700">+{formatCurrency(clientFees.processingFee)}</span>
+            </div>
+            {(urgencyFee ?? 0) > 0 && (
+              <div className="flex justify-between px-4 py-2.5 border-t border-slate-100">
+                <span className="text-slate-500 flex items-center gap-1">
+                  Urgent booking fee ({urgency === "rush" ? "2-hr rush" : "same day"})
+                  <span className="text-xs text-slate-400">(non-refundable)</span>
+                </span>
+                <span className="text-slate-700">+{formatCurrency(urgencyFee ?? 0)}</span>
+              </div>
+            )}
+            {clientFees.platformServiceFee > 0 && (
+              <div className="flex justify-between px-4 py-2.5 border-t border-slate-100">
+                <span className="text-slate-500 flex items-center gap-1">
+                  Platform service fee ({DEFAULT_PLATFORM_SERVICE_FEE_RATE_PERCENT}%)
+                  <span className="text-xs text-slate-400">(non-refundable)</span>
+                </span>
+                <span className="text-slate-700">+{formatCurrency(clientFees.platformServiceFee)}</span>
+              </div>
+            )}
+            <div className="flex justify-between px-4 py-2.5 border-t border-slate-100">
+              <span className="text-slate-500">Platform commission ({(breakdown.rate * 100).toFixed(0)}%)</span>
               <span className="text-slate-700">−{formatCurrency(breakdown.commission)}</span>
             </div>
             <div className="flex justify-between px-4 py-2.5 border-t border-slate-100 bg-slate-50">
@@ -425,7 +463,7 @@ export default function JobActionButtons({ jobId, status, escrowStatus, budget, 
             </div>
             <div className="flex justify-between px-4 py-3 border-t-2 border-primary/20 bg-primary/5">
               <span className="font-semibold text-slate-800">Total charged to you</span>
-              <span className="text-lg font-bold text-primary">{formatCurrency(breakdown.gross)}</span>
+              <span className="text-lg font-bold text-primary">{formatCurrency(clientFees.totalCharge)}</span>
             </div>
           </div>
 

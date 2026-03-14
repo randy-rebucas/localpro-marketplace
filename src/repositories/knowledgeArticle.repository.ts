@@ -4,7 +4,7 @@ import type { KnowledgeAudience } from "@/types";
 
 export const knowledgeArticleRepository = {
   /** Published articles visible to a role (audience = role or "both"). */
-  async findPublishedForAudience(role: "client" | "provider") {
+  async findPublishedForAudience(role: "client" | "provider" | "business" | "agency" | "peso") {
     await connectDB();
     return KnowledgeArticle.find({
       isPublished: true,

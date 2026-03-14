@@ -13,3 +13,4 @@ export { payoutService } from "./payout.service";
 export { loyaltyService } from "./loyalty.service";
 export { pesoService } from "./peso.service";
 export { ledgerService } from "./ledger.service";
+export { trainingService } from "./training.service";

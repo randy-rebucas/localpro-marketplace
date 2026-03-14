@@ -47,6 +47,21 @@ export class PayoutRepository extends BaseRepository<PayoutDocument> {
     return result[0]?.total ?? 0;
   }
 
+  /**
+   * Sum of all payouts that have been ring-fenced from Earnings Payable (2100).
+   * Includes pending + processing + completed; excludes rejected (which are
+   * returned to 2100 via payout_rejected ledger entry).
+   * Used for reconciliation of account 2100.
+   */
+  async sumAllNetRequested(): Promise<number> {
+    await this.connect();
+    const result = await Payout.aggregate([
+      { $match: { status: { $in: ["pending", "processing", "completed"] } } },
+      { $group: { _id: null, total: { $sum: "$amount" } } },
+    ]);
+    return result[0]?.total ?? 0;
+  }
+
   /** Payout requests that have been in "pending" status since before `cutoff` */
   async findStalePending(cutoff: Date): Promise<PayoutDocument[]> {
     await this.connect();

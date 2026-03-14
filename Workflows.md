@@ -1,7 +1,7 @@
 # LocalPro Marketplace — System Workflow Documentation
 
-**Version:** 1.0  
-**Last Updated:** March 7, 2026  
+**Version:** 1.1  
+**Last Updated:** March 14, 2026  
 **Stack:** Next.js 14 · MongoDB (Mongoose) · PayMongo · Cloudinary · SSE Push Notifications
 
 ---
@@ -464,8 +464,10 @@ Escrow can only be funded when:
 
 ### Payment Method A — PayMongo Checkout
 
+The client may optionally pass a JSON body `{ amount: number }` to override the job budget when funding escrow (e.g. for partial funding or admin-adjusted amounts). If omitted, the full job `budget` is used.
+
 1. System creates a **PayMongo Checkout Session** with:
-   - Amount in PHP, job title as line item
+   - Amount in PHP (uses `overrideAmount` if provided, otherwise `job.budget`), job title as line item
    - `successUrl` → `/client/escrow?jobId=...&payment=success`
    - `cancelUrl` → `/client/jobs/[id]?payment=cancelled`
    - Metadata: `jobId`, `clientId`, `providerId`
@@ -1391,6 +1393,166 @@ Finance team members can:
 
 ---
 
+## Workflow 18 — Provider Boost / Featured Listings
+
+**Scenario:** A provider purchases a visibility boost to appear prominently in search results
+
+---
+
+### Actors
+| Actor | Role |
+|---|---|
+| Provider | Selects boost tier and pays via wallet or PayMongo |
+| System | Creates `FeaturedListing`, debits wallet / initiates checkout, posts ledger entry |
+| PayMongo | Processes payment and webhooks confirmation (checkout path) |
+| Cron Job | Expires stale listings daily; notifies affected providers |
+
+---
+
+### Boost Tiers
+
+| Type | Default Price | Visibility Placement |
+|---|---|---|
+| `featured_provider` | ₱199/week | Top of marketplace search with badge |
+| `top_search` | ₱299/week | Pinned at top of category-filtered searches |
+| `homepage_highlight` | ₱499/week | Premium panel on the find-a-provider page |
+
+- All three tiers can be active **simultaneously** (stacking allowed)
+- Each boost lasts exactly **7 days** (`startsAt = now`, `expiresAt = startsAt + 7 days`)
+- Prices are configurable via `AppSetting` keys (`payments.featuredListingFeaturedProvider`, etc.)
+- Fees are **non-refundable** once a boost is activated
+
+---
+
+### Payment Path A — Platform Wallet
+
+1. Provider calls `POST /api/provider/boost` with `{ type, payWith: "wallet" }`
+2. System checks wallet balance ≥ boost price
+3. If sufficient:
+   - Wallet debited atomically via `WalletTransaction` (`type: featured_listing_payment`)
+   - `FeaturedListing` record created with `status: active`
+   - Double-entry ledger journal posted (`postFeaturedListingPayment`)
+   - `ledgerJournalId` stamped back on the listing
+4. Push notification to provider: *"Boost activated! ₱{price} was deducted from your wallet."* (notification `data.listingId` included)
+5. Returns `{ activated: true, listing }`
+
+---
+
+### Payment Path B — PayMongo Checkout
+
+1. Provider calls `POST /api/provider/boost` with `{ type, payWith: "paymongo" }`
+2. System creates a **PayMongo Checkout Session** with:
+   - `metadata.type = "featured_listing"`, `metadata.listingType`, `metadata.providerId`, `metadata.amountPHP`
+   - `successUrl` → `/provider/boost?payment=success&type={type}`
+   - `cancelUrl` → `/provider/boost?payment=cancelled`
+3. Returns `{ activated: false, checkoutUrl, checkoutSessionId }`
+4. Provider completes payment on PayMongo-hosted page
+5. PayMongo fires webhook → `activateFromWebhook()` called:
+   - Idempotency check: skip if listing for this `paymongoSessionId` already exists
+   - `FeaturedListing` created (`status: active`) with `paymongoSessionId` stored
+   - Ledger journal posted
+   - Push notification to provider: *"Boost activated!"*
+
+> **Dev fallback:** If `PAYMONGO_SECRET_KEY` is not set, the checkout path silently falls back to the wallet path and activates immediately.
+
+---
+
+### Cancellation
+
+- Provider (or admin/staff) can cancel an active boost via `DELETE /api/provider/boost/[id]`
+- `FeaturedListing.status` → `cancelled`
+- No refund is issued
+- Only `active` listings can be cancelled
+
+---
+
+### Cron — Expiry Job
+
+- Runs daily; sets `status → expired` on all listings where `expiresAt < now` and `status: active`
+- Bulk push notification to all affected providers: *"Your {type} boost has expired. Renew to stay featured."*
+
+---
+
+### FeaturedListing Status Reference
+
+| Status | Description |
+|---|---|
+| `active` | Boost live; provider is promoted in the configured placement |
+| `expired` | 7-day period ended; no longer shown |
+| `cancelled` | Manually cancelled by provider or admin before expiry |
+
+---
+
+> **Production Notes**
+> - Surface boost analytics to providers: impression count, profile view count, quote conversion rate attributed to each boost period
+> - Add a "Renew" shortcut on expired listings so providers can re-purchase with one tap
+> - Implement a boost purchase limit per provider type to prevent artificial search flooding
+> - Consider tiered pricing by category demand (e.g., Cleaning boosts cost more than niche categories)
+
+---
+
+## Workflow 19 — Provider Job Withdrawal
+
+**Scenario:** An assigned provider withdraws from a job before work has started
+
+---
+
+### Actors
+| Actor | Role |
+|---|---|
+| Provider | Requests to withdraw from an assigned job before starting |
+| System | Reverts job to `open`, rejects provider's quote, notifies client |
+| Client | Notified of withdrawal; job re-enters open marketplace |
+
+---
+
+### Preconditions
+
+- Job must be in `status: assigned` (escrow may or may not be funded)
+- Only the **assigned provider** (`job.providerId`) can trigger withdrawal
+- Withdrawal is **blocked** once the job transitions to `in_progress`
+
+---
+
+### Withdrawal Flow
+
+1. Provider calls `POST /api/jobs/[id]/withdraw` with an optional `{ reason }` body
+2. System validates lifecycle transition: `assigned → open` is allowed
+3. System actions:
+   - `job.status` → `open`
+   - `job.providerId` → `null` (assignment cleared)
+   - Provider's accepted/pending quote → `rejected` via `quoteRepository.rejectByProvider()`
+4. Activity log entry: `provider_withdrew` (metadata includes `action`, `reason`)
+5. Push notification to client: *"Your provider could not proceed. The job has been re-opened."*
+6. SSE real-time status update to both parties
+7. Returns `{ job }` with reverted state
+
+---
+
+### Impact on Escrow
+
+- If escrow was **not yet funded**: job simply re-opens; no fund movement
+- If escrow was **funded**: escrow remains locked on the job; client must choose a new provider and the funded escrow applies to the new assignment
+- Admin may need to manually refund escrow if the client wishes to cancel instead
+
+---
+
+### Activity Log Event
+
+| Event | Description |
+|---|---|
+| `provider_withdrew` | Logged when an assigned provider withdraws before job start |
+
+---
+
+> **Production Notes**
+> - Add a withdrawal penalty system: providers who withdraw frequently may have their `completionRate` penalised or receive a warning
+> - Track `withdrawalCount` on `ProviderProfile` for admin visibility
+> - If escrow is funded at withdrawal time, auto-notify the client with options: "Find a new provider" or "Cancel and get a refund"
+> - Consider a cooldown window: block further quote submissions for the withdrawn provider on the same job
+
+---
+
 ## Global Status Reference
 
 ---
@@ -1503,6 +1665,50 @@ disputed            →  completed, refunded
 
 ---
 
+### Featured Listing States
+
+| Status | Description |
+|---|---|
+| `active` | Boost live; provider appears in configured placement |
+| `expired` | 7-day period ended; boost no longer shown |
+| `cancelled` | Manually cancelled by provider or admin before expiry |
+
+---
+
+### Activity Event Types
+
+| Event | Trigger |
+|---|---|
+| `job_created` | Client creates a job |
+| `job_approved` | Admin approves a job |
+| `job_rejected` | Admin rejects a job |
+| `job_started` | Provider begins work |
+| `job_completed` | Provider marks job done |
+| `job_expired` | Job expires without a provider |
+| `job_cancelled` | Job cancelled by client or admin |
+| `quote_submitted` | Provider submits a quote |
+| `quote_accepted` | Client accepts a quote |
+| `quote_expired` | Quote expires without client action |
+| `escrow_funded` | Client funds escrow |
+| `escrow_released` | Escrow released to provider |
+| `provider_withdrew` | Assigned provider withdraws before job start |
+| `dispute_opened` | Either party raises a dispute |
+| `dispute_resolved` | Admin resolves a dispute |
+| `review_submitted` | Client or provider submits a review |
+| `payout_requested` | Provider requests a payout |
+| `payout_updated` | Admin updates payout status |
+| `consultation_requested` | Client requests a site consultation |
+| `consultation_accepted` | Provider accepts a consultation |
+| `consultation_declined` | Provider declines a consultation |
+| `consultation_converted_to_job` | Consultation converted into a job |
+| `consultation_stale_accepted` | Consultation accepted after stale timeout |
+| `recurring_created` | Recurring schedule created |
+| `recurring_cancelled` | Recurring schedule cancelled |
+| `recurring_job_spawned` | Cron auto-generates a recurring job |
+| `admin_ledger_entry` | Admin manually posts a ledger adjustment |
+
+---
+
 ## Critical Edge Cases
 
 The following scenarios require explicit system or admin handling. Many of these are partially addressed in the current codebase but benefit from further hardening.
@@ -1521,6 +1727,8 @@ The following scenarios require explicit system or admin handling. Many of these
 | 8 | **Job extensions** | Admin manual action only | Build self-service extension requests: both parties agree, new `scheduleDate` saved, provider notified |
 | 9 | **Multiple providers on one project** | Single `providerId` per job | Consider a future "team job" model with multiple assigned providers and split payout |
 | 10 | **Agency providers assigning sub-workers** | Not supported | Build a `BusinessOrganization` equivalent for provider teams: agency owner manages worker assignments |
+| 11 | **Provider withdraws after escrow is funded** | Job reverts to `open`; escrow remains on job | Auto-notify client with options: find a new provider or cancel + refund; add penalty logic for serial withdrawals |
+| 12 | **Provider boost purchased but checkout abandoned** | No listing created until webhook fires | Add a listing status `pending_payment` for initiated but unpaid sessions; clean up via cron after 24h |
 
 ---
 
@@ -1539,4 +1747,32 @@ Keepalive heartbeats sent every **25 seconds** via SSE to prevent proxy timeouts
 
 ---
 
-*Documentation generated from live codebase — March 7, 2026*
+### Notification Types
+
+| Type | Description |
+|---|---|
+| `job_submitted` | New job posted (admin) |
+| `job_approved` / `job_rejected` | Admin decision on a job |
+| `quote_received` | Provider submitted a quote |
+| `quote_accepted` / `quote_rejected` / `quote_expired` | Quote lifecycle events |
+| `escrow_funded` / `escrow_released` / `escrow_auto_released` | Escrow lifecycle events |
+| `payment_confirmed` / `payment_failed` | Payment outcome |
+| `payment_reminder` | Reminder to fund escrow |
+| `job_completed` / `job_expired` | Job outcome events |
+| `dispute_opened` / `dispute_resolved` | Dispute lifecycle events |
+| `review_received` | New review submitted |
+| `new_message` | New chat message |
+| `payout_requested` / `payout_status_update` | Payout lifecycle events |
+| `job_direct_invite` | Provider received a direct job invitation |
+| `consultation_request` / `consultation_accepted` / `consultation_expired` / `consultation_stale` | Consultation lifecycle events |
+| `estimate_provided` | Provider submitted an estimate on a consultation |
+| `recurring_job_spawned` | Cron spawned a new recurring job |
+| `wallet_credited` / `wallet_withdrawal_update` | Wallet events |
+| `agency_job_assigned` / `agency_staff_invited` | Agency/team events |
+| `admin_message` | Admin sends a broadcast message |
+| `reminder_*` | Scheduled reminder nudges (fund escrow, no quotes, start job, complete job, leave review, stale dispute, pending validation, profile incomplete) |
+| `system_notice` | System-generated advisory alert (e.g., low bid credit balance) |
+
+---
+
+*Documentation generated from live codebase — March 14, 2026*

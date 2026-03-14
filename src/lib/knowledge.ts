@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import { marked } from "marked";
 
-export type KnowledgeFolder = "client" | "provider";
+export type KnowledgeFolder = "client" | "provider" | "business" | "agency" | "peso";
 
 export interface KnowledgeArticle {
   slug: string;
@@ -87,12 +87,12 @@ export function getArticle(
   return parseFile(folder, `${slug}.md`);
 }
 
-/** All articles from both folders (for admin view). */
+/** All articles from all folders (for admin view). */
 export function getAllArticles(): Array<KnowledgeArticle & { folder: KnowledgeFolder }> {
-  return [
-    ...getArticlesForFolder("client").map((a) => ({ ...a, folder: "client" as const })),
-    ...getArticlesForFolder("provider").map((a) => ({ ...a, folder: "provider" as const })),
-  ];
+  const folders: KnowledgeFolder[] = ["client", "provider", "business", "agency", "peso"];
+  return folders.flatMap((folder) =>
+    getArticlesForFolder(folder).map((a) => ({ ...a, folder }))
+  );
 }
 
 // ── Write helpers ────────────────────────────────────────────────────────────
@@ -113,9 +113,11 @@ export function isValidSlug(slug: string): boolean {
   return /^[a-z0-9][a-z0-9-]*[a-z0-9]$/.test(slug) || /^[a-z0-9]$/.test(slug);
 }
 
+const VALID_FOLDERS: readonly string[] = ["client", "provider", "business", "agency", "peso"];
+
 /** Validate folder name to prevent path traversal. */
 function assertFolder(folder: string): asserts folder is KnowledgeFolder {
-  if (folder !== "client" && folder !== "provider") {
+  if (!VALID_FOLDERS.includes(folder)) {
     throw new Error("Invalid folder");
   }
 }

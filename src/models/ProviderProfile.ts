@@ -105,6 +105,20 @@ const ProviderProfileSchema = new Schema<ProviderProfileDocument>(
       enum: ["standard", "youth", "cooperative"],
       default: "standard",
     },
+    /** LocalPro-issued certification badges earned by completing training courses */
+    earnedBadges: {
+      type: [
+        new Schema(
+          {
+            badgeSlug:   { type: String, required: true, trim: true },
+            courseTitle: { type: String, required: true, trim: true },
+            earnedAt:    { type: Date,   required: true },
+          },
+          { _id: false }
+        ),
+      ],
+      default: [],
+    },
   },
   { timestamps: true }
 );

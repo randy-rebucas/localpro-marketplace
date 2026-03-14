@@ -103,7 +103,7 @@ const UserSchema = new Schema<UserDocument>(
     agencyId: { type: Schema.Types.ObjectId, ref: "AgencyProfile", default: null },
     facebookId: { type: String, default: null, index: true, sparse: true },
     oauthProvider: { type: String, enum: ["facebook", null], default: null },
-    phone: { type: String, default: null, sparse: true },
+    phone: { type: String, default: null },
     dateOfBirth: { type: Date, default: null },
     gender: { type: String, enum: ["male", "female", "other", null], default: null },
     otpCode: { type: String, select: false, default: null },
@@ -190,6 +190,12 @@ UserSchema.methods.comparePassword = async function (
 // Indexes
 UserSchema.index({ role: 1 });
 UserSchema.index({ approvalStatus: 1 });
+// Unique sparse index — phone numbers must be distinct (null is excluded)
+UserSchema.index({ phone: 1 }, { unique: true, sparse: true });
+// TTL indexes — automatically purge expired tokens from the users collection
+UserSchema.index({ verificationTokenExpiry: 1 }, { expireAfterSeconds: 0, sparse: true });
+UserSchema.index({ resetPasswordTokenExpiry: 1 }, { expireAfterSeconds: 0, sparse: true });
+UserSchema.index({ otpExpiry: 1 }, { expireAfterSeconds: 0, sparse: true });
 
 const User: Model<UserDocument> =
   mongoose.models.User ?? mongoose.model<UserDocument>("User", UserSchema);

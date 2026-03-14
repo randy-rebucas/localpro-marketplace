@@ -41,6 +41,8 @@ const ActivityLogSchema = new Schema<ActivityLogDocument>(
         "recurring_cancelled",
         "recurring_job_spawned",
         "job_cancelled",
+        "provider_withdrew",
+        "admin_ledger_entry",
       ] as ActivityEventType[],
       required: true,
     },
@@ -58,14 +60,10 @@ const ActivityLogSchema = new Schema<ActivityLogDocument>(
 ActivityLogSchema.index({ userId: 1, createdAt: -1 });
 ActivityLogSchema.index({ jobId: 1 });
 
-// In development, delete the cached model so schema changes are picked up
-// without needing a full server restart.
-if (process.env.NODE_ENV === "development") {
-  delete mongoose.models.ActivityLog;
-}
-
+// Use the cached model when available to avoid OverwriteModelError across
+// hot-reloads in development and during tests.
 const ActivityLog: Model<ActivityLogDocument> =
-  mongoose.models.ActivityLog ??
+  (mongoose.models.ActivityLog as Model<ActivityLogDocument>) ??
   mongoose.model<ActivityLogDocument>("ActivityLog", ActivityLogSchema);
 
 export default ActivityLog;

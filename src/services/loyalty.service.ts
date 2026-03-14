@@ -16,13 +16,21 @@ export class LoyaltyService {
    * - +100 bonus if it's the client's very first job
    * - Tier multiplier applied (Gold ×1.05, Platinum ×1.10)
    * - Triggers referral bonus if this is the referee's first job
+   *
+   * L19: Idempotent — safe to call multiple times for the same jobId
+   * (e.g., if the auto-release cron retries). Points are awarded at most once
+   * per (userId, earned_job, jobId) combination.
    */
   async awardJobPoints(
     userId: string,
     jobAmount: number,
     jobId: string,
-    isFirstJob: boolean
+    _isFirstJobHint?: boolean   // deprecated param kept for backwards compat; ignored
   ): Promise<void> {
+    // L19: Check idempotency — skip if points already awarded for this job
+    const alreadyAwarded = await loyaltyRepository.hasLedgerEntry(userId, "earned_job", jobId);
+    if (alreadyAwarded) return;
+
     const account = await loyaltyRepository.findOrCreate(userId);
     const multiplier = TIER_MULTIPLIER[account.tier];
 
@@ -41,6 +49,8 @@ export class LoyaltyService {
       });
     }
 
+    // ── First-job bonus: atomic CAS so only one concurrent call wins (C8) ──
+    const isFirstJob = await loyaltyRepository.claimFirstJobBonus(userId);
     if (isFirstJob) {
       const bonusPoints = await getAppSetting<number>("loyalty.firstJobBonusPoints", 100) as number;
       await loyaltyRepository.addPoints(userId, bonusPoints, bonusPoints);
@@ -55,19 +65,19 @@ export class LoyaltyService {
 
     // Check and trigger referral bonus
     const fresh = await loyaltyRepository.findByUserId(userId);
-    if (
-      fresh &&
-      fresh.referredBy &&
-      !fresh.referralBonusAwarded &&
-      (isFirstJob || (fresh.lifetimePoints <= multipliedPoints + (isFirstJob ? 100 : 0)))
-    ) {
+    if (fresh && fresh.referredBy && !fresh.referralBonusAwarded) {
       await this.awardReferralBonus(fresh.referredBy.toString(), userId);
     }
   }
 
   /** Award referral bonuses: +200 pts to referrer, +100 pts to referee. */
   async awardReferralBonus(referrerId: string, refereeId: string): Promise<void> {
-    await loyaltyRepository.markReferralBonusAwarded(refereeId);
+    // Atomic CAS: only proceed if referralBonusAwarded is still false (C9)
+    const claimed = await loyaltyRepository.atomicClaimReferralBonus(refereeId);
+    if (!claimed) {
+      // Already awarded by a concurrent call — skip to prevent double-award
+      return;
+    }
 
     // Referrer bonus
     await loyaltyRepository.findOrCreate(referrerId);
@@ -89,9 +99,14 @@ export class LoyaltyService {
     });
   }
 
-  /** Award +50 pts for submitting a review. */
+  /** Award +50 pts for submitting a review. Idempotent — one award per job. */
   async awardReviewPoints(userId: string, jobId: string): Promise<void> {
     await loyaltyRepository.findOrCreate(userId);
+
+    // Idempotency: skip if the review bonus for this job was already awarded
+    const alreadyAwarded = await loyaltyRepository.hasLedgerEntry(userId, "earned_review", jobId);
+    if (alreadyAwarded) return;
+
     await loyaltyRepository.addPoints(userId, 50, 50);
     await loyaltyRepository.addLedgerEntry({
       userId,

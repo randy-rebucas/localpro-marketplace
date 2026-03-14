@@ -178,6 +178,12 @@ export class BusinessService {
 
   async removeMember(orgId: string, memberId: string, requestingUserId: string): Promise<void> {
     await this.requireManagerAccess(orgId, requestingUserId);
+    // H10: Verify the member record belongs to this org before deactivating
+    // to prevent cross-organization deactivation attacks
+    const member = await businessMemberRepository.findById(memberId) as { orgId?: { toString(): string } } | null;
+    if (!member || member.orgId?.toString() !== orgId) {
+      throw new NotFoundError("Member not found in this organization");
+    }
     await businessMemberRepository.deactivateMember(memberId);
   }
 

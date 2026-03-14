@@ -111,7 +111,10 @@ function matchPhrases(text: string, phrases: string[]): string[] {
  * Returns a SpamResult with flag status, additive score, and reasons.
  */
 export function detectSpam(title: string, description: string): SpamResult {
-  const combined = normalise(`${title} ${description}`);
+  // Use a NUL sentinel (" \x00 ") between title and description so that a
+  // pattern split across the boundary (e.g. title ends with "pay" and
+  // description starts with "pal") cannot form a false positive.
+  const combined = normalise(`${title} \x00 ${description}`);
   const reasons: string[] = [];
   let score = 0;
 

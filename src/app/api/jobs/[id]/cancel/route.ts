@@ -4,6 +4,8 @@ import { requireUser } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { ForbiddenError, NotFoundError, UnprocessableError, ValidationError } from "@/lib/errors";
 import { canTransition } from "@/lib/jobLifecycle";
+import { getPaymentSettings } from "@/lib/appSettings";
+import { calculateCancellationFee } from "@/lib/commission";
 import {
   jobRepository,
   activityRepository,
@@ -11,6 +13,7 @@ import {
   quoteRepository,
   paymentRepository,
 } from "@/repositories";
+import { ledgerRepository } from "@/repositories/ledger.repository";
 import { pushStatusUpdateMany, pushNotification } from "@/lib/events";
 import { ledgerService } from "@/services/ledger.service";
 import type { IJob } from "@/types";
@@ -72,9 +75,35 @@ export const POST = withHandler(async (
 
   const previousProviderId = job.providerId?.toString() ?? null;
   const hadFundedEscrow = job.escrowStatus === "funded";
+  const jobBudget = (job as unknown as { budget: number }).budget;
+  const jobScheduleDate = (job as unknown as { scheduleDate: Date | null }).scheduleDate;
+  const isAssignedCancel = job.status === "assigned" && !!previousProviderId;
+
+  // Calculate cancellation fee (only for assigned jobs with a funded escrow)
+  let cancellationFee = 0;
+  let cancellationProviderShare = 0;
+
+  if (isAssignedCancel && hadFundedEscrow) {
+    const paySettings = await getPaymentSettings();
+    const breakdown = calculateCancellationFee(
+      jobBudget,
+      jobScheduleDate,
+      paySettings["payments.cancellationWindowFreeHours"],
+      paySettings["payments.cancellationWindowFlatHours"],
+      paySettings["payments.cancellationWindowPercentHours"],
+      paySettings["payments.cancellationFeeFlat"],
+      paySettings["payments.cancellationFeePercent"]
+    );
+    cancellationFee          = breakdown.fee;
+    cancellationProviderShare = breakdown.providerShare;
+  }
 
   // Cancel the job
   (job as unknown as { status: string }).status = "cancelled";
+
+  if (cancellationFee > 0) {
+    (job as unknown as { cancellationFee: number }).cancellationFee = cancellationFee;
+  }
 
   // If escrow was funded, mark it as refunded on the job record
   if (hadFundedEscrow) {
@@ -87,31 +116,71 @@ export const POST = withHandler(async (
   if (hadFundedEscrow) {
     const { walletService } = await import("@/services/wallet.service");
     const cancelJournalId = `cancel-refund-${id}`;
+    const netRefundToClient = jobBudget - cancellationFee;
+
+    // Post cancellation fee ledger + credit provider wallet (if applicable)
+    if (cancellationFee > 0 && previousProviderId) {
+      try {
+        const feeJournalId = `${cancelJournalId}-fee`;
+        const existingFeeEntries = await ledgerRepository.findByJournalId(feeJournalId);
+        if (existingFeeEntries.length === 0) {
+          await ledgerService.postCancellationFee(
+            {
+              journalId:   feeJournalId,
+              entityType:  "job",
+              entityId:    id,
+              clientId:    user.userId,
+              providerId:  previousProviderId,
+              initiatedBy: user.userId,
+            },
+            cancellationFee,
+            cancellationProviderShare
+          );
+          if (cancellationProviderShare > 0) {
+            await walletService.credit(
+              previousProviderId,
+              cancellationProviderShare,
+              `Cancellation compensation — job cancelled by client`,
+              { jobId: id, silent: false, journalId: `${cancelJournalId}-fee-provider` }
+            );
+          }
+        }
+      } catch (err) {
+        console.error(`[CancelJob] Cancellation fee ledger/wallet post failed for job ${id}:`, err);
+      }
+    }
+
     await walletService.credit(
       user.userId,
-      (job as unknown as { budget: number }).budget,
-      `Refund — job cancelled`,
+      netRefundToClient,
+      `Refund — job cancelled${cancellationFee > 0 ? ` (₱${cancellationFee.toLocaleString()} cancellation fee deducted)` : ""}`,
       { jobId: id, silent: true, journalId: cancelJournalId }
     );
     await paymentRepository.markRefundedByJobId(id);
-    // Post ledger: DR 2000 Escrow Payable → CR 2200 Wallet Payable (escrow returned to client)
+    // Post ledger: DR 2000 Escrow Payable → CR 2200 Wallet Payable (net escrow returned to client)
     try {
-      const { transactionRepository } = await import("@/repositories");
-      const tx = await transactionRepository.findOneByJobId(id);
-      const refundAmount = tx
-        ? (tx as unknown as { amount: number }).amount
-        : (job as unknown as { budget: number }).budget;
-      await ledgerService.postDisputeRefund(
-        {
-          journalId: cancelJournalId,
-          entityType: "job",
-          entityId: id,
-          clientId: user.userId,
-          initiatedBy: user.userId,
-        },
-        refundAmount
-      );
-    } catch { /* non-critical */ }
+      const existingRefundEntries = await ledgerRepository.findByJournalId(cancelJournalId);
+      if (existingRefundEntries.length === 0) {
+        const { transactionRepository } = await import("@/repositories");
+        const tx = await transactionRepository.findOneByJobId(id);
+        const escrowBalance = tx
+          ? (tx as unknown as { amount: number }).amount
+          : jobBudget;
+        const netRefundLedger = Math.max(escrowBalance - cancellationFee, 0);
+        await ledgerService.postDisputeRefund(
+          {
+            journalId:   cancelJournalId,
+            entityType:  "job",
+            entityId:    id,
+            clientId:    user.userId,
+            initiatedBy: user.userId,
+          },
+          netRefundLedger
+        );
+      }
+    } catch (err) {
+      console.error(`[CancelJob] Refund ledger post failed for job ${id}:`, err);
+    }
   }
 
   // Reject all pending/accepted quotes for this job (open = multiple providers, assigned = one)
@@ -127,11 +196,14 @@ export const POST = withHandler(async (
 
   // Notify assigned provider (if any)
   if (previousProviderId) {
+    const feeNote = cancellationFee > 0
+      ? ` You will receive ₱${cancellationProviderShare.toLocaleString()} as cancellation compensation.`
+      : "";
     const note = await notificationRepository.create({
       userId:  previousProviderId,
       type:    "job_update" as never,
       title:   "Job cancelled by client",
-      message: `The client has cancelled the job you were assigned to. Reason: ${reason}`,
+      message: `The client has cancelled the job you were assigned to. Reason: ${reason}${feeNote}`,
       data:    { jobId: id },
     });
     pushNotification(previousProviderId, note);
@@ -143,7 +215,9 @@ export const POST = withHandler(async (
 
   return NextResponse.json({
     message: hadFundedEscrow
-      ? "Job cancelled. Your escrow payment will be refunded."
+      ? cancellationFee > 0
+        ? `Job cancelled. A cancellation fee of ₱${cancellationFee.toLocaleString()} was deducted. You will receive a refund of ₱${(jobBudget - cancellationFee).toLocaleString()}.`
+        : "Job cancelled. Your escrow payment will be refunded."
       : "Job cancelled successfully.",
   });
 });

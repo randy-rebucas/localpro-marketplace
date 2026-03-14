@@ -4,6 +4,7 @@ import { withHandler } from "@/lib/utils";
 import { connectDB } from "@/lib/db";
 import User from "@/models/User";
 import { favoriteProviderRepository } from "@/repositories/favoriteProvider.repository";
+import { featuredListingRepository } from "@/repositories/featuredListing.repository";
 import type { PipelineStage } from "mongoose";
 
 /**
@@ -96,10 +97,27 @@ export const GET = withHandler(async (req: NextRequest) => {
       ? new Set(await favoriteProviderRepository.getFavoriteProviderIds(user.userId))
       : new Set<string>();
 
+  // Fetch active featured provider IDs for boost badges + sort priority
+  const [featuredIds, topSearchIds] = await Promise.all([
+    featuredListingRepository.findActiveProviderIdsByType("featured_provider"),
+    featuredListingRepository.findActiveProviderIdsByType("top_search"),
+  ]);
+  const featuredSet  = new Set(featuredIds);
+  const topSearchSet = new Set(topSearchIds);
+
   const results = providers.map((p) => ({
     ...p,
-    isFavorite: favoriteIds.has(p.userId._id.toString()),
+    isFavorite:  favoriteIds.has(p.userId._id.toString()),
+    isFeatured:  featuredSet.has(p.userId._id.toString()),
+    isTopSearch: topSearchSet.has(p.userId._id.toString()),
   }));
+
+  // Sort: featured_provider first, then top_search, then the rest
+  results.sort((a, b) => {
+    const scoreA = (a.isFeatured ? 2 : 0) + (a.isTopSearch ? 1 : 0);
+    const scoreB = (b.isFeatured ? 2 : 0) + (b.isTopSearch ? 1 : 0);
+    return scoreB - scoreA;
+  });
 
   return NextResponse.json(results);
 });

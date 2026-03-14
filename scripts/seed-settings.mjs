@@ -105,6 +105,81 @@ const DEFAULT_SETTINGS = [
     value: 100,
     description: "Minimum payout or wallet withdrawal amount in PHP.",
   },
+  {
+    key: "payments.escrowServiceFeeRate",
+    value: 2,
+    description: "Non-refundable escrow protection fee charged to the client on top of the service price (whole-number %). Default: 2%.",
+  },
+  {
+    key: "payments.processingFeeRate",
+    value: 2,
+    description: "Non-refundable payment processing fee passed to the client to offset gateway costs (whole-number %). Default: 2%.",
+  },
+  {
+    key: "payments.withdrawalFeeBank",
+    value: 20,
+    description: "Flat fee (PHP) deducted from gross payout for standard bank transfer withdrawals. Default: ₱20.",
+  },
+  {
+    key: "payments.withdrawalFeeGcash",
+    value: 15,
+    description: "Flat fee (PHP) deducted from gross payout for GCash / Maya withdrawals. Default: ₱15.",
+  },
+  {
+    key: "payments.urgencyFeeSameDay",
+    value: 50,
+    description: "Flat fee (PHP) charged to the client when they select Same Day booking urgency. Default: ₱50.",
+  },
+  {
+    key: "payments.urgencyFeeRush",
+    value: 100,
+    description: "Flat fee (PHP) charged to the client when they select 2-Hour Rush booking urgency. Default: ₱100.",
+  },
+  {
+    key: "payments.platformServiceFeeRate",
+    value: 5,
+    description: "Client-side platform service fee charged on top of the service price at checkout (whole-number %). Enables dual-sided revenue. Default: 5%. Set to 0 to disable.",
+  },
+  {
+    key: "payments.featuredListingFeaturedProvider",
+    value: 199,
+    description: "Weekly price (PHP) for the 'Featured Provider' boost tier. Provider appears at top of search results with a badge.",
+  },
+  {
+    key: "payments.featuredListingTopSearch",
+    value: 299,
+    description: "Weekly price (PHP) for the 'Top Search Placement' boost tier. Provider is pinned at top of category-filtered searches.",
+  },
+  {
+    key: "payments.featuredListingHomepage",
+    value: 499,
+    description: "Weekly price (PHP) for the 'Homepage Highlight' boost tier. Provider card is shown in the premium homepage strip.",
+  },
+  {
+    key: "payments.leadFeeEnabled",
+    value: false,
+    description: "Master switch for the lead fee system. When false, all providers can quote for free.",
+  },
+  {
+    key: "payments.leadFeeMode",
+    value: "pay_per_lead",
+    description: "Active lead-fee model: pay_per_lead | bid_credits | subscription.",
+  },
+  {
+    key: "payments.leadFeePayPerLead",
+    value: 30,
+    description: "Fee (PHP) deducted from the provider wallet per quote submission when mode is pay_per_lead.",
+  },
+  {
+    key: "payments.leadFeeBidCreditPrice",
+    value: 10,
+    description: "Price (PHP) per bid credit token. Each quote submission consumes 1 token when mode is bid_credits.",
+  },
+  {
+    key: "payments.leadFeeSubscriptionMonthly",
+    value: 499,
+    description: "Monthly subscription price (PHP) for unlimited quotes when mode is subscription.",
+  },
 
   // ── Job Board ─────────────────────────────────────────────────────────────
   {
