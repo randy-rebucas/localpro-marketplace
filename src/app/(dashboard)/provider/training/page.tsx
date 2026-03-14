@@ -10,9 +10,9 @@ import {
   Award,
   ChevronRight,
   Loader2,
-  Lock,
+  Wallet,
+  CreditCard,
 } from "lucide-react";
-import { useAuthStore } from "@/stores/authStore";
 import toast from "react-hot-toast";
 
 type CourseCategory = "basic" | "advanced" | "safety" | "custom";
@@ -54,7 +54,6 @@ const CATEGORY_COLORS: Record<CourseCategory, string> = {
 };
 
 export default function ProviderTrainingPage() {
-  const { user } = useAuthStore();
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [enrolling, setEnrolling] = useState<string | null>(null);
@@ -125,14 +124,13 @@ export default function ProviderTrainingPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h2 className="text-xl sm:text-2xl font-bold text-slate-900 flex items-center gap-2">
-          <GraduationCap className="h-6 w-6 text-indigo-500" />
-          Training &amp; Upskilling
-        </h2>
-        <p className="text-slate-500 text-sm mt-1">
-          Earn recognised badges by completing professional training courses.
-        </p>
+      <div className="flex items-center gap-3">
+        <div>
+          <h2 className="text-xl sm:text-2xl font-bold text-slate-900">Training &amp; Upskilling</h2>
+          <p className="text-slate-500 text-sm mt-0.5">
+            Earn recognised badges by completing professional training courses.
+          </p>
+        </div>
       </div>
 
       {/* Stats bar */}
@@ -214,22 +212,35 @@ export default function ProviderTrainingPage() {
                   >
                     Continue <ChevronRight className="h-3.5 w-3.5" />
                   </Link>
+                ) : course.price === 0 ? (
+                  <button
+                    disabled={enrolling === course._id}
+                    onClick={() => void handleEnroll(course._id, 0)}
+                    className="flex items-center gap-1.5 bg-indigo-600 text-white text-xs font-semibold px-3 py-1.5 rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
+                  >
+                    {enrolling === course._id
+                      ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      : <CheckCircle2 className="h-3.5 w-3.5" />}
+                    Enroll Free
+                  </button>
                 ) : (
                   <div className="flex gap-2">
                     <button
                       disabled={enrolling === course._id}
                       onClick={() => void handleEnroll(course._id, course.price)}
-                      className="flex items-center gap-1 bg-indigo-600 text-white text-xs font-semibold px-3 py-1.5 rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
+                      className="flex items-center gap-1.5 bg-indigo-600 text-white text-xs font-semibold px-3 py-1.5 rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
                     >
-                      {enrolling === course._id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
+                      {enrolling === course._id
+                        ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        : <Wallet className="h-3.5 w-3.5" />}
                       Wallet
                     </button>
                     <button
                       disabled={enrolling === course._id}
                       onClick={() => void handlePayMongo(course._id)}
-                      className="flex items-center gap-1 bg-slate-100 text-slate-700 text-xs font-semibold px-3 py-1.5 rounded-lg hover:bg-slate-200 transition-colors disabled:opacity-50"
+                      className="flex items-center gap-1.5 bg-slate-100 text-slate-700 text-xs font-semibold px-3 py-1.5 rounded-lg hover:bg-slate-200 transition-colors disabled:opacity-50"
                     >
-                      <Lock className="h-3 w-3" /> Pay
+                      <CreditCard className="h-3.5 w-3.5" /> Card
                     </button>
                   </div>
                 )}

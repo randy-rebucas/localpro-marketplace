@@ -255,7 +255,7 @@ export class WalletService {
       amountPHP,
       description: `Wallet top-up — ₱${amountPHP.toLocaleString()}`,
       lineItemName: "Wallet Top-Up",
-      successUrl: `${baseUrl}/client/wallet?topup=success`,
+      successUrl: `${baseUrl}/api/payment-return?to=${encodeURIComponent(`/client/wallet?topup=success`)}`,
       cancelUrl:  `${baseUrl}/client/wallet?topup=cancelled`,
       metadata: {
         type:       "wallet_topup",

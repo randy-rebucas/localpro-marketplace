@@ -8,7 +8,7 @@ import { apiFetch } from "@/lib/fetchClient";
 import Modal from "@/components/ui/Modal";
 import { calculateCommission, getCommissionRate, calculateClientFees, DEFAULT_ESCROW_FEE_RATE_PERCENT, DEFAULT_PROCESSING_FEE_RATE_PERCENT, DEFAULT_PLATFORM_SERVICE_FEE_RATE_PERCENT } from "@/lib/commission";
 import { formatCurrency } from "@/lib/utils";
-import { ShieldCheck, Info, AlertTriangle, Wallet } from "lucide-react";
+import { ShieldCheck, AlertTriangle, Wallet } from "lucide-react";
 import type { JobStatus, EscrowStatus } from "@/types";
 
 interface Props {
@@ -103,10 +103,10 @@ export default function JobActionButtons({ jobId, status, escrowStatus, budget, 
     setLoading("fund");
     setShowFundModal(false);
     try {
+      // H9: Do NOT send an amount — the server always uses job.budget.
+      // Sending a client-supplied amount was a security risk (underpayment).
       const res = await apiFetch(`/api/jobs/${jobId}/fund`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount: parsedAmount }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -393,26 +393,14 @@ export default function JobActionButtons({ jobId, status, escrowStatus, budget, 
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-medium">₱</span>
               <input
                 type="number"
-                min="1"
-                step="1"
-                className="input w-full pl-7"
+                readOnly
+                className="input w-full pl-7 bg-slate-50 cursor-not-allowed text-slate-600"
                 value={amountInput}
-                onChange={(e) => setAmountInput(e.target.value)}
               />
             </div>
-            {acceptedAmount !== undefined && parsedAmount !== acceptedAmount && parsedAmount > 0 && (
-              <div className="mt-1.5 flex items-center gap-1 text-xs text-amber-600">
-                <Info className="h-3 w-3 flex-shrink-0" />
-                Differs from quoted amount ({formatCurrency(acceptedAmount)})
-                <button
-                  type="button"
-                  className="ml-1 underline hover:no-underline"
-                  onClick={() => setAmountInput(String(acceptedAmount))}
-                >
-                  Reset
-                </button>
-              </div>
-            )}
+            <p className="text-xs text-slate-400 mt-1">
+              Amount is set by the accepted quote and cannot be changed here.
+            </p>
           </div>
 
           {/* Breakdown */}

@@ -167,7 +167,7 @@ export class PaymentService {
       amountPHP: totalCharge,
       description: `Escrow for: ${jobTitle}`,
       lineItemName: jobTitle,
-      successUrl: `${APP_URL}/client/escrow?jobId=${jobId}&payment=success`,
+      successUrl: `${APP_URL}/api/payment-return?to=${encodeURIComponent(`/client/escrow?jobId=${jobId}&payment=success`)}`,
       cancelUrl: `${APP_URL}/client/jobs/${jobId}?payment=cancelled`,
       metadata: {
         jobId: job._id!.toString(),
@@ -558,10 +558,7 @@ export class PaymentService {
     const jobDoc = await jobRepository.getDocById(p.jobId.toString());
     if (!jobDoc) return;
 
-    const job = jobDoc as unknown as IJob;
-    const rate = await getEffectiveCommissionRate(job.category, p.clientId.toString());
-    const { commission, netAmount } = calculateCommission(p.amount, rate);
-
+    // Commission is deferred to release time — no commission variables needed here.
     await ledgerService.postEscrowFundedGateway(
       {
         journalId,

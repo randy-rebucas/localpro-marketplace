@@ -212,7 +212,7 @@ export class TrainingService {
       amountPHP:    price,
       description:  `Training course — ${courseTitle}`,
       lineItemName: courseTitle,
-      successUrl:   `${APP_URL}/provider/training/${courseId}?payment=success`,
+      successUrl:   `${APP_URL}/api/payment-return?to=${encodeURIComponent(`/provider/training/${courseId}?payment=success`)}`,
       cancelUrl:    `${APP_URL}/provider/training/${courseId}?payment=cancelled`,
       metadata: {
         type:       "training",

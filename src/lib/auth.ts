@@ -72,7 +72,12 @@ export function setAuthCookies(
   response.cookies.set("access_token", accessToken, {
     httpOnly: true,
     secure: isSecure,
-    sameSite: "strict", // L1: "strict" prevents CSRF via cross-site requests
+    // "lax" sends the cookie on top-level cross-site navigations (e.g. redirect
+    // back from PayMongo / PayPal checkout) while still blocking it on cross-site
+    // sub-requests (fetch, img, form POST) — preventing CSRF.
+    // "strict" was causing logout after external payment redirects because the
+    // browser withholds strict cookies on any cross-site navigation.
+    sameSite: "lax",
     maxAge: 60 * 15, // 15 minutes
     path: "/",
   });
@@ -80,7 +85,7 @@ export function setAuthCookies(
   response.cookies.set("refresh_token", refreshToken, {
     httpOnly: true,
     secure: isSecure,
-    sameSite: "strict", // L1
+    sameSite: "lax", // same rationale as access_token above
     maxAge: 60 * 60 * 24 * 7, // 7 days
     path: "/",
   });

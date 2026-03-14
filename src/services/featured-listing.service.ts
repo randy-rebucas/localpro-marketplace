@@ -152,7 +152,7 @@ export class FeaturedListingService {
       amountPHP:    price,
       description:  `${label} boost — 1 week`,
       lineItemName: label,
-      successUrl:   `${APP_URL}/provider/boost?payment=success&type=${type}`,
+      successUrl:   `${APP_URL}/api/payment-return?to=${encodeURIComponent(`/provider/boost?payment=success&type=${type}`)}`,
       cancelUrl:    `${APP_URL}/provider/boost?payment=cancelled`,
       metadata: {
         type:        "featured_listing",

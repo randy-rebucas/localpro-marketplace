@@ -106,7 +106,7 @@ export class QuoteService {
   async acceptQuote(user: TokenPayload, quoteId: string) {
     assertObjectId(quoteId, "quoteId");
     await connectDB();
-    const Quote = mongoose.model("JobApplication");
+    const Quote = mongoose.model("Quote");
     const Job   = mongoose.model("Job");
 
     // ── 1. Load and pre-validate quote ────────────────────────────────────

@@ -270,7 +270,7 @@ export class LeadService {
       amountPHP:    totalCost,
       description:  `Bid Credits — ${quantity} token${quantity !== 1 ? "s" : ""}`,
       lineItemName: `Bid Credits (${quantity} token${quantity !== 1 ? "s" : ""})`,
-      successUrl:   `${APP_URL}/provider/lead-credits?payment=success`,
+      successUrl:   `${APP_URL}/api/payment-return?to=${encodeURIComponent(`/provider/lead-credits?payment=success`)}`,
       cancelUrl:    `${APP_URL}/provider/lead-credits?payment=cancelled`,
       metadata: {
         type:       "lead_credits",
@@ -411,7 +411,7 @@ export class LeadService {
       amountPHP:    price,
       description:  "Unlimited Leads — Monthly Subscription (30 days)",
       lineItemName: "Lead Subscription (monthly)",
-      successUrl:   `${APP_URL}/provider/lead-credits?payment=success`,
+      successUrl:   `${APP_URL}/api/payment-return?to=${encodeURIComponent(`/provider/lead-credits?payment=success`)}`,
       cancelUrl:    `${APP_URL}/provider/lead-credits?payment=cancelled`,
       metadata: {
         type:       "lead_subscription",

@@ -76,7 +76,7 @@ export const POST = withHandler(async (req: NextRequest) => {
   const order = await createOrder({
     amountPHP,
     description: `${PLAN_LABELS[plan]} — Monthly Subscription`,
-    successUrl:  `${appUrl}/provider/business/billing?plan_success=1`,
+    successUrl:  `${appUrl}/api/payment-return?to=${encodeURIComponent("/provider/business/billing?plan_success=1")}`,
     cancelUrl:   `${appUrl}/provider/business/billing?plan_cancelled=1`,
     metadata: {
       type:       "agency_subscription",
