@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { injectMetaPixel } from "@/components/analytics/MetaPixel";
 
 const STORAGE_KEY = "lp_cookie_consent";
 
@@ -36,7 +37,10 @@ export default function CookieConsent() {
     const stored = getStoredConsent();
     if (stored) {
       setDecision(stored);
-      if (stored === "accepted") injectGTM();
+      if (stored === "accepted") {
+        injectGTM();
+        injectMetaPixel();
+      }
     } else {
       setDecision(null); // show banner
     }
@@ -46,6 +50,7 @@ export default function CookieConsent() {
     storeConsent("accepted");
     setDecision("accepted");
     injectGTM();
+    injectMetaPixel();
   }
 
   function decline() {

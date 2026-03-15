@@ -79,6 +79,30 @@ export function ShareButtons({ url, text }: ShareButtonsProps) {
           </svg>
         </a>
 
+        {/* X (Twitter) */}
+        <a
+          href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="Share on X (Twitter)"
+          className="flex items-center justify-center w-9 h-9 rounded-xl bg-[#000000] border border-white/10 hover:opacity-80 transition-opacity"
+        >
+          <svg viewBox="0 0 24 24" className="w-4 h-4 fill-white">
+            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.737-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+          </svg>
+        </a>
+
+        {/* Viber */}
+        <a
+          href={`viber://forward?text=${encodeURIComponent(text + " " + url)}`}
+          aria-label="Share on Viber"
+          className="flex items-center justify-center w-9 h-9 rounded-xl bg-[#7360f2] hover:opacity-80 transition-opacity"
+        >
+          <svg viewBox="0 0 24 24" className="w-4 h-4 fill-white">
+            <path d="M11.997 0C5.976 0 1.038 4.366.065 10.142c-.433 2.596-.082 5.225 1.003 7.59L.02 23.462a.38.38 0 0 0 .475.463l5.895-1.636a11.957 11.957 0 0 0 5.607 1.394C18.02 23.683 23 18.703 23 12.5 23 5.597 18.12 0 11.997 0zm.003 21.52a9.973 9.973 0 0 1-4.962-1.313l-.357-.214-3.7.972.992-3.614-.234-.37A9.97 9.97 0 0 1 2 12.5C2 6.7 6.478 2 12 2s10 4.7 10 10.5c0 5.8-4.478 9.02-10 9.02zm5.36-7.54c-.293-.147-1.737-.855-2.006-.952-.268-.1-.464-.147-.659.147-.195.293-.757.952-.927 1.148-.171.195-.342.22-.635.073-.293-.147-1.237-.455-2.354-1.45-.87-.773-1.457-1.727-1.628-2.021-.171-.293-.018-.452.128-.597.132-.132.293-.342.44-.513.147-.17.195-.292.293-.487.097-.195.049-.366-.025-.513-.073-.147-.659-1.586-.903-2.172-.237-.57-.48-.492-.659-.503a11.74 11.74 0 0 0-.562-.01c-.195 0-.513.073-.781.366-.268.293-1.025 1.001-1.025 2.44 0 1.44 1.049 2.832 1.196 3.027.147.195 2.063 3.149 4.998 4.416.699.3 1.244.481 1.669.614.701.224 1.34.193 1.844.117.562-.084 1.733-.708 1.977-1.392.245-.684.245-1.27.171-1.392-.073-.122-.268-.196-.562-.342z" />
+          </svg>
+        </a>
+
         {/* Copy link */}
         <button
           onClick={handleCopy}

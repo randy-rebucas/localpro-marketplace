@@ -6,6 +6,9 @@ import { withHandler } from "@/lib/utils";
 import { ValidationError, UnprocessableError } from "@/lib/errors";
 import { getAppSetting } from "@/lib/appSettings";
 import { checkRateLimit } from "@/lib/rateLimit";
+import { loyaltyRepository } from "@/repositories/loyalty.repository";
+import { sendReferralRegistrationEmail } from "@/lib/email";
+import User from "@/models/User";
 
 const RegisterSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters").max(100),
@@ -57,6 +60,27 @@ export const POST = withHandler(async (req: NextRequest) => {
   if (!parsed.success) throw new ValidationError(parsed.error.errors[0].message);
 
   const { user, accessToken, refreshToken } = await authService.register(parsed.data);
+
+  // Fire referral notification email (non-blocking)
+  if (parsed.data.referralCode) {
+    void (async () => {
+      try {
+        const referrerAcct = await loyaltyRepository.findByReferralCode(parsed.data.referralCode!);
+        if (referrerAcct) {
+          const referrer = await User.findById(referrerAcct.userId).select("name email").lean();
+          if (referrer && referrer.email) {
+            await sendReferralRegistrationEmail(
+              referrer.email,
+              referrer.name ?? "there",
+              user.name ?? "A friend"
+            );
+          }
+        }
+      } catch (err) {
+        console.error("[REGISTER] Referral email error:", err);
+      }
+    })();
+  }
 
   const response = NextResponse.json({ user }, { status: 201 });
   setAuthCookies(response, accessToken, refreshToken);

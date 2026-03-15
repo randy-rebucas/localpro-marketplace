@@ -21,6 +21,11 @@ export default function robots(): MetadataRoute.Robots {
           "/dispute-resolution",
           "/board",
           "/jobs/",
+          "/jobs",
+          "/providers/",
+          "/providers",
+          "/peso-program",
+          "/refer",
           "/api/og",
         ],
         disallow: [

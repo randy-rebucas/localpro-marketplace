@@ -3,6 +3,8 @@ import { TIER_MULTIPLIER } from "@/lib/loyalty";
 import { getAppSetting } from "@/lib/appSettings";
 import { UnprocessableError, NotFoundError } from "@/lib/errors";
 import type { LoyaltyAccountDocument } from "@/models/LoyaltyAccount";
+import { sendReferralBonusAwardedEmail } from "@/lib/email";
+import User from "@/models/User";
 
 export class LoyaltyService {
   /** Get or create the loyalty account for a user. */
@@ -97,6 +99,24 @@ export class LoyaltyService {
       points: 100,
       description: "Welcome bonus: +100 pts (referred by a friend)",
     });
+
+    // Notify referrer via email (non-blocking)
+    void (async () => {
+      try {
+        const referrer = await User.findById(referrerId).select("name email").lean();
+        const referee = await User.findById(refereeId).select("name").lean();
+        if (referrer?.email) {
+          await sendReferralBonusAwardedEmail(
+            referrer.email,
+            referrer.name ?? "there",
+            referee?.name ?? "Your referral",
+            200
+          );
+        }
+      } catch (err) {
+        console.error("[LOYALTY] Referral bonus email error:", err);
+      }
+    })();
   }
 
   /** Award +50 pts for submitting a review. Idempotent — one award per job. */

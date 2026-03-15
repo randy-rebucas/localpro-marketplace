@@ -92,3 +92,29 @@ export async function getLimitSettings() {
     "limits.maxActiveJobsPerClient": 10 as number,
   });
 }
+
+export async function getReferralSettings() {
+  return getAppSettings({
+    /** Points awarded to the referrer when their referee completes a first job. Default: 200. */
+    "referral.referrerBonusPoints": 200 as number,
+    /** Points awarded to the referee (new user) who was referred. Default: 100. */
+    "referral.refereeBonusPoints": 100 as number,
+    /** Whether the referral program is active. Default: true. */
+    "referral.enabled": true as boolean,
+  });
+}
+
+export async function getLoyaltySettings() {
+  return getAppSettings({
+    /** Loyalty points earned per ₱100 of job spend (clients). Default: 10. */
+    "loyalty.pointsPerHundredPeso": 10 as number,
+    /** Minimum points required for a redemption. Default: 500. */
+    "loyalty.minRedemptionPoints": 500 as number,
+    /** Peso credit value per 100 points redeemed. Default: ₱10. */
+    "loyalty.pesoPerHundredPoints": 10 as number,
+    /** Points awarded on first job posted (clients). Default: 50. */
+    "loyalty.firstJobBonusPoints": 50 as number,
+    /** Points awarded for writing a review. Default: 50. */
+    "loyalty.reviewBonusPoints": 50 as number,
+  });
+}

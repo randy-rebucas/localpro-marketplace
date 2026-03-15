@@ -3,6 +3,7 @@
 import { useState } from "react";
 import toast from "react-hot-toast";
 import { Loader2, CreditCard, Shield } from "lucide-react";
+import { trackPurchase } from "@/lib/analytics";
 
 interface PayMongoButtonProps {
   jobId: string;
@@ -74,12 +75,14 @@ export default function PayMongoButton({
 
       if (data.simulated) {
         toast.success("Escrow funded (dev simulation)");
+        trackPurchase({ value: totalCharge ?? amountPHP, jobId });
         onSimulated?.();
         return;
       }
 
       // Redirect to PayMongo-hosted checkout page
       if (data.checkoutUrl) {
+        trackPurchase({ value: totalCharge ?? amountPHP, jobId });
         window.location.href = data.checkoutUrl;
       }
     } catch {

@@ -17,6 +17,8 @@ import {
   Download,
   Upload,
   FileJson,
+  Cloud,
+  History,
 } from "lucide-react";
 
 interface CollectionStat {
@@ -36,6 +38,28 @@ interface DbStats {
 }
 
 type ActionType = "full_reset" | "seed_only" | "seed_settings" | "seed_skills" | "clear_collection";
+
+interface AtlasSnapshot {
+  id: string;
+  status: "queued" | "inProgress" | "completed" | "failed";
+  description: string;
+  createdAt: string;
+  expiresAt: string;
+  storageSizeBytes?: number;
+  mongodVersion?: string;
+}
+
+interface BackupLogEntry {
+  _id: string;
+  type: "atlas_snapshot" | "json_export";
+  status: "pending" | "completed" | "failed";
+  triggeredBy: "cron" | "admin";
+  snapshotId?: string;
+  description?: string;
+  error?: string;
+  sizeBytes?: number;
+  createdAt: string;
+}
 
 function formatBytes(bytes: number): string {
   if (bytes === 0) return "0 B";
@@ -225,6 +249,14 @@ export default function DatabaseClient({ resetEnabled }: { resetEnabled: boolean
   const [showRestore, setShowRestore] = useState(false);
   const [expandedLog, setExpandedLog] = useState(false);
 
+  // Atlas cloud backup state
+  const [atlasSnapshots, setAtlasSnapshots] = useState<AtlasSnapshot[]>([]);
+  const [atlasLogs, setAtlasLogs] = useState<BackupLogEntry[]>([]);
+  const [atlasLoading, setAtlasLoading] = useState(false);
+  const [atlasConfigured, setAtlasConfigured] = useState(false);
+  const [takingSnapshot, setTakingSnapshot] = useState(false);
+  const [snapshotConfirm, setSnapshotConfirm] = useState(false);
+
   const fetchStats = useCallback(async () => {
     try {
       const res = await fetch("/api/admin/database/stats");
@@ -235,7 +267,22 @@ export default function DatabaseClient({ resetEnabled }: { resetEnabled: boolean
     }
   }, []);
 
-  useEffect(() => { fetchStats(); }, [fetchStats]);
+  const fetchAtlasSnapshots = useCallback(async () => {
+    setAtlasLoading(true);
+    try {
+      const res = await fetch("/api/admin/backup/snapshots");
+      if (res.ok) {
+        const data = await res.json();
+        setAtlasSnapshots(data.snapshots ?? []);
+        setAtlasLogs(data.logs ?? []);
+        setAtlasConfigured(data.atlasConfigured ?? false);
+      }
+    } finally {
+      setAtlasLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { fetchStats(); fetchAtlasSnapshots(); }, [fetchStats, fetchAtlasSnapshots]);
 
   const handleRefresh = () => { setRefreshing(true); fetchStats(); };
 
@@ -323,6 +370,37 @@ export default function DatabaseClient({ resetEnabled }: { resetEnabled: boolean
   };
 
   const totalDocs = stats?.collections.reduce((s, c) => s + c.count, 0) ?? 0;
+
+  const handleTakeSnapshot = async () => {
+    if (!snapshotConfirm) { setSnapshotConfirm(true); return; }
+    setSnapshotConfirm(false);
+    setTakingSnapshot(true);
+    try {
+      const res = await fetch("/api/admin/backup/snapshots", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        pushLog(
+          [
+            `✓ Snapshot queued — ID: ${data.snapshotId ?? "(pending)"}`,
+            "Atlas will complete the snapshot within a few minutes.",
+          ],
+          "success"
+        );
+        // Refresh log after a short delay so the pending entry appears
+        setTimeout(() => fetchAtlasSnapshots(), 3000);
+      } else {
+        pushLog([`✗ Snapshot failed: ${data.error}`], "error");
+      }
+    } catch (e) {
+      pushLog([(e as Error).message], "error");
+    } finally {
+      setTakingSnapshot(false);
+    }
+  };
 
   return (
     <>
@@ -468,6 +546,143 @@ export default function DatabaseClient({ resetEnabled }: { resetEnabled: boolean
               </button>
             </div>
           </div>
+        </div>
+
+        {/* Atlas Cloud Backups panel */}
+        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+          <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-slate-100 dark:border-slate-700">
+            <div className="flex items-center gap-3">
+              <div className="p-1.5 bg-emerald-50 dark:bg-emerald-900/30 rounded-lg">
+                <Cloud className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-slate-800 dark:text-white flex items-center gap-2">
+                  Atlas Cloud Backups
+                  {!atlasConfigured && (
+                    <span className="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400">
+                      Not configured
+                    </span>
+                  )}
+                </h3>
+                <p className="text-xs text-slate-400 dark:text-slate-500">
+                  {atlasConfigured
+                    ? "MongoDB Atlas Continuous Cloud Backup — point-in-time recovery available."
+                    : "Set MONGODB_ATLAS_* environment variables to enable Atlas snapshot management."}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <button
+                onClick={() => fetchAtlasSnapshots()}
+                disabled={atlasLoading}
+                className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-40 transition-colors"
+                title="Refresh snapshots"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${atlasLoading ? "animate-spin" : ""}`} />
+              </button>
+              {atlasConfigured && (
+                snapshotConfirm ? (
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs text-amber-600 dark:text-amber-400 font-medium">Confirm?</span>
+                    <button
+                      onClick={handleTakeSnapshot}
+                      disabled={takingSnapshot}
+                      className="px-2.5 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-semibold hover:bg-emerald-700 disabled:opacity-40 transition-colors"
+                    >
+                      {takingSnapshot ? "Queuing…" : "Yes, take snapshot"}
+                    </button>
+                    <button
+                      onClick={() => setSnapshotConfirm(false)}
+                      className="px-2.5 py-1.5 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 rounded-lg text-xs font-semibold hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={handleTakeSnapshot}
+                    disabled={takingSnapshot}
+                    className="flex items-center gap-1.5 px-3 py-1.5 border border-emerald-200 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg text-xs font-semibold disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {takingSnapshot
+                      ? <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Queuing…</>
+                      : <><Cloud className="w-3.5 h-3.5" /> Take Snapshot</>}
+                  </button>
+                )
+              )}
+            </div>
+          </div>
+
+          {atlasLoading ? (
+            <div className="p-5 space-y-3 animate-pulse">
+              {[...Array(3)].map((_, i) => <div key={i} className="h-10 bg-slate-100 dark:bg-slate-700 rounded-xl" />)}
+            </div>
+          ) : !atlasConfigured ? (
+            <div className="px-5 py-8 text-center">
+              <Cloud className="w-8 h-8 text-slate-300 dark:text-slate-600 mx-auto mb-2" />
+              <p className="text-sm text-slate-400 dark:text-slate-500 font-medium">Atlas not configured</p>
+              <p className="text-xs text-slate-300 dark:text-slate-600 mt-1 max-w-md mx-auto">
+                Add <code className="bg-slate-100 dark:bg-slate-800 px-1 rounded">MONGODB_ATLAS_PUBLIC_KEY</code>,{" "}
+                <code className="bg-slate-100 dark:bg-slate-800 px-1 rounded">MONGODB_ATLAS_PRIVATE_KEY</code>,{" "}
+                <code className="bg-slate-100 dark:bg-slate-800 px-1 rounded">MONGODB_ATLAS_PROJECT_ID</code>, and{" "}
+                <code className="bg-slate-100 dark:bg-slate-800 px-1 rounded">MONGODB_ATLAS_CLUSTER_NAME</code> to your environment.
+              </p>
+            </div>
+          ) : atlasLogs.length === 0 ? (
+            <div className="px-5 py-8 text-center">
+              <History className="w-8 h-8 text-slate-300 dark:text-slate-600 mx-auto mb-2" />
+              <p className="text-sm text-slate-400 dark:text-slate-500">No snapshots recorded yet</p>
+              <p className="text-xs text-slate-300 dark:text-slate-600 mt-1">Take your first snapshot or wait for the daily cron at 1 AM UTC.</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-slate-100 dark:border-slate-700">
+                    <th className="text-left px-5 py-3 text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Date</th>
+                    <th className="text-left px-5 py-3 text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider hidden sm:table-cell">Snapshot ID</th>
+                    <th className="text-left px-5 py-3 text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Status</th>
+                    <th className="text-right px-5 py-3 text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider hidden md:table-cell">Size</th>
+                    <th className="text-left px-5 py-3 text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider hidden lg:table-cell">Triggered by</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
+                  {atlasLogs.map((entry) => (
+                    <tr key={String(entry._id)} className="hover:bg-slate-50 dark:hover:bg-slate-700/40 transition-colors">
+                      <td className="px-5 py-3 text-xs text-slate-700 dark:text-slate-300 whitespace-nowrap">
+                        {new Date(entry.createdAt).toLocaleString()}
+                      </td>
+                      <td className="px-5 py-3 font-mono text-xs text-slate-400 dark:text-slate-500 hidden sm:table-cell max-w-[140px] truncate">
+                        {entry.snapshotId ?? "—"}
+                      </td>
+                      <td className="px-5 py-3">
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide ${
+                          entry.status === "completed"
+                            ? "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400"
+                            : entry.status === "failed"
+                            ? "bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400"
+                            : "bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400"
+                        }`}>
+                          {entry.status === "completed"
+                            ? <CheckCircle className="w-3 h-3" />
+                            : entry.status === "failed"
+                            ? <XCircle className="w-3 h-3" />
+                            : <RefreshCw className="w-3 h-3 animate-spin" />}
+                          {entry.status}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3 text-right text-xs text-slate-500 dark:text-slate-400 hidden md:table-cell tabular-nums">
+                        {entry.sizeBytes ? formatBytes(entry.sizeBytes) : "—"}
+                      </td>
+                      <td className="px-5 py-3 text-xs text-slate-500 dark:text-slate-400 hidden lg:table-cell capitalize">
+                        {entry.triggeredBy}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
 
         {/* Reset & Seed panel */}

@@ -9,6 +9,7 @@ import { apiFetch } from "@/lib/fetchClient";
 import PageGuide from "@/components/shared/PageGuide";
 import { Copy } from "lucide-react";
 import type { ICategory } from "@/types";
+import { trackJobPost } from "@/lib/analytics";
 
 import type { FormData, BudgetHint } from "./types";
 import { StepIndicator }  from "./StepIndicator";
@@ -246,6 +247,7 @@ export default function PostJobClient({ categories, initialData }: Props) {
       const data = await res.json() as { error?: string };
       if (!res.ok) { toast.error(data.error ?? "Failed to post job"); return; }
       toast.success("Job posted! It will be reviewed by our team.");
+      trackJobPost({ category: form.category, budget: Number(form.budget) });
       router.push("/client/jobs");
     } catch { toast.error("Something went wrong. Please try again."); }
     finally   { setIsSubmitting(false); }

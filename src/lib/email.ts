@@ -779,3 +779,121 @@ export async function sendNotificationEmail(
   const { subject, html } = buildEmailBody(ctx);
   await sendEmail(to, subject, html);
 }
+
+// ─── Referral emails ──────────────────────────────────────────────────────────
+
+/** Notify a referrer that their referred user has registered and the bonus is on its way. */
+export async function sendReferralRegistrationEmail(
+  to: string,
+  referrerName: string,
+  refereeName: string
+): Promise<void> {
+  const html = baseTemplate(
+    "Your referral joined LocalPro!",
+    greeting(referrerName)
+      + p(`Great news — <strong>${escHtml(refereeName)}</strong> just signed up using your referral link!`)
+      + callout(
+          "You'll receive <strong>+200 loyalty points</strong> once they complete their first job. Keep sharing your link to earn more rewards.",
+          "success"
+        )
+      + p("Points are automatically converted to ₱ credits (100 pts = ₱10). No action needed on your part."),
+    `${APP_URL}/refer`,
+    "View My Referrals"
+  );
+  await sendEmail(to, `${refereeName} joined LocalPro using your referral link 🎉`, html);
+}
+
+/** Notify both referrer and referee that referral bonus points were awarded. */
+export async function sendReferralBonusAwardedEmail(
+  referrerTo: string,
+  referrerName: string,
+  refereeFirstName: string,
+  referrerPoints: number,
+): Promise<void> {
+  const html = baseTemplate(
+    "Referral bonus awarded!",
+    greeting(referrerName)
+      + p(`Your referral <strong>${escHtml(refereeFirstName)}</strong> has completed their first job on LocalPro.`)
+      + callout(
+          `You've been awarded <strong>+${referrerPoints} loyalty points</strong>. These have been added to your loyalty account and can be redeemed for ₱ credits.`,
+          "success"
+        ),
+    `${APP_URL}/refer`,
+    "Check My Rewards"
+  );
+  await sendEmail(referrerTo, `You earned +${referrerPoints} pts — referral bonus awarded!`, html);
+}
+
+// ─── Drip / onboarding emails ─────────────────────────────────────────────────
+
+/** Day-3 onboarding nudge for clients who haven't posted a job yet. */
+export async function sendDripDay3ClientEmail(to: string, name: string): Promise<void> {
+  const html = baseTemplate(
+    "Ready to post your first job?",
+    greeting(name)
+      + p("It's been a few days since you joined LocalPro — have you had a chance to post your first job?")
+      + callout(
+          "Posting a job takes less than 2 minutes. Describe what you need, set a budget, and receive quotes from KYC-verified providers near you.",
+          "info"
+        )
+      + p("Payments are protected by escrow — you only pay when the work is done."),
+    `${APP_URL}/client/dashboard`,
+    "Post Your First Job"
+  );
+  await sendEmail(to, "Ready to post your first job on LocalPro?", html);
+}
+
+/** Day-3 onboarding nudge for providers who haven't completed their profile yet. */
+export async function sendDripDay3ProviderEmail(to: string, name: string): Promise<void> {
+  const html = baseTemplate(
+    "Complete your profile to get hired faster",
+    greeting(name)
+      + p("Welcome to LocalPro! Providers with complete profiles receive up to 3× more job invitations.")
+      + callout(
+          "Add your skills, service area, portfolio, and availability to start getting matched with local jobs.",
+          "info"
+        )
+      + p("It takes less than 5 minutes and it's completely free."),
+    `${APP_URL}/provider/profile`,
+    "Complete My Profile"
+  );
+  await sendEmail(to, "Complete your LocalPro profile — get hired faster", html);
+}
+
+/** Day-7 re-engagement email for clients with open jobs in their area. */
+export async function sendDripDay7ClientEmail(
+  to: string,
+  name: string,
+  jobCount: number,
+  city: string
+): Promise<void> {
+  const html = baseTemplate(
+    "Jobs are waiting near you",
+    greeting(name)
+      + p(`There are currently <strong>${jobCount} open job${jobCount !== 1 ? "s" : ""}</strong> in ${escHtml(city)} and surrounding areas on LocalPro.`)
+      + p("Need help around the house, office, or property? Post a job for free and get quotes from verified professionals today."),
+    `${APP_URL}/jobs`,
+    "Browse Open Jobs"
+  );
+  await sendEmail(to, `${jobCount} jobs near you on LocalPro`, html);
+}
+
+/** Day-7 re-engagement email for providers who have not yet submitted a quote. */
+export async function sendDripDay7ProviderEmail(
+  to: string,
+  name: string,
+  jobCount: number,
+): Promise<void> {
+  const html = baseTemplate(
+    "New jobs are available near you",
+    greeting(name)
+      + p(`There are <strong>${jobCount} open job${jobCount !== 1 ? "s" : ""}</strong> on the LocalPro marketplace right now.`)
+      + callout(
+          "Browse the marketplace and submit quotes to start earning. Payments are protected by escrow — you get paid when the job is done.",
+          "success"
+        ),
+    `${APP_URL}/provider/marketplace`,
+    "Browse the Marketplace"
+  );
+  await sendEmail(to, `${jobCount} new jobs available on LocalPro`, html);
+}

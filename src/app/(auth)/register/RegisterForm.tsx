@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
 import { useAuthStore } from "@/stores/authStore";
+import { trackRegistration, trackProviderRegistration } from "@/lib/analytics";
 
 type Role = "client" | "provider";
 
@@ -73,6 +74,9 @@ export default function RegisterForm() {
 
       setUser(data.user);
       toast.success("Account created successfully!");
+      // Fire analytics events
+      trackRegistration({ role: data.user.role });
+      if (data.user.role === "provider") trackProviderRegistration({ role: "provider" });
       // Providers go through the onboarding wizard first to set skills, service area and upload documents
       const destination = data.user.role === "provider" ? "/provider/onboarding" : `/${data.user.role}/dashboard`;
       router.push(destination);

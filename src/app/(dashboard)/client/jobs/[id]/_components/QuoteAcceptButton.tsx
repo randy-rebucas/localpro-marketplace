@@ -8,6 +8,7 @@ import { calculateCommission } from "@/lib/commission";
 import { formatCurrency } from "@/lib/utils";
 import { apiFetch } from "@/lib/fetchClient";
 import Modal from "@/components/ui/Modal";
+import { trackQuoteAccept } from "@/lib/analytics";
 
 export default function QuoteAcceptButton({
   quoteId,
@@ -30,6 +31,7 @@ export default function QuoteAcceptButton({
       const data = await res.json();
       if (!res.ok) { toast.error(data.error ?? "Failed to accept quote"); return; }
       toast.success("Quote accepted! Provider has been assigned.");
+      trackQuoteAccept({ jobId: quoteId, amount: proposedAmount });
       setOpen(false);
       router.refresh();
     } catch {

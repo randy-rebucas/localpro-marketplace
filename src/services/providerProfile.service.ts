@@ -20,17 +20,30 @@ export interface UpdateProfileInput {
 
 export class ProviderProfileService {
   async getProfile(userId: string) {
-    const agencyQuery = (async () => {
+    // First try userId lookup; if not found, the id may be a ProviderProfile _id —
+    // resolve the real userId from it and retry.
+    let resolvedUserId = userId;
+    let directProfile = await providerProfileRepository.findByUserIdPopulated(userId);
+    if (!directProfile) {
       try {
-        const { default: AgencyProfile } = await import("@/models/AgencyProfile");
-        return AgencyProfile.findOne({ providerId: userId }, "name plan staff").lean();
-      } catch { return null; }
-    })();
+        const { default: ProviderProfile } = await import("@/models/ProviderProfile");
+        const byId = await ProviderProfile.findById(userId).select("userId").lean() as { userId: unknown } | null;
+        if (byId?.userId) {
+          resolvedUserId = String(byId.userId);
+          directProfile = await providerProfileRepository.findByUserIdPopulated(resolvedUserId);
+        }
+      } catch { /* invalid ObjectId or not a profile _id — fall through to NotFoundError */ }
+    }
 
     const [profile, ratingStats, agencyDoc] = await Promise.all([
-      providerProfileRepository.findByUserIdPopulated(userId),
-      reviewRepository.getProviderRatingSummary(userId),
-      agencyQuery,
+      Promise.resolve(directProfile),
+      reviewRepository.getProviderRatingSummary(resolvedUserId),
+      (async () => {
+        try {
+          const { default: AgencyProfile } = await import("@/models/AgencyProfile");
+          return AgencyProfile.findOne({ providerId: resolvedUserId }, "name plan staff").lean();
+        } catch { return null; }
+      })(),
     ]);
 
     type AgencyLean = { name: string; plan?: string; staff?: unknown[] };
@@ -50,7 +63,7 @@ export class ProviderProfileService {
 
     // Provider exists but hasn't filled in their profile yet.
     // Return minimal user data so the modal renders instead of erroring.
-    const user = await userRepository.findById(userId) as unknown as {
+    const user = await userRepository.findById(resolvedUserId) as unknown as {
       name: string; email: string; isVerified?: boolean;
     } | null;
     if (!user) throw new NotFoundError("Provider");

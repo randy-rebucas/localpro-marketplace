@@ -13,6 +13,8 @@
     { "path": "/api/cron/spawn-recurring",        "schedule": "0 9 * * *" },
     { "path": "/api/cron/expire-boosts",          "schedule": "0 0 * * *" },
     { "path": "/api/cron/reconcile-ledger",        "schedule": "30 6 * * *" },
-    { "path": "/api/cron/retention-cleanup",       "schedule": "0 2 1 * *" }
+    { "path": "/api/cron/retention-cleanup",       "schedule": "0 2 1 * *" },
+    { "path": "/api/cron/db-backup",               "schedule": "0 1 * * *" },
+    { "path": "/api/cron/drip-emails",             "schedule": "0 9 * * *" }
   ]
 }

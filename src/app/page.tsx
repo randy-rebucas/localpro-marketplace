@@ -82,8 +82,8 @@ async function TopProvidersSection() {
           <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-2">Top-Rated Providers</h2>
           <p className="text-slate-500 text-sm">Ready to take on your next job.</p>
         </div>
-        <Link href="/register?role=client" className="text-sm font-medium text-primary hover:underline hidden sm:block shrink-0">
-          Find more providers →
+        <Link href="/providers" className="text-sm font-medium text-primary hover:underline hidden sm:block shrink-0">
+          Browse all providers →
         </Link>
       </div>
 
@@ -364,8 +364,8 @@ async function LatestJobsSection() {
           <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-2">Latest Open Jobs</h2>
           <p className="text-slate-500 text-sm">Real jobs posted by clients — apply now before they&apos;re filled.</p>
         </div>
-        <Link href="/board" className="text-sm font-medium text-primary hover:underline hidden sm:block shrink-0">
-          View job board →
+        <Link href="/jobs" className="text-sm font-medium text-primary hover:underline hidden sm:block shrink-0">
+          Browse all jobs →
         </Link>
       </div>
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -397,7 +397,7 @@ async function LatestJobsSection() {
         })}
       </div>
       <div className="mt-6 text-center sm:hidden">
-        <Link href="/board" className="text-sm font-medium text-primary hover:underline">View job board →</Link>
+        <Link href="/jobs" className="text-sm font-medium text-primary hover:underline">Browse all jobs →</Link>
       </div>
     </section>
   );
@@ -570,7 +570,9 @@ export default async function RootPage() {
             </span>
           </Link>
           <nav className="flex items-center gap-2">
-            <Link href="/board"    className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors px-3 py-1.5 rounded-lg hover:bg-slate-100">Job Board</Link>
+            <Link href="/jobs"       className="hidden sm:block text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors px-3 py-1.5 rounded-lg hover:bg-slate-100">Browse Jobs</Link>
+            <Link href="/providers"  className="hidden sm:block text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors px-3 py-1.5 rounded-lg hover:bg-slate-100">Providers</Link>
+            <Link href="/peso-program" className="hidden md:block text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors px-3 py-1.5 rounded-lg hover:bg-slate-100">PESO</Link>
             <Link href="/login"    className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors px-3 py-1.5 rounded-lg hover:bg-slate-100">Log in</Link>
             <Link href="/register" className="btn-primary text-sm shadow-sm">Get started →</Link>
           </nav>
@@ -880,6 +882,15 @@ export default async function RootPage() {
                   <li><Link href="/board"                  className="hover:text-white transition-colors">Job Board</Link></li>
                   <li><Link href="/login"                  className="hover:text-white transition-colors">Log in</Link></li>
                   <li><Link href="/register"               className="hover:text-white transition-colors">Sign up</Link></li>
+                </ul>
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-slate-300 uppercase tracking-wider mb-3">Explore</p>
+                <ul className="space-y-2 text-sm">
+                  <li><Link href="/jobs"          className="hover:text-white transition-colors">Browse Jobs</Link></li>
+                  <li><Link href="/providers"     className="hover:text-white transition-colors">Browse Providers</Link></li>
+                  <li><Link href="/refer"         className="hover:text-white transition-colors">Refer &amp; Earn</Link></li>
+                  <li><Link href="/peso-program"  className="hover:text-white transition-colors">PESO Partnership</Link></li>
                 </ul>
               </div>
               <div>

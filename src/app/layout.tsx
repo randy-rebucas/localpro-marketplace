@@ -7,6 +7,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import CookieConsent from "@/components/shared/CookieConsent";
 import JsonLd from "@/components/shared/JsonLd";
 import PwaSetup from "@/components/pwa/PwaSetup";
+import MetaPixelNoscript from "@/components/analytics/MetaPixel";
 import "./globals.css";
 
 const inter = Inter({
@@ -106,8 +107,10 @@ export const metadata: Metadata = {
     images: ["/api/og"],
   },
   icons: {
-    icon: "/favicon.ico",
-    shortcut: "/favicon-16x16.png",
+    icon: [
+      { url: "/icons/icon.svg", type: "image/svg+xml" },
+      { url: "/icons/icon-192x192.png", sizes: "192x192", type: "image/png" },
+    ],
     apple: "/icons/apple-touch-icon.png",
   },
   verification: {
@@ -139,6 +142,7 @@ export default function RootLayout({
             />
           </noscript>
         )}
+        <MetaPixelNoscript />
         {process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY && (
           <Script
             id="google-maps"
