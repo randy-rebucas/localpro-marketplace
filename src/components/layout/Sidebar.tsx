@@ -17,6 +17,8 @@ import {
   CircleDollarSign,
   BarChart3,
   CheckCircle,
+  Scale,
+  Ticket,
   AlertTriangle,
   Users,
   MapPin,
@@ -46,7 +48,6 @@ import {
   UsersRound,
   Zap,
   FileBarChart,
-  Scale,
   Database,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -147,47 +148,53 @@ const navGroups: Partial<Record<UserRole, NavGroup[]>> = {
   admin: [
     {
       items: [
-        { label: "Dashboard", href: "/admin/dashboard", icon: <BarChart3 className="h-4.5 w-4.5" />, capability: null },
+        { label: "Dashboard", href: "/admin/dashboard", icon: <LayoutDashboard className="h-4.5 w-4.5" />, capability: null },
       ],
     },
     {
-      heading: "Operations",
+      heading: "Marketplace",
       items: [
-        { label: "All Jobs", href: "/admin/all-jobs", icon: <Briefcase className="h-4.5 w-4.5" />, capability: "manage_jobs" },
-        { label: "Validate Jobs", href: "/admin/jobs", icon: <CheckCircle className="h-4.5 w-4.5" />, capability: "manage_jobs" },
-        { label: "Fraud Monitor", href: "/admin/fraud", icon: <ShieldAlert className="h-4.5 w-4.5" />, capability: "manage_jobs" },
-        { label: "KYC Review", href: "/admin/kyc", icon: <ShieldCheck className="h-4.5 w-4.5" />, capability: "manage_kyc" },
-        { label: "Disputes", href: "/admin/disputes", icon: <AlertTriangle className="h-4.5 w-4.5" />, capability: "manage_disputes" },
-        { label: "Activity Logs", href: "/admin/logs", icon: <ScrollText className="h-4.5 w-4.5" />, capability: "__admin_only__" },
-      ],
-    },
-    {
-      heading: "Finance",
-      items: [
-        { label: "Revenue", href: "/admin/revenue", icon: <TrendingUp className="h-4.5 w-4.5" />, capability: "view_revenue" },
-        { label: "Accounting", href: "/admin/accounting", icon: <Scale className="h-4.5 w-4.5" />, capability: "view_revenue" },
-        { label: "Payouts", href: "/admin/payouts", icon: <Banknote className="h-4.5 w-4.5" />, capability: "manage_payouts" },
-        { label: "Wallet Withdrawals", href: "/admin/wallet", icon: <Wallet className="h-4.5 w-4.5" />, capability: "manage_payouts" },
+        { label: "All Jobs",      href: "/admin/all-jobs",   icon: <Briefcase     className="h-4.5 w-4.5" />, capability: "manage_jobs" },
+        { label: "Validate Jobs", href: "/admin/jobs",       icon: <CheckCircle   className="h-4.5 w-4.5" />, capability: "manage_jobs" },
+        { label: "Categories",    href: "/admin/categories", icon: <Tag           className="h-4.5 w-4.5" />, capability: "manage_categories" },
+        { label: "Courses",       href: "/admin/courses",    icon: <GraduationCap className="h-4.5 w-4.5" />, capability: "manage_courses" },
       ],
     },
     {
       heading: "Users",
       items: [
-        { label: "Users",         href: "/admin/users",      icon: <Users      className="h-4.5 w-4.5" />, capability: "manage_users" },
-        { label: "Agencies",      href: "/admin/agencies",   icon: <UsersRound className="h-4.5 w-4.5" />, capability: "manage_agencies" },
-        { label: "Businesses",    href: "/admin/businesses", icon: <Building2  className="h-4.5 w-4.5" />, capability: "manage_businesses" },
-        { label: "Staff",         href: "/admin/staff",      icon: <UserCog    className="h-4.5 w-4.5" />, capability: "__admin_only__" },
-        { label: "Categories",    href: "/admin/categories", icon: <Tag        className="h-4.5 w-4.5" />, capability: "manage_categories" },
-        { label: "Courses",        href: "/admin/courses",    icon: <GraduationCap className="h-4.5 w-4.5" />, capability: "manage_courses" },
+        { label: "All Users",   href: "/admin/users",      icon: <Users      className="h-4.5 w-4.5" />, capability: "manage_users" },
+        { label: "Agencies",    href: "/admin/agencies",   icon: <UsersRound className="h-4.5 w-4.5" />, capability: "manage_agencies" },
+        { label: "Businesses",  href: "/admin/businesses", icon: <Building2  className="h-4.5 w-4.5" />, capability: "manage_businesses" },
+        { label: "Staff",       href: "/admin/staff",      icon: <UserCog    className="h-4.5 w-4.5" />, capability: "__admin_only__" },
+      ],
+    },
+    {
+      heading: "Moderation",
+      items: [
+        { label: "Disputes",       href: "/admin/disputes", icon: <AlertTriangle className="h-4.5 w-4.5" />, capability: "manage_disputes" },
+        { label: "Fraud Monitor",  href: "/admin/fraud",    icon: <ShieldAlert   className="h-4.5 w-4.5" />, capability: "manage_jobs" },
+        { label: "KYC Review",     href: "/admin/kyc",      icon: <ShieldCheck   className="h-4.5 w-4.5" />, capability: "manage_kyc" },
+        { label: "Activity Logs",  href: "/admin/logs",     icon: <ScrollText    className="h-4.5 w-4.5" />, capability: "__admin_only__" },
+      ],
+    },
+    {
+      heading: "Finance",
+      items: [
+        { label: "Revenue",            href: "/admin/revenue",    icon: <TrendingUp className="h-4.5 w-4.5" />, capability: "view_revenue" },
+        { label: "Accounting",         href: "/admin/accounting", icon: <Scale      className="h-4.5 w-4.5" />, capability: "view_revenue" },
+        { label: "Payouts",            href: "/admin/payouts",    icon: <Banknote   className="h-4.5 w-4.5" />, capability: "manage_payouts" },
+        { label: "Wallet Withdrawals", href: "/admin/wallet",     icon: <Wallet     className="h-4.5 w-4.5" />, capability: "manage_payouts" },
       ],
     },
     {
       heading: "Communication",
       items: [
-        { label: "Support Inbox", href: "/admin/support", icon: <Headphones className="h-4.5 w-4.5" />, capability: "manage_support" },
-        { label: "Announcements", href: "/admin/announcements", icon: <Megaphone className="h-4.5 w-4.5" />, capability: "__admin_only__" },
-        { label: "Knowledge Base", href: "/admin/knowledge", icon: <BookOpen className="h-4.5 w-4.5" />, capability: "__admin_only__" },
-        { label: "Notifications", href: "/admin/notifications", icon: <Bell className="h-4.5 w-4.5" />, capability: null },
+        { label: "Support Inbox",  href: "/admin/support",         icon: <Headphones className="h-4.5 w-4.5" />, capability: "manage_support" },
+        { label: "Ticket Queue",   href: "/admin/support/tickets", icon: <Ticket     className="h-4.5 w-4.5" />, capability: "manage_support" },
+        { label: "Announcements",  href: "/admin/announcements",   icon: <Megaphone  className="h-4.5 w-4.5" />, capability: "__admin_only__" },
+        { label: "Knowledge Base", href: "/admin/knowledge",       icon: <BookOpen   className="h-4.5 w-4.5" />, capability: "__admin_only__" },
+        { label: "Notifications",  href: "/admin/notifications",   icon: <Bell       className="h-4.5 w-4.5" />, capability: null },
       ],
     },
     {
@@ -199,8 +206,8 @@ const navGroups: Partial<Record<UserRole, NavGroup[]>> = {
     {
       heading: "Platform",
       items: [
-        { label: "App Settings", href: "/admin/settings", icon: <Settings className="h-4.5 w-4.5" />, capability: "__admin_only__" },
-        { label: "Database", href: "/admin/database", icon: <Database className="h-4.5 w-4.5" />, capability: "__admin_only__" },
+        { label: "App Settings", href: "/admin/settings", icon: <Settings  className="h-4.5 w-4.5" />, capability: "__admin_only__" },
+        { label: "Database",     href: "/admin/database", icon: <Database  className="h-4.5 w-4.5" />, capability: "__admin_only__" },
       ],
     },
   ],

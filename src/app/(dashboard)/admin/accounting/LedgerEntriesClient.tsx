@@ -43,6 +43,11 @@ const ACCOUNT_NAMES: Record<string, string> = {
   "4000": "Commission Revenue",
   "4100": "Subscription Revenue",
   "4200": "Late Fee Revenue",
+  "4300": "Escrow Fee Revenue",
+  "4400": "Processing Fee Revenue",
+  "4500": "Withdrawal Fee Revenue",
+  "4600": "Urgency Booking Fee Revenue",
+  "4700": "Platform Service Fee Revenue",
   "5000": "Refunds Issued",
   "5100": "Payment Processing Fees",
   "5200": "Bad Debt / Write-offs",
@@ -50,46 +55,57 @@ const ACCOUNT_NAMES: Record<string, string> = {
 };
 
 const ENTRY_TYPE_LABELS: Record<string, string> = {
-  escrow_funded_gateway:       "Escrow Funded (Gateway)",
-  escrow_funded_wallet:        "Escrow Funded (Wallet)",
-  commission_accrued:          "Commission Accrued",
-  earnings_earmarked:          "Earnings Earmarked",
-  escrow_released:             "Escrow Released",
-  payout_sent:                 "Payout Sent",
-  wallet_funded_gateway:       "Wallet Funded (Gateway)",
-  wallet_debited_escrow:       "Wallet Debited for Escrow",
+  escrow_funded_gateway: "Escrow Funded (Gateway)",
+  escrow_funded_wallet: "Escrow Funded (Wallet)",
+  commission_accrued: "Commission Accrued",
+  earnings_earmarked: "Earnings Earmarked",
+  escrow_released: "Escrow Released",
+  payout_sent: "Payout Sent",
+  wallet_funded_gateway: "Wallet Funded (Gateway)",
+  wallet_debited_escrow: "Wallet Debited for Escrow",
   wallet_withdrawal_requested: "Withdrawal Requested",
   wallet_withdrawal_completed: "Withdrawal Completed",
-  wallet_withdrawal_reversed:  "Withdrawal Reversed",
-  dispute_refund_commission:   "Dispute Refund (Commission)",
-  dispute_refund_earnings:     "Dispute Refund (Earnings)",
-  dispute_release:             "Dispute Release",
-  partial_release:             "Partial Release",
-  milestone_release:           "Milestone Release",
-  admin_credit:                "Admin Credit",
-  admin_debit:                 "Admin Debit",
-  reversal:                    "Reversal",
-  payout_requested:            "Payout Requested"
+  wallet_withdrawal_reversed: "Withdrawal Reversed",
+  dispute_refund_commission: "Dispute Refund (Commission)",
+  dispute_refund_earnings: "Dispute Refund (Earnings)",
+  dispute_release: "Dispute Release",
+  partial_release: "Partial Release",
+  milestone_release: "Milestone Release",
+  admin_credit: "Admin Credit",
+  admin_debit: "Admin Debit",
+  reversal: "Reversal",
+  payout_requested: "Payout Requested",
+  withdrawal_fee_accrued: "Withdrawal Fee Accrued",
+  processing_fee_accrued: "Processing Fee Accrued",
+  escrow_fee_accrued: "Escrow Fee Accrued",
+  platform_service_fee_accrued: "Platform Service Fee Accrued",
+  escrow_fee_refund: "Escrow Fee Refund",
 };
 
 const TYPE_COLORS: Record<string, string> = {
-  escrow_funded_gateway:       "bg-blue-50 text-blue-700",
-  escrow_funded_wallet:        "bg-blue-50 text-blue-700",
-  commission_accrued:          "bg-green-50 text-green-700",
-  earnings_earmarked:          "bg-green-50 text-green-700",
-  escrow_released:             "bg-emerald-50 text-emerald-700",
-  payout_sent:                 "bg-purple-50 text-purple-700",
-  wallet_funded_gateway:       "bg-indigo-50 text-indigo-700",
-  wallet_debited_escrow:       "bg-indigo-50 text-indigo-700",
+  escrow_funded_gateway: "bg-blue-50 text-blue-700",
+  escrow_funded_wallet: "bg-blue-50 text-blue-700",
+  commission_accrued: "bg-green-50 text-green-700",
+  earnings_earmarked: "bg-green-50 text-green-700",
+  escrow_released: "bg-emerald-50 text-emerald-700",
+  payout_sent: "bg-purple-50 text-purple-700",
+  wallet_funded_gateway: "bg-indigo-50 text-indigo-700",
+  wallet_debited_escrow: "bg-indigo-50 text-indigo-700",
   wallet_withdrawal_requested: "bg-amber-50 text-amber-700",
   wallet_withdrawal_completed: "bg-amber-50 text-amber-700",
-  wallet_withdrawal_reversed:  "bg-red-50 text-red-700",
-  dispute_refund_commission:   "bg-red-50 text-red-700",
-  dispute_refund_earnings:     "bg-red-50 text-red-700",
-  dispute_release:             "bg-orange-50 text-orange-700",
-  admin_credit:                "bg-teal-50 text-teal-700",
-  admin_debit:                 "bg-rose-50 text-rose-700",
-  reversal:                    "bg-slate-100 text-slate-600",
+  wallet_withdrawal_reversed: "bg-red-50 text-red-700",
+  dispute_refund_commission: "bg-red-50 text-red-700",
+  dispute_refund_earnings: "bg-red-50 text-red-700",
+  dispute_release: "bg-orange-50 text-orange-700",
+  admin_credit: "bg-teal-50 text-teal-700",
+  admin_debit: "bg-rose-50 text-rose-700",
+  reversal: "bg-slate-100 text-slate-600",
+  payout_requested: "bg-purple-50 text-purple-700",
+  withdrawal_fee_accrued: "bg-amber-50 text-amber-700",
+  processing_fee_accrued: "bg-amber-50 text-amber-700",
+  escrow_fee_accrued: "bg-amber-50 text-amber-700",
+  platform_service_fee_accrued: "bg-amber-50 text-amber-700",
+  escrow_fee_refund: "bg-emerald-50 text-emerald-700",
 };
 
 const ENTITY_TYPE_FILTERS = [
@@ -214,13 +230,13 @@ function JournalRow({ journal }: { journal: Journal }) {
 // ─── Main client ──────────────────────────────────────────────────────────────
 
 export default function LedgerEntriesClient({ embedded = false }: { embedded?: boolean }) {
-  const [journals, setJournals]   = useState<Journal[]>([]);
-  const [total, setTotal]         = useState(0);
+  const [journals, setJournals] = useState<Journal[]>([]);
+  const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
-  const [page, setPage]           = useState(1);
-  const [entity, setEntity]       = useState("");
-  const [loading, setLoading]     = useState(true);
-  const [error, setError]         = useState(false);
+  const [page, setPage] = useState(1);
+  const [entity, setEntity] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const LIMIT = 15;
 
   const fetchEntries = useCallback(async () => {
@@ -269,11 +285,10 @@ export default function LedgerEntriesClient({ embedded = false }: { embedded?: b
                 key={f.value}
                 type="button"
                 onClick={() => handleEntityChange(f.value)}
-                className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
-                  entity === f.value
+                className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${entity === f.value
                     ? "bg-primary text-white"
                     : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                }`}
+                  }`}
               >
                 {f.label}
               </button>
