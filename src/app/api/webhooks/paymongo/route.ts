@@ -56,6 +56,8 @@ export async function POST(req: NextRequest) {
           id: string;
           attributes: {
             status?: string;
+            /** Confirmed amount charged by PayMongo in centavos — authoritative */
+            amount?: number;
             payment_intent?: { id: string } | null;
             metadata?: Record<string, string>;
             payments?: Array<{
@@ -125,18 +127,25 @@ export async function POST(req: NextRequest) {
           return NextResponse.json({ error: "Invalid metadata" }, { status: 400 });
         }
         const sessionId = resourceData.id;
-        const amountPHP = parseFloat(metadata.amountPHP ?? "0");
-        if (amountPHP <= 0) {
-          console.error(`[PAYMONGO WEBHOOK] wallet_topup missing amountPHP — session ${sessionId}`);
-        } else {
-          await walletService.topUpConfirm(
-            metadata.userId,
-            amountPHP,
-            sessionId,
-            metadata.userId
-          );
-          console.log(`[PAYMONGO] Wallet top-up ₱${amountPHP} confirmed for user ${metadata.userId} — session ${sessionId}`);
+        // M-6: Use confirmed centavo amount from event (authoritative), not client-supplied metadata
+        const confirmedCentavosB = Number(resourceData.attributes.amount ?? 0);
+        if (confirmedCentavosB <= 0) {
+          console.error(`[PAYMONGO WEBHOOK] wallet_topup: no confirmed amount in event — session ${sessionId}`);
+          return NextResponse.json({ error: "No confirmed amount" }, { status: 400 });
         }
+        const amountPHP = confirmedCentavosB / 100;
+        const metaAmtB = parseFloat(metadata.amountPHP ?? "0");
+        if (metaAmtB > 0 && Math.abs(amountPHP - metaAmtB) > 0.01) {
+          console.error(`[PAYMONGO WEBHOOK] wallet_topup amount mismatch: confirmed ₱${amountPHP} vs metadata ₱${metaAmtB} — session ${sessionId}`);
+          return NextResponse.json({ error: "Amount mismatch" }, { status: 400 });
+        }
+        await walletService.topUpConfirm(
+          metadata.userId,
+          amountPHP,
+          sessionId,
+          metadata.userId
+        );
+        console.log(`[PAYMONGO] Wallet top-up ₱${amountPHP} confirmed for user ${metadata.userId} — session ${sessionId}`);
 
       // ── Branch D: featured listing boost ──────────────────────────────────
       } else if (metadata.type === "featured_listing" && metadata.providerId && metadata.listingType) {
@@ -146,19 +155,26 @@ export async function POST(req: NextRequest) {
           return NextResponse.json({ error: "Invalid metadata" }, { status: 400 });
         }
         const sessionId = resourceData.id;
-        const amountPHP = parseFloat(metadata.amountPHP ?? "0");
-        if (amountPHP <= 0) {
-          console.error(`[PAYMONGO WEBHOOK] featured_listing missing amountPHP — session ${sessionId}`);
-        } else {
-          const { featuredListingService } = await import("@/services/featured-listing.service");
-          await featuredListingService.activateFromWebhook(
-            metadata.providerId,
-            metadata.listingType as import("@/types").FeaturedListingType,
-            sessionId,
-            amountPHP
-          );
-          console.log(`[PAYMONGO] Featured listing '${metadata.listingType}' activated for provider ${metadata.providerId} — session ${sessionId}`);
+        // M-6: Use confirmed centavo amount from PayMongo event (authoritative, not client metadata)
+        const confirmedCentavosD = Number(resourceData.attributes.amount ?? 0);
+        if (confirmedCentavosD <= 0) {
+          console.error(`[PAYMONGO WEBHOOK] featured_listing: no confirmed amount — session ${sessionId}`);
+          return NextResponse.json({ error: "No confirmed amount" }, { status: 400 });
         }
+        const amountPHPD = confirmedCentavosD / 100;
+        const metaAmtD = parseFloat(metadata.amountPHP ?? "0");
+        if (metaAmtD > 0 && Math.abs(amountPHPD - metaAmtD) > 0.01) {
+          console.error(`[PAYMONGO WEBHOOK] featured_listing amount mismatch: confirmed ₱${amountPHPD} vs metadata ₱${metaAmtD} — session ${sessionId}`);
+          return NextResponse.json({ error: "Amount mismatch" }, { status: 400 });
+        }
+        const { featuredListingService } = await import("@/services/featured-listing.service");
+        await featuredListingService.activateFromWebhook(
+          metadata.providerId,
+          metadata.listingType as import("@/types").FeaturedListingType,
+          sessionId,
+          amountPHPD
+        );
+        console.log(`[PAYMONGO] Featured listing '${metadata.listingType}' activated for provider ${metadata.providerId} — session ${sessionId}`);
 
       // ── Branch E: training course enrollment ──────────────────────────────
       } else if (metadata.type === "training" && metadata.providerId && metadata.courseId) {
@@ -168,19 +184,26 @@ export async function POST(req: NextRequest) {
           return NextResponse.json({ error: "Invalid metadata" }, { status: 400 });
         }
         const sessionId = resourceData.id;
-        const amountPHP = parseFloat(metadata.amountPHP ?? "0");
-        if (amountPHP <= 0) {
-          console.error(`[PAYMONGO WEBHOOK] training missing amountPHP — session ${sessionId}`);
-        } else {
-          const { trainingService } = await import("@/services/training.service");
-          await trainingService.activateFromWebhook(
-            metadata.providerId,
-            metadata.courseId,
-            sessionId,
-            amountPHP
-          );
-          console.log(`[PAYMONGO] Training enrollment activated for provider ${metadata.providerId} course ${metadata.courseId} — session ${sessionId}`);
+        // M-6: Use confirmed centavo amount from PayMongo event (authoritative)
+        const confirmedCentavosE = Number(resourceData.attributes.amount ?? 0);
+        if (confirmedCentavosE <= 0) {
+          console.error(`[PAYMONGO WEBHOOK] training: no confirmed amount — session ${sessionId}`);
+          return NextResponse.json({ error: "No confirmed amount" }, { status: 400 });
         }
+        const amountPHPE = confirmedCentavosE / 100;
+        const metaAmtE = parseFloat(metadata.amountPHP ?? "0");
+        if (metaAmtE > 0 && Math.abs(amountPHPE - metaAmtE) > 0.01) {
+          console.error(`[PAYMONGO WEBHOOK] training amount mismatch: confirmed ₱${amountPHPE} vs metadata ₱${metaAmtE} — session ${sessionId}`);
+          return NextResponse.json({ error: "Amount mismatch" }, { status: 400 });
+        }
+        const { trainingService } = await import("@/services/training.service");
+        await trainingService.activateFromWebhook(
+          metadata.providerId,
+          metadata.courseId,
+          sessionId,
+          amountPHPE
+        );
+        console.log(`[PAYMONGO] Training enrollment activated for provider ${metadata.providerId} course ${metadata.courseId} — session ${sessionId}`);
 
       // ── Branch C: escrow job payment ─────────────────────────────────────
       } else {

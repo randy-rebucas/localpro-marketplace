@@ -5,11 +5,11 @@
  * Set environment variables:
  *   PAYPAL_CLIENT_ID      — App client ID (sandbox or live)
  *   PAYPAL_CLIENT_SECRET  — App client secret
- *   NEXT_PUBLIC_PAYPAL_MODE — "sandbox" | "live"  (defaults to "sandbox")
+ *   PAYPAL_MODE — "sandbox" | "live"  (defaults to "sandbox"; do NOT use NEXT_PUBLIC_ prefix)
  */
 
 const PAYPAL_BASE =
-  process.env.NEXT_PUBLIC_PAYPAL_MODE === "live"
+  process.env.PAYPAL_MODE === "live"
     ? "https://api-m.paypal.com"
     : "https://api-m.sandbox.paypal.com";
 
@@ -49,7 +49,8 @@ async function getAccessToken(): Promise<string> {
 async function request<T>(
   method: string,
   path: string,
-  body?: unknown
+  body?: unknown,
+  extraHeaders?: Record<string, string>
 ): Promise<T> {
   const token = await getAccessToken();
 
@@ -59,6 +60,7 @@ async function request<T>(
       Authorization:  `Bearer ${token}`,
       "Content-Type": "application/json",
       Accept:         "application/json",
+      ...extraHeaders,
     },
     body:  body ? JSON.stringify(body) : undefined,
     cache: "no-store",
@@ -150,6 +152,7 @@ export interface CaptureResult {
  * Returns the capture status and the metadata stored at order creation.
  */
 export async function captureOrder(orderId: string): Promise<CaptureResult> {
+  // H-5: Add PayPal-Request-Id for idempotency — prevents double-capture on retries
   const res = await request<{
     id:    string;
     status: string;
@@ -159,7 +162,9 @@ export async function captureOrder(orderId: string): Promise<CaptureResult> {
         captures?: { id: string; status: string }[];
       };
     }[];
-  }>("POST", `/v2/checkout/orders/${orderId}/capture`, {});
+  }>("POST", `/v2/checkout/orders/${orderId}/capture`, {}, {
+    "PayPal-Request-Id": orderId,
+  });
 
   const unit      = res.purchase_units[0];
   const customId  = unit?.custom_id ?? "{}";

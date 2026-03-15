@@ -89,9 +89,10 @@ export function withHandler(fn: RouteHandler): RouteHandler {
     // Rate limit by IP (skip for SSE endpoints — they hold connections open)
     const isSSE = req.headers.get("accept") === "text/event-stream";
     if (!isSSE) {
+      // M-2: Prioritise x-real-ip (Vercel-injected, not spoofable) over x-forwarded-for
       const ip =
-        req.headers.get("x-forwarded-for")?.split(",")[0].trim() ??
         req.headers.get("x-real-ip") ??
+        req.headers.get("x-forwarded-for")?.split(",").at(-1)?.trim() ??
         "unknown";
 
       const rl = await checkRateLimit(ip, { windowMs: 60_000, max: 100 });

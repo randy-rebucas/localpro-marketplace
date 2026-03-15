@@ -885,8 +885,13 @@ export default async function RootPage() {
               <div>
                 <p className="text-xs font-semibold text-slate-300 uppercase tracking-wider mb-3">Legal</p>
                 <ul className="space-y-2 text-sm">
-                  <li><Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link></li>
-                  <li><Link href="/terms"   className="hover:text-white transition-colors">Terms of Service</Link></li>
+                  <li><Link href="/privacy"            className="hover:text-white transition-colors">Privacy Policy</Link></li>
+                  <li><Link href="/terms"              className="hover:text-white transition-colors">Terms of Service</Link></li>
+                  <li><Link href="/provider-agreement" className="hover:text-white transition-colors">Provider Agreement</Link></li>
+                  <li><Link href="/client-agreement"   className="hover:text-white transition-colors">Client Agreement</Link></li>
+                  <li><Link href="/escrow-policy"      className="hover:text-white transition-colors">Escrow Policy</Link></li>
+                  <li><Link href="/refund-policy"      className="hover:text-white transition-colors">Refund Policy</Link></li>
+                  <li><Link href="/dispute-resolution" className="hover:text-white transition-colors">Dispute Resolution</Link></li>
                 </ul>
               </div>
             </div>

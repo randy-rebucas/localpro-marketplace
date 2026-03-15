@@ -5,7 +5,10 @@ import {
   signAccessToken,
   signRefreshToken,
   verifyRefreshToken,
+  revokeRefreshToken,
+  isRefreshTokenRevoked,
 } from "@/lib/auth";
+import { getRedis } from "@/lib/redis";
 import {
   ConflictError,
   NotFoundError,
@@ -160,17 +163,36 @@ export class AuthService {
   }
 
   async refresh(token: string): Promise<AuthTokens> {
-    let payload: { userId: string };
+    let payload: { userId: string; jti?: string; iat?: number };
     try {
-      payload = verifyRefreshToken(token);
+      payload = verifyRefreshToken(token) as { userId: string; jti?: string; iat?: number };
     } catch {
       throw new UnauthorizedError("Invalid or expired refresh token");
+    }
+
+    // ── Refresh token deny-list (rotation invalidation) ────────────────────
+    if (payload.jti && await isRefreshTokenRevoked(payload.jti)) {
+      throw new UnauthorizedError("Refresh token has already been rotated");
+    }
+
+    // ── Per-user revocation (password change / ban propagation) ─────────────
+    const redis = getRedis();
+    if (redis && payload.userId && payload.iat) {
+      const revokedAt = await redis.get<number>(`jwt:revoke-user:${payload.userId}`);
+      if (revokedAt && payload.iat <= revokedAt) {
+        throw new UnauthorizedError("Session revoked");
+      }
     }
 
     const user = await userRepository.findById(payload.userId);
     if (!user) throw new NotFoundError("User");
     if ((user as { isSuspended?: boolean }).isSuspended) {
       throw new ForbiddenError("Account suspended");
+    }
+
+    // Revoke the old refresh token so it cannot be reused
+    if (payload.jti) {
+      await revokeRefreshToken(payload.jti);
     }
 
     const role = (user as { role: UserRole }).role;

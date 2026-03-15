@@ -171,10 +171,20 @@ export default function PrivacyPage() {
           </section>
         </div>
 
-        <div className="mt-12 pt-8 border-t border-slate-200 flex items-center gap-4 text-sm text-slate-400">
-          <Link href="/terms"   className="hover:text-primary transition-colors">Terms of Service</Link>
-          <span>·</span>
-          <Link href="/"        className="hover:text-primary transition-colors">Back to Home</Link>
+        <div className="mt-12 pt-8 border-t border-slate-200 flex flex-wrap items-center gap-3 text-sm text-slate-400">
+          <Link href="/terms"              className="hover:text-primary transition-colors">Terms of Service</Link>
+          <span className="text-slate-300">·</span>
+          <Link href="/provider-agreement" className="hover:text-primary transition-colors">Provider Agreement</Link>
+          <span className="text-slate-300">·</span>
+          <Link href="/client-agreement"   className="hover:text-primary transition-colors">Client Agreement</Link>
+          <span className="text-slate-300">·</span>
+          <Link href="/escrow-policy"      className="hover:text-primary transition-colors">Escrow Policy</Link>
+          <span className="text-slate-300">·</span>
+          <Link href="/refund-policy"      className="hover:text-primary transition-colors">Refund Policy</Link>
+          <span className="text-slate-300">·</span>
+          <Link href="/dispute-resolution" className="hover:text-primary transition-colors">Dispute Resolution</Link>
+          <span className="text-slate-300">·</span>
+          <Link href="/"                   className="hover:text-primary transition-colors">Back to Home</Link>
         </div>
       </main>
 
@@ -189,9 +199,14 @@ export default function PrivacyPage() {
               <span className="text-primary-300">Local</span><span className="text-brand-400">Pro</span>
             </span>
           </div>
-          <div className="flex items-center gap-6 text-sm">
-            <Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link>
-            <Link href="/terms"   className="hover:text-white transition-colors">Terms of Service</Link>
+          <div className="flex flex-wrap items-center justify-center gap-4 text-sm">
+            <Link href="/privacy"            className="hover:text-white transition-colors">Privacy Policy</Link>
+            <Link href="/terms"              className="hover:text-white transition-colors">Terms of Service</Link>
+            <Link href="/provider-agreement" className="hover:text-white transition-colors">Provider Agreement</Link>
+            <Link href="/client-agreement"   className="hover:text-white transition-colors">Client Agreement</Link>
+            <Link href="/escrow-policy"      className="hover:text-white transition-colors">Escrow Policy</Link>
+            <Link href="/refund-policy"      className="hover:text-white transition-colors">Refund Policy</Link>
+            <Link href="/dispute-resolution" className="hover:text-white transition-colors">Dispute Resolution</Link>
           </div>
           <p className="text-xs">© {new Date().getFullYear()} LocalPro. All rights reserved.</p>
         </div>
