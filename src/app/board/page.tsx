@@ -176,7 +176,7 @@ export default function BoardPage() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen h-screen overflow-x-hidden overflow-y-auto select-none bg-[#14243a] text-[15px] sm:text-base">
+    <div className="flex flex-col min-h-screen md:h-screen overflow-x-hidden overflow-y-auto select-none bg-[#14243a] text-[15px] sm:text-base">
       <style>{`
         @keyframes fillbar {
           from { width: 0%; }
@@ -244,7 +244,7 @@ export default function BoardPage() {
         </div>
 
           {/* Clock + status */}
-          <div className="flex items-center gap-1.5 md:gap-4 flex-shrink-0 justify-end">
+          <div className="flex items-center gap-1.5 md:gap-4 flex-shrink-0">
           {/* Online indicator */}
           <span
             className={`flex items-center gap-1 text-[11px] font-medium ${online ? "text-emerald-400" : "text-red-400"}`}
@@ -277,15 +277,15 @@ export default function BoardPage() {
       )}
 
       {/* ── Main content ─────────────────────────────────────────────────── */}
-      <main className="flex-1 overflow-y-auto flex flex-col md:flex-row gap-0 min-h-0 bg-gradient-to-b from-[#14243a] to-[#1a3050] relative">
+      <main className="flex-1 flex flex-col md:flex-row gap-0 md:min-h-0 md:overflow-hidden bg-gradient-to-b from-[#14243a] to-[#1a3050] relative">
 
 
 
         {/* ── Left Panel: Job Listings + side widgets ────────────────────── */}
-        <section className="flex flex-1 min-w-0 border-b md:border-b-0 md:border-r border-white/10 overflow-y-auto md:overflow-hidden">
+        <section className="flex flex-1 min-w-0 border-b md:border-b-0 md:border-r border-white/10 md:overflow-hidden">
 
           {/* Jobs column */}
-          <div className="flex flex-col flex-1 min-w-0 p-2 sm:p-3 md:p-4 gap-2 md:gap-3 overflow-y-auto">
+          <div className="flex flex-col flex-1 min-w-0 p-2 sm:p-3 md:p-4 gap-2 md:gap-3 md:overflow-y-auto">
 
             {/* Section header — title + inline activity feed + pagination */}
             <div className="flex items-center justify-between flex-shrink-0 gap-2 mb-1">
@@ -346,7 +346,7 @@ export default function BoardPage() {
 
             {/* Job cards grid */}
             {data && visibleJobs.length > 0 ? (
-              <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2 md:gap-3 content-start overflow-hidden">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 md:gap-3 content-start md:flex-1 md:overflow-hidden">
                 {visibleJobs.map((job) => (
                   <JobCard key={job._id} job={job} />
                 ))}

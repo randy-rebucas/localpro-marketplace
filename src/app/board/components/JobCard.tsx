@@ -151,88 +151,15 @@ export function JobCard({ job }: { job: BoardJob }) {
   return (
     <div className="bg-white/[0.07] border border-white/10 rounded-2xl overflow-hidden hover:bg-white/[0.10] transition-colors flex flex-col">
 
-      {/* ── Mobile layout (< sm): QR left + details right, budget + apply bottom ── */}
-      <div className="flex flex-col gap-2.5 p-3 sm:hidden">
-        {/* Top row: QR + info */}
-        <div className="flex gap-3">
-          {/* QR code */}
-          <a
-            href={qr.href}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex-shrink-0 bg-white rounded-xl p-1.5 self-start block active:opacity-75 transition-opacity"
-            title={qr.label === "SCAN TO VIEW" ? "View job details" : "Apply for this job"}
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={imgSrc}
-              alt={qr.label}
-              width={72}
-              height={72}
-              className="rounded-lg block w-[72px] h-[72px]"
-              onError={() =>
-                setImgSrc(
-                  `https://api.qrserver.com/v1/create-qr-code/?size=96x96&data=${encodeURIComponent(qr.href)}&format=png`
-                )
-              }
-            />
-            <p className={`text-[9px] text-center mt-1 font-medium ${
-              qr.label === "SCAN TO VIEW" ? "text-blue-400" : "text-slate-400"
-            }`}>{qr.label}</p>
-          </a>
+      {/* ── Main content row: QR + details (unified responsive layout) ── */}
+      <div className="flex gap-2.5 sm:gap-3 p-3">
 
-          {/* Details */}
-          <div className="min-w-0 flex-1 flex flex-col gap-1.5">
-            {badges}
-            <div className="flex items-start gap-2">
-              <p className="text-[15px] font-bold text-white leading-snug line-clamp-2 flex-1">{job.title}</p>
-              <button
-                onClick={handleShare}
-                aria-label="Share job"
-                className={`flex-shrink-0 p-1.5 rounded-lg transition-all mt-0.5 ${
-                  showShare ? "bg-blue-500/25 text-blue-300 ring-1 ring-blue-400/30" : "text-slate-500 hover:text-slate-300 hover:bg-white/10"
-                }`}
-              >
-                <Share2 className="h-4 w-4" />
-              </button>
-            </div>
-            <div className="flex items-center gap-1 text-xs text-slate-300 min-w-0">
-              <MapPin className="h-3 w-3 text-blue-400 flex-shrink-0" />
-              <span className="truncate">{job.location}</span>
-            </div>
-            <div className="flex items-center gap-1 text-xs text-slate-400">
-              <CalendarDays className="h-3 w-3 text-blue-400 flex-shrink-0" />
-              <span>{formatSchedule(job.scheduleDate)}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Budget + Apply CTA */}
-        <div className="flex items-center justify-between gap-2">
-          <div className="inline-flex items-center gap-1.5 bg-emerald-500/20 border border-emerald-500/30 rounded-xl px-3 py-1.5">
-            <Briefcase className="h-3.5 w-3.5 text-emerald-400" />
-            <span className="text-base font-extrabold text-emerald-300 tabular-nums">{formatPeso(job.budget)}</span>
-          </div>
-          <a
-            href={url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1.5 bg-blue-500/20 border border-blue-400/30 text-blue-300 text-xs font-bold px-3 py-1.5 rounded-xl hover:bg-blue-500/30 active:scale-95 transition-all"
-          >
-            View & Apply
-            <ExternalLink className="h-3 w-3" />
-          </a>
-        </div>
-      </div>
-
-      {/* ── Desktop layout (sm+): QR + details side-by-side ── */}
-      <div className="hidden sm:flex gap-3 p-3 flex-1">
-        {/* QR code */}
+        {/* QR code — tap to open link on mobile, scan on desktop/kiosk */}
         <a
           href={qr.href}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex-shrink-0 bg-white rounded-xl p-1.5 self-start block hover:opacity-90 transition-opacity"
+          className="flex-shrink-0 bg-white rounded-xl p-1 sm:p-1.5 self-start block hover:opacity-90 active:opacity-70 transition-opacity"
           title={qr.label === "SCAN TO VIEW" ? "View job details" : "Apply for this job"}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -241,47 +168,55 @@ export function JobCard({ job }: { job: BoardJob }) {
             alt={qr.label}
             width={96}
             height={96}
-            className="rounded-lg block w-20 h-20 md:w-24 md:h-24"
+            className="rounded-lg block w-[68px] h-[68px] sm:w-20 sm:h-20 md:w-24 md:h-24"
             onError={() =>
               setImgSrc(
                 `https://api.qrserver.com/v1/create-qr-code/?size=96x96&data=${encodeURIComponent(qr.href)}&format=png`
               )
             }
           />
-          <p className={`text-[10px] text-center mt-1 font-medium ${
+          <p className={`text-[9px] sm:text-[10px] text-center mt-1 font-medium ${
             qr.label === "SCAN TO VIEW" ? "text-blue-400" : "text-slate-400"
           }`}>{qr.label}</p>
         </a>
 
-        {/* Details */}
+        {/* Details column */}
         <div className="min-w-0 flex-1 flex flex-col gap-1.5">
           {badges}
 
-          <div className="flex items-start justify-between gap-2">
-            <p className="text-sm font-bold text-white leading-snug line-clamp-2 flex-1">{job.title}</p>
+          {/* Title + share */}
+          <div className="flex items-start gap-2">
+            <p className="text-[15px] sm:text-sm font-bold text-white leading-snug line-clamp-2 flex-1">
+              {job.title}
+            </p>
             <button
               onClick={handleShare}
               aria-label="Share job"
               title="Share this job"
               className={`flex-shrink-0 p-1.5 rounded-lg transition-all ${
-                showShare ? "bg-blue-500/25 text-blue-300 ring-1 ring-blue-400/30" : "text-slate-600 hover:text-slate-300 hover:bg-white/10"
+                showShare
+                  ? "bg-blue-500/25 text-blue-300 ring-1 ring-blue-400/30"
+                  : "text-slate-500 hover:text-slate-300 hover:bg-white/10"
               }`}
             >
               <Share2 className="h-4 w-4" />
             </button>
           </div>
 
-          <div className="flex items-center gap-1 text-sm text-slate-300">
-            <MapPin className="h-3.5 w-3.5 text-blue-400 flex-shrink-0" />
+          {/* Location */}
+          <div className="flex items-center gap-1 text-xs sm:text-sm text-slate-300 min-w-0">
+            <MapPin className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-blue-400 flex-shrink-0" />
             <span className="truncate">{job.location}</span>
           </div>
 
+          {/* Schedule (always) + budget pill (sm+ only, in info column) */}
           <div className="flex items-center justify-between gap-2 mt-auto">
-            <div className="flex items-center gap-1 text-sm text-slate-300 min-w-0">
-              <CalendarDays className="h-3.5 w-3.5 text-blue-400 flex-shrink-0" />
+            <div className="flex items-center gap-1 text-xs sm:text-sm text-slate-400 min-w-0">
+              <CalendarDays className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-blue-400 flex-shrink-0" />
               <span className="truncate">{formatSchedule(job.scheduleDate)}</span>
             </div>
-            <div className="inline-flex items-center gap-1 bg-emerald-500/20 border border-emerald-500/30 rounded-lg px-2.5 py-1 flex-shrink-0">
+            {/* Budget shown inline on sm+ */}
+            <div className="hidden sm:inline-flex items-center gap-1 bg-emerald-500/20 border border-emerald-500/30 rounded-lg px-2.5 py-1 flex-shrink-0">
               <Briefcase className="h-3.5 w-3.5 text-emerald-400" />
               <span className="text-sm font-bold text-emerald-300 tabular-nums">{formatPeso(job.budget)}</span>
             </div>
@@ -289,7 +224,24 @@ export function JobCard({ job }: { job: BoardJob }) {
         </div>
       </div>
 
-      {/* Share drawer — shown in both layouts */}
+      {/* Mobile-only bottom bar: prominent budget + View & Apply CTA */}
+      <div className="flex sm:hidden items-center justify-between gap-2 px-3 pb-3 -mt-0.5">
+        <div className="inline-flex items-center gap-1.5 bg-emerald-500/20 border border-emerald-500/30 rounded-xl px-3 py-1.5">
+          <Briefcase className="h-3.5 w-3.5 text-emerald-400" />
+          <span className="text-[15px] font-extrabold text-emerald-300 tabular-nums">{formatPeso(job.budget)}</span>
+        </div>
+        <a
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-1.5 bg-blue-500/20 border border-blue-400/30 text-blue-300 text-xs font-bold px-3 py-1.5 rounded-xl hover:bg-blue-500/30 active:scale-95 transition-all"
+        >
+          View & Apply
+          <ExternalLink className="h-3 w-3" />
+        </a>
+      </div>
+
+      {/* Share drawer (desktop fallback when navigator.share unavailable) */}
       {shareDrawer}
     </div>
   );
