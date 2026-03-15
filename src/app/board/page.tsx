@@ -394,60 +394,6 @@ export default function BoardPage() {
 
         </section>
 
-        {/* ── Mobile-only panel: Urgent jobs + Leaderboard strip + QR ─── */}
-        {data && (
-          <div className="md:hidden flex-shrink-0 flex flex-col gap-4 px-3 py-4 border-t border-white/10 bg-[#1e3a5f]/30">
-
-            {/* Urgent jobs horizontal scroll */}
-            {data.features?.urgentJobs && (
-              <div>
-                <UrgentJobsStrip jobs={data.jobs} />
-              </div>
-            )}
-
-            {/* Leaderboard horizontal scroll */}
-            {data.leaderboard.length > 0 && (
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <Trophy className="h-4 w-4 text-amber-400" />
-                  <h3 className="text-sm font-bold text-white uppercase tracking-wider">Provider Leaderboard</h3>
-                </div>
-                <div className="flex gap-2 overflow-x-auto pb-1 snap-x scroll-smooth [-ms-overflow-style:none] [scrollbar-width:none]">
-                  {data.leaderboard.map((entry) => (
-                    <div key={entry._id} className="flex-shrink-0 snap-start w-44">
-                      <LeaderboardCard entry={entry} />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Provider QR signup */}
-            <div className="flex items-center gap-3 rounded-2xl border border-blue-400/20 p-3 bg-gradient-to-r from-blue-900/40 to-[#0d2340]/80">
-              <div className="flex-shrink-0 bg-white rounded-xl p-1.5 shadow-md">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={`https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=${encodeURIComponent(PROVIDER_SIGNUP_URL)}&format=png&color=0d2340&bgcolor=ffffff&margin=4`}
-                  alt="Scan to sign up as provider"
-                  width={80}
-                  height={80}
-                  className="rounded-lg block"
-                />
-              </div>
-              <div className="min-w-0">
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-500/20 border border-blue-400/30 text-[10px] font-bold text-blue-300 uppercase tracking-widest mb-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
-                  Now Hiring
-                </span>
-                <p className="text-sm font-extrabold text-white leading-snug">Become a Provider</p>
-                <p className="text-xs text-blue-300 mt-0.5 line-clamp-2 leading-relaxed">{QR_COPY_LINES[qrCopyIdx]}</p>
-                <p className="text-[9px] text-slate-500 font-mono mt-1 truncate">{APP_URL}/register</p>
-              </div>
-            </div>
-
-          </div>
-        )}
-
         {/* ── Right Panel: Leaderboard + QR + Earnings + Training — hidden on mobile ── */}
         <aside className="hidden md:flex w-full md:w-72 xl:w-80 flex-shrink-0 flex-col p-2 sm:p-3 md:p-4 gap-2 md:gap-3 border-t md:border-t-0 md:border-l-0 md:border-l border-white/10 overflow-y-auto bg-[#1e3a5f]/30 transition-all duration-200">
 
