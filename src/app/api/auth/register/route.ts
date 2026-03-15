@@ -27,10 +27,10 @@ const REGISTER_LIMIT = { windowMs: 15 * 60_000, max: 5 };
 export const POST = withHandler(async (req: NextRequest) => {
   // ── Per-IP rate limit ──────────────────────────────────────────────────
   const ip =
-    req.headers.get("x-forwarded-for")?.split(",")[0].trim() ??
     req.headers.get("x-real-ip") ??
+    req.headers.get("x-forwarded-for")?.split(",").at(-1)?.trim() ??
     "unknown";
-  const rl = await checkRateLimit(`register:${ip}`, REGISTER_LIMIT);
+  const rl = await checkRateLimit(`register:${ip}`, REGISTER_LIMIT, { failOpen: false });
   if (!rl.ok) {
     return new Response(
       JSON.stringify({ error: "Too many registration attempts. Please try again later." }),

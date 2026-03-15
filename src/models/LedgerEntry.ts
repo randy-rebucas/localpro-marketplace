@@ -163,7 +163,7 @@ export interface LedgerEntryDocument extends Omit<ILedgerEntry, "_id">, Document
 
 const LedgerEntrySchema = new Schema<LedgerEntryDocument>(
   {
-    journalId: { type: String, required: true, index: true },
+    journalId: { type: String, required: true, index: true, unique: true },
 
     entryType: {
       type: String,
@@ -210,7 +210,7 @@ const LedgerEntrySchema = new Schema<LedgerEntryDocument>(
       enum: Object.values(ACCOUNT_CODES),
     },
 
-    amountCentavos: { type: Number, required: true, min: 0 },
+    amountCentavos: { type: Number, required: true, min: 1 },
     currency:       { type: String, required: true, default: "PHP" },
 
     entityType: {

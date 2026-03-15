@@ -20,8 +20,8 @@ const ResetSchema = z.object({
 const RESET_LIMIT = { windowMs: 15 * 60_000, max: 5 };
 
 export const POST = withHandler(async (req: NextRequest) => {
-  const ip = req.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? req.headers.get("x-real-ip") ?? "unknown";
-  const rl = await checkRateLimit(`reset-password:${ip}`, RESET_LIMIT);
+  const ip = req.headers.get("x-real-ip") ?? req.headers.get("x-forwarded-for")?.split(",").at(-1)?.trim() ?? "unknown";
+  const rl = await checkRateLimit(`reset-password:${ip}`, RESET_LIMIT, { failOpen: false });
   if (!rl.ok) {
     return new Response(
       JSON.stringify({ error: "Too many password reset attempts. Please try again later." }),

@@ -12,10 +12,10 @@ export function LiveClock() {
 
   return (
     <div className="text-right leading-tight">
-      <p className="text-2xl font-bold tabular-nums tracking-tight">
+      <p className="text-base sm:text-2xl font-bold tabular-nums tracking-tight">
         {now.toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
       </p>
-      <p className="text-xs text-blue-300">
+      <p className="hidden sm:block text-xs text-blue-300">
         {now.toLocaleDateString("en-PH", { weekday: "short", month: "short", day: "numeric", year: "numeric" })}
       </p>
     </div>

@@ -80,8 +80,10 @@ export async function proxy(req: NextRequest) {
   if (refreshToken) {
     // Resolve the internal base URL for token refresh.
     // Priority: explicit NEXT_INTERNAL_URL → Vercel deployment URL → localhost (dev only).
+    // Treat empty strings as unset (env vars can be set to "" accidentally).
     const vercelUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null;
-    const internalBase = process.env.NEXT_INTERNAL_URL ?? vercelUrl ?? "http://localhost:3000";
+    const internalBase =
+      process.env.NEXT_INTERNAL_URL?.trim() || vercelUrl || "http://localhost:3000";
     const refreshUrl = new URL("/api/auth/refresh", internalBase);
 
     // L8: only forward the auth cookies — do not forward all cookies (e.g. analytics,

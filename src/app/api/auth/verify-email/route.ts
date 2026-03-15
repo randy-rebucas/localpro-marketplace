@@ -11,8 +11,8 @@ const VerifySchema = z.object({ token: z.string().min(1) });
 const VERIFY_LIMIT = { windowMs: 15 * 60_000, max: 10 };
 
 export const POST = withHandler(async (req: NextRequest) => {
-  const ip = req.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? req.headers.get("x-real-ip") ?? "unknown";
-  const rl = await checkRateLimit(`verify-email:${ip}`, VERIFY_LIMIT);
+  const ip = req.headers.get("x-real-ip") ?? req.headers.get("x-forwarded-for")?.split(",").at(-1)?.trim() ?? "unknown";
+  const rl = await checkRateLimit(`verify-email:${ip}`, VERIFY_LIMIT, { failOpen: false });
   if (!rl.ok) {
     return new Response(
       JSON.stringify({ error: "Too many verification attempts. Please try again later." }),

@@ -1,9 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import toast from "react-hot-toast";
-import { CheckCircle2, XCircle, ShieldCheck, ShieldX, Ban, Unlock, RotateCcw, MessageCircle } from "lucide-react";
+import {
+  CheckCircle2, XCircle, ShieldCheck, ShieldX, Ban, Unlock,
+  RotateCcw, MessageCircle, MoreHorizontal, Eye,
+} from "lucide-react";
 import { apiFetch } from "@/lib/fetchClient";
 import MessageUserModal from "./MessageUserModal";
 
@@ -16,16 +20,28 @@ interface Props {
   approvalStatus: string;
   email?: string;
   phone?: string;
+  viewHref?: string;
 }
 
 // Explicit action keys — avoids the bug where derived keys like "isVerified_true"
 // never matched a plain string comparison in the isLoading check.
 type ActionKey = "approve" | "reject" | "re-approve" | "verify" | "unverify" | "suspend" | "unsuspend";
 
-export default function UserActions({ userId, userName, role, isVerified, isSuspended, approvalStatus, email, phone }: Props) {
+export default function UserActions({ userId, userName, role, isVerified, isSuspended, approvalStatus, email, phone, viewHref }: Props) {
   const router = useRouter();
   const [loading, setLoading] = useState<ActionKey | null>(null);
   const [showMessage, setShowMessage] = useState(false);
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function handler(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
 
   async function act(key: ActionKey, patch: Record<string, unknown>, confirm?: string) {
     if (confirm && !window.confirm(confirm)) return;
@@ -47,17 +63,117 @@ export default function UserActions({ userId, userName, role, isVerified, isSusp
     }
   }
 
-  return (
-    <div className="flex flex-wrap items-center gap-1.5">
+  function close() { setOpen(false); }
 
-      {/* ── Message ───────────────────────────────────────────────────────── */}
-      <ActionBtn
-        label="Message"
-        icon={<MessageCircle size={13} />}
-        colorClass="border border-violet-300 text-violet-700 hover:bg-violet-50"
-        loading={false}
-        onClick={() => setShowMessage(true)}
-      />
+  return (
+    <div className="relative" ref={ref}>
+      {/* ── Trigger ──────────────────────────────────────────────────────── */}
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 transition-colors"
+        aria-label="Actions"
+      >
+        <MoreHorizontal size={16} />
+      </button>
+
+      {/* ── Dropdown panel ───────────────────────────────────────────────── */}
+      {open && (
+        <div className="absolute right-0 top-full mt-1 z-50 w-44 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-xl py-1 flex flex-col">
+
+          {/* View profile */}
+          {viewHref && (
+            <Link
+              href={viewHref}
+              onClick={close}
+              className="flex items-center gap-2 px-3 py-2 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+            >
+              <Eye size={13} className="text-slate-400" />
+              View profile
+            </Link>
+          )}
+
+          {/* Message */}
+          <DropdownItem
+            label="Message"
+            icon={<MessageCircle size={13} />}
+            className="text-violet-700 dark:text-violet-400"
+            loading={false}
+            onClick={() => { close(); setShowMessage(true); }}
+          />
+
+          <div className="h-px bg-slate-100 dark:bg-slate-700 mx-2 my-1" />
+
+          {/* Provider approval */}
+          {role === "provider" && approvalStatus === "pending_approval" && (
+            <>
+              <DropdownItem
+                label="Approve"
+                icon={<CheckCircle2 size={13} />}
+                className="text-emerald-700 dark:text-emerald-400"
+                loading={loading === "approve"}
+                onClick={() => act("approve", { approvalStatus: "approved" })}
+              />
+              <DropdownItem
+                label="Reject"
+                icon={<XCircle size={13} />}
+                className="text-red-600 dark:text-red-400"
+                loading={loading === "reject"}
+                onClick={() => act("reject", { approvalStatus: "rejected" }, "Reject this provider application? They will be notified.")}
+              />
+            </>
+          )}
+
+          {role === "provider" && approvalStatus === "rejected" && (
+            <DropdownItem
+              label="Re-approve"
+              icon={<RotateCcw size={13} />}
+              className="text-emerald-700 dark:text-emerald-400"
+              loading={loading === "re-approve"}
+              onClick={() => act("re-approve", { approvalStatus: "approved" })}
+            />
+          )}
+
+          {/* Verify / Unverify */}
+          {!isVerified ? (
+            <DropdownItem
+              label="Verify"
+              icon={<ShieldCheck size={13} />}
+              className="text-blue-700 dark:text-blue-400"
+              loading={loading === "verify"}
+              onClick={() => act("verify", { isVerified: true })}
+            />
+          ) : (
+            <DropdownItem
+              label="Unverify"
+              icon={<ShieldX size={13} />}
+              className="text-slate-500 dark:text-slate-400"
+              loading={loading === "unverify"}
+              onClick={() => act("unverify", { isVerified: false }, "Remove email verification from this user?")}
+            />
+          )}
+
+          <div className="h-px bg-slate-100 dark:bg-slate-700 mx-2 my-1" />
+
+          {/* Suspend / Unsuspend */}
+          {!isSuspended ? (
+            <DropdownItem
+              label="Suspend"
+              icon={<Ban size={13} />}
+              className="text-orange-600 dark:text-orange-400"
+              loading={loading === "suspend"}
+              onClick={() => act("suspend", { isSuspended: true }, "Suspend this account? The user will lose access immediately.")}
+            />
+          ) : (
+            <DropdownItem
+              label="Unsuspend"
+              icon={<Unlock size={13} />}
+              className="text-slate-700 dark:text-slate-300 font-semibold"
+              loading={loading === "unsuspend"}
+              onClick={() => act("unsuspend", { isSuspended: false })}
+            />
+          )}
+        </div>
+      )}
 
       {showMessage && (
         <MessageUserModal
@@ -68,115 +184,30 @@ export default function UserActions({ userId, userName, role, isVerified, isSusp
           onClose={() => setShowMessage(false)}
         />
       )}
-
-      {/* ── Provider approval ──────────────────────────────────────────── */}
-      {role === "provider" && approvalStatus === "pending_approval" && (
-        <>
-          <ActionBtn
-            label="Approve"
-            icon={<CheckCircle2 size={13} />}
-            colorClass="bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
-            loading={loading === "approve"}
-            onClick={() => act("approve", { approvalStatus: "approved" })}
-          />
-          <ActionBtn
-            label="Reject"
-            icon={<XCircle size={13} />}
-            colorClass="border border-red-300 text-red-600 hover:bg-red-50"
-            loading={loading === "reject"}
-            onClick={() =>
-              act(
-                "reject",
-                { approvalStatus: "rejected" },
-                "Reject this provider application? They will be notified."
-              )
-            }
-          />
-        </>
-      )}
-
-      {role === "provider" && approvalStatus === "rejected" && (
-        <ActionBtn
-          label="Re-approve"
-          icon={<RotateCcw size={13} />}
-          colorClass="border border-emerald-300 text-emerald-700 hover:bg-emerald-50"
-          loading={loading === "re-approve"}
-          onClick={() => act("re-approve", { approvalStatus: "approved" })}
-        />
-      )}
-
-      {/* ── Email verification ────────────────────────────────────────── */}
-      {!isVerified ? (
-        <ActionBtn
-          label="Verify"
-          icon={<ShieldCheck size={13} />}
-          colorClass="border border-blue-300 text-blue-700 hover:bg-blue-50"
-          loading={loading === "verify"}
-          onClick={() => act("verify", { isVerified: true })}
-        />
-      ) : (
-        <ActionBtn
-          label="Unverify"
-          icon={<ShieldX size={13} />}
-          colorClass="border border-slate-300 text-slate-500 hover:bg-slate-50"
-          loading={loading === "unverify"}
-          onClick={() =>
-            act(
-              "unverify",
-              { isVerified: false },
-              "Remove email verification from this user?"
-            )
-          }
-        />
-      )}
-
-      {/* ── Suspend / unsuspend ──────────────────────────────────────── */}
-      {!isSuspended ? (
-        <ActionBtn
-          label="Suspend"
-          icon={<Ban size={13} />}
-          colorClass="border border-orange-300 text-orange-600 hover:bg-orange-50"
-          loading={loading === "suspend"}
-          onClick={() =>
-            act(
-              "suspend",
-              { isSuspended: true },
-              "Suspend this account? The user will lose access immediately."
-            )
-          }
-        />
-      ) : (
-        <ActionBtn
-          label="Unsuspend"
-          icon={<Unlock size={13} />}
-          colorClass="bg-slate-700 hover:bg-slate-800 text-white shadow-sm"
-          loading={loading === "unsuspend"}
-          onClick={() => act("unsuspend", { isSuspended: false })}
-        />
-      )}
     </div>
   );
 }
 
-// ─── Shared small action button ────────────────────────────────────────────────
+// ─── Dropdown menu item ────────────────────────────────────────────────────────
 
-interface ActionBtnProps {
+interface DropdownItemProps {
   label: string;
   icon: React.ReactNode;
-  colorClass: string;
+  className?: string;
   loading: boolean;
   onClick: () => void;
 }
 
-function ActionBtn({ label, icon, colorClass, loading, onClick }: ActionBtnProps) {
+function DropdownItem({ label, icon, className = "", loading, onClick }: DropdownItemProps) {
   return (
     <button
       onClick={onClick}
       disabled={loading}
       className={[
-        "inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium",
-        "transition-colors disabled:opacity-50 disabled:cursor-not-allowed",
-        colorClass,
+        "flex w-full items-center gap-2 px-3 py-2 text-xs font-medium",
+        "hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors",
+        "disabled:opacity-50 disabled:cursor-not-allowed",
+        className,
       ].join(" ")}
     >
       {loading

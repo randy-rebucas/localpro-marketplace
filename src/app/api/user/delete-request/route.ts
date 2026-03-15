@@ -47,21 +47,29 @@ export const POST = withHandler(async (req: NextRequest) => {
     userId:    currentUser.userId,
     action:    "account_deletion_requested",
     details:   { reason, requestedAt: new Date().toISOString() },
-    ipAddress: req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown",
+    ipAddress: req.headers.get("x-real-ip") ?? req.headers.get("x-forwarded-for")?.split(",").at(-1)?.trim() ?? "unknown",
   });
+
+  // Sanitise all user-controlled strings before embedding in HTML
+  const esc = (s: string) =>
+    s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  const safeId     = esc(currentUser.userId);
+  const safeName   = esc(String((user as { name?: string }).name ?? "N/A"));
+  const safeEmail  = esc(String((user as { email?: string }).email ?? "N/A"));
+  const safeReason = esc(reason);
 
   // Notify support via email
   const adminEmail = process.env.ADMIN_SUPPORT_EMAIL ?? process.env.EMAIL_FROM ?? "support@localpro.asia";
   await sendEmail(
     adminEmail,
-    `[Action Required] Account deletion request — ${user.name} (${user.email ?? currentUser.userId})`,
+    `[Action Required] Account deletion request \u2014 ${safeName} (${safeEmail})`,
     `
       <p>A user has submitted an account deletion request.</p>
       <table>
-        <tr><td><strong>User ID</strong></td><td>${currentUser.userId}</td></tr>
-        <tr><td><strong>Name</strong></td><td>${user.name}</td></tr>
-        <tr><td><strong>Email</strong></td><td>${user.email ?? "N/A"}</td></tr>
-        <tr><td><strong>Reason</strong></td><td>${reason}</td></tr>
+        <tr><td><strong>User ID</strong></td><td>${safeId}</td></tr>
+        <tr><td><strong>Name</strong></td><td>${safeName}</td></tr>
+        <tr><td><strong>Email</strong></td><td>${safeEmail}</td></tr>
+        <tr><td><strong>Reason</strong></td><td>${safeReason}</td></tr>
         <tr><td><strong>Requested At</strong></td><td>${new Date().toISOString()}</td></tr>
       </table>
       <p>Please process this request within 30 days in compliance with the Data Privacy Act of 2012.</p>

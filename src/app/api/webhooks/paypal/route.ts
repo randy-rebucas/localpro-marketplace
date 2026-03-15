@@ -18,7 +18,7 @@ import type { BusinessPlan } from "@/types";
  * Set the following environment variables:
  *   PAYPAL_CLIENT_ID, PAYPAL_CLIENT_SECRET  — app credentials
  *   PAYPAL_WEBHOOK_ID                       — the webhook ID from PayPal dashboard
- *   NEXT_PUBLIC_PAYPAL_MODE                 — "sandbox" | "live"
+ *   PAYPAL_MODE                              — "sandbox" | "live" (server-only)
  *
  * Events subscribed:
  *   PAYMENT.CAPTURE.COMPLETED   → activate subscription / escrow funding
@@ -151,7 +151,7 @@ async function verifyPayPalSignature(
   rawBody: string,
   webhookId: string
 ): Promise<boolean> {
-  const base        = process.env.NEXT_PUBLIC_PAYPAL_MODE === "live"
+  const base        = process.env.PAYPAL_MODE === "live"
     ? "https://api-m.paypal.com"
     : "https://api-m.sandbox.paypal.com";
 
@@ -178,6 +178,20 @@ async function verifyPayPalSignature(
     if (!tokenData.access_token) return false;
 
     // Verify signature via PayPal v1 API
+    // Verify signature via PayPal v1 API
+    // H-1: Validate cert_url domain before forwarding — prevents SSRF / cert-swap
+    const certUrl = req.headers.get("paypal-cert-url") ?? "";
+    const ALLOWED_CERT_ORIGINS = [
+      "https://api.paypal.com/",
+      "https://api-m.paypal.com/",
+      "https://api.sandbox.paypal.com/",
+      "https://api-m.sandbox.paypal.com/",
+    ];
+    if (!ALLOWED_CERT_ORIGINS.some((o) => certUrl.startsWith(o))) {
+      console.error("[PAYPAL WEBHOOK] cert_url domain rejected:", certUrl);
+      return false;
+    }
+
     const verifyRes = await fetch(`${base}/v1/notifications/verify-webhook-signature`, {
       method:  "POST",
       headers: {
@@ -186,7 +200,7 @@ async function verifyPayPalSignature(
       },
       body: JSON.stringify({
         auth_algo:         req.headers.get("paypal-auth-algo"),
-        cert_url:          req.headers.get("paypal-cert-url"),
+        cert_url:          certUrl,
         transmission_id:   req.headers.get("paypal-transmission-id"),
         transmission_sig:  req.headers.get("paypal-transmission-sig"),
         transmission_time: req.headers.get("paypal-transmission-time"),

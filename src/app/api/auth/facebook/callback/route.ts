@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withHandler } from "@/lib/utils";
+import { checkRateLimit } from "@/lib/rateLimit";
 import { connectDB } from "@/lib/db";
 import User from "@/models/User";
 import { signAccessToken, signRefreshToken, setAuthCookies } from "@/lib/auth";
@@ -18,6 +19,13 @@ interface FBProfile {
 }
 
 export const GET = withHandler(async (req: NextRequest) => {
+  // M-10: Rate-limit OAuth code exchange — prevents brute-force code guessing
+  const ip = req.headers.get("x-real-ip") ?? req.headers.get("x-forwarded-for")?.split(",").at(-1)?.trim() ?? "unknown";
+  const rl = await checkRateLimit(`fb-callback:${ip}`, { windowMs: 15 * 60_000, max: 10 }, { failOpen: false });
+  if (!rl.ok) {
+    return NextResponse.redirect(`${APP_URL}/login?error=too_many_attempts`);
+  }
+
   const { searchParams } = new URL(req.url);
   const code  = searchParams.get("code");
   const state = searchParams.get("state");

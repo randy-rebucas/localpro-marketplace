@@ -11,8 +11,11 @@ const securityHeaders = [
   { key: "X-DNS-Prefetch-Control", value: "on" },
   { key: "X-Frame-Options", value: "DENY" },
   { key: "X-Content-Type-Options", value: "nosniff" },
+  // L-6: Prevent Adobe Flash/PDF plugins from loading cross-domain policy files
+  { key: "X-Permitted-Cross-Domain-Policies", value: "none" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-  { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(self)" },
+  // L-5: Lock down payment and USB APIs in addition to camera/mic
+  { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(self), payment=(), usb=()" },
   {
     key: "Strict-Transport-Security",
     value: "max-age=63072000; includeSubDomains; preload",
@@ -30,6 +33,8 @@ const securityHeaders = [
       "img-src 'self' data: blob: https://res.cloudinary.com https://maps.googleapis.com https://maps.gstatic.com https://avatars.githubusercontent.com https://lh3.googleusercontent.com https://www.google-analytics.com https://www.googletagmanager.com https://graph.facebook.com https://platform-lookaside.fbsbx.com https://vercel.live https://*.vercel.live https://api.qrserver.com",
       "connect-src 'self' https://api.paymongo.com https://maps.googleapis.com https://www.google-analytics.com https://analytics.google.com https://stats.g.doubleclick.net https://vitals.vercel-insights.com https://vercel.live https://*.vercel.live https://va.vercel-scripts.com",
       "frame-src https://js.paymongo.com https://checkout.paymongo.com https://www.googletagmanager.com https://vercel.live https://*.vercel.live",
+      // M-8: CSP violation reporting — events are logged via /api/csp-report and forwarded to Sentry
+      "report-uri /api/csp-report",
     ].join("; "),
   },
 ];
@@ -87,8 +92,10 @@ export default withSentryConfig(withAnalyzer, {
   sourcemaps: { disable: process.env.CI !== "true" },
   // Suppress noisy Sentry build output
   silent: true,
-  // Tree-shake Sentry debug code from production bundles
-  disableLogger: true,
-  // Automatically instrument server-side route handlers
-  autoInstrumentServerFunctions: true,
+  webpack: {
+    // Tree-shake Sentry debug logging from production bundles
+    treeshake: { removeDebugLogging: true },
+    // Automatically instrument server-side route handlers
+    autoInstrumentServerFunctions: true,
+  },
 });

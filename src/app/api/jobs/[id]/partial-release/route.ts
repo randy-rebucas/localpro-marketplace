@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { requireUser, requireRole } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { connectDB } from "@/lib/db";
@@ -27,9 +28,16 @@ export const POST = withHandler(async (
 
   const { id } = await params;
   const body = await req.json();
-  const releaseAmount = Number(body.amount);
 
-  if (!releaseAmount || releaseAmount <= 0) throw new ValidationError("Must be a positive number");
+  // M-1: Strict Zod validation — prevents Infinity, NaN, and floating-point drift
+  const ReleaseSchema = z.object({
+    amount: z.number().positive().finite().multipleOf(0.01, "Amount must be a valid peso/centavo value"),
+  });
+  const parsed = ReleaseSchema.safeParse(body);
+  if (!parsed.success) {
+    throw new ValidationError(parsed.error.errors[0]?.message ?? "Invalid amount");
+  }
+  const releaseAmount = parsed.data.amount;
 
   await connectDB();
 

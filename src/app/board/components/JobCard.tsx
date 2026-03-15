@@ -77,15 +77,15 @@ export function JobCard({ job }: { job: BoardJob }) {
   }
 
   return (
-    <div className="bg-white/[0.07] border border-white/10 rounded-2xl p-2 flex flex-col gap-3 hover:bg-white/[0.10] transition-colors">
+    <div className="bg-white/[0.07] border border-white/10 rounded-2xl p-2 sm:p-2 flex flex-col gap-2 sm:gap-3 hover:bg-white/[0.10] transition-colors">
       {/* Top row: QR + details */}
-      <div className="flex gap-3">
-        {/* QR code */}
+      <div className="flex gap-2 sm:gap-3">
+        {/* QR code — smaller on mobile */}
         <a
           href={qr.href}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex-shrink-0 bg-white rounded-xl p-1.5 self-start block hover:opacity-90 transition-opacity"
+          className="flex-shrink-0 bg-white rounded-xl p-1 sm:p-1.5 self-start block hover:opacity-90 transition-opacity"
           title={qr.label === "SCAN TO VIEW" ? "View job details" : "Apply for this job"}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -94,14 +94,14 @@ export function JobCard({ job }: { job: BoardJob }) {
             alt={qr.label}
             width={96}
             height={96}
-            className="rounded-lg"
+            className="rounded-lg block w-14 h-14 sm:w-20 sm:h-20 md:w-24 md:h-24"
             onError={() =>
               setImgSrc(
                 `https://api.qrserver.com/v1/create-qr-code/?size=96x96&data=${encodeURIComponent(qr.href)}&format=png`
               )
             }
           />
-          <p className={`text-[11px] text-center mt-1 font-medium ${
+          <p className={`text-[10px] text-center mt-1 font-medium ${
             qr.label === "SCAN TO VIEW" ? "text-blue-400" : "text-slate-400"
           }`}>{qr.label}</p>
         </a>
@@ -132,8 +132,8 @@ export function JobCard({ job }: { job: BoardJob }) {
             )}
           </div>
 
-          <div className="flex items-start justify-between gap-2 mb-2">
-            <p className="text-base font-bold text-white leading-snug line-clamp-2 flex-1">{job.title}</p>
+          <div className="flex items-start justify-between gap-2 mb-1.5">
+            <p className="text-sm font-bold text-white leading-snug line-clamp-2 flex-1">{job.title}</p>
             <button
               onClick={() => setShowShare((v) => !v)}
               aria-label="Share job"

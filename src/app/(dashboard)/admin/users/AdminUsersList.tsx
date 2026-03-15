@@ -455,115 +455,111 @@ export default function AdminUsersList({
         </div>
       )}
 
-      {/* ── Table ─────────────────────────────────────────────────────── */}
-      <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-700/50">
-                <th className="px-4 py-3 w-10">
-                  <input type="checkbox" checked={allSelected} onChange={toggleAll}
-                    className="rounded border-slate-300 text-primary focus:ring-primary/30"
-                    aria-label="Select all" />
-                </th>
-                <th className="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">User</th>
-                <th className="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Role</th>
-                <th className="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Status</th>
-                <th className="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Profile</th>
-                <th className="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Joined</th>
-                <th className="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-              {users.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="px-6 py-10 text-center text-slate-400 dark:text-slate-500 text-sm">
-                    No {roleFilter === "all" ? "" : roleFilter} users
-                    {searchQuery ? ` matching "${searchQuery}"` : ""} found.
-                  </td>
-                </tr>
-              ) : users.map((u) => {
-                const initials = u.name.split(" ").filter(Boolean).map((w: string) => w[0]).join("").slice(0, 2).toUpperCase() || "?";
-                const approvalStatus = u.approvalStatus ?? "approved";
-                const isPendingProvider = u.role === "provider" && approvalStatus === "pending_approval";
-                const uid = u._id.toString();
-                const isSelected = selectedIds.has(uid);
-                return (
-                  <tr key={uid}
-                    className={`hover:bg-slate-50/50 dark:hover:bg-slate-700/40 transition-colors ${
-                      isPendingProvider ? "bg-amber-50/30 dark:bg-amber-900/10 border-l-2 border-amber-400" : ""
-                    } ${isSelected ? "bg-primary/5 dark:bg-primary/10" : ""}`}
-                  >
-                    <td className="px-4 py-3.5">
-                      <input type="checkbox" checked={isSelected} onChange={() => toggleOne(uid)}
-                        className="rounded border-slate-300 text-primary focus:ring-primary/30"
-                        aria-label={`Select ${u.name}`} />
-                    </td>
-                    <td className="px-6 py-3.5">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 overflow-hidden">
-                          {u.avatar
-                            ? <Image src={u.avatar} alt={u.name} width={32} height={32} className="object-cover w-full h-full" />
-                            : <span className="text-xs font-bold text-primary">{initials}</span>}
-                        </div>
-                        <div className="min-w-0">
-                          <p className="font-semibold text-slate-900 dark:text-white truncate">{u.name}</p>
-                          <p className="text-xs text-slate-400 dark:text-slate-500 truncate">{u.email}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-3.5">
-                      <span className={`badge capitalize ${ROLE_COLOR[u.role] ?? "bg-slate-100 text-slate-600"}`}>{u.role}</span>
-                    </td>
-                    <td className="px-6 py-3.5">
-                      <div className="flex flex-col gap-1">
-                        {u.isSuspended
-                          ? <span className="badge bg-red-100 text-red-700 font-semibold">Suspended</span>
-                          : (
-                            <>
-                              {u.role === "provider" && (
-                                <span className={`badge capitalize ${APPROVAL_COLOR[approvalStatus] ?? "bg-slate-100 text-slate-500"}`}>
-                                  {approvalStatus.replace(/_/g, " ")}
-                                </span>
-                              )}
-                              <span className={u.isVerified ? "badge bg-green-100 text-green-700" : "badge bg-slate-100 text-slate-400"}>
-                                {u.isVerified ? "✓ Verified" : "Unverified"}
-                              </span>
-                            </>
-                          )
-                        }
-                      </div>
-                    </td>
-                    <td className="px-6 py-3.5"><CompletenessCell u={u} /></td>
-                    <td className="px-6 py-3.5">
-                      <div className="flex items-center gap-1 text-xs text-slate-400 dark:text-slate-500">
-                        <Clock size={11} className="flex-shrink-0" />{formatDate(u.createdAt)}
-                      </div>
-                    </td>
-                    <td className="px-6 py-3.5">
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <Link href={`/admin/users/${uid}`}
-                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors">
-                          View
-                        </Link>
-                        <UserActions
-                          userId={uid} userName={u.name} role={u.role}
-                          isVerified={u.isVerified} isSuspended={u.isSuspended}
-                          approvalStatus={approvalStatus}
-                          email={u.email} phone={u.phone ?? undefined}
-                        />
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+      {/* ── List ──────────────────────────────────────────────────────── */}
+      <div className="rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm bg-white dark:bg-slate-800">
+
+        {/* Select-all header */}
+        <div className="flex items-center gap-3 px-4 py-2.5 border-b border-slate-100 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-700/40 rounded-t-2xl">
+          <input type="checkbox" checked={allSelected} onChange={toggleAll}
+            className="rounded border-slate-300 text-primary focus:ring-primary/30"
+            aria-label="Select all" />
+          <span className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">
+            {allSelected ? `All ${users.length} selected` : `${total.toLocaleString()} user${total !== 1 ? "s" : ""}`}
+          </span>
         </div>
+
+        {users.length === 0 ? (
+          <div className="px-6 py-14 text-center text-slate-400 dark:text-slate-500 text-sm rounded-b-2xl">
+            No {roleFilter === "all" ? "" : roleFilter} users
+            {searchQuery ? ` matching "${searchQuery}"` : ""} found.
+          </div>
+        ) : (
+          <ul className="flex flex-col gap-2 p-2">
+            {users.map((u) => {
+              const initials = u.name.split(" ").filter(Boolean).map((w: string) => w[0]).join("").slice(0, 2).toUpperCase() || "?";
+              const approvalStatus = u.approvalStatus ?? "approved";
+              const isPendingProvider = u.role === "provider" && approvalStatus === "pending_approval";
+              const uid = u._id.toString();
+              const isSelected = selectedIds.has(uid);
+              return (
+                <li
+                  key={uid}
+                  className={[
+                    "flex items-center gap-3 px-4 py-3 rounded-xl border transition-colors",
+                    "bg-white dark:bg-slate-800/60",
+                    isPendingProvider
+                      ? "border-amber-300 dark:border-amber-700 bg-amber-50/40 dark:bg-amber-900/10"
+                      : "border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600",
+                    isSelected ? "border-primary/40 bg-primary/5 dark:bg-primary/10" : "",
+                  ].join(" ")}
+                >
+                  {/* Checkbox */}
+                  <input type="checkbox" checked={isSelected} onChange={() => toggleOne(uid)}
+                    className="rounded border-slate-300 text-primary focus:ring-primary/30 flex-shrink-0"
+                    aria-label={`Select ${u.name}`} />
+
+                  {/* Avatar */}
+                  <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                    {u.avatar
+                      ? <Image src={u.avatar} alt={u.name} width={36} height={36} className="object-cover w-full h-full" />
+                      : <span className="text-xs font-bold text-primary">{initials}</span>}
+                  </div>
+
+                  {/* Name + email */}
+                  <div className="min-w-0 flex-1">
+                    <p className="font-semibold text-slate-900 dark:text-white text-sm truncate leading-tight">{u.name}</p>
+                    <p className="text-xs text-slate-400 dark:text-slate-500 truncate">{u.email}</p>
+                  </div>
+
+                  {/* Badges: role + status */}
+                  <div className="hidden sm:flex flex-wrap items-center gap-1.5 flex-shrink-0">
+                    <span className={`badge capitalize ${ROLE_COLOR[u.role] ?? "bg-slate-100 text-slate-600"}`}>{u.role}</span>
+                    {u.isSuspended
+                      ? <span className="badge bg-red-100 text-red-700 font-semibold">Suspended</span>
+                      : (
+                        <>
+                          {u.role === "provider" && (
+                            <span className={`badge capitalize ${APPROVAL_COLOR[approvalStatus] ?? "bg-slate-100 text-slate-500"}`}>
+                              {approvalStatus.replace(/_/g, " ")}
+                            </span>
+                          )}
+                          <span className={u.isVerified ? "badge bg-green-100 text-green-700" : "badge bg-slate-100 text-slate-400"}>
+                            {u.isVerified ? "✓ Verified" : "Unverified"}
+                          </span>
+                        </>
+                      )
+                    }
+                  </div>
+
+                  {/* Completeness */}
+                  <div className="hidden lg:block flex-shrink-0">
+                    <CompletenessCell u={u} />
+                  </div>
+
+                  {/* Joined */}
+                  <div className="hidden md:flex items-center gap-1 text-xs text-slate-400 dark:text-slate-500 flex-shrink-0">
+                    <Clock size={11} className="flex-shrink-0" />{formatDate(u.createdAt)}
+                  </div>
+
+                  {/* Actions dropdown */}
+                  <div className="flex-shrink-0">
+                    <UserActions
+                      userId={uid} userName={u.name} role={u.role}
+                      isVerified={u.isVerified} isSuspended={u.isSuspended}
+                      approvalStatus={approvalStatus}
+                      email={u.email} phone={u.phone ?? undefined}
+                      viewHref={`/admin/users/${uid}`}
+                    />
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
 
         {/* ── Pagination footer ─────────────────────────────────────── */}
         {totalPages > 1 && (
-          <div className="px-4 py-3 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between gap-3 flex-wrap dark:bg-slate-700/30">
+          <div className="px-4 py-3 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between gap-3 flex-wrap bg-slate-50/40 dark:bg-slate-700/30 rounded-b-2xl">
             <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
               <span>Page {page} of {totalPages} · {total.toLocaleString()} users</span>
               <span className="text-slate-300 dark:text-slate-600">·</span>

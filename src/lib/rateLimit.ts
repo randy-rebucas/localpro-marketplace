@@ -99,9 +99,19 @@ function checkFallback(key: string, options: RateLimitOptions): RateLimitResult 
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 
+export interface RateLimitCheckOptions {
+  /**
+   * When true (default), a Redis failure degrades to the in-memory fallback.
+   * Set to false on high-sensitivity endpoints (login, register, password reset)
+   * so that a Redis outage never silently allows unlimited requests.
+   */
+  failOpen?: boolean;
+}
+
 export async function checkRateLimit(
   key: string,
-  options: RateLimitOptions
+  options: RateLimitOptions,
+  { failOpen = true }: RateLimitCheckOptions = {}
 ): Promise<RateLimitResult> {
   const limiter = getLimiter(options.max, options.windowMs);
 
@@ -114,8 +124,12 @@ export async function checkRateLimit(
     const { success, remaining, reset } = await limiter.limit(key);
     return { ok: success, remaining, resetAt: reset };
   } catch (err) {
-    // If Redis is temporarily unavailable, degrade gracefully
-    console.error("[RateLimit] Redis error — falling back to in-memory:", err);
+    console.error("[RateLimit] Redis error:", err);
+    if (!failOpen) {
+      // Hard-fail: treat Redis unavailability as rate-limited on sensitive routes
+      return { ok: false, remaining: 0, resetAt: Date.now() + options.windowMs };
+    }
+    // Degrade gracefully for non-sensitive routes
     return checkFallback(key, options);
   }
 }

@@ -8,8 +8,11 @@ import { randomUUID } from "crypto";
 const ACCESS_SECRET = process.env.JWT_SECRET as string;
 const REFRESH_SECRET = process.env.JWT_REFRESH_SECRET as string;
 
-if (!ACCESS_SECRET || !REFRESH_SECRET) {
-  throw new Error("JWT secrets must be defined in environment variables");
+if (!ACCESS_SECRET || ACCESS_SECRET.length < 32) {
+  throw new Error("JWT_SECRET must be at least 32 characters");
+}
+if (!REFRESH_SECRET || REFRESH_SECRET.length < 32) {
+  throw new Error("JWT_REFRESH_SECRET must be at least 32 characters");
 }
 
 export const STAFF_CAPABILITIES: StaffCapability[] = [
@@ -43,15 +46,35 @@ export function signAccessToken(userId: string, role: UserRole, capabilities?: s
 }
 
 export function signRefreshToken(userId: string): string {
-  return jwt.sign({ userId }, REFRESH_SECRET, { expiresIn: "7d" });
+  return jwt.sign({ userId, jti: randomUUID() }, REFRESH_SECRET, { expiresIn: "7d" });
 }
 
 export function verifyAccessToken(token: string): TokenPayload {
   return jwt.verify(token, ACCESS_SECRET) as TokenPayload;
 }
 
-export function verifyRefreshToken(token: string): { userId: string } {
-  return jwt.verify(token, REFRESH_SECRET) as { userId: string };
+export function verifyRefreshToken(token: string): { userId: string; jti?: string } {
+  return jwt.verify(token, REFRESH_SECRET) as { userId: string; jti?: string };
+}
+
+/**
+ * Adds a refresh token's jti to the Redis deny-list (TTL = 7 days).
+ * Called on rotation so the old token cannot be reused.
+ */
+export async function revokeRefreshToken(jti: string): Promise<void> {
+  const redis = getRedis();
+  if (!redis) return;
+  await redis.set(`jwt:refresh-denied:${jti}`, "1", { ex: 7 * 24 * 60 * 60 });
+}
+
+/**
+ * Returns true if the given refresh token jti has been revoked (i.e. already rotated).
+ */
+export async function isRefreshTokenRevoked(jti: string): Promise<boolean> {
+  const redis = getRedis();
+  if (!redis) return false;
+  const revoked = await redis.get(`jwt:refresh-denied:${jti}`);
+  return !!revoked;
 }
 
 export function setAuthCookies(
@@ -142,14 +165,14 @@ export async function revokeToken(jti: string): Promise<void> {
 }
 
 /**
- * Marks all access tokens for a user as revoked by storing a "revoked at"
- * timestamp. Any token with iat <= this timestamp will be rejected.
- * TTL = 15 min (access token lifetime).
+ * Marks all tokens (access + refresh) for a user as revoked by storing a
+ * "revoked at" timestamp. Any token with iat <= this timestamp will be
+ * rejected. TTL = 7 days (refresh token lifetime — the longer of the two).
  */
 export async function revokeAllUserTokens(userId: string): Promise<void> {
   const redis = getRedis();
   if (!redis) return;
-  await redis.set(`jwt:revoke-user:${userId}`, Math.floor(Date.now() / 1000), { ex: 15 * 60 });
+  await redis.set(`jwt:revoke-user:${userId}`, Math.floor(Date.now() / 1000), { ex: 7 * 24 * 60 * 60 });
 }
 
 /** Throws UnauthorizedError if no valid session. */

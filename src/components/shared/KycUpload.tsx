@@ -1,40 +1,101 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import toast from "react-hot-toast";
-import { ShieldCheck, ShieldX, Clock, Upload, ExternalLink } from "lucide-react";
-import Button from "@/components/ui/Button";
+import {
+  ShieldCheck, ShieldX, Clock, Upload, ExternalLink,
+  CheckCircle2, FileText, X, Loader2, Award, BadgeCheck,
+  Briefcase, Wallet, UserCheck, GraduationCap, Send,
+} from "lucide-react";
 import { apiFetch } from "@/lib/fetchClient";
 
 const DOC_TYPES = [
-  { value: "government_id", label: "Government-issued ID (UMID, Passport, Driver's License)" },
-  { value: "tesda_certificate", label: "TESDA Certificate / NC Certificate" },
-  { value: "business_permit", label: "Business Permit / DTI Registration" },
-  { value: "selfie_with_id", label: "Selfie with ID" },
-  { value: "other", label: "Other Document" },
+  {
+    value: "government_id",
+    label: "Government-issued ID",
+    hint: "UMID, Passport, or Driver's License",
+    required: true,
+    badge: { label: "Legit Badge", color: "text-blue-700 bg-blue-50 border-blue-200", icon: BadgeCheck },
+    note: "Unlocks identity verification alongside Selfie with ID",
+  },
+  {
+    value: "selfie_with_id",
+    label: "Selfie with ID",
+    hint: "Hold your government ID next to your face",
+    required: true,
+    badge: { label: "Legit Badge", color: "text-blue-700 bg-blue-50 border-blue-200", icon: BadgeCheck },
+    note: "Both ID + selfie required to earn the Legit badge",
+  },
+  {
+    value: "tesda_certificate",
+    label: "TESDA / NC Certificate",
+    hint: "TESDA Certificate or NC Certificate",
+    required: false,
+    badge: { label: "Verified Provider", color: "text-violet-700 bg-violet-50 border-violet-200", icon: Award },
+    note: "Proves your trade skills to potential clients",
+  },
+  {
+    value: "training_certificate",
+    label: "Training Certification",
+    hint: "Any professional training or skills cert",
+    required: false,
+    badge: { label: "Certified Pro", color: "text-indigo-700 bg-indigo-50 border-indigo-200", icon: GraduationCap },
+    note: "Highlights advanced training beyond standard qualifications",
+  },
+  {
+    value: "business_permit",
+    label: "Business Permit",
+    hint: "DTI Registration or Local Business Permit",
+    required: false,
+    badge: { label: "Business Verified", color: "text-emerald-700 bg-emerald-50 border-emerald-200", icon: Briefcase },
+    note: "Shows clients you run a legitimate registered business",
+  },
+  {
+    value: "bank_verification",
+    label: "Bank / E-Wallet Verification",
+    hint: "Bank statement, GCash, or Maya account screenshot",
+    required: false,
+    badge: { label: "Payment Verified", color: "text-teal-700 bg-teal-50 border-teal-200", icon: Wallet },
+    note: "Enables faster payouts and builds payout trust",
+  },
+  {
+    value: "background_check",
+    label: "Background Check",
+    hint: "NBI Clearance or Police Clearance",
+    required: false,
+    badge: { label: "Trusted Pro", color: "text-rose-700 bg-rose-50 border-rose-200", icon: UserCheck },
+    note: "Strongest trust signal — clients prefer background-checked providers",
+  },
+  {
+    value: "other",
+    label: "Other Document",
+    hint: "Any additional supporting document",
+    required: false,
+    badge: null,
+    note: null,
+  },
 ] as const;
 
 type DocType = (typeof DOC_TYPES)[number]["value"];
 
-interface KycDoc {
-  type: string;
-  url: string;
-  uploadedAt: string;
-}
-
+interface KycDoc { type: string; url: string; uploadedAt: string; }
 interface KycState {
   kycStatus: "none" | "pending" | "approved" | "rejected";
   kycDocuments: KycDoc[];
   kycRejectionReason?: string | null;
 }
 
+const MAX_FILE_BYTES = 10 * 1024 * 1024; // 10 MB
+
 export default function KycUpload() {
   const [state, setState] = useState<KycState | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isUploading, setIsUploading] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [newDocs, setNewDocs] = useState<{ type: DocType; url: string }[]>([]);
-  const [selectedType, setSelectedType] = useState<DocType>("government_id");
+  // Per-type: "idle" | "uploading" | "staged" | "submitting" | "done"
+  const [itemState, setItemState] = useState<Partial<Record<DocType, "uploading" | "staged" | "submitting">>>({});
+  // Per-type staged URL (cleared after submit)
+  const [staged, setStaged] = useState<Partial<Record<DocType, string>>>({});
+  const stateRef = useRef(state);
+  useEffect(() => { stateRef.current = state; }, [state]);
 
   useEffect(() => {
     apiFetch("/api/kyc")
@@ -43,8 +104,21 @@ export default function KycUpload() {
       .catch(() => setIsLoading(false));
   }, []);
 
-  async function uploadFile(file: File) {
-    setIsUploading(true);
+  function setItem(type: DocType, s: "uploading" | "staged" | "submitting" | null) {
+    setItemState((prev) => {
+      const next = { ...prev };
+      if (s === null) delete next[type]; else next[type] = s;
+      return next;
+    });
+  }
+
+  async function handleFileChange(type: DocType, e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (file.size > MAX_FILE_BYTES) { toast.error("File exceeds 10 MB limit"); return; }
+
+    setItem(type, "uploading");
     try {
       const fd = new FormData();
       fd.append("file", file);
@@ -52,53 +126,63 @@ export default function KycUpload() {
       const res = await apiFetch("/api/upload", { method: "POST", body: fd });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Upload failed");
-      return data.url as string;
-    } finally {
-      setIsUploading(false);
-    }
-  }
-
-  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    try {
-      const url = await uploadFile(file);
-      setNewDocs((prev) => [...prev, { type: selectedType, url }]);
-      toast.success("Document uploaded");
+      setStaged((prev) => ({ ...prev, [type]: data.url as string }));
+      setItem(type, "staged");
+      toast.success("File ready — click Submit to save");
     } catch {
-      toast.error("Failed to upload document");
+      toast.error("Failed to upload file");
+      setItem(type, null);
     }
-    e.target.value = "";
   }
 
-  async function handleSubmit() {
-    if (newDocs.length === 0) { toast.error("Please upload at least one document"); return; }
-    setIsSubmitting(true);
+  function discardStaged(type: DocType) {
+    setStaged((prev) => { const n = { ...prev }; delete n[type]; return n; });
+    setItem(type, null);
+  }
+
+  async function submitDoc(type: DocType) {
+    const url = staged[type];
+    if (!url) return;
+    setItem(type, "submitting");
+
+    // Merge: existing submitted docs + this new one (replaces same type if exists)
+    const existing = stateRef.current?.kycDocuments ?? [];
+    const merged = [
+      ...existing.filter((d) => d.type !== type),
+      { type, url, uploadedAt: new Date().toISOString() },
+    ];
+
     try {
-      const res = await fetch("/api/kyc", {
+      const res = await apiFetch("/api/kyc", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ documents: newDocs }),
+        body: JSON.stringify({ documents: merged }),
       });
       const data = await res.json();
-      if (!res.ok) { toast.error(data.error ?? "Submission failed"); return; }
-      toast.success("KYC documents submitted for review!");
-      setState({ kycStatus: "pending", kycDocuments: newDocs.map((d) => ({ ...d, uploadedAt: new Date().toISOString() })) });
-      setNewDocs([]);
+      if (!res.ok) { toast.error(data.error ?? "Submission failed"); setItem(type, "staged"); return; }
+      toast.success(`${DOC_TYPES.find((d) => d.value === type)?.label} submitted!`);
+      setState((prev) => ({
+        kycStatus: prev?.kycStatus === "none" || prev?.kycStatus === "rejected" ? "pending" : (prev?.kycStatus ?? "pending"),
+        kycDocuments: merged,
+        kycRejectionReason: prev?.kycRejectionReason,
+      }));
+      setStaged((prev) => { const n = { ...prev }; delete n[type]; return n; });
+      setItem(type, null);
     } catch {
       toast.error("Something went wrong");
-    } finally {
-      setIsSubmitting(false);
+      setItem(type, "staged");
     }
   }
 
-  if (isLoading) return <div className="h-20 animate-pulse bg-slate-100 rounded-xl" />;
+  if (isLoading) return <div className="h-32 animate-pulse bg-slate-100 rounded-xl" />;
 
   const status = state?.kycStatus ?? "none";
+  const canUpload = status !== "approved";
+  const submittedByType = Object.fromEntries((state?.kycDocuments ?? []).map((d) => [d.type, d]));
 
   return (
     <div className="bg-white rounded-xl border border-slate-200 shadow-card overflow-hidden">
+      {/* ── Header ── */}
       <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
         <div>
           <h3 className="text-sm font-semibold text-slate-800">Identity Verification (KYC)</h3>
@@ -122,95 +206,170 @@ export default function KycUpload() {
       </div>
 
       <div className="p-5 space-y-4">
+        {/* ── Status banners ── */}
         {status === "approved" && (
           <p className="text-sm text-green-700 bg-green-50 rounded-lg p-3">
             ✅ Your identity has been verified. The verified badge is now visible on your profile.
           </p>
         )}
-
         {status === "pending" && (
           <p className="text-sm text-amber-700 bg-amber-50 rounded-lg p-3">
-            ⏳ Your documents are under review. This typically takes 1-2 business days.
+            ⏳ Your documents are under review. This typically takes 1–2 business days.
+            You can still upload additional documents below to strengthen your application.
           </p>
         )}
-
         {status === "rejected" && (
           <div className="text-sm text-red-700 bg-red-50 rounded-lg p-3">
             <p className="font-medium">KYC Rejected</p>
-            {state?.kycRejectionReason && (
-              <p className="mt-1 text-red-600">{state.kycRejectionReason}</p>
-            )}
-            <p className="mt-2 text-xs text-red-500">Please re-submit with the correct documents below.</p>
+            {state?.kycRejectionReason && <p className="mt-1 text-red-600">{state.kycRejectionReason}</p>}
+            <p className="mt-2 text-xs text-red-500">Re-upload the correct documents below and submit each one.</p>
           </div>
         )}
 
-        {/* Submitted documents */}
-        {(state?.kycDocuments?.length ?? 0) > 0 && status !== "rejected" && (
-          <div className="space-y-2">
-            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Submitted Documents</p>
-            {state!.kycDocuments.map((doc, i) => (
-              <div key={i} className="flex items-center justify-between rounded-lg bg-slate-50 border border-slate-200 px-3 py-2">
-                <div>
-                  <p className="text-sm font-medium text-slate-700 capitalize">{doc.type.replace(/_/g, " ")}</p>
-                  <p className="text-xs text-slate-400">{new Date(doc.uploadedAt).toLocaleDateString()}</p>
-                </div>
-                <a href={doc.url} target="_blank" rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-xs text-primary hover:underline">
-                  View <ExternalLink className="h-3 w-3" />
-                </a>
-              </div>
-            ))}
-          </div>
-        )}
+        {/* ── Section label ── */}
+        <div className="flex items-center gap-2">
+          <Award className="h-4 w-4 text-violet-500 flex-shrink-0" />
+          <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">
+            Upload documents to earn badges and build client trust
+          </p>
+        </div>
 
-        {/* Upload new documents — shown when status is none or rejected */}
-        {(status === "none" || status === "rejected") && (
-          <div className="space-y-3">
-            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Upload Documents</p>
+        {/* ── Per-type cards ── */}
+        <div className="space-y-2">
+          {DOC_TYPES.map((dt) => {
+            const submitted = submittedByType[dt.value] as KycDoc | undefined;
+            const stagedUrl = staged[dt.value];
+            const phase = itemState[dt.value] ?? null;
+            const isUploading  = phase === "uploading";
+            const isStaged     = phase === "staged";
+            const isSubmitting = phase === "submitting";
+            const hasFile      = !!stagedUrl || !!submitted;
+            const isRequiredEmpty = dt.required && !hasFile;
 
-            <div className="flex gap-2">
-              <select
-                className="input flex-1 text-sm"
-                value={selectedType}
-                onChange={(e) => setSelectedType(e.target.value as DocType)}
+            return (
+              <div
+                key={dt.value}
+                className={[
+                  "rounded-xl border px-4 py-3 transition-colors",
+                  isStaged || isSubmitting
+                    ? "border-primary/30 bg-primary/5 dark:border-primary/40 dark:bg-primary/10"
+                    : hasFile
+                    ? "border-green-200 bg-green-50/60 dark:border-green-800 dark:bg-green-900/10"
+                    : isRequiredEmpty
+                    ? "border-amber-300 bg-amber-50/50 dark:border-amber-700 dark:bg-amber-900/10"
+                    : "border-slate-200 bg-slate-50/50 dark:border-slate-700 dark:bg-slate-800/30",
+                ].join(" ")}
               >
-                {DOC_TYPES.map((dt) => (
-                  <option key={dt.value} value={dt.value}>{dt.label}</option>
-                ))}
-              </select>
-              <label className={`inline-flex items-center gap-1.5 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2 text-sm font-medium text-primary cursor-pointer hover:bg-primary/10 transition-colors ${isUploading ? "opacity-50 cursor-not-allowed" : ""}`}>
-                <Upload className="h-4 w-4" />
-                {isUploading ? "Uploading…" : "Add File"}
-                <input type="file" className="hidden" accept="image/*,.pdf" onChange={handleFileChange} disabled={isUploading} />
-              </label>
-            </div>
-
-            {/* Staged uploads */}
-            {newDocs.length > 0 && (
-              <div className="space-y-2">
-                {newDocs.map((doc, i) => (
-                  <div key={i} className="flex items-center justify-between rounded-lg bg-green-50 border border-green-200 px-3 py-2">
-                    <div>
-                      <p className="text-xs font-medium text-green-700 capitalize">{doc.type.replace(/_/g, " ")}</p>
-                      <p className="text-xs text-green-500 truncate max-w-xs">{doc.url.split("/").pop()}</p>
-                    </div>
-                    <button onClick={() => setNewDocs((prev) => prev.filter((_, j) => j !== i))}
-                      className="text-xs text-red-500 hover:text-red-700">Remove</button>
+                {/* ── Top row: icon + label + badge + view + upload btn ── */}
+                <div className="flex items-center gap-3">
+                  {/* Status icon */}
+                  <div className="flex-shrink-0">
+                    {isUploading || isSubmitting ? (
+                      <Loader2 className="h-5 w-5 text-primary animate-spin" />
+                    ) : isStaged ? (
+                      <FileText className="h-5 w-5 text-primary" />
+                    ) : hasFile ? (
+                      <CheckCircle2 className="h-5 w-5 text-green-500" />
+                    ) : isRequiredEmpty ? (
+                      <FileText className="h-5 w-5 text-amber-400" />
+                    ) : (
+                      <FileText className="h-5 w-5 text-slate-300 dark:text-slate-600" />
+                    )}
                   </div>
-                ))}
 
-                <Button onClick={handleSubmit} isLoading={isSubmitting} className="w-full">
-                  Submit for Review
-                </Button>
+                  {/* Label + badges */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center flex-wrap gap-1.5">
+                      <span className="text-sm font-medium text-slate-800 dark:text-slate-200">{dt.label}</span>
+                      {dt.required && (
+                        <span className="text-[10px] font-semibold text-red-500 bg-red-50 border border-red-100 rounded px-1">Required</span>
+                      )}
+                      {dt.badge && (
+                        <span className={`inline-flex items-center gap-1 text-[10px] font-semibold border rounded-full px-1.5 py-0.5 ${dt.badge.color}`}>
+                          <dt.badge.icon className="h-2.5 w-2.5" />
+                          {dt.badge.label}
+                        </span>
+                      )}
+                    </div>
+                    {stagedUrl ? (
+                      <p className="text-xs text-primary font-medium truncate mt-0.5">{stagedUrl.split("/").pop()}</p>
+                    ) : submitted ? (
+                      <p className="text-xs text-slate-400 mt-0.5">Submitted {new Date(submitted.uploadedAt).toLocaleDateString()}</p>
+                    ) : (
+                      <p className="text-xs text-slate-400 mt-0.5">{dt.note ?? dt.hint}</p>
+                    )}
+                  </div>
+
+                  {/* View submitted */}
+                  {submitted && (
+                    <a href={submitted.url} target="_blank" rel="noopener noreferrer"
+                      className="flex-shrink-0 inline-flex items-center gap-1 text-xs text-primary hover:underline">
+                      View <ExternalLink className="h-3 w-3" />
+                    </a>
+                  )}
+
+                  {/* Upload / Replace button */}
+                  {canUpload && !isStaged && !isSubmitting && (
+                    <label className={[
+                      "flex-shrink-0 inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium cursor-pointer transition-colors",
+                      isUploading
+                        ? "opacity-50 cursor-not-allowed border-slate-200 text-slate-400"
+                        : hasFile
+                        ? "border-slate-300 text-slate-600 hover:border-slate-400 hover:bg-slate-50"
+                        : "border-primary/40 bg-primary/5 text-primary hover:bg-primary/10",
+                    ].join(" ")}>
+                      {isUploading
+                        ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Uploading…</>
+                        : hasFile
+                        ? <><Upload className="h-3.5 w-3.5" /> Replace</>
+                        : <><Upload className="h-3.5 w-3.5" /> Upload</>
+                      }
+                      <input type="file" className="hidden" accept="image/*,.pdf"
+                        disabled={isUploading}
+                        onChange={(e) => handleFileChange(dt.value, e)} />
+                    </label>
+                  )}
+                </div>
+
+                {/* ── Staged action row: discard + submit ── */}
+                {isStaged && (
+                  <div className="flex items-center justify-between gap-2 mt-3 pt-3 border-t border-primary/10">
+                    <div className="flex items-center gap-2">
+                      {/* Replace with different file */}
+                      <label className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs font-medium text-slate-600 cursor-pointer hover:bg-slate-50 transition-colors">
+                        <Upload className="h-3.5 w-3.5" /> Replace
+                        <input type="file" className="hidden" accept="image/*,.pdf"
+                          onChange={(e) => handleFileChange(dt.value, e)} />
+                      </label>
+                      {/* Discard */}
+                      <button onClick={() => discardStaged(dt.value)}
+                        className="inline-flex items-center gap-1 rounded-lg border border-red-200 px-2.5 py-1.5 text-xs font-medium text-red-500 hover:bg-red-50 transition-colors">
+                        <X className="h-3.5 w-3.5" /> Discard
+                      </button>
+                    </div>
+                    {/* Submit this doc */}
+                    <button onClick={() => submitDoc(dt.value)}
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-white hover:bg-primary/90 transition-colors">
+                      <Send className="h-3.5 w-3.5" /> Submit document
+                    </button>
+                  </div>
+                )}
+
+                {/* Submitting overlay row */}
+                {isSubmitting && (
+                  <div className="flex items-center gap-2 mt-3 pt-3 border-t border-primary/10 text-xs text-primary font-medium">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" /> Submitting…
+                  </div>
+                )}
               </div>
-            )}
+            );
+          })}
+        </div>
 
-            {newDocs.length === 0 && (
-              <p className="text-xs text-slate-400">
-                Accepted: Government ID, Business Permit, Selfie with ID. Max 10 MB per file.
-              </p>
-            )}
-          </div>
+        {canUpload && (
+          <p className="text-xs text-slate-400 text-center">
+            Accepted formats: JPG, PNG, PDF · Max 10 MB per file · Each document is submitted individually
+          </p>
         )}
       </div>
     </div>

@@ -93,6 +93,13 @@ const navGroups: Partial<Record<UserRole, NavGroup[]>> = {
         { label: "Business Hub", href: "/client/business", icon: <Building2 className="h-4.5 w-4.5" /> },
       ],
     },
+    {
+      heading: "Support",
+      items: [
+        { label: "Help Center", href: "/client/knowledge", icon: <BookOpen className="h-4.5 w-4.5" /> },
+        { label: "Live Chat & Tickets", href: "/client/support", icon: <Headphones className="h-4.5 w-4.5" /> },
+      ],
+    },
   ],
   provider: [
     {
@@ -127,6 +134,13 @@ const navGroups: Partial<Record<UserRole, NavGroup[]>> = {
       heading: "Growth",
       items: [
         { label: "Training", href: "/provider/training", icon: <GraduationCap className="h-4.5 w-4.5" /> },
+      ],
+    },
+    {
+      heading: "Support",
+      items: [
+        { label: "Help Center", href: "/provider/knowledge", icon: <BookOpen className="h-4.5 w-4.5" /> },
+        { label: "Live Chat & Tickets", href: "/provider/support", icon: <Headphones className="h-4.5 w-4.5" /> },
       ],
     },
   ],

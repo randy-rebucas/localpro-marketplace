@@ -445,6 +445,14 @@ export function verifyWebhookSignature(
     return false;
   }
 
+  // Reject stale webhooks (replay attack protection — max 5 minutes old)
+  const MAX_AGE_SECONDS = 300;
+  const now = Math.floor(Date.now() / 1000);
+  if (Math.abs(now - Number(timestamp)) > MAX_AGE_SECONDS) {
+    console.error(`[PAYMONGO] Stale webhook rejected — timestamp ${timestamp}, now ${now}`);
+    return false;
+  }
+
   const expected = crypto
     .createHmac("sha256", secret)
     .update(`${timestamp}.${rawBody}`)

@@ -26,21 +26,25 @@ export async function GET() {
         db:      "connected",
         latency: `${Date.now() - start}ms`,
         ts:      new Date().toISOString(),
-        version: process.env.npm_package_version ?? "unknown",
       },
-      { status: 200 }
+      {
+        status: 200,
+        headers: { "Cache-Control": "no-store, no-cache" },
+      }
     );
   } catch (err) {
     console.error("[HEALTH] Database ping failed:", err);
 
     return NextResponse.json(
       {
-        status:  "error",
-        db:      "disconnected",
-        error:   err instanceof Error ? err.message : "unknown error",
-        ts:      new Date().toISOString(),
+        status: "error",
+        db:     "disconnected",
+        ts:     new Date().toISOString(),
       },
-      { status: 503 }
+      {
+        status: 503,
+        headers: { "Cache-Control": "no-store, no-cache" },
+      }
     );
   }
 }

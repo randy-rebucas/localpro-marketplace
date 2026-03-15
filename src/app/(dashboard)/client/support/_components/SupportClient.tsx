@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
-import { Headphones, Clock, ShieldCheck, AlertCircle, Lock, ArrowUpRight } from "lucide-react";
+import { Headphones, Clock, ShieldCheck, AlertCircle, Lock, ArrowUpRight, Ticket, MessageCircle } from "lucide-react";
+import MyTickets from "@/components/shared/MyTickets";
 import PageGuide from "@/components/shared/PageGuide";
 import { fetchClient } from "@/lib/fetchClient";
 import { hasPrioritySupportAccess, PLAN_LABELS, PLAN_UPGRADE_NEXT } from "@/lib/businessPlan";
@@ -23,6 +24,7 @@ const INFO_CHIPS = [
 
 export default function SupportClient({ userId }: { userId: string }) {
   const [org, setOrg] = useState<IBusinessOrganization | null | undefined>(undefined);
+  const [tab, setTab] = useState<"chat" | "tickets">("chat");
 
   useEffect(() => {
     fetchClient<{ org: IBusinessOrganization | null }>("/api/business/org")
@@ -106,6 +108,32 @@ export default function SupportClient({ userId }: { userId: string }) {
 
   return (
     <div className="flex flex-col gap-4 h-[calc(100vh-8rem)]">
+      {/* Tab bar */}
+      <div className="flex gap-1 rounded-xl bg-slate-100 p-1 w-fit">
+        <button
+          onClick={() => setTab("chat")}
+          className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+            tab === "chat"
+              ? "bg-white text-slate-800 shadow-sm"
+              : "text-slate-500 hover:text-slate-700"
+          }`}
+        >
+          <MessageCircle className="h-4 w-4" /> Live Chat
+        </button>
+        <button
+          onClick={() => setTab("tickets")}
+          className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+            tab === "tickets"
+              ? "bg-white text-slate-800 shadow-sm"
+              : "text-slate-500 hover:text-slate-700"
+          }`}
+        >
+          <Ticket className="h-4 w-4" /> My Tickets
+        </button>
+      </div>
+
+      {tab === "tickets" && <MyTickets />}
+      {tab === "chat" && <>
       <PageGuide
         pageKey="client-support"
         title="How Support works"
@@ -165,6 +193,7 @@ export default function SupportClient({ userId }: { userId: string }) {
         }
         emptyMessage="Send us a message and our support team will get back to you shortly."
       />
+      </>}
     </div>
   );
 }
