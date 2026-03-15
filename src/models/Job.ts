@@ -140,6 +140,22 @@ const JobSchema = new Schema<JobDocument>(
       default: null,
     },
     isPriority: { type: Boolean, default: false },
+    /** Urgency level selected by the client at job creation */
+    urgency: {
+      type: String,
+      enum: ["standard", "same_day", "rush"],
+      default: "standard",
+    },
+    /** Flat urgent booking fee locked in at job creation from AppSettings (PHP) */
+    urgencyFee: { type: Number, default: 0 },
+    /** Cancellation fee charged when the client cancels an assigned job (PHP). Populated at cancellation time. */
+    cancellationFee: { type: Number, default: 0 },
+    /** Escrow service fee (2%) snapshot locked in at escrow funding (PHP) */
+    escrowFee: { type: Number, default: 0 },
+    /** Payment processing fee (2%) snapshot locked in at escrow funding (PHP) */
+    processingFee: { type: Number, default: 0 },
+    /** Client-side platform service fee (5%) snapshot locked in at escrow funding (PHP) */
+    platformServiceFee: { type: Number, default: 0 },
   },
   {
     timestamps: true,

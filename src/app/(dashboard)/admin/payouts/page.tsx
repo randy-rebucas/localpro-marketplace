@@ -43,7 +43,7 @@ const statusConfig: Record<PayoutStatus, { label: string; classes: string; icon:
 };
 
 type PopulatedPayout = Omit<IPayout, "providerId"> & {
-  providerId: Pick<IUser, "_id" | "name" | "email">;
+  providerId: Pick<IUser, "_id" | "name" | "email"> | null;
 };
 
 export default async function AdminPayoutsPage() {
@@ -206,9 +206,9 @@ export default async function AdminPayoutsPage() {
                         <p className="text-sm text-slate-500 dark:text-slate-400">
                           Requested by{" "}
                           <span className="font-semibold text-slate-700 dark:text-slate-200">
-                            {payout.providerId.name}
+                            {payout.providerId?.name ?? "(deleted user)"}
                           </span>{" "}
-                          <span className="text-slate-400 dark:text-slate-500">({payout.providerId.email})</span>
+                          <span className="text-slate-400 dark:text-slate-500">({payout.providerId?.email ?? "—"})</span>
                           <span className="text-slate-300 dark:text-slate-600 mx-2">·</span>
                           {formatDate(payout.createdAt)}
                         </p>
@@ -270,8 +270,8 @@ export default async function AdminPayoutsPage() {
                       <tr key={p._id.toString()} className="hover:bg-slate-50/50 dark:hover:bg-slate-700/40 transition-colors">
                         <td className="px-6 py-3.5 text-slate-500 dark:text-slate-400">{formatDate(p.createdAt)}</td>
                         <td className="px-6 py-3.5">
-                          <span className="font-semibold text-slate-800 dark:text-white">{p.providerId.name}</span>
-                          <span className="block text-xs text-slate-400 dark:text-slate-500">{p.providerId.email}</span>
+                          <span className="font-semibold text-slate-800 dark:text-white">{p.providerId?.name ?? "(deleted user)"}</span>
+                          <span className="block text-xs text-slate-400 dark:text-slate-500">{p.providerId?.email ?? "—"}</span>
                         </td>
                         <td className="px-6 py-3.5 text-right font-bold text-slate-900 dark:text-white">
                           {formatCurrency(p.amount)}

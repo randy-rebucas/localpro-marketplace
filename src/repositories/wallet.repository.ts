@@ -118,12 +118,14 @@ export class WalletRepository {
 
   // ── Transactions history ──────────────────────────────────────────────────
 
-  async listTransactions(userId: string, limit = 0): Promise<WalletTransactionDocument[]> {
+  async listTransactions(userId: string, page = 1, limit = 20): Promise<WalletTransactionDocument[]> {
     await connectDB();
-    const query = WalletTransaction.find({ userId: new mongoose.Types.ObjectId(userId) })
-      .sort({ createdAt: -1 });
-    if (limit > 0) query.limit(limit);
-    return query.lean() as unknown as WalletTransactionDocument[];
+    const skip = (Math.max(1, page) - 1) * Math.min(100, Math.max(1, limit));
+    return WalletTransaction.find({ userId: new mongoose.Types.ObjectId(userId) })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(Math.min(100, Math.max(1, limit)))
+      .lean() as unknown as WalletTransactionDocument[];
   }
 
   // ── Withdrawals ───────────────────────────────────────────────────────────

@@ -39,6 +39,49 @@ export async function getPaymentSettings() {
     "payments.highCommissionRate": 20 as number,
     "payments.minJobBudget": 500 as number,
     "payments.minPayoutAmount": 100 as number,
+    /** Escrow service fee charged to the client on top of the service price (whole-number %). Default: 2. */
+    "payments.escrowServiceFeeRate": 2 as number,
+    /** Payment processing fee passed to the client to cover gateway costs (whole-number %). Default: 2. */
+    "payments.processingFeeRate": 2 as number,
+    /** Flat withdrawal fee for bank transfer payouts (PHP). Default: ₱20. */
+    "payments.withdrawalFeeBank": 20 as number,
+    /** Flat withdrawal fee for GCash / Maya payouts (PHP). Default: ₱15. */
+    "payments.withdrawalFeeGcash": 15 as number,
+    /** Flat urgent booking fee for same-day service (PHP). Default: ₱50. */
+    "payments.urgencyFeeSameDay": 50 as number,
+    /** Flat urgent booking fee for 2-hour rush service (PHP). Default: ₱100. */
+    "payments.urgencyFeeRush": 100 as number,
+    /** Client-side platform service fee charged on top of the service price (whole-number %). Default: 5%. */
+    "payments.platformServiceFeeRate": 5 as number,    /** Featured listing boost price for 'Featured Provider' placement (PHP/week). Default: ₱199. */
+    "payments.featuredListingFeaturedProvider": 199 as number,
+    /** Featured listing boost price for 'Top Search Placement' (PHP/week). Default: ₱299. */
+    "payments.featuredListingTopSearch": 299 as number,
+    /** Featured listing boost price for 'Homepage Highlight' (PHP/week). Default: ₱499. */
+    "payments.featuredListingHomepage": 499 as number,
+    /** Whether the lead fee system is enabled. When false, providers can quote for free. Default: false. */
+    "payments.leadFeeEnabled": false as boolean,
+    /** Active lead fee mode: pay_per_lead | bid_credits | subscription. Default: pay_per_lead. */
+    "payments.leadFeeMode": "pay_per_lead" as string,
+    /** Fee charged per quote submitted when mode is pay_per_lead (PHP). Default: ₱30. */
+    "payments.leadFeePayPerLead": 30 as number,
+    /** Price of one bid credit token (PHP). Pack pricing scales from this. Default: ₱10. */
+    "payments.leadFeeBidCreditPrice": 10 as number,
+    /** Monthly subscription price for unlimited leads (PHP). Default: ₱499. */
+    "payments.leadFeeSubscriptionMonthly": 499 as number,
+    /** Hours before scheduleDate within which cancellation is free. Default: 24 hours. */
+    "payments.cancellationWindowFreeHours": 24 as number,
+    /** Hours before scheduleDate for the flat cancellation fee tier. Default: 12 hours. */
+    "payments.cancellationWindowFlatHours": 12 as number,
+    /** Hours before scheduleDate for the percentage cancellation fee tier. Default: 1 hour. */
+    "payments.cancellationWindowPercentHours": 1 as number,
+    /** Flat cancellation fee charged when cancelling between 1h–12h before service (PHP). Default: ₱100. */
+    "payments.cancellationFeeFlat": 100 as number,
+    /** Percentage of job budget charged when cancelling within 1h of service (whole-number %). Default: 20%. */
+    "payments.cancellationFeePercent": 20 as number,
+    /** Flat case handling fee charged to the losing party when a dispute escalates to investigation (PHP). Default: ₱100. */
+    "payments.disputeHandlingFee": 100 as number,
+    /** Whether the training / upskilling course system is enabled for providers. Default: false. */
+    "payments.trainingEnabled": false as boolean,
   });
 }
 

@@ -15,8 +15,9 @@ import {
 } from "@/lib/paymongo";
 import { connectDB } from "@/lib/db";
 import User from "@/models/User";
-import { calculateCommission } from "@/lib/commission";
+import { calculateCommission, calculateEscrowFee, calculateClientFees } from "@/lib/commission";
 import { getEffectiveCommissionRate } from "@/lib/serverCommission";
+import { getPaymentSettings } from "@/lib/appSettings";
 import { canTransitionEscrow } from "@/lib/jobLifecycle";
 import {
   NotFoundError,
@@ -34,6 +35,11 @@ export class PaymentService {
    * Returns a hosted checkoutUrl — redirect the user there.
    *
    * Falls back to immediate simulation if PAYMONGO_SECRET_KEY is not set.
+   *
+   * NOTE: The `overrideAmount` parameter has been intentionally removed (H9).
+   * Escrow amount is always driven by `job.budget`, which is set server-side
+   * during quote acceptance. An admin-only escrow override route provides
+   * a controlled path for exceptional adjustments.
    */
   async initiateEscrowPayment(user: TokenPayload, jobId: string, overrideAmount?: number) {
     const jobDoc = await jobRepository.getDocById(jobId);
@@ -42,22 +48,52 @@ export class PaymentService {
     const job = jobDoc as unknown as IJob & { save(): Promise<void> };
     if (job.clientId.toString() !== user.userId) throw new ForbiddenError();
 
+    // L11: Reject escrow funding for jobs whose schedule date is in the past.
+    // The schemaLevel check already enforces this at creation time, but a job
+    // could linger un-funded long enough that its scheduleDate passes.
+    if (job.scheduleDate && new Date(job.scheduleDate) < new Date()) {
+      throw new UnprocessableError("Cannot fund escrow for a job whose schedule date has already passed. Please update the schedule date first.");
+    }
+
     const check = canTransitionEscrow(job, "funded");
     if (!check.allowed) throw new UnprocessableError(check.reason!);
 
-    if (overrideAmount !== undefined && overrideAmount <= 0) {
-      throw new UnprocessableError("Escrow amount must be greater than zero.");
-    }
-
     const amount = overrideAmount ?? job.budget;
+
+    // ── Client-side fees (escrow protection + payment processing) ───────────
+    const {
+      "payments.escrowServiceFeeRate": escrowFeeRatePercent,
+      "payments.processingFeeRate":    processingFeeRatePercent,
+      "payments.platformServiceFeeRate": platformServiceFeeRatePercent,
+    } = await getPaymentSettings();
+    const jobUrgencyFee = (job as unknown as { urgencyFee?: number }).urgencyFee ?? 0;
+    const { escrowFee, processingFee, urgencyFee, platformServiceFee, totalCharge } = calculateClientFees(
+      amount,
+      escrowFeeRatePercent,
+      processingFeeRatePercent,
+      jobUrgencyFee,
+      platformServiceFeeRatePercent
+    );
 
     // ── Development fallback (no PayMongo key set) ─────────────────────────
     if (!process.env.PAYMONGO_SECRET_KEY) {
       job.escrowStatus = "funded";
+      // Persist fee snapshot so the Job record is self-contained
+      (job as unknown as { escrowFee: number }).escrowFee = escrowFee;
+      (job as unknown as { processingFee: number }).processingFee = processingFee;
+      (job as unknown as { platformServiceFee: number }).platformServiceFee = platformServiceFee;
       await jobDoc.save();
 
       const rate = await getEffectiveCommissionRate(job.category, user.userId);
       const { commission, netAmount } = calculateCommission(amount, rate);
+
+      // H14: Skip transaction creation if no provider is assigned yet.
+      // The transaction will be created when a provider is assigned (quote acceptance).
+      if (!job.providerId) {
+        console.warn(`[PaymentService] Dev-sim: escrow funded for job ${job._id?.toString()} but no provider assigned — transaction deferred`);
+        return { checkoutUrl: null, simulated: true, message: "Escrow funded (dev simulation). Transaction will be created when a provider is assigned." };
+      }
+
       const tx = await transactionRepository.create({
         jobId: job._id,
         payerId: user.userId,
@@ -81,7 +117,11 @@ export class PaymentService {
           providerId: job.providerId?.toString(),
           initiatedBy: user.userId,
         },
-        amount
+        totalCharge,
+        escrowFee,
+        processingFee,
+        urgencyFee,
+        platformServiceFee
       );
       await transactionRepository.updateById((tx as { _id: { toString(): string } })._id.toString(), { ledgerJournalId: journalId });
 
@@ -89,7 +129,7 @@ export class PaymentService {
         userId: user.userId,
         eventType: "escrow_funded",
         jobId: job._id!.toString(),
-        metadata: { amount, simulated: true },
+        metadata: { amount, escrowFee, processingFee, urgencyFee, platformServiceFee, totalCharge, simulated: true },
       });
 
       // Notify parties via notification service
@@ -98,7 +138,7 @@ export class PaymentService {
         userId: user.userId,
         type: "payment_confirmed",
         title: "Payment confirmed (simulation)",
-        message: `Escrow of ₱${amount.toLocaleString()} has been funded (dev mode).`,
+        message: `Escrow of ₱${amount.toLocaleString()} funded (dev mode). Fees: escrow ₱${escrowFee.toLocaleString()}, processing ₱${processingFee.toLocaleString()}${urgencyFee > 0 ? `, urgency ₱${urgencyFee.toLocaleString()}` : ""}${platformServiceFee > 0 ? `, platform ₱${platformServiceFee.toLocaleString()}` : ""}.`,
         data: { jobId: job._id!.toString() },
       });
       if (job.providerId) {
@@ -124,10 +164,10 @@ export class PaymentService {
     const jobTitle = (job as { title?: string }).title ?? "Service";
 
     const session = await createCheckoutSession({
-      amountPHP: amount,
+      amountPHP: totalCharge,
       description: `Escrow for: ${jobTitle}`,
       lineItemName: jobTitle,
-      successUrl: `${APP_URL}/client/escrow?jobId=${jobId}&payment=success`,
+      successUrl: `${APP_URL}/api/payment-return?to=${encodeURIComponent(`/client/escrow?jobId=${jobId}&payment=success`)}`,
       cancelUrl: `${APP_URL}/client/jobs/${jobId}?payment=cancelled`,
       metadata: {
         jobId: job._id!.toString(),
@@ -147,6 +187,11 @@ export class PaymentService {
       amount,
       amountInCentavos: Math.round(amount * 100),
       currency: "PHP",
+      escrowFee,
+      processingFee,
+      urgencyFee,
+      platformServiceFee,
+      totalCharge,
     });
 
     return {
@@ -155,6 +200,11 @@ export class PaymentService {
       checkoutUrl: session.checkoutUrl,
       referenceNumber: session.referenceNumber,
       amountPHP: amount,
+      escrowFee,
+      processingFee,
+      urgencyFee,
+      platformServiceFee,
+      totalCharge,
     };
   }
 
@@ -220,6 +270,10 @@ export class PaymentService {
       clientId: { toString(): string };
       providerId: { toString(): string } | null;
       amount: number;
+      escrowFee?: number;
+      processingFee?: number;
+      urgencyFee?: number;
+      platformServiceFee?: number;
     };
 
     const jobDoc = await jobRepository.getDocById(p.jobId.toString());
@@ -227,6 +281,10 @@ export class PaymentService {
 
     const job = jobDoc as unknown as IJob & { save(): Promise<void> };
     job.escrowStatus = "funded";
+    // Persist fee snapshot on the Job record for auditability
+    (job as unknown as { escrowFee: number }).escrowFee = p.escrowFee ?? 0;
+    (job as unknown as { processingFee: number }).processingFee = p.processingFee ?? 0;
+    (job as unknown as { platformServiceFee: number }).platformServiceFee = p.platformServiceFee ?? 0;
     await jobDoc.save();
 
     const rate = await getEffectiveCommissionRate(job.category, p.clientId.toString());
@@ -254,7 +312,13 @@ export class PaymentService {
         providerId: p.providerId?.toString(),
         initiatedBy: p.clientId.toString(),
       },
-      p.amount
+      (p.escrowFee ?? 0) + (p.processingFee ?? 0) + (p.urgencyFee ?? 0) + (p.platformServiceFee ?? 0) > 0
+        ? p.amount + (p.escrowFee ?? 0) + (p.processingFee ?? 0) + (p.urgencyFee ?? 0) + (p.platformServiceFee ?? 0)
+        : p.amount,
+      p.escrowFee ?? 0,
+      p.processingFee ?? 0,
+      p.urgencyFee ?? 0,
+      p.platformServiceFee ?? 0
     );
     await transactionRepository.updateById((tx as { _id: { toString(): string } })._id.toString(), { ledgerJournalId: journalId });
     // Mark payment with confirmedAt timestamp and ledger journal reference.
@@ -284,7 +348,7 @@ export class PaymentService {
       userId: p.clientId.toString(),
       type: "payment_confirmed",
       title: "Payment confirmed",
-      message: `Your payment of ₱${p.amount.toLocaleString()} has been confirmed.`,
+        message: `Your payment of ₱${p.amount.toLocaleString()} has been confirmed. Fees: escrow ₱${(p.escrowFee ?? 0).toLocaleString()}, processing ₱${(p.processingFee ?? 0).toLocaleString()}${(p.urgencyFee ?? 0) > 0 ? `, urgency ₱${(p.urgencyFee ?? 0).toLocaleString()}` : ""}${(p.platformServiceFee ?? 0) > 0 ? `, platform ₱${(p.platformServiceFee ?? 0).toLocaleString()}` : ""}.`,
       data: { jobId: p.jobId.toString() },
     });
 
@@ -315,17 +379,36 @@ export class PaymentService {
     if (!check.allowed) return { success: false, reason: check.reason ?? "Cannot fund escrow" };
 
     const jobTitle = (job as unknown as { title: string }).title;
+
+    // ── Calculate client-side fees (same as the manual escrow path) ─────────
+    const {
+      "payments.escrowServiceFeeRate": escrowFeeRatePercent,
+      "payments.processingFeeRate":    processingFeeRatePercent,
+      "payments.platformServiceFeeRate": platformServiceFeeRatePercent,
+    } = await getPaymentSettings();
+    const jobUrgencyFee = (job as unknown as { urgencyFee?: number }).urgencyFee ?? 0;
+    const { escrowFee, processingFee, urgencyFee, platformServiceFee, totalCharge } = calculateClientFees(
+      job.budget,
+      escrowFeeRatePercent,
+      processingFeeRatePercent,
+      jobUrgencyFee,
+      platformServiceFeeRatePercent
+    );
+
     const result = await chargeWithSavedMethod(
       paymentMethodId,
-      job.budget,
+      totalCharge,
       `Recurring escrow: ${jobTitle}`,
       { jobId, clientId, source: "recurring_auto" }
     );
 
     if (!result.success) return result;
 
-    // Mark escrow funded
+    // Mark escrow funded and persist fee snapshot
     job.escrowStatus = "funded";
+    (job as unknown as { escrowFee: number }).escrowFee = escrowFee;
+    (job as unknown as { processingFee: number }).processingFee = processingFee;
+    (job as unknown as { platformServiceFee: number }).platformServiceFee = platformServiceFee;
     await jobDoc.save();
 
     const rate = await getEffectiveCommissionRate(job.category, clientId);
@@ -354,7 +437,11 @@ export class PaymentService {
         providerId: job.providerId?.toString(),
         initiatedBy: clientId,
       },
-      job.budget
+      totalCharge,
+      escrowFee,
+      processingFee,
+      urgencyFee,
+      platformServiceFee
     );
     await transactionRepository.updateById((tx as { _id: { toString(): string } })._id.toString(), { ledgerJournalId: journalId });
 
@@ -362,7 +449,7 @@ export class PaymentService {
       userId: clientId,
       eventType: "escrow_funded",
       jobId: jobId,
-      metadata: { autoCharge: true, paymentMethodId },
+      metadata: { autoCharge: true, paymentMethodId, escrowFee, processingFee, urgencyFee, platformServiceFee, totalCharge },
     });
 
     const { notificationService } = await import("@/services/notification.service");
@@ -370,7 +457,7 @@ export class PaymentService {
       userId: clientId,
       type: "payment_confirmed",
       title: "Auto-pay successful ✅",
-      message: `₱${job.budget.toLocaleString()} escrow funded automatically for "${jobTitle}".`,
+      message: `₱${totalCharge.toLocaleString()} charged automatically for "${jobTitle}" (service ₱${job.budget.toLocaleString()}, escrow ₱${escrowFee.toLocaleString()}, processing ₱${processingFee.toLocaleString()}${urgencyFee > 0 ? `, urgency ₱${urgencyFee.toLocaleString()}` : ""}${platformServiceFee > 0 ? `, platform ₱${platformServiceFee.toLocaleString()}` : ""}).`,
       data: { jobId },
     });
 
@@ -456,6 +543,10 @@ export class PaymentService {
       clientId: { toString(): string };
       providerId: { toString(): string } | null;
       amount: number;
+      escrowFee?: number;
+      processingFee?: number;
+      urgencyFee?: number;
+      platformServiceFee?: number;
     };
 
     const journalId = `escrow-fund-${p.jobId.toString()}`;
@@ -467,10 +558,7 @@ export class PaymentService {
     const jobDoc = await jobRepository.getDocById(p.jobId.toString());
     if (!jobDoc) return;
 
-    const job = jobDoc as unknown as IJob;
-    const rate = await getEffectiveCommissionRate(job.category, p.clientId.toString());
-    const { commission, netAmount } = calculateCommission(p.amount, rate);
-
+    // Commission is deferred to release time — no commission variables needed here.
     await ledgerService.postEscrowFundedGateway(
       {
         journalId,
@@ -480,7 +568,11 @@ export class PaymentService {
         providerId: p.providerId?.toString(),
         initiatedBy: p.clientId.toString(),
       },
-      p.amount
+      p.amount + (p.escrowFee ?? 0) + (p.processingFee ?? 0) + (p.urgencyFee ?? 0) + (p.platformServiceFee ?? 0),
+      p.escrowFee ?? 0,
+      p.processingFee ?? 0,
+      p.urgencyFee ?? 0,
+      p.platformServiceFee ?? 0
     );
 
     const tx = await transactionRepository.findOneByJobId(p.jobId.toString());

@@ -36,6 +36,7 @@ function makeInitial(data: Partial<FormData> = {}): FormData {
     location: "",
     scheduleDate: "",
     specialInstructions: "",
+    urgency: "standard",
     ...data,
   };
 }

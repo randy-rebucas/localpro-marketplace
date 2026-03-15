@@ -17,9 +17,13 @@ import { withHandler } from "@/lib/utils";
  * Dev / simulation (no key set):
  *   Returns { simulated: true, message }
  *   — escrow is funded immediately in MongoDB.
+ *
+ * NOTE (H9): The request body is intentionally ignored. Escrow amount is always
+ * driven by `job.budget`, which is set server-side during quote acceptance.
+ * Accepting a client-supplied overrideAmount would allow underpayment attacks.
  */
 export const PATCH = withHandler(async (
-  req: NextRequest,
+  _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) => {
   const user = await requireUser();
@@ -27,16 +31,6 @@ export const PATCH = withHandler(async (
 
   const { id } = await params;
 
-  let overrideAmount: number | undefined;
-  try {
-    const body = await req.json();
-    if (body?.amount && typeof body.amount === "number" && body.amount > 0) {
-      overrideAmount = body.amount;
-    }
-  } catch {
-    // no body — use job budget
-  }
-
-  const result = await escrowService.fundEscrow(user, id, overrideAmount);
+  const result = await escrowService.fundEscrow(user, id);
   return NextResponse.json(result);
 });

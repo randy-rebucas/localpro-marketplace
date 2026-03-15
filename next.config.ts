@@ -1,5 +1,6 @@
 import type { NextConfig } from "next";
 import BundleAnalyzer from "@next/bundle-analyzer";
+import { withSentryConfig } from "@sentry/nextjs";
 
 const withBundleAnalyzer = BundleAnalyzer({
   enabled: process.env.ANALYZE === "true",
@@ -20,6 +21,9 @@ const securityHeaders = [
     key: "Content-Security-Policy",
     value: [
       "default-src 'self'",
+      // NOTE: 'unsafe-inline' and 'unsafe-eval' are required for Next.js HMR in dev and some third-party libraries.
+      // TODO: Replace with a nonce-based CSP (using Next.js middleware) to remove both unsafe directives.
+      // See: https://nextjs.org/docs/app/building-your-application/configuring/content-security-policy
       "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://maps.googleapis.com https://js.paymongo.com https://www.googletagmanager.com https://vercel.live https://*.vercel.live https://va.vercel-scripts.com",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://vercel.live https://*.vercel.live",
       "font-src 'self' https://fonts.gstatic.com https://vercel.live https://*.vercel.live",
@@ -73,4 +77,18 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default withBundleAnalyzer(nextConfig);
+const withAnalyzer = withBundleAnalyzer(nextConfig);
+
+export default withSentryConfig(withAnalyzer, {
+  // Sentry organisation and project (set in CI / Vercel env)
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  // Upload source maps in CI builds only; keep them off in local dev
+  sourcemaps: { disable: process.env.CI !== "true" },
+  // Suppress noisy Sentry build output
+  silent: true,
+  // Tree-shake Sentry debug code from production bundles
+  disableLogger: true,
+  // Automatically instrument server-side route handlers
+  autoInstrumentServerFunctions: true,
+});

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import mongoose from "mongoose";
 import { userRepository } from "@/repositories";
-import { requireUser } from "@/lib/auth";
+import { requireUser, revokeAllUserTokens } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { connectDB } from "@/lib/db";
 import { ValidationError, NotFoundError } from "@/lib/errors";
@@ -13,7 +13,11 @@ const UpdateMeSchema = z.object({
   phone: z.string().regex(/^\+[1-9]\d{6,14}$/, "Phone must be in E.164 format (e.g. +639123456789)").nullable().optional(),
   currentPassword: z.string().optional(),
   newPassword: z.string().min(8).max(128).optional(),
-  avatar: z.string().url().optional(),
+  avatar: z
+    .string()
+    .url()
+    .refine((u) => /^https:\/\/res\.cloudinary\.com\//.test(u), "Avatar must be a Cloudinary URL")
+    .optional(),
 });
 
 export const PUT = withHandler(async (req: NextRequest) => {
@@ -37,6 +41,11 @@ export const PUT = withHandler(async (req: NextRequest) => {
   }
 
   await user.save();
+
+  // Invalidate all existing access tokens after a password change
+  if (parsed.data.newPassword) {
+    await revokeAllUserTokens(tokenUser.userId);
+  }
 
   return NextResponse.json({
     _id: user._id,

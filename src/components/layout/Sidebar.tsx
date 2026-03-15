@@ -114,12 +114,19 @@ const navGroups: Partial<Record<UserRole, NavGroup[]>> = {
       items: [
         { label: "Earnings", href: "/provider/earnings", icon: <CircleDollarSign className="h-4.5 w-4.5" /> },
         { label: "Payouts", href: "/provider/payouts", icon: <Banknote className="h-4.5 w-4.5" /> },
+        { label: "Boost", href: "/provider/boost", icon: <Zap className="h-4.5 w-4.5" /> },
       ],
     },
     {
       heading: "Business",
       items: [
         { label: "Agency Hub", href: "/provider/business", icon: <Building2 className="h-4.5 w-4.5" /> },
+      ],
+    },
+    {
+      heading: "Growth",
+      items: [
+        { label: "Training", href: "/provider/training", icon: <GraduationCap className="h-4.5 w-4.5" /> },
       ],
     },
   ],
@@ -157,6 +164,7 @@ const navGroups: Partial<Record<UserRole, NavGroup[]>> = {
         { label: "Businesses",    href: "/admin/businesses", icon: <Building2  className="h-4.5 w-4.5" />, capability: "manage_businesses" },
         { label: "Staff",         href: "/admin/staff",      icon: <UserCog    className="h-4.5 w-4.5" />, capability: "__admin_only__" },
         { label: "Categories",    href: "/admin/categories", icon: <Tag        className="h-4.5 w-4.5" />, capability: "manage_categories" },
+        { label: "Courses",        href: "/admin/courses",    icon: <GraduationCap className="h-4.5 w-4.5" />, capability: "manage_courses" },
       ],
     },
     {

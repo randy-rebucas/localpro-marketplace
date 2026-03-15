@@ -46,6 +46,11 @@ const PayoutSchema = new Schema<PayoutDocument>(
     },
     currency:        { type: String, default: "PHP" },
     ledgerJournalId: { type: String, default: null },
+    /** L21: Journal ID for the rejection ledger reversal. Preserved separately so that
+     *  the original payout-requested journal ID (ledgerJournalId) is not overwritten. */
+    rejectionJournalId: { type: String, default: null },
+    /** Flat withdrawal fee deducted at payout request time (PHP). */
+    withdrawalFee:   { type: Number, default: 0 },
   },
   { timestamps: true }
 );

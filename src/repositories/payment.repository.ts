@@ -105,6 +105,16 @@ export class PaymentRepository extends BaseRepository<PaymentDocument> {
     amount: number;
     amountInCentavos: number;
     currency: string;
+    /** Non-refundable escrow service fee charged to the client (PHP). */
+    escrowFee?: number;
+    /** Non-refundable payment processing fee charged to the client (PHP). */
+    processingFee?: number;
+    /** Flat urgent booking fee charged at checkout (PHP). Non-refundable. */
+    urgencyFee?: number;
+    /** Non-refundable client-side platform service fee charged at checkout (PHP). */
+    platformServiceFee?: number;
+    /** Total charged at checkout = amount + escrowFee + processingFee + urgencyFee + platformServiceFee (PHP). */
+    totalCharge?: number;
   }): Promise<PaymentDocument> {
     await this.connect();
     const doc = await Payment.findOneAndUpdate(
@@ -121,6 +131,11 @@ export class PaymentRepository extends BaseRepository<PaymentDocument> {
           amountInCentavos: data.amountInCentavos,
           currency: data.currency,
           providerId: data.providerId ? new Types.ObjectId(String(data.providerId)) : null,
+          ...(data.escrowFee    !== undefined && { escrowFee:    data.escrowFee }),
+          ...(data.processingFee !== undefined && { processingFee: data.processingFee }),
+          ...(data.urgencyFee         !== undefined && { urgencyFee:         data.urgencyFee }),
+          ...(data.platformServiceFee  !== undefined && { platformServiceFee: data.platformServiceFee }),
+          ...(data.totalCharge         !== undefined && { totalCharge:        data.totalCharge }),
         },
         $setOnInsert: {
           status: "awaiting_payment",

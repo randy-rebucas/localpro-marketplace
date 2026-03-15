@@ -8,6 +8,7 @@ import Payment from "@/models/Payment";
 import { businessOrganizationRepository } from "@/repositories";
 import { walletService } from "@/services/wallet.service";
 import type { BusinessPlan } from "@/types";
+import { isValidObjectId } from "mongoose";
 
 /**
  * POST /api/webhooks/paymongo
@@ -24,7 +25,7 @@ import type { BusinessPlan } from "@/types";
 export async function POST(req: NextRequest) {
   // Rate-limit: 60 webhook deliveries per minute per source IP
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
-  const rl = checkRateLimit(`webhook:${ip}`, { windowMs: 60_000, max: 60 });
+  const rl = await checkRateLimit(`webhook:${ip}`, { windowMs: 60_000, max: 60 });
   if (!rl.ok) {
     return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   }
@@ -97,6 +98,11 @@ export async function POST(req: NextRequest) {
 
       // ── Branch A: subscription plan upgrade ───────────────────────────────
       if (metadata.type === "subscription" && metadata.orgId && metadata.plan) {
+        // H13: validate orgId is a real ObjectId before using in DB query
+        if (!isValidObjectId(metadata.orgId)) {
+          console.error(`[PAYMONGO WEBHOOK] Invalid orgId in subscription metadata: ${metadata.orgId}`);
+          return NextResponse.json({ error: "Invalid metadata" }, { status: 400 });
+        }
         const now = new Date();
         const expires = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
         await businessOrganizationRepository.updateById(metadata.orgId, {
@@ -113,6 +119,11 @@ export async function POST(req: NextRequest) {
 
       // ── Branch B: wallet top-up ───────────────────────────────────────────
       } else if (metadata.type === "wallet_topup" && metadata.userId) {
+        // H13: validate userId
+        if (!isValidObjectId(metadata.userId)) {
+          console.error(`[PAYMONGO WEBHOOK] Invalid userId in wallet_topup metadata: ${metadata.userId}`);
+          return NextResponse.json({ error: "Invalid metadata" }, { status: 400 });
+        }
         const sessionId = resourceData.id;
         const amountPHP = parseFloat(metadata.amountPHP ?? "0");
         if (amountPHP <= 0) {
@@ -125,6 +136,50 @@ export async function POST(req: NextRequest) {
             metadata.userId
           );
           console.log(`[PAYMONGO] Wallet top-up ₱${amountPHP} confirmed for user ${metadata.userId} — session ${sessionId}`);
+        }
+
+      // ── Branch D: featured listing boost ──────────────────────────────────
+      } else if (metadata.type === "featured_listing" && metadata.providerId && metadata.listingType) {
+        // H13: validate providerId
+        if (!isValidObjectId(metadata.providerId)) {
+          console.error(`[PAYMONGO WEBHOOK] Invalid providerId in featured_listing metadata: ${metadata.providerId}`);
+          return NextResponse.json({ error: "Invalid metadata" }, { status: 400 });
+        }
+        const sessionId = resourceData.id;
+        const amountPHP = parseFloat(metadata.amountPHP ?? "0");
+        if (amountPHP <= 0) {
+          console.error(`[PAYMONGO WEBHOOK] featured_listing missing amountPHP — session ${sessionId}`);
+        } else {
+          const { featuredListingService } = await import("@/services/featured-listing.service");
+          await featuredListingService.activateFromWebhook(
+            metadata.providerId,
+            metadata.listingType as import("@/types").FeaturedListingType,
+            sessionId,
+            amountPHP
+          );
+          console.log(`[PAYMONGO] Featured listing '${metadata.listingType}' activated for provider ${metadata.providerId} — session ${sessionId}`);
+        }
+
+      // ── Branch E: training course enrollment ──────────────────────────────
+      } else if (metadata.type === "training" && metadata.providerId && metadata.courseId) {
+        // H13: validate providerId and courseId
+        if (!isValidObjectId(metadata.providerId) || !isValidObjectId(metadata.courseId)) {
+          console.error(`[PAYMONGO WEBHOOK] Invalid providerId/courseId in training metadata`);
+          return NextResponse.json({ error: "Invalid metadata" }, { status: 400 });
+        }
+        const sessionId = resourceData.id;
+        const amountPHP = parseFloat(metadata.amountPHP ?? "0");
+        if (amountPHP <= 0) {
+          console.error(`[PAYMONGO WEBHOOK] training missing amountPHP — session ${sessionId}`);
+        } else {
+          const { trainingService } = await import("@/services/training.service");
+          await trainingService.activateFromWebhook(
+            metadata.providerId,
+            metadata.courseId,
+            sessionId,
+            amountPHP
+          );
+          console.log(`[PAYMONGO] Training enrollment activated for provider ${metadata.providerId} course ${metadata.courseId} — session ${sessionId}`);
         }
 
       // ── Branch C: escrow job payment ─────────────────────────────────────

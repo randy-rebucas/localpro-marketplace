@@ -2,7 +2,10 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { Toaster } from "react-hot-toast";
 import Script from "next/script";
-import { GoogleTagManagerScript, GoogleTagManagerNoscript } from "@/components/analytics/GoogleTagManager";
+import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/next";
+import CookieConsent from "@/components/shared/CookieConsent";
+import JsonLd from "@/components/shared/JsonLd";
 import PwaSetup from "@/components/pwa/PwaSetup";
 import "./globals.css";
 
@@ -122,12 +125,19 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en-PH" className={`${inter.variable} h-full`}>
+      <head>
+        <JsonLd />
+      </head>
       <body className="font-sans h-full">
         {process.env.NEXT_PUBLIC_GTM_ID && (
-          <GoogleTagManagerNoscript gtmId={process.env.NEXT_PUBLIC_GTM_ID} />
-        )}
-        {process.env.NEXT_PUBLIC_GTM_ID && (
-          <GoogleTagManagerScript gtmId={process.env.NEXT_PUBLIC_GTM_ID} />
+          <noscript>
+            <iframe
+              src={`https://www.googletagmanager.com/ns.html?id=${process.env.NEXT_PUBLIC_GTM_ID}`}
+              height="0" width="0"
+              style={{ display: "none", visibility: "hidden" }}
+              title="Google Tag Manager"
+            />
+          </noscript>
         )}
         {process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY && (
           <Script
@@ -138,6 +148,9 @@ export default function RootLayout({
         )}
         {children}
         <PwaSetup />
+        <CookieConsent />
+        <Analytics />
+        <SpeedInsights />
         <Toaster
           position="top-right"
           toastOptions={{

@@ -27,6 +27,16 @@ const PaymentSchema = new Schema<PaymentDocument>(
     webhookEventId: { type: String, default: null },
     /** Double-entry ledger journal ID (escrow_funded_gateway) */
     ledgerJournalId: { type: String, default: null },
+    /** Non-refundable escrow service fee charged to the client (PHP). */
+    escrowFee: { type: Number, default: 0 },
+    /** Non-refundable payment processing fee charged to the client (PHP). */
+    processingFee: { type: Number, default: 0 },
+    /** Flat urgent booking fee charged at checkout (PHP). Non-refundable. */
+    urgencyFee: { type: Number, default: 0 },
+    /** Non-refundable client-side platform service fee charged at checkout (PHP). */
+    platformServiceFee: { type: Number, default: 0 },
+    /** Total amount charged at checkout = amount (service price) + escrowFee + processingFee + urgencyFee + platformServiceFee (PHP). */
+    totalCharge: { type: Number, default: null },
   },
   { timestamps: true }
 );

@@ -11,7 +11,7 @@ const KnowledgeArticleSchema = new Schema<KnowledgeArticleDocument>(
     excerpt:     { type: String, required: true, trim: true },
     content:     { type: String, required: true },
     group:       { type: String, required: true, trim: true },
-    audience:    { type: String, enum: ["client", "provider", "both"], required: true },
+    audience:    { type: String, enum: ["client", "provider", "business", "agency", "peso", "both"], required: true },
     order:       { type: Number, default: 0 },
     isPublished: { type: Boolean, default: true, index: true },
     createdBy:   { type: Schema.Types.ObjectId, ref: "User", required: true },

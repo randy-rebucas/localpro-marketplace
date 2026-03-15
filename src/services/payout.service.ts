@@ -2,6 +2,7 @@ import { payoutRepository } from "@/repositories/payout.repository";
 import { transactionRepository, activityRepository } from "@/repositories";
 import { ledgerService } from "@/services/ledger.service";
 import { getAppSetting } from "@/lib/appSettings";
+import { calculateWithdrawalFee } from "@/lib/commission";
 import {
   NotFoundError,
   ForbiddenError,
@@ -63,7 +64,35 @@ export class PayoutService {
       accountName: accountName.trim(),
     });
 
+    // ── Race-condition guard: re-verify balance AFTER creating the payout ──
+    // Both this payout and any concurrent payout are now visible in sumPaidOut,
+    // so a negative balance means a concurrent request already consumed the funds.
+    const recheckBalance = await this.getAvailableBalance(user.userId);
+    if (recheckBalance < 0) {
+      // Cancel the just-created payout to restore balance visibility
+      await payoutRepository.updateById(payout._id?.toString() ?? "", { status: "rejected", notes: "Cancelled — concurrent payout exceeded available balance" });
+      throw new UnprocessableError(
+        "Insufficient balance — a concurrent payout request consumed your available funds. Please try again."
+      );
+    }
+
     // Post ledger entry: ring-fence provider's earnings as in-flight (DR 2100 / CR 2400)
+    // Fetch withdrawal fee settings and compute fee
+    const [feeBank, feeGcash] = await Promise.all([
+      getAppSetting("payments.withdrawalFeeBank", 20) as Promise<number>,
+      getAppSetting("payments.withdrawalFeeGcash", 15) as Promise<number>,
+    ]);
+    const { withdrawalFee, netAmount } = calculateWithdrawalFee(
+      amount, bankName.trim(), feeBank as number, feeGcash as number
+    );
+
+    // Persist the withdrawal fee on the payout document
+    await payoutRepository.updateById(
+      payout._id?.toString() ?? "",
+      { withdrawalFee }
+    );
+
+    // Post ledger entries (non-critical)
     try {
       await ledgerService.postPayoutRequested(
         {
@@ -75,6 +104,19 @@ export class PayoutService {
         },
         amount
       );
+      // Immediately split off the fee as revenue (DR 2400 / CR 4500)
+      if (withdrawalFee > 0) {
+        await ledgerService.postWithdrawalFeeAccrued(
+          {
+            journalId: `withdrawal-fee-${payout._id?.toString()}`,
+            entityType: "payout",
+            entityId: payout._id?.toString() ?? "",
+            providerId: user.userId,
+            initiatedBy: user.userId,
+          },
+          withdrawalFee
+        );
+      }
       await payoutRepository.updateById(
         payout._id?.toString() ?? "",
         { ledgerJournalId: `payout-requested-${payout._id?.toString()}` }
@@ -84,7 +126,7 @@ export class PayoutService {
     await activityRepository.log({
       userId: user.userId,
       eventType: "payout_requested",
-      metadata: { payoutId: payout._id?.toString(), amount },
+      metadata: { payoutId: payout._id?.toString(), amount, withdrawalFee },
     });
 
     const { notificationService } = await import("@/services/notification.service");
@@ -92,7 +134,7 @@ export class PayoutService {
       userId: user.userId,
       type: "payout_requested",
       title: "Payout request submitted",
-      message: `Your payout of ₱${amount.toLocaleString()} has been submitted and is pending review.`,
+      message: `Your payout of ₱${amount.toLocaleString()} has been submitted. A withdrawal fee of ₱${withdrawalFee} applies — you will receive ₱${netAmount.toLocaleString()}.`,
       data: { payoutId: payout._id?.toString() },
     });
 
@@ -143,7 +185,8 @@ export class PayoutService {
     const updated = await payoutRepository.updateById(payoutId, update);
 
     // Post ledger entry when payout is completed (DR Earnings Payable / CR Gateway Receivable)
-    const p = payout as unknown as { providerId: { toString(): string }; amount: number };
+    const p = payout as unknown as { providerId: { toString(): string }; amount: number; withdrawalFee?: number };
+    const netPayout = p.amount - (p.withdrawalFee ?? 0);
     if (data.status === "completed") {
       try {
         await ledgerService.postPayoutSent(
@@ -154,7 +197,7 @@ export class PayoutService {
             providerId: p.providerId.toString(),
             initiatedBy: admin.userId,
           },
-          p.amount
+          netPayout
         );
         await payoutRepository.updateById(payoutId, { ledgerJournalId: `payout-sent-${payoutId}` });
       } catch { /* non-critical */ }
@@ -171,9 +214,11 @@ export class PayoutService {
             providerId: p.providerId.toString(),
             initiatedBy: admin.userId,
           },
-          p.amount
+          netPayout
         );
-        await payoutRepository.updateById(payoutId, { ledgerJournalId: `payout-rejected-${payoutId}` });
+        // L21: Store the rejection journal ID in a dedicated field so the
+        // original payout-requested journal ID (ledgerJournalId) is preserved.
+        await payoutRepository.updateById(payoutId, { rejectionJournalId: `payout-rejected-${payoutId}` });
       } catch { /* non-critical */ }
     }
 
@@ -182,8 +227,8 @@ export class PayoutService {
 
     const messages: Record<string, string> = {
       processing: "Your payout request is now being processed.",
-      completed: `Your payout of ₱${p.amount.toLocaleString()} has been completed.`,
-      rejected: `Your payout request was rejected.${data.notes ? ` Reason: ${data.notes}` : ""}`,
+      completed: `Your payout of ₱${p.amount.toLocaleString()} has been completed. Net amount sent: ₱${netPayout.toLocaleString()}.`,
+      rejected: `Your payout request was rejected.${data.notes ? ` Reason: ${data.notes}` : ""} Note: the ₱${p.withdrawalFee ?? 0} withdrawal fee is non-refundable.`,
     };
 
     if (messages[data.status]) {

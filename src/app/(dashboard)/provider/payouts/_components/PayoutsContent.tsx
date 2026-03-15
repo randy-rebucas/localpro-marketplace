@@ -136,6 +136,13 @@ export async function PayoutsContent({ user }: { user: TokenPayload }) {
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <p className="text-sm font-semibold text-slate-900">{formatCurrency(p.amount)}</p>
+                        {p.withdrawalFee != null && p.withdrawalFee > 0 && (
+                          <p className="text-xs text-slate-400 mt-0.5">
+                            Fee: <span className="text-red-500">−{formatCurrency(p.withdrawalFee)}</span>
+                            {" · "}
+                            Net: <span className="text-green-600 font-medium">{formatCurrency(p.amount - p.withdrawalFee)}</span>
+                          </p>
+                        )}
                         <p className="text-xs text-slate-500 mt-0.5">{p.bankName}</p>
                       </div>
                       <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium flex-shrink-0 ${cfg.classes}`}>
@@ -175,7 +182,14 @@ export async function PayoutsContent({ user }: { user: TokenPayload }) {
                       <tr key={p._id.toString()} className="hover:bg-slate-50/50 transition-colors">
                         <td className="px-6 py-4 text-slate-500">{formatDate(p.createdAt)}</td>
                         <td className="px-6 py-4 text-right font-semibold text-slate-900">
-                          {formatCurrency(p.amount)}
+                          <span>{formatCurrency(p.amount)}</span>
+                          {p.withdrawalFee != null && p.withdrawalFee > 0 && (
+                            <div className="mt-0.5 text-xs font-normal text-slate-400">
+                              Fee: <span className="text-red-500">−{formatCurrency(p.withdrawalFee)}</span>
+                              {" · "}
+                              Net: <span className="text-green-600">{formatCurrency(p.amount - p.withdrawalFee)}</span>
+                            </div>
+                          )}
                         </td>
                         <td className="px-6 py-4 text-slate-700">{p.bankName}</td>
                         <td className="px-6 py-4 text-slate-500">

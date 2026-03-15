@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { randomBytes } from "crypto";
 import { requireUser, requireCapability } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { userRepository, providerProfileRepository } from "@/repositories";
@@ -7,7 +8,8 @@ import { userRepository, providerProfileRepository } from "@/repositories";
 const RowSchema = z.object({
   name:     z.string().min(2, "Name must be at least 2 chars").max(100),
   email:    z.string().email("Invalid email"),
-  password: z.string().min(8, "Password must be at least 8 chars"),
+  // L6: password is optional — a secure random password is generated server-side when not supplied.
+  password: z.string().min(8, "Password must be at least 8 chars").optional().nullable(),
   role:     z.enum(["client", "provider", "admin", "staff"], {
     errorMap: () => ({ message: "Role must be client, provider, admin, or staff" }),
   }),
@@ -69,11 +71,14 @@ export const POST = withHandler(async (req: NextRequest) => {
     }
 
     const {
-      name, email, password, role,
+      name, email, role,
       dateOfBirth, gender, phone,
       address1, city, province, zip,
       skills, workExperiences, yearsOfExperience,
     } = parsed.data;
+
+    // L6: generate a secure random password if the import row does not supply one
+    const password = parsed.data.password || randomBytes(16).toString("hex");
 
     // Skip if email already exists
     const existing = await userRepository.findByEmail(email);

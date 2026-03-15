@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import { ShieldCheck } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
+import { calculateClientFees, DEFAULT_ESCROW_FEE_RATE_PERCENT, DEFAULT_PROCESSING_FEE_RATE_PERCENT } from "@/lib/commission";
 import type { JobStatus, EscrowStatus } from "@/types";
 
 const JobActionButtons = dynamic(() => import("./JobActionButtons"), { ssr: false });
@@ -15,17 +16,27 @@ interface Props {
   acceptedAmount?: number;
   fundedAmount?: number;
   category?: string;
+  urgencyFee?: number;
+  urgency?: string;
 }
 
 /**
  * Sticky bottom bar surfacing the primary job action (fund escrow / release payment).
  * Only renders when there is an actionable CTA for the client.
  */
-export default function StickyJobCTA({ jobId, status, escrowStatus, budget, acceptedAmount, fundedAmount, category }: Props) {
+export default function StickyJobCTA({ jobId, status, escrowStatus, budget, acceptedAmount, fundedAmount, category, urgencyFee, urgency }: Props) {
   const needsFunding = status === "assigned" && escrowStatus === "not_funded";
   const needsRelease = status === "completed" && escrowStatus === "funded";
 
   if (!needsFunding && !needsRelease) return null;
+
+  const serviceAmount = acceptedAmount ?? budget;
+  const { escrowFee, processingFee, totalCharge } = calculateClientFees(
+    serviceAmount,
+    DEFAULT_ESCROW_FEE_RATE_PERCENT,
+    DEFAULT_PROCESSING_FEE_RATE_PERCENT,
+    urgencyFee ?? 0
+  );
 
   return (
     <div className="fixed bottom-0 inset-x-0 z-50 bg-white border-t border-slate-200 shadow-[0_-4px_20px_rgba(0,0,0,0.08)]">
@@ -37,8 +48,12 @@ export default function StickyJobCTA({ jobId, status, escrowStatus, budget, acce
               <>
                 <p className="text-sm font-semibold text-slate-900">Ready to start?</p>
                 <p className="text-xs text-slate-500 truncate">
-                  Fund{" "}
-                  {formatCurrency(acceptedAmount ?? budget)} in escrow — released only when you approve the work
+                  {formatCurrency(serviceAmount)} + {formatCurrency(escrowFee)} escrow + {formatCurrency(processingFee)} processing
+                  {(urgencyFee ?? 0) > 0 && (
+                    <> + {formatCurrency(urgencyFee ?? 0)} {urgency === "rush" ? "rush" : "same-day"}</>
+                  )}{" "}
+                  = <span className="font-semibold text-slate-700">{formatCurrency(totalCharge)} total</span>
+                  {" "}— released only when you approve the work
                 </p>
               </>
             )}
@@ -61,6 +76,8 @@ export default function StickyJobCTA({ jobId, status, escrowStatus, budget, acce
             acceptedAmount={acceptedAmount}
             fundedAmount={fundedAmount}
             category={category}
+            urgencyFee={urgencyFee}
+            urgency={urgency}
           />
         </div>
       </div>

@@ -36,6 +36,8 @@ const LoyaltyTransactionSchema = new Schema<LoyaltyTransactionDocument>(
 );
 
 LoyaltyTransactionSchema.index({ userId: 1, createdAt: -1 });
+// L13: compound index for idempotency checks (userId, type, jobId)
+LoyaltyTransactionSchema.index({ userId: 1, type: 1, jobId: 1 }, { sparse: true });
 
 const LoyaltyTransaction: Model<LoyaltyTransactionDocument> =
   mongoose.models.LoyaltyTransaction ??

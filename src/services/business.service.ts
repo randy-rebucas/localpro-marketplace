@@ -178,6 +178,12 @@ export class BusinessService {
 
   async removeMember(orgId: string, memberId: string, requestingUserId: string): Promise<void> {
     await this.requireManagerAccess(orgId, requestingUserId);
+    // H10: Verify the member record belongs to this org before deactivating
+    // to prevent cross-organization deactivation attacks
+    const member = await businessMemberRepository.findById(memberId) as { orgId?: { toString(): string } } | null;
+    if (!member || member.orgId?.toString() !== orgId) {
+      throw new NotFoundError("Member not found in this organization");
+    }
     await businessMemberRepository.deactivateMember(memberId);
   }
 
@@ -699,8 +705,12 @@ export class BusinessService {
     const memberships = await businessMemberRepository.findByUser(userId);
     if (!memberships || memberships.length === 0) return; // not a business client
 
-    // Use the first active org (owner typically belongs to exactly one)
-    const orgId = String(memberships[0].orgId);
+    // Use the first active org (owner typically belongs to exactly one).
+    // findByUser populates orgId to { _id, name, … }, so extract _id when needed.
+    const rawOrgId = memberships[0].orgId as { _id: mongoose.Types.ObjectId } | mongoose.Types.ObjectId | string;
+    const orgId = typeof rawOrgId === "object" && rawOrgId !== null && "_id" in rawOrgId
+      ? String((rawOrgId as { _id: unknown })._id)
+      : String(rawOrgId);
     const org   = await businessOrganizationRepository.findOrgById(orgId);
     if (!org) return;
 
@@ -725,7 +735,10 @@ export class BusinessService {
     const memberships = await businessMemberRepository.findByUser(userId);
     if (!memberships || memberships.length === 0) return; // not a business client
 
-    const orgId = String(memberships[0].orgId);
+    const rawOrgId2 = memberships[0].orgId as { _id: mongoose.Types.ObjectId } | mongoose.Types.ObjectId | string;
+    const orgId = typeof rawOrgId2 === "object" && rawOrgId2 !== null && "_id" in rawOrgId2
+      ? String((rawOrgId2 as { _id: unknown })._id)
+      : String(rawOrgId2);
     const org   = await businessOrganizationRepository.findOrgById(orgId);
     if (!org) return;
 

@@ -6,6 +6,7 @@ export interface FormData {
   location: string;
   scheduleDate: string;
   specialInstructions: string;
+  urgency: string;
 }
 
 export interface BudgetHint {

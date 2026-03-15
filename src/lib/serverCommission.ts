@@ -22,7 +22,7 @@ export async function getDbCommissionRate(category?: string | null): Promise<num
   });
   const baseRate = (settings["payments.baseCommissionRate"] as number) / 100;
   const highRate = (settings["payments.highCommissionRate"] as number) / 100;
-  if (category && HIGH_VALUE_CATEGORIES.has(category)) return highRate;
+  if (category && HIGH_VALUE_CATEGORIES.has(category.trim())) return highRate;
   return baseRate;
 }
 
@@ -47,7 +47,7 @@ export async function getEffectiveCommissionRate(
         const org   = await businessOrganizationRepository.findOrgById(orgId);
         if (org) return getBusinessCommissionRate(org.plan as BusinessPlan);
       }
-    } catch { /* non-critical — fall through to standard rate */ }
+    } catch (err) { console.warn("[Commission] Could not resolve business plan rate; using category rate.", err); }
   }
   return getDbCommissionRate(category);
 }

@@ -162,7 +162,11 @@ export class LedgerRepository {
   ): Promise<{ revenue: number; expenses: number; netIncome: number; breakdown: Record<AccountCode, number> }> {
     await connectDB();
 
-    const revenueCodes: AccountCode[] = ["4000", "4100", "4200"];
+    const revenueCodes: AccountCode[] = [
+      "4000", "4100", "4200",
+      "4300", "4400", "4500", "4600", "4700",
+      "4800", "4900", "4950", "4960", "4970",
+    ];
     const expenseCodes: AccountCode[] = ["5000", "5100", "5200"];
     const allCodes = [...revenueCodes, ...expenseCodes];
     const dateFilter = { currency, createdAt: { $gte: from, $lte: to } };

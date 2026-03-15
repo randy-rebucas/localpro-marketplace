@@ -9,14 +9,19 @@ export class ReviewRepository extends BaseRepository<ReviewDocument> {
   }
 
   async findWithPopulation(
-    filter: FilterQuery<ReviewDocument>
+    filter: FilterQuery<ReviewDocument>,
+    page = 1,
+    limit = 20
   ): Promise<ReviewDocument[]> {
     await this.connect();
+    const skip = (Math.max(1, page) - 1) * Math.min(100, Math.max(1, limit));
     return Review.find(filter)
       .populate("jobId", "title")
       .populate("clientId", "name")
       .populate("providerId", "name")
       .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(Math.min(100, Math.max(1, limit)))
       .lean() as unknown as ReviewDocument[];
   }
 

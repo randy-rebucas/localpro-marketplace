@@ -66,6 +66,8 @@ interface ProviderResult {
   availabilityStatus?: "available" | "busy" | "unavailable";
   isLocalProCertified?: boolean;
   isFavorite: boolean;
+  isFeatured?: boolean;
+  isTopSearch?: boolean;
 }
 
 const availabilityConfig = {
@@ -98,6 +100,8 @@ function ProviderListRow({
   onPostJob,
   isFavorite,
   isToggling,
+  isFeatured,
+  isTopSearch,
 }: {
   id: string;
   name: string;
@@ -108,6 +112,8 @@ function ProviderListRow({
   onPostJob: (id: string, name: string) => void;
   isFavorite?: boolean;
   isToggling?: boolean;
+  isFeatured?: boolean;
+  isTopSearch?: boolean;
 }) {
   const avail = profile?.availabilityStatus ?? "unavailable";
   const cfg = availabilityConfig[avail];
@@ -130,6 +136,16 @@ function ProviderListRow({
           <Link href={`/client/providers/${id}`} className="font-semibold text-slate-900 text-sm hover:text-primary hover:underline transition-colors">{name}</Link>
           {isVerified && (
             <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-medium">Verified</span>
+          )}
+          {isFeatured && (
+            <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 border border-amber-200">
+              ✨ Featured
+            </span>
+          )}
+          {isTopSearch && (
+            <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded bg-violet-100 text-violet-700 border border-violet-200">
+              🔝 Top Search
+            </span>
           )}
           {profile?.isLocalProCertified && (
             <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-700 border border-indigo-200">
@@ -707,6 +723,8 @@ export default function FavoritesClient({
                     onPostJob={(id, name) => setDirectJobTarget({ id, name })}
                     isFavorite={p.isFavorite}
                     isToggling={togglingId === p.userId._id}
+                    isFeatured={p.isFeatured}
+                    isTopSearch={p.isTopSearch}
                   />
                 ))
               )}

@@ -88,6 +88,22 @@ const DEFAULTS: AppSettings = {
   "payments.highCommissionRate": 20,
   "payments.minJobBudget": 500,
   "payments.minPayoutAmount": 100,
+  "payments.escrowServiceFeeRate": 2,
+  "payments.processingFeeRate": 2,
+  "payments.withdrawalFeeBank": 20,
+  "payments.withdrawalFeeGcash": 15,
+  "payments.urgencyFeeSameDay": 50,
+  "payments.urgencyFeeRush": 100,
+  "payments.platformServiceFeeRate": 5,
+  "payments.featuredListingFeaturedProvider": 199,
+  "payments.featuredListingTopSearch": 299,
+  "payments.featuredListingHomepage": 499,
+  // Lead fee
+  "payments.leadFeeEnabled": false,
+  "payments.leadFeeMode": "pay_per_lead",
+  "payments.leadFeePayPerLead": 30,
+  "payments.leadFeeBidCreditPrice": 10,
+  "payments.leadFeeSubscriptionMonthly": 499,
   // Limits
   "limits.maxQuotesPerJob": 5,
   "limits.quoteValidityDays": 7,
@@ -112,7 +128,7 @@ const DEFAULTS: AppSettings = {
   "fraud.highBudgetThreshold": 5000,
 };
 
-type SettingType = "boolean" | "number";
+type SettingType = "boolean" | "number" | "select";
 
 interface SettingMeta {
   label: string;
@@ -122,6 +138,7 @@ interface SettingMeta {
   min?: number;
   max?: number;
   step?: number;
+  options?: { value: string; label: string }[];
 }
 
 type TabId = "general" | "board" | "payments" | "limits" | "loyalty" | "fraud";
@@ -269,6 +286,154 @@ const SETTING_META: Record<string, SettingMeta> = {
     type: "number",
     unit: "₱",
     min: 0,
+    step: 50,
+  },
+  "payments.escrowServiceFeeRate": {
+    label: "Escrow Service Fee",
+    description:
+      "Non-refundable fee charged to the client on top of the service price when funding escrow. Recognised as platform revenue at the moment of payment.",
+    type: "number",
+    unit: "%",
+    min: 0,
+    max: 10,
+    step: 0.5,
+  },
+  "payments.processingFeeRate": {
+    label: "Payment Processing Fee",
+    description:
+      "Non-refundable fee passed to the client to offset gateway processing costs (GCash, PayMongo, etc.). Recognised as platform revenue at the moment of payment.",
+    type: "number",
+    unit: "%",
+    min: 0,
+    max: 10,
+    step: 0.5,
+  },
+  "payments.withdrawalFeeBank": {
+    label: "Withdrawal Fee (Bank Transfer)",
+    description:
+      "Flat fee (PHP) deducted from the gross payout amount for standard bank transfer withdrawals. Non-refundable and recognised as revenue immediately on request.",
+    type: "number",
+    unit: "₱",
+    min: 0,
+    max: 100,
+    step: 1,
+  },
+  "payments.withdrawalFeeGcash": {
+    label: "Withdrawal Fee (GCash / Maya)",
+    description:
+      "Flat fee (PHP) deducted from the gross payout amount for GCash / Maya withdrawals. Non-refundable and recognised as revenue immediately on request.",
+    type: "number",
+    unit: "₱",
+    min: 0,
+    max: 100,
+    step: 1,
+  },
+  "payments.urgencyFeeSameDay": {
+    label: "Urgency Fee (Same Day)",
+    description:
+      "Flat fee (PHP) charged to the client when they select Same Day booking urgency. Non-refundable and recognised as revenue at escrow funding.",
+    type: "number",
+    unit: "₱",
+    min: 0,
+    max: 500,
+    step: 5,
+  },
+  "payments.urgencyFeeRush": {
+    label: "Urgency Fee (2-Hour Rush)",
+    description:
+      "Flat fee (PHP) charged to the client when they select 2-Hour Rush booking urgency. Non-refundable and recognised as revenue at escrow funding.",
+    type: "number",
+    unit: "₱",
+    min: 0,
+    max: 500,
+    step: 5,
+  },
+  "payments.platformServiceFeeRate": {
+    label: "Platform Service Fee (Client)",
+    description:
+      "Client-side service fee charged on top of the service price at checkout. Recognised as non-refundable platform revenue at the moment of payment. Set to 0 to disable. This fee is applied in addition to the provider commission — enabling a dual-sided revenue model.",
+    type: "number",
+    unit: "%",
+    min: 0,
+    max: 15,
+    step: 0.5,
+  },
+  "payments.featuredListingFeaturedProvider": {
+    label: "Featured Provider Boost (₱/week)",
+    description:
+      "Weekly price (PHP) for the 'Featured Provider' boost tier. Provider appears at the top of marketplace search results with a highlighted badge.",
+    type: "number",
+    unit: "₱",
+    min: 0,
+    max: 2000,
+    step: 10,
+  },
+  "payments.featuredListingTopSearch": {
+    label: "Top Search Placement Boost (₱/week)",
+    description:
+      "Weekly price (PHP) for the 'Top Search Placement' boost tier. Provider is pinned at the top of category-filtered search pages.",
+    type: "number",
+    unit: "₱",
+    min: 0,
+    max: 2000,
+    step: 10,
+  },
+  "payments.featuredListingHomepage": {
+    label: "Homepage Highlight Boost (₱/week)",
+    description:
+      "Weekly price (PHP) for the 'Homepage Highlight' boost tier. Provider card is shown in the premium strip on the client homepage.",
+    type: "number",
+    unit: "₱",
+    min: 0,
+    max: 2000,
+    step: 10,
+  },
+  // ── Lead Fee ───────────────────────────────────────────────────────────────
+  "payments.leadFeeEnabled": {
+    label: "Lead Fee Enabled",
+    description:
+      "Master switch for the lead fee system. When OFF, all providers can submit quotes for free regardless of other lead fee settings.",
+    type: "boolean",
+  },
+  "payments.leadFeeMode": {
+    label: "Lead Fee Mode",
+    description:
+      "Controls which charging model is active. pay_per_lead debits the provider wallet per quote. bid_credits requires pre-purchased credit tokens. subscription grants unlimited quotes to monthly subscribers.",
+    type: "select",
+    options: [
+      { value: "pay_per_lead", label: "Pay per lead (wallet debit per quote)" },
+      { value: "bid_credits",  label: "Bid credits (token per quote)" },
+      { value: "subscription", label: "Monthly subscription (unlimited quotes)" },
+    ],
+  },
+  "payments.leadFeePayPerLead": {
+    label: "Pay-per-Lead Fee (₱/quote)",
+    description:
+      "Amount (PHP) deducted from the provider\'s wallet each time they submit a quote when mode is \'pay_per_lead\'.",
+    type: "number",
+    unit: "₱",
+    min: 0,
+    max: 500,
+    step: 5,
+  },
+  "payments.leadFeeBidCreditPrice": {
+    label: "Bid Credit Price (₱/token)",
+    description:
+      "Cost per bid credit token. Providers purchase packs at this price; each quote submission consumes 1 token when mode is \'bid_credits\'.",
+    type: "number",
+    unit: "₱",
+    min: 0,
+    max: 200,
+    step: 5,
+  },
+  "payments.leadFeeSubscriptionMonthly": {
+    label: "Monthly Subscription (₱/month)",
+    description:
+      "Monthly price (PHP) for an unlimited-leads subscription. Active subscribers skip per-quote charges when mode is \'subscription\'.",
+    type: "number",
+    unit: "₱",
+    min: 0,
+    max: 5000,
     step: 50,
   },
   // ── Limits ───────────────────────────────────────────────────────────────────
@@ -486,6 +651,21 @@ const TABS: Tab[] = [
       "payments.highCommissionRate",
       "payments.minJobBudget",
       "payments.minPayoutAmount",
+      "payments.escrowServiceFeeRate",
+      "payments.processingFeeRate",
+      "payments.withdrawalFeeBank",
+      "payments.withdrawalFeeGcash",
+      "payments.urgencyFeeSameDay",
+      "payments.urgencyFeeRush",
+      "payments.platformServiceFeeRate",
+      "payments.featuredListingFeaturedProvider",
+      "payments.featuredListingTopSearch",
+      "payments.featuredListingHomepage",
+      "payments.leadFeeEnabled",
+      "payments.leadFeeMode",
+      "payments.leadFeePayPerLead",
+      "payments.leadFeeBidCreditPrice",
+      "payments.leadFeeSubscriptionMonthly",
     ],
   },
   {
@@ -1091,6 +1271,21 @@ export default function AppSettingsClient() {
                             </span>
                           )}
                         </div>
+                      </div>
+                    )}
+
+                    {meta.type === "select" && meta.options && (
+                      <div className="flex-shrink-0">
+                        <select
+                          id={`setting-${key}`}
+                          value={String(settings[key] ?? DEFAULTS[key] ?? "")}
+                          onChange={(e) => setSettings((prev) => ({ ...prev, [key]: e.target.value }))}
+                          className="text-sm border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-1.5 bg-white dark:bg-slate-800 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                          {meta.options.map((opt) => (
+                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                          ))}
+                        </select>
                       </div>
                     )}
                   </div>

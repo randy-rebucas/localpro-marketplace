@@ -7,6 +7,11 @@ import { Wallet, X } from "lucide-react";
 import Button from "@/components/ui/Button";
 import { formatCurrency } from "@/lib/utils";
 import { apiFetch } from "@/lib/fetchClient";
+import {
+  calculateWithdrawalFee,
+  DEFAULT_WITHDRAWAL_FEE_BANK,
+  DEFAULT_WITHDRAWAL_FEE_GCASH,
+} from "@/lib/commission";
 
 interface Props {
   availableBalance: number;
@@ -195,6 +200,38 @@ export default function RequestPayoutModal({ availableBalance }: Props) {
                   className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
                 />
               </div>
+
+              {/* Withdrawal fee breakdown — shown once bank and a valid amount are entered */}
+              {(() => {
+                const parsedAmount = parseFloat(form.amount);
+                if (!form.bankName || !(parsedAmount > 0)) return null;
+                const { withdrawalFee, netAmount } = calculateWithdrawalFee(
+                  parsedAmount,
+                  form.bankName,
+                  DEFAULT_WITHDRAWAL_FEE_BANK,
+                  DEFAULT_WITHDRAWAL_FEE_GCASH
+                );
+                return (
+                  <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 space-y-1.5 text-sm">
+                    <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide">Payout breakdown</p>
+                    <div className="flex items-center justify-between text-slate-700">
+                      <span>Requested amount</span>
+                      <span className="font-medium">{formatCurrency(parsedAmount)}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-slate-500">
+                      <span>
+                        Withdrawal fee
+                        <span className="ml-1 text-xs text-amber-600 font-medium">(non-refundable)</span>
+                      </span>
+                      <span className="text-red-500 font-medium">−{formatCurrency(withdrawalFee)}</span>
+                    </div>
+                    <div className="flex items-center justify-between border-t border-amber-200 pt-1.5 font-semibold text-slate-900">
+                      <span>You will receive</span>
+                      <span className="text-green-700">{formatCurrency(netAmount)}</span>
+                    </div>
+                  </div>
+                );
+              })()}
 
               <p className="text-xs text-slate-400">
                 Payouts are typically processed within 1–3 business days. An admin will

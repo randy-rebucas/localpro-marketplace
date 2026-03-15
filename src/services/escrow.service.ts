@@ -138,8 +138,20 @@ export class EscrowService {
     const check = canTransitionEscrow(job as unknown as IJob, "released");
     if (!check.allowed) throw new UnprocessableError(check.reason!);
 
-    job.escrowStatus = "released";
-    await jobDoc.save();
+    // Atomically transition escrowStatus from "funded" → "released".
+    // If the document was already released by a concurrent request the update
+    // returns null — we treat that as idempotent success (no double-posting).
+    // We also guard against releasing a disputed escrow via the normal path.
+    const Job = (await import("@/models/Job")).default;
+    const updated = await Job.findOneAndUpdate(
+      { _id: jobDoc._id, escrowStatus: "funded", status: { $ne: "disputed" } },
+      { $set: { escrowStatus: "released" } },
+      { new: true }
+    );
+    if (!updated) {
+      // Already released by another request — nothing more to do.
+      return { job };
+    }
 
     // ── update provider performance metrics ──────────────────────────────────
     if (job.providerId) {
@@ -177,20 +189,19 @@ export class EscrowService {
           await transactionRepository.updateById(t._id.toString(), { ledgerJournalId: releaseJournalId });
         }
       }
-    } catch {
-      // Non-critical — do not fail escrow release if ledger write fails
+    } catch (err) {
+      // Non-critical — escrow was released; log so reconciliation discrepancies are visible
+      console.error(`[EscrowService] Ledger post failed for escrow release on job ${job._id?.toString()}:`, err);
     }
 
     // ── loyalty points for client ────────────────────────────────────────────
     try {
       const { loyaltyService } = await import("@/services/loyalty.service");
-      const acct = await loyaltyService.getAccount(job.clientId.toString());
-      const isFirst = acct.lifetimePoints === 0;
+      // First-job detection is now handled atomically inside awardJobPoints (C8)
       await loyaltyService.awardJobPoints(
         job.clientId.toString(),
         job.budget,
-        job._id!.toString(),
-        isFirst
+        job._id!.toString()
       );
     } catch {
       // Non-critical — do not fail escrow release if loyalty fails
@@ -230,9 +241,11 @@ export class EscrowService {
                 s.userId.toString() === job.providerId!.toString()
             );
 
+            // L16: workerSharePct:0 is a valid explicit setting (worker gets 0%, agency keeps all).
+            // Only fall back to the agency default when the staff entry has no explicit value (undefined).
             const sharePct =
-              (staffEntry?.workerSharePct ?? 0) > 0
-                ? (staffEntry!.workerSharePct)
+              staffEntry?.workerSharePct !== undefined
+                ? staffEntry.workerSharePct
                 : (agency.defaultWorkerSharePct ?? 60);
 
             // Determine gross amount from the job transaction
@@ -307,7 +320,7 @@ export class EscrowService {
 
     await activityRepository.log({
       userId: user.userId,
-      eventType: "job_started", // reuse closest event; extend ActivityLog events if needed
+      eventType: "provider_withdrew",
       jobId: job._id!.toString(),
       metadata: { action: "provider_withdrawal", reason },
     });

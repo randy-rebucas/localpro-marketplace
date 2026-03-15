@@ -28,6 +28,9 @@ export default async function AdminKnowledgePage() {
 
   const clientCount   = articles.filter((a) => a.folder === "client").length;
   const providerCount = articles.filter((a) => a.folder === "provider").length;
+  const businessCount = articles.filter((a) => a.folder === "business").length;
+  const agencyCount   = articles.filter((a) => a.folder === "agency").length;
+  const pesoCount     = articles.filter((a) => a.folder === "peso").length;
 
   return (
     <div className="space-y-5">
@@ -35,10 +38,10 @@ export default async function AdminKnowledgePage() {
         pageKey="admin-knowledge"
         title="How the Knowledge Base works"
         steps={[
-          { icon: "📝", title: "Create articles", description: "Click 'Add Article', choose the audience (client or provider), write in Markdown, and save. The .md file is created automatically." },
+          { icon: "📝", title: "Create articles", description: "Click 'Add Article', choose the audience (client, provider, business, agency, or peso), write in Markdown, and save. The .md file is created automatically." },
           { icon: "✏️", title: "Edit articles", description: "Click the pencil icon on any article. Changes are saved directly to the .md file on disk." },
           { icon: "🗂️", title: "Groups", description: "Assign a group name to each article (e.g. 'Getting Started'). Articles with the same group appear together in the portal." },
-          { icon: "🎯", title: "Audience", description: "Choose 'client' or 'provider' to control which portal sees the article." },
+          { icon: "🎯", title: "Audience", description: "Choose an audience to control which portal sees the article: client, provider, business, agency, or peso." },
         ]}
       />
 
@@ -62,6 +65,9 @@ export default async function AdminKnowledgePage() {
           <span className="hidden sm:inline text-slate-300 dark:text-slate-600">·</span>
           <span className="px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 font-semibold">{clientCount} client</span>
           <span className="px-2 py-0.5 rounded-full bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-400 font-semibold">{providerCount} provider</span>
+          <span className="px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 font-semibold">{businessCount} business</span>
+          <span className="px-2 py-0.5 rounded-full bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-400 font-semibold">{agencyCount} agency</span>
+          <span className="px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 font-semibold">{pesoCount} peso</span>
         </div>
       </div>
 

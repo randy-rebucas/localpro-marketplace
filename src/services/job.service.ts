@@ -7,6 +7,7 @@ import type { PaginatedJobs } from "@/repositories/job.repository";
 import { connectDB } from "@/lib/db";
 import User from "@/models/User";
 import { getAppSetting } from "@/lib/appSettings";
+import { type UrgencyLevel } from "@/lib/commission";
 import type { JobTag } from "@/types";
 
 // ─── Shared base ─────────────────────────────────────────────────────────────
@@ -48,6 +49,7 @@ export interface CreateJobInput extends BaseJobInput {
   beforePhoto?: string[];
   coordinates?: { type: "Point"; coordinates: [number, number] };
   invitedProviderId?: string;
+  urgency?: UrgencyLevel;
 }
 
 export interface JobFilters {
@@ -127,7 +129,18 @@ export class JobService {
       throw new UnprocessableError("Daily job posting limit reached (10 per day)");
     }
 
-    const { invitedProviderId, ...rest } = input;
+    const { invitedProviderId, urgency: urgencyInput, ...rest } = input;
+    const urgencyLevel: UrgencyLevel = urgencyInput ?? "standard";
+
+    // Fetch urgency fee amounts from AppSettings (locked-in at job creation time)
+    const [urgencyFeeSameDay, urgencyFeeRush] = await Promise.all([
+      getAppSetting("payments.urgencyFeeSameDay", 50) as Promise<number>,
+      getAppSetting("payments.urgencyFeeRush",    100) as Promise<number>,
+    ]);
+    const urgencyFee =
+      urgencyLevel === "same_day" ? (urgencyFeeSameDay as number)
+      : urgencyLevel === "rush"   ? (urgencyFeeRush    as number)
+      : 0;
 
     // Build from shared core then layer private-job specifics
     const coreData = buildCoreJobPayload(rest, user.userId);
@@ -135,6 +148,8 @@ export class JobService {
       ...coreData,
       status:    "pending_validation" as const,
       jobSource: "private"  as const,
+      urgency:    urgencyLevel,
+      urgencyFee,
       ...(input.beforePhoto   ? { beforePhoto:   input.beforePhoto }   : {}),
       ...(input.coordinates   ? { coordinates:   input.coordinates }   : {}),
       ...(invitedProviderId   ? { invitedProviderId }                   : {}),
@@ -221,6 +236,21 @@ export class JobService {
       (job as { clientId: { toString(): string } | string }).clientId.toString() !== user.userId
     ) {
       throw new ForbiddenError();
+    }
+
+    // H12: Providers may only view jobs they are assigned to, or jobs that are open/public
+    if (user.role === "provider") {
+      const j = job as {
+        status: string;
+        providerId?: { toString(): string } | string | null;
+        invitedProviderId?: { toString(): string } | string | null;
+      };
+      const isAssigned = j.providerId?.toString() === user.userId;
+      const isInvited = j.invitedProviderId?.toString() === user.userId;
+      const isPublic = ["open", "pending_validation"].includes(j.status);
+      if (!isAssigned && !isInvited && !isPublic) {
+        throw new ForbiddenError();
+      }
     }
 
     return job;

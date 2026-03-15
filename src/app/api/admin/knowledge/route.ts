@@ -8,10 +8,11 @@ import {
   slugify,
   slugExists,
   isValidSlug,
+  type KnowledgeFolder,
 } from "@/lib/knowledge";
 import { ValidationError, ConflictError } from "@/lib/errors";
 
-const FOLDERS = ["client", "provider"] as const;
+const FOLDERS = ["client", "provider", "business", "agency", "peso"] as const;
 
 const CreateSchema = z.object({
   folder:  z.enum(FOLDERS),
@@ -25,7 +26,7 @@ const CreateSchema = z.object({
 
 function serializeArticle(
   a: ReturnType<typeof writeArticle>,
-  folder: "client" | "provider"
+  folder: KnowledgeFolder
 ) {
   return {
     id:        `${folder}__${a.slug}`,

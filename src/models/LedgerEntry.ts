@@ -17,6 +17,16 @@ export const ACCOUNT_CODES = {
   COMMISSION_REVENUE:       "4000",
   SUBSCRIPTION_REVENUE:     "4100",
   LATE_FEE_REVENUE:         "4200",
+  ESCROW_FEE_REVENUE:       "4300",
+  PROCESSING_FEE_REVENUE:   "4400",
+  WITHDRAWAL_FEE_REVENUE:   "4500",
+  URGENCY_FEE_REVENUE:             "4600",
+  PLATFORM_SERVICE_FEE_REVENUE:   "4700",
+  FEATURED_LISTING_REVENUE:       "4800",
+  LEAD_FEE_REVENUE:               "4900",
+  CANCELLATION_FEE_REVENUE:        "4950",
+  DISPUTE_HANDLING_FEE_REVENUE:    "4960",
+  TRAINING_COURSE_REVENUE:         "4970",
   // Expenses
   REFUNDS_ISSUED:           "5000",
   PAYMENT_PROCESSING_FEES:  "5100",
@@ -38,6 +48,16 @@ export const ACCOUNT_NAMES: Record<AccountCode, string> = {
   "4000": "Commission Revenue",
   "4100": "Subscription Revenue",
   "4200": "Late Fee Revenue",
+  "4300": "Escrow Fee Revenue",
+  "4400": "Processing Fee Revenue",
+  "4500": "Withdrawal Fee Revenue",
+  "4600": "Urgency Booking Fee Revenue",
+  "4700": "Platform Service Fee Revenue",
+  "4800": "Featured Listing Revenue",
+  "4900": "Lead Fee Revenue",
+  "4950": "Cancellation Fee Revenue",
+  "4960": "Dispute Handling Fee Revenue",
+  "4970": "Training Course Revenue",
   "5000": "Refunds Issued",
   "5100": "Payment Processing Fees",
   "5200": "Bad Debt / Write-offs",
@@ -56,16 +76,34 @@ export const ACCOUNT_TYPES: Record<AccountCode, "asset" | "liability" | "equity"
   "4000": "revenue",
   "4100": "revenue",
   "4200": "revenue",
+  "4300": "revenue",
+  "4400": "revenue",
+  "4500": "revenue",
+  "4600": "revenue",
+  "4700": "revenue",
+  "4800": "revenue",
+  "4900": "revenue",
+  "4950": "revenue",
+  "4960": "revenue",
+  "4970": "revenue",
   "5000": "expense",
   "5100": "expense",
   "5200": "expense",
 };
 
 export type LedgerEntryType =
+  | "escrow_fee_accrued"
+  | "processing_fee_accrued"
+  | "withdrawal_fee_accrued"
+  | "urgency_fee_accrued"
+  | "platform_service_fee_accrued"
+  | "featured_listing_payment"
+  | "lead_fee_payment"
+  | "lead_subscription_payment"
+  | "bid_credit_purchase"
   | "escrow_funded_gateway"
   | "escrow_funded_wallet"
   | "commission_accrued"
-  | "earnings_earmarked"
   | "escrow_released"
   | "payout_requested"
   | "payout_sent"
@@ -75,14 +113,15 @@ export type LedgerEntryType =
   | "wallet_withdrawal_requested"
   | "wallet_withdrawal_completed"
   | "wallet_withdrawal_reversed"
-  | "dispute_refund_commission"
   | "dispute_refund_earnings"
   | "dispute_release"
+  | "cancellation_fee_accrued"
+  | "dispute_handling_fee_accrued"
+  | "training_course_payment"
   | "partial_release"
   | "milestone_release"
   | "admin_credit"
-  | "admin_debit"
-  | "reversal";
+  | "admin_debit";
 
 export type LedgerEntityType =
   | "job"
@@ -93,6 +132,10 @@ export type LedgerEntityType =
   | "dispute"
   | "transaction"
   | "recurring_schedule"
+  | "featured_listing"
+  | "lead_subscription"
+  | "training_enrollment"
+  | "quote"
   | "manual";
 
 export interface ILedgerEntry {
@@ -126,10 +169,18 @@ const LedgerEntrySchema = new Schema<LedgerEntryDocument>(
       type: String,
       required: true,
       enum: [
+        "escrow_fee_accrued",
+        "processing_fee_accrued",
+        "withdrawal_fee_accrued",
+        "urgency_fee_accrued",
+        "platform_service_fee_accrued",
+        "featured_listing_payment",
+        "lead_fee_payment",
+        "lead_subscription_payment",
+        "bid_credit_purchase",
         "escrow_funded_gateway",
         "escrow_funded_wallet",
         "commission_accrued",
-        "earnings_earmarked",
         "escrow_released",
         "payout_requested",
         "payout_sent",
@@ -139,14 +190,12 @@ const LedgerEntrySchema = new Schema<LedgerEntryDocument>(
         "wallet_withdrawal_requested",
         "wallet_withdrawal_completed",
         "wallet_withdrawal_reversed",
-        "dispute_refund_commission",
         "dispute_refund_earnings",
         "dispute_release",
         "partial_release",
         "milestone_release",
         "admin_credit",
         "admin_debit",
-        "reversal",
       ] as LedgerEntryType[],
     },
 
@@ -167,7 +216,7 @@ const LedgerEntrySchema = new Schema<LedgerEntryDocument>(
     entityType: {
       type: String,
       required: true,
-      enum: ["job", "payout", "payment", "wallet_withdrawal", "wallet_topup", "dispute", "transaction", "recurring_schedule", "manual"] as LedgerEntityType[],
+      enum: ["job", "payout", "payment", "wallet_withdrawal", "wallet_topup", "dispute", "transaction", "recurring_schedule", "featured_listing", "lead_subscription", "training_enrollment", "quote", "manual"] as LedgerEntityType[],
     },
     entityId: { type: Schema.Types.ObjectId, required: true },
 

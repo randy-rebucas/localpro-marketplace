@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { withHandler } from "@/lib/utils";
-import { requireUser, requireRole } from "@/lib/auth";
+import { requireUser, requireRole, requireCapability } from "@/lib/auth";
 import { userRepository } from "@/repositories/user.repository";
 import { notificationService } from "@/services";
 import { sendEmail } from "@/lib/email";
@@ -22,6 +22,7 @@ export const POST = withHandler(async (
 ) => {
   const admin = await requireUser();
   requireRole(admin, "admin", "staff");
+  requireCapability(admin, "manage_support");
 
   const { id } = await params;
   const payload = MessageSchema.safeParse(await req.json());

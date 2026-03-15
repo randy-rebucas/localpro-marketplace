@@ -39,11 +39,30 @@ const DisputeSchema = new Schema<DisputeDocument>(
       type: String,
       trim: true,
     },
+    /** Set to true once the dispute transitions to "investigating" — gates the handling fee. */
+    wasEscalated: { type: Boolean, default: false },
+    /** Who was charged the case handling fee at resolution: client, provider, or both. */
+    losingParty: {
+      type: String,
+      enum: ["client", "provider", "both", null],
+      default: null,
+    },
+    /** Flat handling fee charged in PHP (0 if not charged). */
+    handlingFeeAmount: { type: Number, default: 0 },
+    /** True if the wallet deduction succeeded for the handling fee. */
+    handlingFeePaid: { type: Boolean, default: false },
   },
   { timestamps: true }
 );
 
 DisputeSchema.index({ status: 1, createdAt: -1 });
+// Prevent duplicate open/investigating disputes for the same (job, user) pair.
+// partialFilterExpression excludes resolved disputes so historical records are kept.
+DisputeSchema.index(
+  { jobId: 1, raisedBy: 1 },
+  { unique: true, partialFilterExpression: { status: { $in: ["open", "investigating"] } } }
+);
+// Fast lookup by jobId alone is covered by index: true on the field definition
 
 const Dispute: Model<DisputeDocument> =
   mongoose.models.Dispute ??

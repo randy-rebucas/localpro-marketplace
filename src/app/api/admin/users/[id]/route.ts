@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { adminService } from "@/services";
-import { requireUser, requireCapability, requireRole, STAFF_CAPABILITIES } from "@/lib/auth";
+import { requireUser, requireCapability, requireRole, STAFF_CAPABILITIES, revokeAllUserTokens } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { ValidationError, NotFoundError } from "@/lib/errors";
 import { userRepository } from "@/repositories";
@@ -54,6 +54,11 @@ export const PATCH = withHandler(async (
 
   // Apply standard status updates through the service
   let result = await adminService.updateUser(user.userId, id, standardUpdates);
+
+  // Immediately revoke all active tokens when suspending a user
+  if (standardUpdates.isSuspended === true) {
+    await revokeAllUserTokens(id);
+  }
 
   // Apply role / capability updates directly
   if (role !== undefined || capabilities !== undefined) {

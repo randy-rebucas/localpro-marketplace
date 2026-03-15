@@ -6,6 +6,7 @@ import ProviderProfile from "@/models/ProviderProfile";
 import Review from "@/models/Review";
 import Job from "@/models/Job";
 import "@/models/User";
+import FeaturedListing from "@/models/FeaturedListing";
 import Link from "next/link";
 import { CheckCircle, Briefcase, Star, Shield, ArrowRight, MapPin, Users, TrendingUp, Lock, Zap } from "lucide-react";
 import Image from "next/image";
@@ -61,10 +62,12 @@ async function TopProvidersSection() {
 
   if (!topProviders.length) return null;
 
-  const providerIds = topProviders.map((p) => {
-    const uid = p.userId as unknown as { _id: string } | string;
-    return typeof uid === "string" ? uid : uid._id;
-  });
+  const providerIds = topProviders
+    .filter((p) => p.userId != null)
+    .map((p) => {
+      const uid = p.userId as unknown as { _id: string } | string;
+      return typeof uid === "string" ? uid : uid._id;
+    });
   const reviewCounts = await Review.aggregate([
     { $match: { providerId: { $in: providerIds } } },
     { $group: { _id: "$providerId", count: { $sum: 1 } } },
@@ -99,7 +102,7 @@ async function TopProvidersSection() {
         )}
       </div>
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-        {topProviders.map((p) => {
+        {topProviders.filter((p) => p.userId != null).map((p) => {
           const profile = p as unknown as {
             _id: string;
             userId: { _id: string; name: string; isVerified: boolean; avatar?: string | null };
@@ -232,6 +235,113 @@ function TopProvidersSkeleton() {
         {[...Array(6)].map((_, i) => (
           <div key={i} className="h-40 rounded-2xl bg-slate-100 border border-slate-200" />
         ))}
+      </div>
+    </section>
+  );
+}
+
+async function HomepageHighlightStrip() {
+  await connectDB();
+
+  const activeListings = await FeaturedListing.find({
+    type: "homepage_highlight",
+    status: "active",
+    expiresAt: { $gt: new Date() },
+  })
+    .sort({ createdAt: -1 })
+    .limit(8)
+    .lean();
+
+  if (!activeListings.length) return null;
+
+  const providerIds = activeListings.map((l) => {
+    const al = l as unknown as { providerId: string };
+    return al.providerId;
+  });
+
+  const profiles = await ProviderProfile.find({ userId: { $in: providerIds } })
+    .populate("userId", "name isVerified avatar")
+    .lean();
+
+  if (!profiles.length) return null;
+
+  return (
+    <section className="max-w-6xl mx-auto px-4 py-10">
+      <div className="flex items-center justify-between mb-5">
+        <div className="flex items-center gap-2">
+          <Zap className="h-5 w-5 text-amber-500" />
+          <h2 className="text-lg font-bold text-slate-900">Highlighted Providers</h2>
+          <span className="text-[10px] font-semibold bg-amber-100 text-amber-700 border border-amber-200 px-1.5 py-0.5 rounded-full">Sponsored</span>
+        </div>
+        <Link href="/register?role=client" className="text-sm font-medium text-primary hover:underline hidden sm:block">
+          Browse all →
+        </Link>
+      </div>
+      <div className="flex gap-4 overflow-x-auto pb-2 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+        {profiles.map((p) => {
+          const profile = p as unknown as {
+            _id: string;
+            userId: { _id: string; name: string; isVerified: boolean; avatar?: string | null };
+            bio: string;
+            avgRating: number;
+            completedJobCount: number;
+            skills: string[];
+            hourlyRate?: number;
+            isLocalProCertified?: boolean;
+          };
+          const initials = profile.userId?.name
+            ?.split(" ").filter(Boolean).map((w: string) => w[0]).join("").slice(0, 2).toUpperCase() ?? "??";
+          return (
+            <Link
+              key={String(profile._id)}
+              href={`/providers/${String(profile.userId?._id)}`}
+              className="flex-shrink-0 w-52 bg-white rounded-2xl border border-amber-200 shadow-card hover:shadow-card-hover hover:-translate-y-0.5 transition-all p-4 flex flex-col gap-2"
+            >
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-full flex-shrink-0 overflow-hidden border border-amber-200/60">
+                  {profile.userId?.avatar ? (
+                    <Image
+                      src={profile.userId.avatar}
+                      alt={profile.userId.name ?? "Provider"}
+                      width={40}
+                      height={40}
+                      className="h-10 w-10 object-cover"
+                    />
+                  ) : (
+                    <div className="h-full w-full bg-gradient-to-br from-amber-100 to-amber-50 flex items-center justify-center">
+                      <span className="text-xs font-bold text-amber-600">{initials}</span>
+                    </div>
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1">
+                    <p className="font-semibold text-slate-900 text-sm truncate">{profile.userId?.name}</p>
+                    {profile.userId?.isVerified && <CheckCircle className="h-3 w-3 text-blue-500 flex-shrink-0" />}
+                  </div>
+                  {profile.avgRating > 0 && (
+                    <div className="flex items-center gap-0.5 mt-0.5">
+                      <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                      <span className="text-xs text-amber-700 font-medium">{profile.avgRating.toFixed(1)}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+              {profile.bio && (
+                <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">{profile.bio}</p>
+              )}
+              {profile.skills.length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-auto">
+                  {profile.skills.slice(0, 2).map((s) => (
+                    <span key={s} className="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded-full">{s}</span>
+                  ))}
+                </div>
+              )}
+              <span className="inline-flex items-center gap-1 self-start text-[10px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-full">
+                ✨ Featured
+              </span>
+            </Link>
+          );
+        })}
       </div>
     </section>
   );
@@ -527,6 +637,11 @@ export default async function RootPage() {
       {/* ── Categories — deferred ── */}
       <Suspense fallback={<CategoriesSkeleton />}>
         <CategoriesSection />
+      </Suspense>
+
+      {/* ── Homepage Highlight — paid featured providers ── */}
+      <Suspense fallback={null}>
+        <HomepageHighlightStrip />
       </Suspense>
 
       {/* ── How it works — no data dependency ── */}

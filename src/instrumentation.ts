@@ -9,15 +9,18 @@
  */
 export async function register() {
   if (process.env.NEXT_RUNTIME === "nodejs") {
-    // await import("../sentry.server.config");
+    await import("../sentry.server.config");
   }
 
+  // Edge runtime uses the same server config (no Node APIs needed)
   if (process.env.NEXT_RUNTIME === "edge") {
-    // await import("../sentry.edge.config");
+    await import("../sentry.server.config");
   }
 }
 
-export const onRequestError =
-  // Uncomment after installing @sentry/nextjs:
-  // (await import("@sentry/nextjs")).captureRequestError;
-  undefined;
+export const onRequestError = async (
+  ...args: Parameters<(typeof import("@sentry/nextjs"))["captureRequestError"]>
+) => {
+  const { captureRequestError } = await import("@sentry/nextjs");
+  captureRequestError(...args);
+};
