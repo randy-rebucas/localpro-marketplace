@@ -76,17 +76,9 @@ export function JobCard({ job }: { job: BoardJob }) {
     });
   }
 
-  /** On mobile use the native share sheet; on desktop toggle the drawer */
-  async function handleShare() {
-    if (typeof navigator.share === "function") {
-      try {
-        await navigator.share({ title: job.title, text, url });
-      } catch {
-        // user cancelled or share failed — do nothing
-      }
-    } else {
-      setShowShare((v) => !v);
-    }
+  /** Toggle the social share drawer on all devices */
+  function handleShare() {
+    setShowShare((v) => !v);
   }
 
   /** Shared badge row used in both layouts */
