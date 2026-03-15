@@ -2,6 +2,8 @@ import jwt from "jsonwebtoken";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import type { StaffCapability, UserRole } from "@/types";
+import { getRedis } from "@/lib/redis";
+import { randomUUID } from "crypto";
 
 const ACCESS_SECRET = process.env.JWT_SECRET as string;
 const REFRESH_SECRET = process.env.JWT_REFRESH_SECRET as string;
@@ -28,12 +30,14 @@ export interface TokenPayload {
   userId: string;
   role: UserRole;
   capabilities?: string[];
+  /** Unique token ID — used for revocation deny-listing */
+  jti?: string;
   iat?: number;
   exp?: number;
 }
 
 export function signAccessToken(userId: string, role: UserRole, capabilities?: string[]): string {
-  const payload: Record<string, unknown> = { userId, role };
+  const payload: Record<string, unknown> = { userId, role, jti: randomUUID() };
   if (capabilities?.length) payload.capabilities = capabilities;
   return jwt.sign(payload, ACCESS_SECRET, { expiresIn: "15m" });
 }
@@ -105,7 +109,21 @@ export async function getCurrentUser(): Promise<TokenPayload | null> {
   try {
     const token = await getTokenFromCookies();
     if (!token) return null;
-    return verifyAccessToken(token);
+    const payload = verifyAccessToken(token);
+
+    // ── Deny-list check (Redis-backed revocation) ─────────────────────────
+    const redis = getRedis();
+    if (redis && payload.jti) {
+      const revoked = await redis.get(`jwt:denied:${payload.jti}`);
+      if (revoked) return null;
+    }
+    // ── Per-user revocation (password change / ban) ───────────────────────
+    if (redis && payload.userId) {
+      const revokedAt = await redis.get<number>(`jwt:revoke-user:${payload.userId}`);
+      if (revokedAt && payload.iat && payload.iat <= revokedAt) return null;
+    }
+
+    return payload;
   } catch {
     return null;
   }
@@ -113,6 +131,26 @@ export async function getCurrentUser(): Promise<TokenPayload | null> {
 
 // ─── Route-level auth guards ───────────────────────────────────────────────────
 import { UnauthorizedError, ForbiddenError } from "@/lib/errors";
+
+// ─── Token revocation helpers ─────────────────────────────────────────────────
+
+/** Adds a single token's jti to the Redis deny-list (TTL = 15 min). */
+export async function revokeToken(jti: string): Promise<void> {
+  const redis = getRedis();
+  if (!redis) return;
+  await redis.set(`jwt:denied:${jti}`, "1", { ex: 15 * 60 });
+}
+
+/**
+ * Marks all access tokens for a user as revoked by storing a "revoked at"
+ * timestamp. Any token with iat <= this timestamp will be rejected.
+ * TTL = 15 min (access token lifetime).
+ */
+export async function revokeAllUserTokens(userId: string): Promise<void> {
+  const redis = getRedis();
+  if (!redis) return;
+  await redis.set(`jwt:revoke-user:${userId}`, Math.floor(Date.now() / 1000), { ex: 15 * 60 });
+}
 
 /** Throws UnauthorizedError if no valid session. */
 export async function requireUser(): Promise<TokenPayload> {

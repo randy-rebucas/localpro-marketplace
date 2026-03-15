@@ -22,12 +22,18 @@ const AUDIENCE_LABELS: Record<KnowledgeAudience, string> = {
   client:   "Client",
   provider: "Provider",
   both:     "Both",
+  peso:     "PESO",
+  business: "Business",
+  agency:   "Agency",
 };
 
 const AUDIENCE_CHIP: Record<KnowledgeAudience, string> = {
   client:   "bg-blue-100 text-blue-700",
   provider: "bg-violet-100 text-violet-700",
   both:     "bg-emerald-100 text-emerald-700",
+  peso:     "bg-yellow-100 text-yellow-700",
+  business: "bg-orange-100 text-orange-700",
+  agency:   "bg-pink-100 text-pink-700",
 };
 
 const EMPTY_FORM = {

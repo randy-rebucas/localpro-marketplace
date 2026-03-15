@@ -30,7 +30,7 @@ export const POST = withHandler(async (req: NextRequest) => {
     req.headers.get("x-forwarded-for")?.split(",")[0].trim() ??
     req.headers.get("x-real-ip") ??
     "unknown";
-  const rl = checkRateLimit(`register:${ip}`, REGISTER_LIMIT);
+  const rl = await checkRateLimit(`register:${ip}`, REGISTER_LIMIT);
   if (!rl.ok) {
     return new Response(
       JSON.stringify({ error: "Too many registration attempts. Please try again later." }),

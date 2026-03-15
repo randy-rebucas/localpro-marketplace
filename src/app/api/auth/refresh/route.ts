@@ -11,7 +11,7 @@ const REFRESH_LIMIT = { windowMs: 15 * 60_000, max: 20 };
 
 export const POST = withHandler(async (req: NextRequest) => {
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? req.headers.get("x-real-ip") ?? "unknown";
-  const rl = checkRateLimit(`refresh:${ip}`, REFRESH_LIMIT);
+  const rl = await checkRateLimit(`refresh:${ip}`, REFRESH_LIMIT);
   if (!rl.ok) {
     return new Response(
       JSON.stringify({ error: "Too many token refresh requests. Please try again later." }),

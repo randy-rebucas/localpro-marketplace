@@ -16,7 +16,7 @@ export const POST = withHandler(async (req: NextRequest) => {
   if (!parsed.success) throw new ValidationError("A valid email address is required");
 
   const email = parsed.data.email.toLowerCase();
-  const rl = checkRateLimit(`fp:${email}`, FORGOT_LIMIT);
+  const rl = await checkRateLimit(`fp:${email}`, FORGOT_LIMIT);
   if (!rl.ok) {
     return new Response(
       JSON.stringify({ error: "Too many requests. Please try again later." }),

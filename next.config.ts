@@ -1,5 +1,6 @@
 import type { NextConfig } from "next";
 import BundleAnalyzer from "@next/bundle-analyzer";
+import { withSentryConfig } from "@sentry/nextjs";
 
 const withBundleAnalyzer = BundleAnalyzer({
   enabled: process.env.ANALYZE === "true",
@@ -76,4 +77,18 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default withBundleAnalyzer(nextConfig);
+const withAnalyzer = withBundleAnalyzer(nextConfig);
+
+export default withSentryConfig(withAnalyzer, {
+  // Sentry organisation and project (set in CI / Vercel env)
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  // Upload source maps in CI builds only; keep them off in local dev
+  sourcemaps: { disable: process.env.CI !== "true" },
+  // Suppress noisy Sentry build output
+  silent: true,
+  // Tree-shake Sentry debug code from production bundles
+  disableLogger: true,
+  // Automatically instrument server-side route handlers
+  autoInstrumentServerFunctions: true,
+});

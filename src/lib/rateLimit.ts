@@ -1,45 +1,16 @@
 /**
- * In-memory sliding window rate limiter.
+ * Distributed sliding-window rate limiter backed by Upstash Redis.
  *
- * ⚠️  PRODUCTION WARNING (M1):
- * This implementation stores state in a Node.js Map, which is per-process.
- * In a multi-instance deployment (e.g. Vercel serverless, multiple containers)
- * each instance has an independent counter, so the effective rate limit is
- * `max × numInstances`.
+ * Requires the following environment variables:
+ *   UPSTASH_REDIS_REST_URL   — Upstash Redis REST API URL
+ *   UPSTASH_REDIS_REST_TOKEN — Upstash Redis REST API token
  *
- * To fix for production:
- *  1. Install `@upstash/ratelimit` and `@upstash/redis`
- *  2. Replace the Map store with an Upstash Redis sliding-window limiter
- *  3. Set UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN in .env
- *
- * Example migration:
- *   import { Ratelimit } from "@upstash/ratelimit";
- *   import { Redis } from "@upstash/redis";
- *   const ratelimit = new Ratelimit({
- *     redis: Redis.fromEnv(),
- *     limiter: Ratelimit.slidingWindow(10, "15 m"),
- *   });
- *   const { success } = await ratelimit.limit(key);
+ * Falls back to an in-memory limiter when those variables are absent
+ * (e.g. local development without an Upstash account).
  */
 
-interface RateLimitRecord {
-  count: number;
-  resetAt: number;
-}
-
-const store = new Map<string, RateLimitRecord>();
-
-// Prune expired entries every 5 minutes
-const pruneTimer = setInterval(() => {
-  const now = Date.now();
-  for (const [key, record] of store) {
-    if (record.resetAt < now) store.delete(key);
-  }
-}, 5 * 60 * 1000);
-// Allow the Node.js process to exit even if this timer is still pending
-if (typeof pruneTimer === "object" && pruneTimer !== null && "unref" in pruneTimer) {
-  (pruneTimer as { unref(): void }).unref();
-}
+import { Ratelimit } from "@upstash/ratelimit";
+import { Redis } from "@upstash/redis";
 
 export interface RateLimitOptions {
   /** Window size in milliseconds */
@@ -54,20 +25,97 @@ export interface RateLimitResult {
   resetAt: number;
 }
 
-export function checkRateLimit(
-  key: string,
-  options: RateLimitOptions
-): RateLimitResult {
-  const now = Date.now();
-  const existing = store.get(key);
+// ─── Redis client ─────────────────────────────────────────────────────────────
 
-  if (!existing || existing.resetAt < now) {
+const hasRedis =
+  !!process.env.UPSTASH_REDIS_REST_URL &&
+  !!process.env.UPSTASH_REDIS_REST_TOKEN;
+
+const redis = hasRedis
+  ? new Redis({
+      url:   process.env.UPSTASH_REDIS_REST_URL!,
+      token: process.env.UPSTASH_REDIS_REST_TOKEN!,
+    })
+  : null;
+
+// ─── Limiter cache ────────────────────────────────────────────────────────────
+// We cache one Ratelimit instance per (max, windowMs) combination so that the
+// underlying Redis scripts are only registered once.
+
+const limiterCache = new Map<string, Ratelimit>();
+
+function getLimiter(max: number, windowMs: number): Ratelimit | null {
+  if (!redis) return null;
+  const cacheKey = `${max}:${windowMs}`;
+  if (!limiterCache.has(cacheKey)) {
+    const windowSeconds = Math.max(1, Math.floor(windowMs / 1000));
+    // Express the window as "Xs" or "Xm" — Upstash accepts "s" and "m" units
+    const windowStr =
+      windowSeconds >= 60
+        ? `${Math.floor(windowSeconds / 60)} m`
+        : `${windowSeconds} s`;
+    limiterCache.set(
+      cacheKey,
+      new Ratelimit({
+        redis,
+        limiter: Ratelimit.slidingWindow(max, windowStr as `${number} ${"s" | "m" | "h" | "d"}`),
+        analytics: false,
+      })
+    );
+  }
+  return limiterCache.get(cacheKey)!;
+}
+
+// ─── In-memory fallback ───────────────────────────────────────────────────────
+
+interface FallbackRecord {
+  count: number;
+  resetAt: number;
+}
+
+const fallbackStore = new Map<string, FallbackRecord>();
+const pruneTimer = setInterval(() => {
+  const now = Date.now();
+  for (const [k, r] of fallbackStore) {
+    if (r.resetAt < now) fallbackStore.delete(k);
+  }
+}, 5 * 60 * 1000);
+if (typeof pruneTimer === "object" && pruneTimer !== null && "unref" in pruneTimer) {
+  (pruneTimer as { unref(): void }).unref();
+}
+
+function checkFallback(key: string, options: RateLimitOptions): RateLimitResult {
+  const now = Date.now();
+  const rec = fallbackStore.get(key);
+  if (!rec || rec.resetAt < now) {
     const resetAt = now + options.windowMs;
-    store.set(key, { count: 1, resetAt });
+    fallbackStore.set(key, { count: 1, resetAt });
     return { ok: true, remaining: options.max - 1, resetAt };
   }
+  rec.count++;
+  const remaining = Math.max(0, options.max - rec.count);
+  return { ok: rec.count <= options.max, remaining, resetAt: rec.resetAt };
+}
 
-  existing.count++;
-  const remaining = Math.max(0, options.max - existing.count);
-  return { ok: existing.count <= options.max, remaining, resetAt: existing.resetAt };
+// ─── Public API ───────────────────────────────────────────────────────────────
+
+export async function checkRateLimit(
+  key: string,
+  options: RateLimitOptions
+): Promise<RateLimitResult> {
+  const limiter = getLimiter(options.max, options.windowMs);
+
+  if (!limiter) {
+    // No Redis credentials — use in-memory fallback (dev only)
+    return checkFallback(key, options);
+  }
+
+  try {
+    const { success, remaining, reset } = await limiter.limit(key);
+    return { ok: success, remaining, resetAt: reset };
+  } catch (err) {
+    // If Redis is temporarily unavailable, degrade gracefully
+    console.error("[RateLimit] Redis error — falling back to in-memory:", err);
+    return checkFallback(key, options);
+  }
 }

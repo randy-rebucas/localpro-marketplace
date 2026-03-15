@@ -20,7 +20,7 @@ export const POST = withHandler(async (req: NextRequest) => {
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? req.headers.get("x-real-ip") ?? "unknown";
 
   // Per-IP gate (first — cheapest check before DB)
-  const ipRl = checkRateLimit(`login-ip:${ip}`, LOGIN_IP_LIMIT);
+  const ipRl = await checkRateLimit(`login-ip:${ip}`, LOGIN_IP_LIMIT);
   if (!ipRl.ok) {
     return new Response(
       JSON.stringify({ error: "Too many login attempts from this IP. Please try again later." }),
@@ -39,7 +39,7 @@ export const POST = withHandler(async (req: NextRequest) => {
   if (!parsed.success) throw new ValidationError(parsed.error.errors[0].message);
 
   const email = parsed.data.email.toLowerCase();
-  const rl = checkRateLimit(`login:${email}`, LOGIN_LIMIT);
+  const rl = await checkRateLimit(`login:${email}`, LOGIN_LIMIT);
   if (!rl.ok) {
     return new Response(
       JSON.stringify({ error: "Too many login attempts. Please try again later." }),

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import mongoose from "mongoose";
 import { userRepository } from "@/repositories";
-import { requireUser } from "@/lib/auth";
+import { requireUser, revokeAllUserTokens } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { connectDB } from "@/lib/db";
 import { ValidationError, NotFoundError } from "@/lib/errors";
@@ -41,6 +41,11 @@ export const PUT = withHandler(async (req: NextRequest) => {
   }
 
   await user.save();
+
+  // Invalidate all existing access tokens after a password change
+  if (parsed.data.newPassword) {
+    await revokeAllUserTokens(tokenUser.userId);
+  }
 
   return NextResponse.json({
     _id: user._id,

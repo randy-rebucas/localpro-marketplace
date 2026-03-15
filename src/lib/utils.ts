@@ -94,7 +94,7 @@ export function withHandler(fn: RouteHandler): RouteHandler {
         req.headers.get("x-real-ip") ??
         "unknown";
 
-      const rl = checkRateLimit(ip, { windowMs: 60_000, max: 100 });
+      const rl = await checkRateLimit(ip, { windowMs: 60_000, max: 100 });
       if (!rl.ok) {
         return new Response(
           JSON.stringify({ error: "Too many requests. Please slow down." }),

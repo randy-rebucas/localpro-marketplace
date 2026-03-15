@@ -25,7 +25,7 @@ import { isValidObjectId } from "mongoose";
 export async function POST(req: NextRequest) {
   // Rate-limit: 60 webhook deliveries per minute per source IP
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
-  const rl = checkRateLimit(`webhook:${ip}`, { windowMs: 60_000, max: 60 });
+  const rl = await checkRateLimit(`webhook:${ip}`, { windowMs: 60_000, max: 60 });
   if (!rl.ok) {
     return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   }
