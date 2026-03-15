@@ -34,6 +34,19 @@ export default function PesoPage() {
         dangerouslySetInnerHTML={{
           __html: JSON.stringify({
             "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            itemListElement: [
+              { "@type": "ListItem", position: 1, name: "Home",             item: "https://www.localpro.asia" },
+              { "@type": "ListItem", position: 2, name: "PESO Partnership", item: "https://www.localpro.asia/peso-program" },
+            ],
+          }),
+        }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
             "@type": "Organization",
             name: "LocalPro × PESO Partnership",
             url: `${APP_URL}/peso-program`,

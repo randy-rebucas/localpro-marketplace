@@ -114,6 +114,19 @@ export default async function PublicJobsPage({
 
   return (
     <div className="min-h-screen bg-slate-50">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            itemListElement: [
+              { "@type": "ListItem", position: 1, name: "Home",        item: "https://www.localpro.asia" },
+              { "@type": "ListItem", position: 2, name: "Browse Jobs", item: "https://www.localpro.asia/jobs" },
+            ],
+          }),
+        }}
+      />
       {/* Header */}
       <header className="sticky top-0 z-50 bg-white border-b border-slate-200">
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between gap-4">

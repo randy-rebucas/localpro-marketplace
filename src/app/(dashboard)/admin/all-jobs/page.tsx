@@ -86,7 +86,7 @@ export default async function AdminAllJobsPage({
     escrowStatus: string;
     scheduleDate?: Date | null;
     createdAt: Date;
-    clientId: { name: string; email: string };
+  clientId: { name: string; email: string } | null;
     providerId?: { name: string; email: string } | null;
   }[];
 
@@ -298,7 +298,7 @@ export default async function AdminAllJobsPage({
                     <MapPin className="h-3 w-3 flex-shrink-0" />{job.location}
                   </span>
                   <span className="flex items-center gap-1.5">
-                    <span className="text-slate-600 dark:text-slate-300">{job.clientId.name}</span>
+                    <span className="text-slate-600 dark:text-slate-300">{job.clientId?.name ?? <span className="italic text-slate-400">deleted user</span>}</span>
                     {job.providerId && (
                       <>
                         <ArrowRight className="h-3 w-3 text-slate-300 dark:text-slate-600 flex-shrink-0" />

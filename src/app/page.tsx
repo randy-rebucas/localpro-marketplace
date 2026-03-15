@@ -480,6 +480,8 @@ export default async function RootPage() {
               url: "https://www.localpro.asia",
               logo: "https://www.localpro.asia/logo.jpg",
               description: "The Philippines\u2019 trusted marketplace for local service professionals.",
+              foundingDate: "2024",
+              areaServed: { "@type": "Country", name: "Philippines" },
               address: {
                 "@type": "PostalAddress",
                 addressLocality: "Ormoc City",
@@ -489,10 +491,12 @@ export default async function RootPage() {
               contactPoint: {
                 "@type": "ContactPoint",
                 contactType: "customer support",
+                email: "support@localpro.asia",
                 availableLanguage: ["English", "Filipino"],
               },
               sameAs: [
                 "https://www.facebook.com/localproasia",
+                "https://www.linkedin.com/company/localproasia",
               ],
             },
             {
@@ -505,7 +509,7 @@ export default async function RootPage() {
                 "@type": "SearchAction",
                 target: {
                   "@type": "EntryPoint",
-                  urlTemplate: "https://www.localpro.asia/board?q={search_term_string}",
+                  urlTemplate: "https://www.localpro.asia/jobs?q={search_term_string}",
                 },
                 "query-input": "required name=search_term_string",
               },

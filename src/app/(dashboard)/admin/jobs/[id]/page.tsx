@@ -56,14 +56,14 @@ export default async function AdminJobDetailPage({
   if (!jobRaw) notFound();
 
   const j = jobRaw as unknown as IJob & {
-    clientId: { name: string; email: string };
-    providerId?: { name: string; email: string };
+    clientId: { name: string; email: string } | null;
+    providerId?: { name: string; email: string } | null;
     beforePhoto?: string[];
     afterPhoto?: string[];
   };
 
   const typedQuotes = quotes as unknown as (IQuote & {
-    providerId: { name: string; email: string };
+    providerId: { name: string; email: string } | null;
   })[];
 
   return (
@@ -140,11 +140,11 @@ export default async function AdminJobDetailPage({
           {/* Client */}
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm flex-shrink-0">
-              {j.clientId.name[0].toUpperCase()}
+              {j.clientId?.name?.[0]?.toUpperCase() ?? "?"}
             </div>
             <div>
-              <p className="font-medium text-slate-900 text-sm">{j.clientId.name}</p>
-              <p className="text-xs text-slate-500">{j.clientId.email}</p>
+              <p className="font-medium text-slate-900 text-sm">{j.clientId?.name ?? <span className="italic text-slate-400">deleted user</span>}</p>
+              <p className="text-xs text-slate-500">{j.clientId?.email ?? "—"}</p>
             </div>
           </div>
 
@@ -269,8 +269,8 @@ export default async function AdminJobDetailPage({
               <li key={q._id.toString()} className="px-6 py-4">
                 <div className="flex justify-between gap-4">
                   <div>
-                    <p className="font-medium text-slate-900 text-sm">{q.providerId.name}</p>
-                    <p className="text-xs text-slate-500">{q.providerId.email}</p>
+                    <p className="font-medium text-slate-900 text-sm">{q.providerId?.name ?? <span className="italic text-slate-400">deleted user</span>}</p>
+                    <p className="text-xs text-slate-500">{q.providerId?.email ?? "—"}</p>
                     <p className="text-sm text-slate-600 mt-2">{q.message}</p>
                     <p className="text-xs text-slate-400 mt-1">Timeline: {q.timeline}</p>
                   </div>
