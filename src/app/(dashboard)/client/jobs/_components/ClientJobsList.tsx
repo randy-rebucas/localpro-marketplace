@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo, useCallback } from "react";
 import Link from "next/link";
 import { JobStatusBadge, EscrowBadge } from "@/components/ui/Badge";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import {
   MapPin, Calendar, MessageSquare, ShieldCheck, ChevronRight,
-  Briefcase, Zap, CheckCircle2,
+  Briefcase, Zap, CheckCircle2, Search, X, ArrowUpDown,
+  ChevronDown, ChevronUp, Clock, FileText, AlertCircle,
 } from "lucide-react";
 import type { IJob, JobStatus } from "@/types";
 import ProviderInfoButton from "@/components/shared/ProviderInfoButtonLazy";
@@ -14,6 +15,15 @@ import ProviderInfoButton from "@/components/shared/ProviderInfoButtonLazy";
 type JobWithProvider = IJob & {
   providerId?: { _id: string; name: string; email: string; isVerified: boolean };
 };
+
+type SortOption = "date_desc" | "date_asc" | "budget_high" | "budget_low";
+
+const SORT_OPTIONS: { label: string; value: SortOption }[] = [
+  { label: "Newest",     value: "date_desc" },
+  { label: "Oldest",     value: "date_asc" },
+  { label: "Budget ↑",  value: "budget_high" },
+  { label: "Budget ↓",  value: "budget_low" },
+];
 
 interface ClientJobsListProps {
   jobs: JobWithProvider[];
@@ -95,19 +105,57 @@ export default function ClientJobsList({
   quoteCountMap,
   fundedAmounts = {},
 }: ClientJobsListProps) {
-  const [activeTab, setActiveTab] = useState<JobStatus | "all">("all");
+  const [activeTab,   setActiveTab]   = useState<JobStatus | "all">("all");
+  const [search,      setSearch]      = useState("");
+  const [sortBy,      setSortBy]      = useState<SortOption>("date_desc");
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+  const [listKey,     setListKey]     = useState(0);
 
-  const filtered =
-    activeTab === "all" ? jobs : jobs.filter((j) => j.status === activeTab);
+  const switchTab = useCallback((tab: JobStatus | "all") => {
+    setActiveTab(tab);
+    setListKey((k) => k + 1);
+  }, []);
 
-  /* Summary stats */
-  const totalActive = jobs.filter(
-    (j) => ["open", "assigned", "in_progress"].includes(j.status)
-  ).length;
-  const totalQuotes = Object.values(quoteCountMap).reduce((a, b) => a + b, 0);
-  const totalBudget = jobs
-    .filter((j) => j.status !== "rejected" && j.status !== "refunded")
-    .reduce((s, j) => s + j.budget, 0);
+  const toggleExpand = useCallback((id: string) => {
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }, []);
+
+  /* ── Memoised stats ── */
+  const totalActive = useMemo(
+    () => jobs.filter((j) => ["open", "assigned", "in_progress"].includes(j.status)).length,
+    [jobs]
+  );
+  const totalQuotes = useMemo(
+    () => Object.values(quoteCountMap).reduce((a, b) => a + b, 0),
+    [quoteCountMap]
+  );
+  const totalBudget = useMemo(
+    () => jobs
+      .filter((j) => j.status !== "rejected" && j.status !== "refunded")
+      .reduce((s, j) => s + j.budget, 0),
+    [jobs]
+  );
+
+  /* ── Memoised filtered + sorted list ── */
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    let list = activeTab === "all" ? jobs : jobs.filter((j) => j.status === activeTab);
+    if (q) list = list.filter(
+      (j) => j.title.toLowerCase().includes(q) || j.category.toLowerCase().includes(q)
+    );
+    return [...list].sort((a, b) => {
+      switch (sortBy) {
+        case "date_asc":    return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        case "budget_high": return b.budget - a.budget;
+        case "budget_low":  return a.budget - b.budget;
+        default:           return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      }
+    });
+  }, [jobs, activeTab, search, sortBy]);
 
   return (
     <div className="space-y-4">
@@ -152,6 +200,45 @@ export default function ClientJobsList({
         </div>
       )}
 
+      {/* ── Search + Sort ── */}
+      <div className="flex flex-col sm:flex-row gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setListKey((k) => k + 1); }}
+            placeholder="Search by title or category…"
+            className="w-full pl-9 pr-8 py-2 text-sm rounded-xl border border-slate-200 bg-white text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition"
+          />
+          {search && (
+            <button
+              onClick={() => { setSearch(""); setListKey((k) => k + 1); }}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+              aria-label="Clear search"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+        <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-xl px-2 py-1 flex-shrink-0">
+          <ArrowUpDown className="h-3.5 w-3.5 text-slate-400 ml-1 flex-shrink-0" />
+          {SORT_OPTIONS.map((opt) => (
+            <button
+              key={opt.value}
+              onClick={() => { setSortBy(opt.value); setListKey((k) => k + 1); }}
+              className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${
+                sortBy === opt.value
+                  ? "bg-primary text-white shadow-sm"
+                  : "text-slate-500 hover:text-slate-700 hover:bg-slate-100"
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* ── Filter tabs ── */}
       <div className="overflow-x-auto pb-1 -mx-1 px-1">
         <div className="flex gap-1 bg-slate-100 p-1 rounded-xl w-fit min-w-full sm:min-w-0">
@@ -164,7 +251,7 @@ export default function ClientJobsList({
             return (
               <button
                 key={tab.value}
-                onClick={() => setActiveTab(tab.value)}
+                onClick={() => switchTab(tab.value)}
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${
                   activeTab === tab.value
                     ? "bg-white text-slate-900 shadow-sm"
@@ -188,9 +275,11 @@ export default function ClientJobsList({
       </div>
 
       {/* ── Result count ── */}
-      {activeTab !== "all" && filtered.length > 0 && (
+      {filtered.length > 0 && (activeTab !== "all" || search) && (
         <p className="text-xs text-slate-400 px-0.5">
-          Showing {filtered.length} {activeTab.replace(/_/g, " ")} job{filtered.length !== 1 ? "s" : ""}
+          {search
+            ? `${filtered.length} result${filtered.length !== 1 ? "s" : ""} for "${search}"`
+            : `Showing ${filtered.length} ${activeTab.replace(/_/g, " ")} job${filtered.length !== 1 ? "s" : ""}`}
         </p>
       )}
 
@@ -202,7 +291,7 @@ export default function ClientJobsList({
           </p>
           {activeTab !== "all" && (
             <button
-              onClick={() => setActiveTab("all")}
+              onClick={() => switchTab("all")}
               className="text-xs text-primary hover:underline"
             >
               View all jobs
@@ -211,17 +300,19 @@ export default function ClientJobsList({
         </div>
       ) : (
         /* ── Job cards ── */
-        <div className="space-y-3">
+        <div key={listKey} className="space-y-3 animate-fade-in">
           {filtered.map((j) => {
-            const pendingQuotes = quoteCountMap[j._id.toString()] ?? 0;
-            const fundedAmount = fundedAmounts[j._id.toString()];
+            const id = j._id.toString();
+            const pendingQuotes = quoteCountMap[id] ?? 0;
+            const fundedAmount = fundedAmounts[id];
             const step = STATUS_STEP[j.status] ?? 1;
             const borderClass = STATUS_BORDER[j.status] ?? "border-l-slate-200";
             const dotClass = STATUS_DOT[j.status] ?? "bg-slate-300";
+            const isExpanded = expandedIds.has(id);
 
             return (
               <div
-                key={j._id.toString()}
+                key={id}
                 className={`relative block bg-white rounded-xl border border-slate-200 border-l-4 ${borderClass} shadow-card hover:shadow-card-hover hover:border-primary/30 transition-all p-4 sm:p-5 group`}
               >
                 {/* Overlay link covers the whole card except interactive children */}
@@ -241,9 +332,9 @@ export default function ClientJobsList({
                         {j.category}
                       </span>
                       {j.location && (
-                        <span className="hidden sm:flex items-center gap-1">
+                        <span className="flex items-center gap-1">
                           <MapPin className="h-3 w-3" />
-                          {j.location}
+                          <span className="truncate max-w-[120px] sm:max-w-none">{j.location}</span>
                         </span>
                       )}
                       <span className="flex items-center gap-1">
@@ -277,9 +368,54 @@ export default function ClientJobsList({
                     </div>
                     <JobStatusBadge status={j.status} />
                     <EscrowBadge status={j.escrowStatus} />
-                    <ChevronRight className="h-4 w-4 text-slate-300 group-hover:text-primary transition-colors mt-auto" />
+                    <div className="flex flex-col items-center gap-1">
+                      <ChevronRight className="h-4 w-4 text-slate-300 group-hover:text-primary transition-colors" />
+                      <button
+                        onClick={(e) => { e.preventDefault(); toggleExpand(id); }}
+                        className="relative z-10 p-1 rounded-lg text-slate-300 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+                        aria-label={isExpanded ? "Collapse" : "Expand"}
+                      >
+                        {isExpanded
+                          ? <ChevronUp className="h-3.5 w-3.5" />
+                          : <ChevronDown className="h-3.5 w-3.5" />}
+                      </button>
+                    </div>
                   </div>
                 </div>
+
+                {/* ── Expandable details ── */}
+                {isExpanded && (
+                  <div className="mt-3 pt-3 border-t border-slate-100 space-y-2 animate-fade-in">
+                    {j.description && (
+                      <div className="flex gap-2 text-xs text-slate-600">
+                        <FileText className="h-3.5 w-3.5 text-slate-400 flex-shrink-0 mt-0.5" />
+                        <p className="leading-relaxed line-clamp-3">{j.description}</p>
+                      </div>
+                    )}
+                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
+                      {j.scheduleDate && (
+                        <span className="flex items-center gap-1">
+                          <Clock className="h-3 w-3 text-slate-400" />
+                          Scheduled: {formatDate(j.scheduleDate)}
+                        </span>
+                      )}
+                      {j.urgency && j.urgency !== "standard" && (
+                        <span className={`flex items-center gap-1 font-medium ${
+                          j.urgency === "rush" ? "text-red-500" : "text-amber-500"
+                        }`}>
+                          <Zap className="h-3 w-3" />
+                          {j.urgency === "rush" ? "Rush" : "Same-day"} booking
+                        </span>
+                      )}
+                      {j.specialInstructions && (
+                        <span className="flex items-center gap-1">
+                          <AlertCircle className="h-3 w-3 text-slate-400" />
+                          {j.specialInstructions}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 {/* Funded escrow row */}
                 {fundedAmount !== undefined && (

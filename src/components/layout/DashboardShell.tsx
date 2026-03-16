@@ -7,7 +7,6 @@ import Sidebar from "./Sidebar";
 import Header from "./Header";
 import AnnouncementBanner from "@/components/shared/AnnouncementBanner";
 import ImpersonationBanner from "./ImpersonationBanner";
-import SupportFab from "@/components/shared/SupportFab";
 import { PageLoader } from "@/components/ui/Spinner";
 import type { UserRole } from "@/types";
 
@@ -58,7 +57,6 @@ export default function DashboardShell({ children, role, capabilities, pageTitle
         <Header title={pageTitle} onMenuClick={() => setSidebarOpen(true)} />
         <AnnouncementBanner />
         <main className="flex-1 overflow-y-auto p-4 sm:p-6">{children}</main>
-        <SupportFab />
       </div>
     </div>
   );

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { getCurrentUser } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import PageGuide from "@/components/shared/PageGuide";
+import TourGuide from "@/components/shared/TourGuide";
 import { RecurringList } from "./_components/RecurringList";
 
 export const metadata: Metadata = { title: "Recurring Bookings" };
@@ -14,7 +14,7 @@ export default async function ClientRecurringPage() {
 
   return (
     <div className="space-y-6">
-      <PageGuide
+      <TourGuide
         pageKey="client-recurring"
         title="How Recurring Bookings work"
         steps={[

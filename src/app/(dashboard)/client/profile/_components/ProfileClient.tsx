@@ -10,7 +10,7 @@ import Button from "@/components/ui/Button";
 import { useAuthStore } from "@/stores/authStore";
 import { formatDate } from "@/lib/utils";
 import { ShieldCheck, CalendarDays, Camera, MapPin, Trash2, Plus, LocateFixed, Loader2, User, KeyRound, BadgeCheck, AlertCircle } from "lucide-react";
-import PageGuide from "@/components/shared/PageGuide";
+import TourGuide from "@/components/shared/TourGuide";
 import KycUpload from "@/components/shared/KycUpload";
 import PhoneInput, { isValidPhoneNumber } from "@/components/shared/PhoneInput";
 import { apiFetch } from "@/lib/fetchClient";
@@ -339,7 +339,7 @@ export default function ProfileClient({ initialUser, initialJobCount }: Props) {
 
   return (
     <div className="space-y-6">
-      <PageGuide
+      <TourGuide
         pageKey="client-profile"
         title="How My Profile works"
         steps={[

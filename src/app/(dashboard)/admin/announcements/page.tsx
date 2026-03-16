@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { getCurrentUser } from "@/lib/auth";
 import { announcementRepository } from "@/repositories/announcement.repository";
 import AnnouncementsClient from "./AnnouncementsClient";
-import PageGuide from "@/components/shared/PageGuide";
+import TourGuide from "@/components/shared/TourGuide";
 import { Megaphone } from "lucide-react";
 
 export const metadata: Metadata = { title: "Announcements" };
@@ -16,7 +16,7 @@ export default async function AdminAnnouncementsPage() {
 
   return (
     <div className="space-y-5">
-      <PageGuide
+      <TourGuide
         pageKey="admin-announcements"
         title="How Announcements work"
         steps={[

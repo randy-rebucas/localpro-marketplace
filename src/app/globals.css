@@ -163,3 +163,84 @@
   background: rgb(148 163 184 / 0.5);
   border-radius: 2px;
 }
+
+/* ─── driver.js tour overrides ───────────────────────────────────────────── */
+
+/* Popover container */
+.driver-popover {
+  border-radius: 1rem !important;           /* rounded-2xl */
+  box-shadow: 0 20px 60px -10px rgb(0 0 0 / 0.25) !important;
+  border: 1px solid #e2e8f0 !important;     /* slate-200  */
+  padding: 1.25rem !important;
+  max-width: 360px !important;
+  font-family: var(--font-inter, sans-serif) !important;
+}
+
+/* Title */
+.driver-popover-title {
+  font-size: 0.9375rem !important;
+  font-weight: 700 !important;
+  color: #0f172a !important;               /* slate-900 */
+  margin-bottom: 0.35rem !important;
+}
+
+/* Description */
+.driver-popover-description {
+  font-size: 0.8125rem !important;
+  color: #475569 !important;               /* slate-600 */
+  line-height: 1.55 !important;
+}
+
+/* Progress text */
+.driver-popover-progress-text {
+  font-size: 0.75rem !important;
+  color: #94a3b8 !important;               /* slate-400 */
+}
+
+/* Footer button row */
+.driver-popover-footer {
+  margin-top: 1rem !important;
+  gap: 0.5rem !important;
+}
+
+/* All footer buttons base */
+.driver-popover-footer button {
+  border-radius: 0.625rem !important;      /* rounded-[10px] */
+  font-size: 0.8125rem !important;
+  font-weight: 600 !important;
+  padding: 0.4rem 0.875rem !important;
+  cursor: pointer !important;
+  transition: opacity 0.15s !important;
+}
+.driver-popover-footer button:hover {
+  opacity: 0.85 !important;
+}
+
+/* Primary (Next / Done) button → brand blue */
+.driver-popover-next-btn,
+.driver-popover-done-btn {
+  background-color: rgb(26 95 168) !important;   /* --primary */
+  color: #fff !important;
+  border: none !important;
+}
+
+/* Prev button → ghost */
+.driver-popover-prev-btn {
+  background-color: #f1f5f9 !important;  /* slate-100 */
+  color: #334155 !important;             /* slate-700 */
+  border: 1px solid #e2e8f0 !important;  /* slate-200 */
+}
+
+/* Close (×) button */
+.driver-popover-close-btn {
+  color: #94a3b8 !important;
+  font-size: 1.25rem !important;
+}
+.driver-popover-close-btn:hover {
+  color: #0f172a !important;
+}
+
+/* Spotlight overlay colour */
+.driver-overlay {
+  background: rgb(15 23 42 / 0.55) !important; /* slate-900 / 55% */
+}

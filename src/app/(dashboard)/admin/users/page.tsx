@@ -3,7 +3,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { userRepository } from "@/repositories/user.repository";
 import type { UserSortOption } from "@/repositories/user.repository";
 import AdminUsersList from "./AdminUsersList";
-import PageGuide from "@/components/shared/PageGuide";
+import TourGuide from "@/components/shared/TourGuide";
 import { Users } from "lucide-react";
 import type { IUser } from "@/types";
 
@@ -78,7 +78,7 @@ export default async function AdminUsersPage({
           <p className="text-xs text-slate-500 dark:text-slate-400">{total.toLocaleString()} user{total !== 1 ? "s" : ""} in current filter</p>
         </div>
       </div>
-      <PageGuide
+      <TourGuide
         pageKey="admin-users"
         title="How User Management works"
         steps={[

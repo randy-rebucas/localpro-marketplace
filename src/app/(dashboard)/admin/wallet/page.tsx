@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import type { IWalletWithdrawal, IUser, WalletWithdrawalStatus } from "@/types";
 import WithdrawalActions from "./_components/WithdrawalActions";
-import PageGuide from "@/components/shared/PageGuide";
+import TourGuide from "@/components/shared/TourGuide";
 
 export const metadata: Metadata = { title: "Wallet Withdrawals" };
 
@@ -126,7 +126,7 @@ export default async function AdminWalletPage() {
         </div>
       </div>
 
-      <PageGuide
+      <TourGuide
         pageKey="admin-wallet-withdrawals"
         title="How Wallet Withdrawals work"
         steps={[

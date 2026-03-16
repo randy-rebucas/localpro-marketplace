@@ -16,7 +16,7 @@ import {
   Users, ShieldAlert, ShieldCheck, TrendingUp, Activity,
   Briefcase, FileText, Flag, CreditCard, ChevronRight, LayoutDashboard,
 } from "lucide-react";
-import PageGuide from "@/components/shared/PageGuide";
+import TourGuide from "@/components/shared/TourGuide";
 import type { JobStatus } from "@/types";
 
 export const metadata: Metadata = { title: "Admin Dashboard" };
@@ -377,7 +377,7 @@ export default async function AdminDashboardPage() {
         </div>
       </div>
 
-      <PageGuide
+      <TourGuide
         pageKey="admin-dashboard"
         title="How the Admin Dashboard works"
         steps={[

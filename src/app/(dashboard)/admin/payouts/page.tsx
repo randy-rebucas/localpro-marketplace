@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import type { IPayout, IUser, PayoutStatus } from "@/types";
 import PayoutActions from "./PayoutActions";
-import PageGuide from "@/components/shared/PageGuide";
+import TourGuide from "@/components/shared/TourGuide";
 import AdminEscrowReleaseCard from "./AdminEscrowReleaseCard";
 
 export const metadata: Metadata = { title: "Manage Payouts" };
@@ -78,7 +78,7 @@ export default async function AdminPayoutsPage() {
         </div>
       </div>
 
-      <PageGuide
+      <TourGuide
         pageKey="admin-payouts"
         title="How Payouts & Payments works"
         steps={[

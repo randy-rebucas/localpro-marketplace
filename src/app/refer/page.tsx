@@ -6,6 +6,8 @@ import { connectDB } from "@/lib/db";
 import { loyaltyService } from "@/services/loyalty.service";
 import { loyaltyRepository } from "@/repositories/loyalty.repository";
 import ReferralClient from "./_components/ReferralClient";
+import PublicHeader from "@/components/layout/PublicHeader";
+import PublicFooter from "@/components/layout/PublicFooter";
 
 export const metadata: Metadata = {
   title: "Refer a Friend | LocalPro",
@@ -36,19 +38,7 @@ export default async function ReferPage() {
   return (
     <div className="min-h-screen bg-slate-50">
       {/* Header */}
-      <header className="bg-white border-b border-slate-200">
-        <div className="max-w-4xl mx-auto px-4 h-14 flex items-center justify-between">
-          <Link href="/" className="text-base font-bold text-primary tracking-tight">
-            LocalPro
-          </Link>
-          <Link
-            href="/client/dashboard"
-            className="text-sm text-slate-600 hover:text-slate-900 px-3 py-1.5 rounded-lg hover:bg-slate-100 transition-colors"
-          >
-            ← Dashboard
-          </Link>
-        </div>
-      </header>
+      <PublicHeader />
 
       <main className="max-w-4xl mx-auto px-4 py-10 space-y-8">
         {/* Hero */}
@@ -129,6 +119,7 @@ export default async function ReferPage() {
           </ol>
         </div>
       </main>
+      <PublicFooter />
     </div>
   );
 }

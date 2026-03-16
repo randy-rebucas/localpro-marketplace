@@ -13,7 +13,7 @@ interface ScopeResult {
 
 interface RawMessage {
   body: string;
-  senderId: { role?: string } | string;
+  senderId: { role?: string } | string | null;
   type?: string;
 }
 
@@ -23,7 +23,7 @@ interface Props {
 }
 
 function getSenderRole(msg: RawMessage): string {
-  if (typeof msg.senderId === "string") return "user";
+  if (!msg.senderId || typeof msg.senderId === "string") return "user";
   return msg.senderId?.role ?? "user";
 }
 

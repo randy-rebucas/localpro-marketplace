@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { getCurrentUser } from "@/lib/auth";
 import { getAllArticles } from "@/lib/knowledge";
 import KnowledgeAdminView from "./KnowledgeAdminView";
-import PageGuide from "@/components/shared/PageGuide";
+import TourGuide from "@/components/shared/TourGuide";
 import { BookOpen } from "lucide-react";
 
 export const metadata: Metadata = { title: "Knowledge Base" };
@@ -34,7 +34,7 @@ export default async function AdminKnowledgePage() {
 
   return (
     <div className="space-y-5">
-      <PageGuide
+      <TourGuide
         pageKey="admin-knowledge"
         title="How the Knowledge Base works"
         steps={[

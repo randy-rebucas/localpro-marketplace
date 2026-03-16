@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Suspense } from "react";
 import RealtimeRefresher from "@/components/shared/RealtimeRefresher";
-import PageGuide from "@/components/shared/PageGuide";
+import TourGuide from "@/components/shared/TourGuide";
 import { ConsultationsData } from "./_components/ConsultationsData";
 import { ConsultationsSkeleton } from "./_components/skeletons";
 
@@ -16,7 +16,7 @@ export default async function ClientConsultationsPage() {
 
   return (
     <div className="space-y-6">
-      <PageGuide
+      <TourGuide
         pageKey="client-consultations"
         title="How Consultation Requests work"
         steps={[

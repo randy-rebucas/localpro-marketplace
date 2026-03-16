@@ -1,7 +1,8 @@
 import React from "react";
 import Link from "next/link";
-import { MapPin } from "lucide-react";
 import type { Metadata } from "next";
+import PublicHeader from "@/components/layout/PublicHeader";
+import PublicFooter from "@/components/layout/PublicFooter";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://www.localpro.asia";
 
@@ -33,25 +34,7 @@ export default function RefundPolicyPage() {
   return (
     <div className="min-h-screen bg-white">
       {/* Nav */}
-      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur border-b border-slate-200">
-        <div className="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
-            <MapPin className="w-5 h-5 text-primary" />
-            <span className="text-lg font-bold">
-              <span className="text-primary">Local</span>
-              <span className="text-brand">Pro</span>
-            </span>
-          </Link>
-          <nav className="flex items-center gap-3 text-sm">
-            <Link href="/login" className="font-medium text-slate-600 hover:text-slate-900 transition-colors">
-              Log in
-            </Link>
-            <Link href="/register" className="btn-primary text-sm">
-              Get started
-            </Link>
-          </nav>
-        </div>
-      </header>
+      <PublicHeader />
 
       {/* Content */}
       <main className="max-w-3xl mx-auto px-4 py-16">
@@ -185,27 +168,7 @@ export default function RefundPolicyPage() {
       </main>
 
       {/* Footer */}
-      <footer className="bg-slate-900 text-slate-400 py-8 px-4 mt-8">
-        <div className="max-w-4xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center">
-              <span className="text-white font-bold text-xs leading-none">LP</span>
-            </div>
-            <span className="text-sm font-bold">
-              <span className="text-primary-300">Local</span>
-              <span className="text-brand-400">Pro</span>
-            </span>
-          </div>
-          <div className="flex flex-wrap items-center justify-center gap-4 text-sm">
-            {LEGAL_LINKS.map((l) => (
-              <Link key={l.href} href={l.href} className="hover:text-white transition-colors">
-                {l.label}
-              </Link>
-            ))}
-          </div>
-          <p className="text-xs">© {new Date().getFullYear()} LocalPro. All rights reserved.</p>
-        </div>
-      </footer>
+      <PublicFooter />
     </div>
   );
 }

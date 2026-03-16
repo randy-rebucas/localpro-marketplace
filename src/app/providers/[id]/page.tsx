@@ -5,6 +5,8 @@ import { providerProfileService } from "@/services";
 import { PublicProfileSkeleton } from "./_components/skeletons";
 import PublicProfileContent from "./_components/PublicProfileContent";
 import { ShareButtons } from "@/app/jobs/[id]/ShareButtons";
+import PublicHeader from "@/components/layout/PublicHeader";
+import PublicFooter from "@/components/layout/PublicFooter";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://www.localpro.asia";
 
@@ -85,28 +87,8 @@ export default async function PublicProviderProfilePage({
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(providerSchema) }}
       />
-      {/* Minimal navbar */}
-      <header className="sticky top-0 z-50 bg-white border-b border-slate-200">
-        <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between gap-4">
-          <Link href="/" className="text-base font-bold text-primary tracking-tight">
-            LocalPro
-          </Link>
-          <div className="flex items-center gap-2">
-            <Link
-              href="/login"
-              className="text-sm text-slate-600 hover:text-slate-900 px-3 py-1.5 rounded-lg hover:bg-slate-100 transition-colors"
-            >
-              Log in
-            </Link>
-            <Link
-              href="/register"
-              className="text-sm font-semibold bg-primary text-white px-4 py-1.5 rounded-lg hover:bg-primary/90 transition-colors"
-            >
-              Sign up free
-            </Link>
-          </div>
-        </div>
-      </header>
+      {/* Header */}
+      <PublicHeader />
 
       <main className="max-w-5xl mx-auto px-4 py-5 sm:py-8">
         <Suspense fallback={<PublicProfileSkeleton />}>
@@ -122,16 +104,7 @@ export default async function PublicProviderProfilePage({
       </div>
 
       {/* Footer */}
-      <footer className="border-t border-slate-200 mt-0 py-6 sm:py-8">
-        <div className="max-w-5xl mx-auto px-4 text-center text-xs text-slate-400 space-y-1">
-          <p>© {new Date().getFullYear()} LocalPro. All rights reserved.</p>
-          <p>
-            <Link href="/privacy" className="hover:underline">Privacy</Link>
-            {" · "}
-            <Link href="/terms" className="hover:underline">Terms</Link>
-          </p>
-        </div>
-      </footer>
+      <PublicFooter />
     </div>
   );
 }

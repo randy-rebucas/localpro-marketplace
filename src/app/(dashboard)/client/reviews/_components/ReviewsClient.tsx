@@ -7,7 +7,7 @@ import Button from "@/components/ui/Button";
 import { apiFetch } from "@/lib/fetchClient";
 import { formatDate, formatCurrency } from "@/lib/utils";
 import type { IReview } from "@/types";
-import PageGuide from "@/components/shared/PageGuide";
+import TourGuide from "@/components/shared/TourGuide";
 import { Briefcase, User, Calendar, Star } from "lucide-react";
 
 const Modal = dynamic(() => import("@/components/ui/Modal"), { ssr: false });
@@ -77,7 +77,7 @@ export default function ReviewsClient({ initialJobs }: Props) {
 
   return (
     <div className="space-y-6">
-      <PageGuide
+      <TourGuide
         pageKey="client-reviews"
         title="How Reviews works"
         steps={[

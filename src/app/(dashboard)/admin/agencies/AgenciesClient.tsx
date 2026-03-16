@@ -33,7 +33,7 @@ interface Agency {
   planStatus: string;
   defaultWorkerSharePct: number;
   staff: { _id: string }[];
-  providerId: AgencyOwner;
+  providerId: AgencyOwner | null;
   createdAt: string;
 }
 
@@ -85,7 +85,7 @@ function EditModal({ agency, onClose, onSaved }: EditModalProps) {
   const [plan, setPlan]             = useState(agency.plan ?? "starter");
   const [planStatus, setPlanStatus] = useState(agency.planStatus ?? "active");
   const [workerPct, setWorkerPct]   = useState(String(agency.defaultWorkerSharePct ?? 60));
-  const [suspend, setSuspend]       = useState(agency.providerId.isSuspended);
+  const [suspend, setSuspend]       = useState(agency.providerId?.isSuspended ?? false);
   const [saving, setSaving]         = useState(false);
 
   useEffect(() => {
@@ -139,7 +139,7 @@ function EditModal({ agency, onClose, onSaved }: EditModalProps) {
             )}
             <div className="min-w-0">
               <h3 className="font-semibold text-slate-900 dark:text-white truncate">{agency.name}</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{agency.providerId.email}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{agency.providerId?.email}</p>
             </div>
           </div>
           <button onClick={onClose} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-600 dark:hover:text-slate-300 transition-colors shrink-0">

@@ -13,7 +13,7 @@ interface RawMessage {
   _id: string;
   body: string;
   createdAt: string;
-  senderId: { _id: string; name: string; role: string } | string;
+  senderId: { _id: string; name: string; role: string } | string | null;
   readAt?: string | null;
   type?: string;
   fileUrl?: string;
@@ -207,13 +207,13 @@ export default function ChatWindow({
   }, [attachUrl]);
 
   const getSenderId = (msg: RawMessage) =>
-    typeof msg.senderId === "string" ? msg.senderId : msg.senderId._id;
+    !msg.senderId || typeof msg.senderId === "string" ? (msg.senderId ?? "") : msg.senderId._id;
 
   const getSenderName = (msg: RawMessage) =>
-    typeof msg.senderId === "string" ? "Unknown" : msg.senderId.name;
+    !msg.senderId || typeof msg.senderId === "string" ? "Unknown" : msg.senderId.name;
 
   const getSenderRole = (msg: RawMessage) =>
-    typeof msg.senderId === "string" ? "" : msg.senderId.role;
+    !msg.senderId || typeof msg.senderId === "string" ? "" : msg.senderId.role;
 
   return (
     <div className="flex flex-col h-full bg-slate-50">
