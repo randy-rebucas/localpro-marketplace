@@ -2,6 +2,22 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+  Use a system font for the Philippine Peso sign (₱ U+20B1) so Next.js never
+  attempts to dynamically download a Google Font glyph for it, which causes a
+  "Failed to download dynamic font. Status: 400" error at runtime.
+*/
+@font-face {
+  font-family: 'Inter';
+  src: local('Arial'), local('Helvetica Neue'), local('sans-serif');
+  unicode-range: U+20B1;
+}
+@font-face {
+  font-family: 'Outfit';
+  src: local('Arial'), local('Helvetica Neue'), local('sans-serif');
+  unicode-range: U+20B1;
+}
+
 @keyframes msgFadeIn {
   from { opacity: 0; transform: translateY(6px); }
   to   { opacity: 1; transform: translateY(0);   }
