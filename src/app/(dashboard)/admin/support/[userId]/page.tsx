@@ -17,7 +17,7 @@ export default async function AdminSupportThreadPage({
 
   const targetUser = await userRepository.findById(userId);
 
-  const serialized = targetUser
+  const serialized = targetUser?._id
     ? {
         _id: targetUser._id.toString(),
         name: targetUser.name,
