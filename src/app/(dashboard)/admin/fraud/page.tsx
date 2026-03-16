@@ -57,19 +57,21 @@ export default async function AdminFraudPage() {
   ]);
 
   // Serialize for the client component
-  const serializedJobs = flaggedJobs.map((j) => ({
-    id:          j._id.toString(),
-    title:       j.title,
-    category:    j.category,
-    budget:      j.budget,
-    status:      j.status,
-    riskScore:   j.riskScore,
-    fraudFlags:  j.fraudFlags ?? [],
-    clientId:    j.clientId._id.toString(),
-    clientName:  j.clientId.name,
-    clientEmail: j.clientId.email,
-    createdAt:   new Date(j.createdAt).toISOString(),
-  }));
+  const serializedJobs = flaggedJobs
+    .filter((j) => j.clientId != null)
+    .map((j) => ({
+      id:          j._id.toString(),
+      title:       j.title,
+      category:    j.category,
+      budget:      j.budget,
+      status:      j.status,
+      riskScore:   j.riskScore,
+      fraudFlags:  j.fraudFlags ?? [],
+      clientId:    j.clientId._id.toString(),
+      clientName:  j.clientId.name,
+      clientEmail: j.clientId.email,
+      createdAt:   new Date(j.createdAt).toISOString(),
+    }));
 
   const serializedUsers = suspiciousUsers.map((u) => ({
     id:             u._id.toString(),
