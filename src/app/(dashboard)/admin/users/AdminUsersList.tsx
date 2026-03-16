@@ -59,6 +59,8 @@ interface Props {
   providerFilters: ProviderFilters;
   /** Distinct skill values for the skill dropdown (populated only on Providers tab). */
   skillOptions: string[];
+  /** Provider profile data (skills, workExperiences, yearsExperience) keyed by userId string. */
+  providerProfiles: Record<string, { skills: string[]; workExperiences: string[]; yearsExperience: number }>;
 }
 
 // ─── Completeness helpers ─────────────────────────────────────────────────────
@@ -171,7 +173,7 @@ function pageNumbers(current: number, total: number): (number | "...")[] {
 export default function AdminUsersList({
   users, total, page, totalPages, limit, sort,
   roleFilter, kycFilter, searchQuery, approvalFilter, showSuspended, userStats, currentUserRole,
-  providerFilters, skillOptions,
+  providerFilters, skillOptions, providerProfiles,
 }: Props) {
   const isAdmin = currentUserRole === "admin";
   const router   = useRouter();
@@ -714,6 +716,40 @@ export default function AdminUsersList({
                         );
                       })()}
                     </div>
+
+                    {/* Skills + experience (providers only) */}
+                    {u.role === "provider" && (() => {
+                      const pp = providerProfiles[uid];
+                      if (!pp) return null;
+                      const { skills, workExperiences, yearsExperience } = pp;
+                      const hasSkills = skills.length > 0;
+                      const hasExp    = workExperiences.length > 0 || yearsExperience > 0;
+                      if (!hasSkills && !hasExp) return null;
+                      return (
+                        <div className="hidden xl:flex flex-col gap-1 justify-center min-w-0 w-56 flex-shrink-0">
+                          {hasSkills && (
+                            <div className="flex flex-wrap gap-1">
+                              {skills.slice(0, 4).map((s) => (
+                                <span key={s} className="inline-block px-1.5 py-0.5 rounded-md bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 text-[10px] font-medium">{s}</span>
+                              ))}
+                              {skills.length > 4 && (
+                                <span className="inline-block px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 text-[10px] font-medium">+{skills.length - 4}</span>
+                              )}
+                            </div>
+                          )}
+                          {hasExp && (
+                            <div className="flex flex-col gap-0.5">
+                              {yearsExperience > 0 && (
+                                <span className="text-[10px] text-slate-400 dark:text-slate-500">{yearsExperience} yr{yearsExperience !== 1 ? "s" : ""} experience</span>
+                              )}
+                              {workExperiences.slice(0, 2).map((we, i) => (
+                                <span key={i} className="text-[10px] text-slate-400 dark:text-slate-500 truncate">{we}</span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
 
                   {/* ── Right group ───────────────────────────────────── */}

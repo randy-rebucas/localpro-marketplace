@@ -113,6 +113,23 @@ export default async function AdminUsersPage({
     addresses: (u.addresses ?? []).map((a) => ({ ...a, _id: a._id.toString() })),
   })) as unknown as IUser[];
 
+  // Fetch skills / work experience for provider users on this page
+  const providerUserIds = users
+    .filter((u) => u.role === "provider")
+    .map((u) => u._id.toString());
+
+  const providerProfileRows = providerUserIds.length > 0
+    ? await providerProfileRepository.findForExport(providerUserIds)
+    : [];
+
+  const providerProfiles: Record<string, { skills: string[]; workExperiences: string[]; yearsExperience: number }> =
+    Object.fromEntries(
+      providerProfileRows.map((p) => [
+        p.userId.toString(),
+        { skills: p.skills ?? [], workExperiences: p.workExperiences ?? [], yearsExperience: p.yearsExperience ?? 0 },
+      ])
+    );
+
   const totalPages = Math.ceil(total / limit);
 
   return (
@@ -158,6 +175,7 @@ export default async function AdminUsersPage({
           certified:    certifiedFilter,
         }}
         skillOptions={skillOptions}
+        providerProfiles={providerProfiles}
       />
     </div>
   );
