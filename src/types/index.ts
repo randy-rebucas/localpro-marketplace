@@ -92,6 +92,8 @@ export interface IUser {
   savedPaymentMethodLast4?: string | null;
   savedPaymentMethodBrand?: string | null;
   preferences?: IUserPreferences;
+  /** Last time the user made an authenticated request — used for online indicator. */
+  lastSeenAt?: Date | string | null;
   createdAt: Date;
   updatedAt: Date;
 }

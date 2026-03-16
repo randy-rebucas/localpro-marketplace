@@ -158,6 +158,8 @@ const UserSchema = new Schema<UserDocument>(
       }, { _id: false }),
       default: () => ({}),
     },
+    // Activity tracking — stamped on every authenticated request (throttled).
+    lastSeenAt: { type: Date, default: null, index: true },
   },
   {
     timestamps: true,

@@ -59,8 +59,8 @@ interface Props {
   providerFilters: ProviderFilters;
   /** Distinct skill values for the skill dropdown (populated only on Providers tab). */
   skillOptions: string[];
-  /** Provider profile data (skills, workExperiences, yearsExperience) keyed by userId string. */
-  providerProfiles: Record<string, { skills: string[]; workExperiences: string[]; yearsExperience: number }>;
+  /** Provider profile data (skills, workExperiences, yearsExperience, availabilityStatus) keyed by userId string. */
+  providerProfiles: Record<string, { skills: string[]; workExperiences: string[]; yearsExperience: number; availabilityStatus: string }>;
 }
 
 // ─── Completeness helpers ─────────────────────────────────────────────────────
@@ -128,6 +128,26 @@ const SORT_LABELS: Record<UserSortOption, string> = {
   oldest:    "Oldest first",
   name_asc:  "Name A → Z",
   name_desc: "Name Z → A",
+};
+
+/** Returns online presence info based on lastSeenAt. */
+function getPresence(lastSeenAt: Date | string | null | undefined): {
+  label: string;
+  dot: string;
+  pulse: boolean;
+} {
+  if (!lastSeenAt) return { label: "Never seen", dot: "bg-slate-300 dark:bg-slate-600", pulse: false };
+  const ms = Date.now() - new Date(lastSeenAt).getTime();
+  if (ms < 5 * 60 * 1000)        return { label: "Online now",       dot: "bg-emerald-500",                    pulse: true  };
+  if (ms < 60 * 60 * 1000)       return { label: "Active < 1h ago",  dot: "bg-emerald-400 dark:bg-emerald-500", pulse: false };
+  if (ms < 24 * 60 * 60 * 1000)  return { label: "Active today",     dot: "bg-amber-400",                      pulse: false };
+  return { label: "Inactive", dot: "bg-slate-300 dark:bg-slate-600", pulse: false };
+}
+
+const AVAIL_STYLE: Record<string, string> = {
+  available:   "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
+  busy:        "bg-amber-100   text-amber-700   dark:bg-amber-900/30   dark:text-amber-400",
+  unavailable: "bg-red-100     text-red-700     dark:bg-red-900/30     dark:text-red-400",
 };
 
 /** Very lenient phone validation — at least 7 digits present. */
@@ -682,10 +702,22 @@ export default function AdminUsersList({
                       aria-label={`Select ${u.name}`} />
 
                     {/* Avatar */}
-                    <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 overflow-hidden">
-                      {u.avatar
-                        ? <Image src={u.avatar} alt={u.name} width={36} height={36} className="object-cover w-full h-full" />
-                        : <span className="text-xs font-bold text-primary">{initials}</span>}
+                    <div className="relative w-9 h-9 flex-shrink-0">
+                      <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden">
+                        {u.avatar
+                          ? <Image src={u.avatar} alt={u.name} width={36} height={36} className="object-cover w-full h-full" />
+                          : <span className="text-xs font-bold text-primary">{initials}</span>}
+                      </div>
+                      {/* Online / activity presence dot */}
+                      {(() => {
+                        const p = getPresence(u.lastSeenAt);
+                        return (
+                          <span
+                            title={p.label}
+                            className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-white dark:border-slate-800 ${p.dot} ${p.pulse ? "animate-pulse" : ""}`}
+                          />
+                        );
+                      })()}
                     </div>
 
                     {/* Name + email + phone */}
@@ -721,12 +753,15 @@ export default function AdminUsersList({
                     {u.role === "provider" && (() => {
                       const pp = providerProfiles[uid];
                       if (!pp) return null;
-                      const { skills, workExperiences, yearsExperience } = pp;
+                      const { skills, workExperiences, yearsExperience, availabilityStatus } = pp;
                       const hasSkills = skills.length > 0;
                       const hasExp    = workExperiences.length > 0 || yearsExperience > 0;
-                      if (!hasSkills && !hasExp) return null;
                       return (
                         <div className="hidden xl:flex flex-col gap-1 justify-center min-w-0 w-56 flex-shrink-0">
+                          {/* Availability */}
+                          <span className={`self-start inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-semibold capitalize ${AVAIL_STYLE[availabilityStatus] ?? "bg-slate-100 text-slate-500"}`}>
+                            {availabilityStatus}
+                          </span>
                           {hasSkills && (
                             <div className="flex flex-wrap gap-1">
                               {skills.slice(0, 4).map((s) => (

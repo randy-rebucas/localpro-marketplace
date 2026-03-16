@@ -146,6 +146,23 @@ export async function getCurrentUser(): Promise<TokenPayload | null> {
       if (revokedAt && payload.iat && payload.iat <= revokedAt) return null;
     }
 
+    // ── Stamp lastSeenAt (throttled to once per 5 min via Redis) ─────────
+    void (async () => {
+      try {
+        if (redis && payload.userId) {
+          const seenKey = `seen:5m:${payload.userId}`;
+          const already = await redis.get(seenKey);
+          if (!already) {
+            await redis.set(seenKey, "1", { ex: 5 * 60 });
+            const { connectDB } = await import("@/lib/db");
+            const { default: User } = await import("@/models/User");
+            await connectDB();
+            await User.updateOne({ _id: payload.userId }, { $set: { lastSeenAt: new Date() } });
+          }
+        }
+      } catch { /* non-critical */ }
+    })();
+
     return payload;
   } catch {
     return null;
