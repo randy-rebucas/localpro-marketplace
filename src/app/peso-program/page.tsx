@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { CheckCircle2, Building2, Users, Briefcase, ArrowRight, Globe, ShieldCheck, BarChart3 } from "lucide-react";
+import PublicHeader from "@/components/layout/PublicHeader";
+import PublicFooter from "@/components/layout/PublicFooter";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://www.localpro.asia";
 
@@ -66,27 +68,7 @@ export default function PesoPage() {
       />
 
       {/* Header */}
-      <header className="bg-white border-b border-slate-200">
-        <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between gap-4">
-          <Link href="/" className="text-base font-bold text-primary tracking-tight">
-            LocalPro
-          </Link>
-          <div className="flex items-center gap-2">
-            <Link
-              href="/login"
-              className="text-sm text-slate-600 hover:text-slate-900 px-3 py-1.5 rounded-lg hover:bg-slate-100 transition-colors"
-            >
-              Log in
-            </Link>
-            <Link
-              href="/register"
-              className="text-sm font-semibold bg-primary text-white px-4 py-1.5 rounded-lg hover:bg-primary/90 transition-colors"
-            >
-              Register PESO Office
-            </Link>
-          </div>
-        </div>
-      </header>
+      <PublicHeader />
 
       {/* Hero */}
       <section className="bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 text-white py-20 px-4">
@@ -333,18 +315,7 @@ export default function PesoPage() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-slate-200 py-6">
-        <div className="max-w-5xl mx-auto px-4 text-center text-xs text-slate-400">
-          <p>© {new Date().getFullYear()} LocalPro. All rights reserved.</p>
-          <p className="mt-1">
-            <Link href="/privacy" className="hover:underline">Privacy Policy</Link>
-            {" · "}
-            <Link href="/terms" className="hover:underline">Terms of Service</Link>
-            {" · "}
-            <Link href="/jobs" className="hover:underline">Browse Jobs</Link>
-          </p>
-        </div>
-      </footer>
+      <PublicFooter />
     </div>
   );
 }

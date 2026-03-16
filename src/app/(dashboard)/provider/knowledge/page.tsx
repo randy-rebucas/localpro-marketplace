@@ -3,7 +3,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { getArticlesForFolder } from "@/lib/knowledge";
 import KnowledgeBase from "@/components/shared/KnowledgeBase";
-import PageGuide from "@/components/shared/PageGuide";
+import TourGuide from "@/components/shared/TourGuide";
 import { BookOpen } from "lucide-react";
 
 export const metadata: Metadata = { title: "Knowledge Base" };
@@ -21,7 +21,7 @@ export default async function ProviderKnowledgePage() {
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
-      <PageGuide
+      <TourGuide
         pageKey="provider-knowledge"
         title="Knowledge Base tips"
         steps={[

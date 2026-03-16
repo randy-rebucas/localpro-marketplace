@@ -3,7 +3,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import MaintenanceReminder from "@/components/shared/MaintenanceReminder";
 import { Suspense } from "react";
-import PageGuide from "@/components/shared/PageGuide";
+import TourGuide from "@/components/shared/TourGuide";
 import { DashboardKpis } from "./_components/DashboardKpis";
 import { RecentJobs } from "./_components/RecentJobs";
 import { LoyaltyWidget } from "./_components/LoyaltyWidget";
@@ -21,7 +21,7 @@ export default async function ClientDashboardPage() {
   return (
     <div className="space-y-6">
       {/* ── Onboarding guide ── */}
-      <PageGuide
+      <TourGuide
         pageKey="client-dashboard"
         title="How your Client Dashboard works"
         steps={[

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { getCurrentUser } from "@/lib/auth";
 import { ledgerService } from "@/services/ledger.service";
 import KpiCard from "@/components/ui/KpiCard";
-import PageGuide from "@/components/shared/PageGuide";
+import TourGuide from "@/components/shared/TourGuide";
 import { formatCurrency } from "@/lib/utils";
 import {
   TrendingUp,
@@ -69,7 +69,7 @@ export default async function AccountingPage() {
         </div>
       </div>
 
-      <PageGuide
+      <TourGuide
         pageKey="admin-accounting"
         title="How the Accounting Ledger works"
         steps={[

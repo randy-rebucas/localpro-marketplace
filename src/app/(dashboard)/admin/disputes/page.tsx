@@ -5,7 +5,7 @@ import { DisputeStatusBadge } from "@/components/ui/Badge";
 import { formatDate, formatCurrency } from "@/lib/utils";
 import DisputeActions from "./DisputeActions";
 import RealtimeRefresher from "@/components/shared/RealtimeRefresher";
-import PageGuide from "@/components/shared/PageGuide";
+import TourGuide from "@/components/shared/TourGuide";
 import { PhotoStrip } from "@/components/shared/JobPhotoGallery";
 import { AlertOctagon, Search, Lock } from "lucide-react";
 
@@ -88,7 +88,7 @@ export default async function AdminDisputesPage() {
         </div>
       </div>
 
-      <PageGuide
+      <TourGuide
         pageKey="admin-disputes"
         title="How Dispute Resolution works"
         steps={[

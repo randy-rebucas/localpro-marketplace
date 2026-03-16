@@ -3,7 +3,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import RealtimeRefresher from "@/components/shared/RealtimeRefresher";
-import PageGuide from "@/components/shared/PageGuide";
+import TourGuide from "@/components/shared/TourGuide";
 import { ProviderConsultationsData } from "./_components/ProviderConsultationsData";
 import { ConsultationsSkeleton } from "./_components/skeletons";
 
@@ -15,7 +15,7 @@ export default async function ProviderConsultationsPage() {
 
   return (
     <div className="space-y-6">
-      <PageGuide
+      <TourGuide
         pageKey="provider-consultations"
         title="How Consultation Requests work"
         steps={[

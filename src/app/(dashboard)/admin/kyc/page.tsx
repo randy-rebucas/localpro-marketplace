@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { getCurrentUser } from "@/lib/auth";
 import { userRepository } from "@/repositories/user.repository";
 import { providerProfileRepository } from "@/repositories/providerProfile.repository";
-import PageGuide from "@/components/shared/PageGuide";
+import TourGuide from "@/components/shared/TourGuide";
 import AdminKycClient from "./AdminKycClient";
 import { ShieldCheck } from "lucide-react";
 
@@ -72,7 +72,7 @@ export default async function AdminKycPage() {
         </div>
       </div>
 
-      <PageGuide
+      <TourGuide
         pageKey="admin-kyc"
         title="How KYC Review works"
         steps={[

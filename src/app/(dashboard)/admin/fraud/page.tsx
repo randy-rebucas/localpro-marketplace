@@ -3,7 +3,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { connectDB } from "@/lib/db";
 import { jobRepository } from "@/repositories";
 import User from "@/models/User";
-import PageGuide from "@/components/shared/PageGuide";
+import TourGuide from "@/components/shared/TourGuide";
 import RealtimeRefresher from "@/components/shared/RealtimeRefresher";
 import AdminFraudClient from "./AdminFraudClient";
 import { ShieldAlert } from "lucide-react";
@@ -101,14 +101,14 @@ export default async function AdminFraudPage() {
         </div>
       </div>
 
-      <PageGuide
+      <TourGuide
         pageKey="admin-fraud"
         title="How Fraud Monitoring works"
         steps={[
-          { icon: "🔍", title: "Automatic scanning",  description: "Every job submission is scanned for spam keywords, off-platform payment requests, phishing language, and suspicious patterns." },
-          { icon: "📊", title: "Risk scoring",        description: "Jobs receive a 0–100 composite risk score combining content signals, budget, category, schedule urgency, and client behaviour." },
-          { icon: "🚨", title: "Flagged items",       description: "Jobs with a score ≥ 50 or explicit fraud flags are surfaced here for admin review before they reach providers." },
-          { icon: "👤", title: "User risk profiles",  description: "Clients who repeatedly trigger fraud signals accumulate a flagged-job count and are shown here for account review." },
+          { icon: "🔍", title: "Automatic scanning",  element: "[data-tour='fraud-search']",  description: "Every job submission is scanned for spam keywords, off-platform payment requests, phishing language, and suspicious patterns." },
+          { icon: "📊", title: "Risk scoring",        element: "[data-tour='fraud-stats']",   description: "Jobs receive a 0–100 composite risk score combining content signals, budget, category, schedule urgency, and client behaviour." },
+          { icon: "🚨", title: "Flagged items",       element: "[data-tour='fraud-jobs']",    description: "Jobs with a score ≥ 50 or explicit fraud flags are surfaced here for admin review before they reach providers." },
+          { icon: "👤", title: "User risk profiles",  element: "[data-tour='fraud-users']",   description: "Clients who repeatedly trigger fraud signals accumulate a flagged-job count and are shown here for account review." },
         ]}
       />
 

@@ -4,7 +4,7 @@ import { connectDB } from "@/lib/db";
 import Category from "@/models/Category";
 import CategoriesManager from "./CategoriesManager";
 import type { ICategory } from "@/types";
-import PageGuide from "@/components/shared/PageGuide";
+import TourGuide from "@/components/shared/TourGuide";
 import { Tags } from "lucide-react";
 
 export const metadata: Metadata = { title: "Categories" };
@@ -24,7 +24,7 @@ export default async function AdminCategoriesPage() {
 
   return (
     <div className="space-y-5">
-      <PageGuide
+      <TourGuide
         pageKey="admin-categories"
         title="How Categories works"
         steps={[

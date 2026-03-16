@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { getCurrentUser } from "@/lib/auth";
 import { jobRepository } from "@/repositories/job.repository";
 import RealtimeRefresher from "@/components/shared/RealtimeRefresher";
-import PageGuide from "@/components/shared/PageGuide";
+import TourGuide from "@/components/shared/TourGuide";
 import AdminJobsClient, { type SerializedJob } from "./AdminJobsClient";
 import { Briefcase } from "lucide-react";
 
@@ -45,7 +45,7 @@ export default async function AdminJobsPage() {
         </div>
       </div>
 
-      <PageGuide
+      <TourGuide
         pageKey="admin-jobs"
         title="How Job Validation works"
         steps={[

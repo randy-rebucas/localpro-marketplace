@@ -8,7 +8,7 @@ import KpiCard from "@/components/ui/KpiCard";
 import { formatCurrency } from "@/lib/utils";
 import dynamic from "next/dynamic";
 import { CircleDollarSign, TrendingUp, Users, Briefcase } from "lucide-react";
-import PageGuide from "@/components/shared/PageGuide";
+import TourGuide from "@/components/shared/TourGuide";
 
 // Lazy-load Recharts bundle (~300 KB) — code-split so it's not in the initial JS bundle
 const RevenueLineChart = dynamic(
@@ -99,7 +99,7 @@ export default async function AdminRevenuePage() {
         </div>
       </div>
 
-      <PageGuide
+      <TourGuide
         pageKey="admin-revenue"
         title="How the Revenue Dashboard works"
         steps={[

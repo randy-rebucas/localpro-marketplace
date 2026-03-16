@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { Suspense } from "react";
-import PageGuide from "@/components/shared/PageGuide";
+import TourGuide from "@/components/shared/TourGuide";
 import { EscrowContent } from "./_components/EscrowContent";
 import { EscrowSkeleton } from "./_components/skeletons";
 
@@ -18,7 +18,7 @@ export default async function EscrowPage({ searchParams }: EscrowPageProps) {
 
   return (
     <div className="space-y-6">
-      <PageGuide
+      <TourGuide
         pageKey="client-escrow"
         title="How Escrow works"
         steps={[

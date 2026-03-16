@@ -6,7 +6,7 @@ import toast from "react-hot-toast";
 import Button from "@/components/ui/Button";
 import Card, { CardBody, CardFooter } from "@/components/ui/Card";
 import { apiFetch } from "@/lib/fetchClient";
-import PageGuide from "@/components/shared/PageGuide";
+import TourGuide from "@/components/shared/TourGuide";
 import { Copy } from "lucide-react";
 import type { ICategory } from "@/types";
 import { trackJobPost } from "@/lib/analytics";
@@ -256,7 +256,7 @@ export default function PostJobClient({ categories, initialData }: Props) {
   // ── Render ────────────────────────────────────────────────────────────────────
   return (
     <div className="max-w-2xl mx-auto space-y-6">
-      <PageGuide
+      <TourGuide
         pageKey="client-post-job"
         title="How to post a job"
         steps={[

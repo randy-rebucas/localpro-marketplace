@@ -299,7 +299,7 @@ export default function AdminFraudClient({ flaggedJobs, suspiciousUsers }: Props
     <div className="space-y-6">
 
       {/* ── Stats (clickable as quick-filters) ──────────────────────────────── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div data-tour="fraud-stats" className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <StatCard
           icon={<ShieldAlert className="h-5 w-5 text-red-500" />}
           label="Critical Jobs" value={nCritical} color="red"
@@ -325,7 +325,7 @@ export default function AdminFraudClient({ flaggedJobs, suspiciousUsers }: Props
       </div>
 
       {/* ── Search + sort ────────────────────────────────────────────────────── */}
-      <div className="flex flex-col sm:flex-row gap-3">
+      <div data-tour="fraud-search" className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
           <input
@@ -353,7 +353,7 @@ export default function AdminFraudClient({ flaggedJobs, suspiciousUsers }: Props
       </div>
 
       {/* ── Flagged Jobs ─────────────────────────────────────────────────────── */}
-      <section>
+      <section data-tour="fraud-jobs">
         <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
           <div className="flex items-center gap-2">
             <Briefcase className="h-4 w-4 text-slate-500 dark:text-slate-400" />
@@ -387,7 +387,7 @@ export default function AdminFraudClient({ flaggedJobs, suspiciousUsers }: Props
       </section>
 
       {/* ── Suspicious Users (collapsible) ───────────────────────────────────── */}
-      <section>
+      <section data-tour="fraud-users">
         <button
           type="button"
           onClick={() => setUsersOpen((v) => !v)}

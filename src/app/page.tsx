@@ -12,6 +12,8 @@ import { CheckCircle, Briefcase, Star, Shield, ArrowRight, MapPin, Users, Trendi
 import Image from "next/image";
 import { Suspense } from "react";
 import { formatRelativeTime, formatPHP } from "@/lib/utils";
+import PublicHeader from "@/components/layout/PublicHeader";
+import PublicFooter from "@/components/layout/PublicFooter";
 
 // ── Async data sections (deferred behind Suspense) ────────────────────────────
 
@@ -565,23 +567,7 @@ export default async function RootPage() {
       />
 
       {/* ── Nav ── */}
-      <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-slate-200/80 shadow-sm">
-        <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2 shrink-0">
-            <MapPin className="w-5 h-5 text-primary" />
-            <span className="text-2xl font-bold">
-              <span className="text-primary">Local</span><span className="text-brand">Pro</span>
-            </span>
-          </Link>
-          <nav className="flex items-center gap-2">
-            <Link href="/jobs"       className="hidden sm:block text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors px-3 py-1.5 rounded-lg hover:bg-slate-100">Browse Jobs</Link>
-            <Link href="/providers"  className="hidden sm:block text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors px-3 py-1.5 rounded-lg hover:bg-slate-100">Providers</Link>
-            <Link href="/peso-program" className="hidden md:block text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors px-3 py-1.5 rounded-lg hover:bg-slate-100">PESO</Link>
-            <Link href="/login"    className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors px-3 py-1.5 rounded-lg hover:bg-slate-100">Log in</Link>
-            <Link href="/register" className="btn-primary text-sm shadow-sm">Get started →</Link>
-          </nav>
-        </div>
-      </header>
+      <PublicHeader />
 
       {/* ── Hero — no data dependency, streams instantly ── */}
       <section className="relative overflow-hidden bg-gradient-to-b from-slate-50 via-white to-white pt-14 pb-16 sm:pt-20 sm:pb-24 px-4">
@@ -863,60 +849,7 @@ export default async function RootPage() {
       </section>
 
       {/* ── Footer ── */}
-      <footer className="bg-slate-950 text-slate-400 py-10 sm:py-12 px-4">
-        <div className="max-w-6xl mx-auto">
-          <div className="flex flex-col md:flex-row items-start justify-between gap-8 sm:gap-10 mb-8 sm:mb-10">
-            <div className="flex flex-col gap-3 max-w-xs">
-              <div className="flex items-center gap-2">
-                <MapPin className="w-5 h-5 text-primary-300" />
-                <span className="text-base font-bold">
-                  <span className="text-primary-300">Local</span><span className="text-brand-400">Pro</span>
-                </span>
-              </div>
-              <p className="text-xs text-slate-500 leading-relaxed">
-                The trusted marketplace connecting Filipino clients with verified local service professionals.
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-x-10 sm:gap-x-16 gap-y-8">
-              <div>
-                <p className="text-xs font-semibold text-slate-300 uppercase tracking-wider mb-3">Platform</p>
-                <ul className="space-y-2 text-sm">
-                  <li><Link href="/register?role=client"   className="hover:text-white transition-colors">Post a Job</Link></li>
-                  <li><Link href="/register?role=provider" className="hover:text-white transition-colors">Become a Provider</Link></li>
-                  <li><Link href="/board"                  className="hover:text-white transition-colors">Job Board</Link></li>
-                  <li><Link href="/login"                  className="hover:text-white transition-colors">Log in</Link></li>
-                  <li><Link href="/register"               className="hover:text-white transition-colors">Sign up</Link></li>
-                </ul>
-              </div>
-              <div>
-                <p className="text-xs font-semibold text-slate-300 uppercase tracking-wider mb-3">Explore</p>
-                <ul className="space-y-2 text-sm">
-                  <li><Link href="/jobs"          className="hover:text-white transition-colors">Browse Jobs</Link></li>
-                  <li><Link href="/providers"     className="hover:text-white transition-colors">Browse Providers</Link></li>
-                  <li><Link href="/refer"         className="hover:text-white transition-colors">Refer &amp; Earn</Link></li>
-                  <li><Link href="/peso-program"  className="hover:text-white transition-colors">PESO Partnership</Link></li>
-                </ul>
-              </div>
-              <div>
-                <p className="text-xs font-semibold text-slate-300 uppercase tracking-wider mb-3">Legal</p>
-                <ul className="space-y-2 text-sm">
-                  <li><Link href="/privacy"            className="hover:text-white transition-colors">Privacy Policy</Link></li>
-                  <li><Link href="/terms"              className="hover:text-white transition-colors">Terms of Service</Link></li>
-                  <li><Link href="/provider-agreement" className="hover:text-white transition-colors">Provider Agreement</Link></li>
-                  <li><Link href="/client-agreement"   className="hover:text-white transition-colors">Client Agreement</Link></li>
-                  <li><Link href="/escrow-policy"      className="hover:text-white transition-colors">Escrow Policy</Link></li>
-                  <li><Link href="/refund-policy"      className="hover:text-white transition-colors">Refund Policy</Link></li>
-                  <li><Link href="/dispute-resolution" className="hover:text-white transition-colors">Dispute Resolution</Link></li>
-                </ul>
-              </div>
-            </div>
-          </div>
-          <div className="border-t border-slate-800 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-600">
-            <p>© {new Date().getFullYear()} LocalPro. All rights reserved.</p>
-            <p>Made with ❤️ in the Philippines</p>
-          </div>
-        </div>
-      </footer>
+      <PublicFooter />
 
     </div>
   );

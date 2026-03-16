@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Suspense } from "react";
 import RealtimeRefresher from "@/components/shared/RealtimeRefresher";
-import PageGuide from "@/components/shared/PageGuide";
+import TourGuide from "@/components/shared/TourGuide";
 import { JobsData } from "./_components/JobsData";
 import { JobsSkeleton } from "./_components/skeletons";
 
@@ -16,7 +16,7 @@ export default async function ClientJobsPage() {
 
   return (
     <div className="space-y-6">
-      <PageGuide
+      <TourGuide
         pageKey="client-jobs"
         title="How My Jobs works"
         steps={[

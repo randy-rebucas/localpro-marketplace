@@ -4,6 +4,8 @@ import { connectDB } from "@/lib/db";
 import User from "@/models/User";
 import ProviderProfile from "@/models/ProviderProfile";
 import { Star, MapPin, Briefcase, Search, ArrowRight, CheckCircle2 } from "lucide-react";
+import PublicHeader from "@/components/layout/PublicHeader";
+import PublicFooter from "@/components/layout/PublicFooter";
 
 export const metadata: Metadata = {
   title: "Browse Service Providers | LocalPro",
@@ -151,27 +153,7 @@ export default async function PublicProvidersPage({
       />
 
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-white border-b border-slate-200">
-        <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between gap-4">
-          <Link href="/" className="text-base font-bold text-primary tracking-tight">
-            LocalPro
-          </Link>
-          <div className="flex items-center gap-2">
-            <Link
-              href="/login"
-              className="text-sm text-slate-600 hover:text-slate-900 px-3 py-1.5 rounded-lg hover:bg-slate-100 transition-colors"
-            >
-              Log in
-            </Link>
-            <Link
-              href="/register?role=client"
-              className="text-sm font-semibold bg-primary text-white px-4 py-1.5 rounded-lg hover:bg-primary/90 transition-colors"
-            >
-              Post a Job
-            </Link>
-          </div>
-        </div>
-      </header>
+      <PublicHeader />
 
       {/* Hero */}
       <section className="bg-gradient-to-br from-slate-900 to-slate-800 text-white py-12 px-4">
@@ -373,18 +355,7 @@ export default async function PublicProvidersPage({
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-slate-200 py-6">
-        <div className="max-w-6xl mx-auto px-4 text-center text-xs text-slate-400">
-          <p>© {new Date().getFullYear()} LocalPro. All rights reserved.</p>
-          <p className="mt-1">
-            <Link href="/privacy" className="hover:underline">Privacy</Link>
-            {" · "}
-            <Link href="/terms" className="hover:underline">Terms</Link>
-            {" · "}
-            <Link href="/jobs" className="hover:underline">Browse Jobs</Link>
-          </p>
-        </div>
-      </footer>
+      <PublicFooter />
     </div>
   );
 }

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import { Headphones, Clock, ShieldCheck, AlertCircle, Lock, ArrowUpRight, Ticket, MessageCircle } from "lucide-react";
 import MyTickets from "@/components/shared/MyTickets";
-import PageGuide from "@/components/shared/PageGuide";
+import TourGuide from "@/components/shared/TourGuide";
 import { fetchClient } from "@/lib/fetchClient";
 import { hasPrioritySupportAccess, PLAN_LABELS, PLAN_UPGRADE_NEXT } from "@/lib/businessPlan";
 import type { IBusinessOrganization } from "@/types";
@@ -134,7 +134,7 @@ export default function SupportClient({ userId }: { userId: string }) {
 
       {tab === "tickets" && <MyTickets />}
       {tab === "chat" && <>
-      <PageGuide
+      <TourGuide
         pageKey="client-support"
         title="How Support works"
         steps={[
