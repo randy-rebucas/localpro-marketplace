@@ -1,9 +1,8 @@
 "use client";
 
-import { useMemo, useState, useRef, useCallback } from "react";
+import { useMemo, useState, useRef, useCallback, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Image from "next/image";
-import Link from "next/link";
 import toast from "react-hot-toast";
 import { apiFetch } from "@/lib/fetchClient";
 import { formatDate } from "@/lib/utils";
@@ -185,6 +184,12 @@ export default function AdminUsersList({
   // ── Search ─────────────────────────────────────────────────────────────
   const [searchDraft, setSearchDraft] = useState(searchQuery);
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Keep searchDraft in sync when the server updates searchQuery
+  // (e.g. after navigating to a new page or changing a filter)
+  useEffect(() => {
+    setSearchDraft(searchQuery);
+  }, [searchQuery]);
 
   /** Build a URL preserving all active filters, overriding any supplied overrides. */
   const buildUrl = useCallback(
@@ -776,28 +781,32 @@ export default function AdminUsersList({
             </div>
             <div className="flex gap-1 items-center">
               {page > 1 && (
-                <Link href={buildUrl({ page: page - 1 })}
+                <button
+                  onClick={() => router.push(buildUrl({ page: page - 1 }))}
                   className="px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors text-xs font-medium text-slate-600 dark:text-slate-300">
                   ← Prev
-                </Link>
+                </button>
               )}
               {pagination.map((p, i) =>
                 p === "..." ? (
                   <span key={`ellipsis-${i}`} className="px-1.5 text-slate-400 dark:text-slate-500 text-xs">…</span>
                 ) : (
-                  <Link key={p} href={buildUrl({ page: p })}
+                  <button
+                    key={p}
+                    onClick={() => router.push(buildUrl({ page: p }))}
                     className={`w-8 h-8 flex items-center justify-center rounded-lg text-xs font-medium transition-colors ${
                       p === page ? "bg-primary text-white" : "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600"
                     }`}>
                     {p}
-                  </Link>
+                  </button>
                 )
               )}
               {page < totalPages && (
-                <Link href={buildUrl({ page: page + 1 })}
+                <button
+                  onClick={() => router.push(buildUrl({ page: page + 1 }))}
                   className="px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors text-xs font-medium text-slate-600 dark:text-slate-300">
                   Next →
-                </Link>
+                </button>
               )}
             </div>
           </div>

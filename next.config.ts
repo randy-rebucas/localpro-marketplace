@@ -47,6 +47,12 @@ const nextConfig: NextConfig = {
     optimizePackageImports: ["lucide-react", "recharts"],
     // NOTE: PPR (cacheComponents) conflicts with `export const dynamic = "force-dynamic"` on SSE routes.
     // Streaming via <Suspense> already provides the main performance benefit without enabling this flag.
+
+    // Disable the client-side Router Cache for dynamic routes so that paginated
+    // admin pages always serve fresh data on navigation.
+    staleTimes: {
+      dynamic: 0,
+    },
   },
 
   async headers() {

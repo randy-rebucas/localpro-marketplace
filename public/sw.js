@@ -1,5 +1,5 @@
 // LocalPro Service Worker — push notifications + navigation caching
-const CACHE_NAME = "localpro-v1";
+const CACHE_NAME = "localpro-v2";
 
 // ─── Install: cache offline fallback ────────────────────────────────────────
 self.addEventListener("install", (event) => {
@@ -11,7 +11,15 @@ self.addEventListener("install", (event) => {
         // /offline page may not exist yet — skip silently
       })
   );
-  self.skipWaiting();
+  // Do NOT auto-skipWaiting — the new worker waits until the user confirms
+  // the update via the in-app banner (SKIP_WAITING message below).
+});
+
+// ─── Message: allow client to trigger skip-waiting ───────────────────────────
+self.addEventListener("message", (event) => {
+  if (event.data?.type === "SKIP_WAITING") {
+    self.skipWaiting();
+  }
 });
 
 // ─── Activate: purge old caches ─────────────────────────────────────────────
