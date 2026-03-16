@@ -1,5 +1,6 @@
 import { getCurrentUser } from "@/lib/auth";
 import { redirect } from "next/navigation";
+import { connectDB } from "@/lib/db";
 import { supportService } from "@/services/support.service";
 import AdminSupportShell from "./AdminSupportShell";
 import type { SupportThread } from "./AdminSupportShell";
@@ -12,6 +13,7 @@ export default async function AdminSupportLayout({
   const user = await getCurrentUser();
   if (!user || (user.role !== "admin" && user.role !== "staff")) redirect("/login");
 
+  await connectDB();
   const raw = await supportService.listThreads();
 
   const threads: SupportThread[] = raw.map((t) => {

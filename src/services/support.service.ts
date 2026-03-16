@@ -7,6 +7,7 @@ import {
 import { maskContactInfo } from "@/lib/contactFilter";
 import { NotFoundError } from "@/lib/errors";
 import type { TokenPayload } from "@/lib/auth";
+import Message from "@/models/Message";
 
 export class SupportService {
   // ─── User side ────────────────────────────────────────────────────────────
@@ -33,16 +34,17 @@ export class SupportService {
       body: maskContactInfo(body.trim()),
     });
 
-    // Populate senderId so UI can show name
-    const populated = await messageRepository.findSupportThread(user.userId, 1)
-      .then((msgs) => msgs[msgs.length - 1] ?? message);
+    // Populate before pushing so real-time listeners receive name/role on senderId
+    const populated = await Message.findById(message._id)
+      .populate("senderId", "name role")
+      .populate("receiverId", "name role")
+      .lean();
 
-    // Push to both buses so the admin inbox updates and any open thread refreshes
-    const payload = { ...message, __support: true };
+    const payload = { ...(populated ?? message), __support: true };
     pushSupportToAdmin({ userId: user.userId, message: payload });
     pushSupportToUser(user.userId, payload);
 
-    return populated;
+    return populated ?? message;
   }
 
   // ─── Admin side ───────────────────────────────────────────────────────────
@@ -69,7 +71,13 @@ export class SupportService {
       body: maskContactInfo(body.trim()),
     });
 
-    const payload = { ...message, __support: true };
+    // Populate before pushing so real-time listeners receive name/role on senderId
+    const populated = await Message.findById(message._id)
+      .populate("senderId", "name role")
+      .populate("receiverId", "name role")
+      .lean();
+
+    const payload = { ...(populated ?? message), __support: true };
     // User sees the reply in their support chat
     pushSupportToUser(targetUserId, payload);
     // Admin inbox also updates
@@ -85,7 +93,7 @@ export class SupportService {
     });
     pushNotification(targetUserId, notification);
 
-    return message;
+    return populated ?? message;
   }
 
   /** List all support threads for the admin inbox. */

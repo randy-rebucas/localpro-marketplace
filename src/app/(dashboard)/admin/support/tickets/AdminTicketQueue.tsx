@@ -55,22 +55,26 @@ export default function AdminTicketQueue() {
   const [tickets, setTickets]   = useState<AdminTicket[]>([]);
   const [total, setTotal]       = useState(0);
   const [isLoading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+  const [updateError, setUpdateError] = useState<string | null>(null);
   const [statusFilter, setStatus]   = useState<TicketStatus | "all">("all");
   const [priorityFilter, setPriority] = useState<TicketPriority | "all">("all");
   const [updating, setUpdating] = useState<string | null>(null);
 
   const fetchTickets = useCallback(async () => {
     setLoading(true);
+    setFetchError(null);
     try {
       const params = new URLSearchParams();
       if (statusFilter   !== "all") params.set("status",   statusFilter);
       if (priorityFilter !== "all") params.set("priority", priorityFilter);
       const res  = await apiFetch(`/api/admin/support/tickets?${params.toString()}`);
+      if (!res.ok) throw new Error(`Server error: ${res.status}`);
       const data = await res.json() as { tickets: AdminTicket[]; total: number };
       setTickets(data.tickets);
       setTotal(data.total);
-    } catch {
-      // swallow
+    } catch (err) {
+      setFetchError(err instanceof Error ? err.message : "Failed to load tickets.");
     } finally {
       setLoading(false);
     }
@@ -80,16 +84,18 @@ export default function AdminTicketQueue() {
 
   async function updateStatus(ticketId: string, status: TicketStatus) {
     setUpdating(ticketId);
+    setUpdateError(null);
     try {
       const res  = await apiFetch("/api/admin/support/tickets", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ticketId, status }),
       });
+      if (!res.ok) throw new Error(`Server error: ${res.status}`);
       const data = await res.json() as { ticket: AdminTicket };
       setTickets((prev) => prev.map((t) => t._id === ticketId ? { ...t, ...data.ticket } : t));
-    } catch {
-      // swallow
+    } catch (err) {
+      setUpdateError(err instanceof Error ? err.message : "Failed to update status.");
     } finally {
       setUpdating(null);
     }
@@ -113,6 +119,20 @@ export default function AdminTicketQueue() {
           <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? "animate-spin" : ""}`} /> Refresh
         </button>
       </div>
+
+      {/* Error banners */}
+      {fetchError && (
+        <div className="rounded-xl border border-red-200 bg-red-50 dark:bg-red-900/20 dark:border-red-800 px-4 py-3 text-sm text-red-700 dark:text-red-300 flex items-center justify-between gap-2">
+          <span>{fetchError}</span>
+          <button onClick={fetchTickets} className="text-xs font-medium underline hover:no-underline">Retry</button>
+        </div>
+      )}
+      {updateError && (
+        <div className="rounded-xl border border-orange-200 bg-orange-50 dark:bg-orange-900/20 dark:border-orange-800 px-4 py-3 text-sm text-orange-700 dark:text-orange-300 flex items-center justify-between gap-2">
+          <span>{updateError}</span>
+          <button onClick={() => setUpdateError(null)} className="text-xs font-medium underline hover:no-underline">Dismiss</button>
+        </div>
+      )}
 
       {/* Filters */}
       <div className="flex flex-wrap gap-3">

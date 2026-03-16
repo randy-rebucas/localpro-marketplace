@@ -1,9 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { requireUser, requireCapability } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { connectDB } from "@/lib/db";
+import { ValidationError } from "@/lib/errors";
 import SupportTicket from "@/models/SupportTicket";
 import mongoose from "mongoose";
+
+const PatchSchema = z.object({
+  ticketId:   z.string().min(1),
+  status:     z.enum(["open", "in_progress", "resolved", "closed"]).optional(),
+  priority:   z.enum(["low", "normal", "high", "urgent"]).optional(),
+  assignedTo: z.string().optional(),
+});
 
 /**
  * GET /api/admin/support/tickets
@@ -52,11 +61,10 @@ export const PATCH = withHandler(async (req: NextRequest) => {
   await connectDB();
 
   const body = await req.json();
-  const { ticketId, status, priority, assignedTo } = body as Record<string, string>;
+  const parsed = PatchSchema.safeParse(body);
+  if (!parsed.success) throw new ValidationError(parsed.error.errors[0].message);
 
-  if (!ticketId) {
-    return NextResponse.json({ error: "ticketId required" }, { status: 400 });
-  }
+  const { ticketId, status, priority, assignedTo } = parsed.data;
 
   const update: Record<string, unknown> = {};
   if (status)     update.status     = status;
