@@ -192,7 +192,7 @@ export default function UserDetailView({ user, providerProfile, currentUserRole 
   const router = useRouter();
   const { items: completenessItems, pct } = getCompleteness(user);
   const c = completenessColor(pct);
-  const initials = user.name.split(" ").filter(Boolean).map((w: string) => w[0]).join("").slice(0, 2).toUpperCase() || "?";
+  const initials = (user.name ?? "").split(" ").filter(Boolean).map((w: string) => w[0]).join("").slice(0, 2).toUpperCase() || "?";
   const approvalStatus = user.approvalStatus ?? "approved";
   const kycStatus = user.kycStatus ?? "none";
   const userId = String(user._id);
@@ -344,8 +344,9 @@ export default function UserDetailView({ user, providerProfile, currentUserRole 
           )}
           <button
             onClick={handlePasswordReset}
-            disabled={loadingReset}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition-colors disabled:opacity-50"
+            disabled={loadingReset || !user.email}
+            title={!user.email ? "No email address on record" : undefined}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loadingReset ? <span className="h-3 w-3 rounded-full border-2 border-slate-400 border-t-transparent animate-spin" /> : <KeyRound size={13} />}
             Reset Password

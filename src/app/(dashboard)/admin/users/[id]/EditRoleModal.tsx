@@ -11,10 +11,13 @@ const ALL_CAPABILITIES = [
   { key: "manage_kyc",        label: "Manage KYC"        },
   { key: "manage_disputes",   label: "Manage Disputes"   },
   { key: "manage_users",      label: "Manage Users"      },
+  { key: "manage_agencies",   label: "Manage Agencies"   },
+  { key: "manage_businesses", label: "Manage Businesses" },
   { key: "view_revenue",      label: "View Revenue"      },
   { key: "manage_payouts",    label: "Manage Payouts"    },
   { key: "manage_categories", label: "Manage Categories" },
   { key: "manage_support",    label: "Manage Support"    },
+  { key: "manage_courses",    label: "Manage Courses"    },
 ] as const;
 
 type Role = "client" | "provider" | "admin" | "staff";

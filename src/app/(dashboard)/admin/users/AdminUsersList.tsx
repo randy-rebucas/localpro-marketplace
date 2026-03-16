@@ -17,10 +17,19 @@ import {
   CheckCircle2, XCircle, Clock, UserPlus, Upload, Download, Search, X,
   ShieldCheck, Ban, Trash2, CheckCheck, MessageSquare, ArrowUpDown,
   AlertTriangle, ShieldAlert, Users, UserX,
+  SlidersHorizontal, Star, Briefcase, BadgeCheck, Phone, MapPin,
 } from "lucide-react";
 
 type FilterRole = "all" | "client" | "provider" | "admin";
 type KycFilter  = "all" | "none" | "pending" | "approved" | "rejected";
+
+interface ProviderFilters {
+  skill:        string;
+  minRating:    number;
+  minJobs:      number;
+  availability: string;
+  certified:    boolean;
+}
 
 interface UserStats {
   suspended: number;
@@ -40,9 +49,17 @@ interface Props {
   kycFilter: KycFilter;
   /** Active keyword search, derived from the URL by the server component. */
   searchQuery: string;
+  /** Active approval status filter (empty string = no filter). */
+  approvalFilter: string;
+  /** When true, only suspended users are shown. */
+  showSuspended: boolean;
   userStats: UserStats;
   /** Role of the currently logged-in admin/staff user. */
   currentUserRole: string;
+  /** Active provider-specific filters. */
+  providerFilters: ProviderFilters;
+  /** Distinct skill values for the skill dropdown (populated only on Providers tab). */
+  skillOptions: string[];
 }
 
 // ─── Completeness helpers ─────────────────────────────────────────────────────
@@ -51,6 +68,7 @@ interface CompletenessItem { label: string; done: boolean }
 
 function getCompleteness(u: IUser): { items: CompletenessItem[]; pct: number } {
   const items: CompletenessItem[] = [
+    { label: "Email verified", done: u.isVerified },
     { label: "Profile photo",  done: !!u.avatar },
     { label: "KYC submitted",  done: !!u.kycStatus && u.kycStatus !== "none" },
     { label: "KYC approved",   done: u.kycStatus === "approved" },
@@ -111,6 +129,34 @@ const SORT_LABELS: Record<UserSortOption, string> = {
   name_desc: "Name Z → A",
 };
 
+/** Very lenient phone validation — at least 7 digits present. */
+function isValidPhone(phone: string | null | undefined): boolean {
+  if (!phone) return false;
+  return (phone.replace(/\D/g, "").length >= 7);
+}
+
+function PhoneCell({ phone }: { phone: string | null | undefined }) {
+  if (!phone) {
+    return (
+      <span className="inline-flex items-center gap-1 text-[11px] text-slate-300 dark:text-slate-600 italic">
+        <Phone size={10} />No phone
+      </span>
+    );
+  }
+  const valid = isValidPhone(phone);
+  return (
+    <span className={`inline-flex items-center gap-1 text-[11px] font-medium ${
+      valid
+        ? "text-emerald-600 dark:text-emerald-400"
+        : "text-amber-600 dark:text-amber-400"
+    }`}>
+      <Phone size={10} className="flex-shrink-0" />
+      {phone}
+      {!valid && <span className="text-[10px] opacity-70">(unverified)</span>}
+    </span>
+  );
+}
+
 // ─── Numbered pagination helper ───────────────────────────────────────────────
 
 function pageNumbers(current: number, total: number): (number | "...")[] {
@@ -125,7 +171,8 @@ function pageNumbers(current: number, total: number): (number | "...")[] {
 
 export default function AdminUsersList({
   users, total, page, totalPages, limit, sort,
-  roleFilter, kycFilter, searchQuery, userStats, currentUserRole,
+  roleFilter, kycFilter, searchQuery, approvalFilter, showSuspended, userStats, currentUserRole,
+  providerFilters, skillOptions,
 }: Props) {
   const isAdmin = currentUserRole === "admin";
   const router   = useRouter();
@@ -146,22 +193,40 @@ export default function AdminUsersList({
       const get = (key: string, fallback: string) =>
         key in overrides ? String(overrides[key] ?? "") : fallback;
 
-      const r   = get("role",   roleFilter  !== "all" ? roleFilter  : "");
-      const kyc = get("kyc",    kycFilter   !== "all" ? kycFilter   : "");
-      const s   = get("search", searchDraft.trim());
-      const srt = get("sort",   sort        !== "newest" ? sort     : "");
-      const lim = get("limit",  limit       !== 50   ? String(limit) : "");
-      const pg  = get("page",   "1");
+      const r    = get("role",      roleFilter  !== "all" ? roleFilter  : "");
+      const kyc  = get("kyc",       kycFilter   !== "all" ? kycFilter   : "");
+      const s    = get("search",    searchDraft.trim());
+      const srt  = get("sort",      sort        !== "newest" ? sort     : "");
+      const lim  = get("limit",     limit       !== 50   ? String(limit) : "");
+      const pg   = get("page",      "1");
+      const appr = get("approval",  approvalFilter ?? "");
+      const susp = get("suspended", showSuspended ? "true" : "");
 
-      if (r)   p.set("role",   r);
-      if (kyc) p.set("kyc",    kyc);
-      if (s)   p.set("search", s);
-      if (srt) p.set("sort",   srt);
-      if (lim) p.set("limit",  lim);
+      // Provider filters — only kept when the resolved role tab is "provider"
+      const nextRole = r;
+      const keepProviderFilters = nextRole === "provider";
+      const skill  = keepProviderFilters ? get("skill",        providerFilters.skill)        : "";
+      const minRat = keepProviderFilters ? get("minRating",    providerFilters.minRating > 0 ? String(providerFilters.minRating) : "")  : "";
+      const minJob = keepProviderFilters ? get("minJobs",      providerFilters.minJobs   > 0 ? String(providerFilters.minJobs)   : "")  : "";
+      const avail  = keepProviderFilters ? get("availability", providerFilters.availability) : "";
+      const cert   = keepProviderFilters ? get("certified",    providerFilters.certified ? "true" : "") : "";
+
+      if (r)      p.set("role",      r);
+      if (kyc)    p.set("kyc",       kyc);
+      if (s)      p.set("search",    s);
+      if (srt)    p.set("sort",      srt);
+      if (lim)    p.set("limit",     lim);
       if (pg !== "1") p.set("page", pg);
+      if (appr)   p.set("approval",  appr);
+      if (susp)   p.set("suspended", susp);
+      if (skill)  p.set("skill",       skill);
+      if (minRat) p.set("minRating",   minRat);
+      if (minJob) p.set("minJobs",     minJob);
+      if (avail)  p.set("availability", avail);
+      if (cert)   p.set("certified",   cert);
       return `${pathname}?${p.toString()}`;
     },
-    [pathname, roleFilter, kycFilter, sort, limit, searchDraft]
+    [pathname, roleFilter, kycFilter, sort, limit, searchDraft, approvalFilter, showSuspended, providerFilters]
   );
 
   const pushSearch = useCallback((val: string) => {
@@ -223,6 +288,14 @@ export default function AdminUsersList({
     [users]
   );
 
+  const providerFilterCount = useMemo(() => [
+    providerFilters.skill !== "",
+    providerFilters.minRating > 0,
+    providerFilters.minJobs > 0,
+    providerFilters.availability !== "",
+    providerFilters.certified,
+  ].filter(Boolean).length, [providerFilters]);
+
   const ROLE_TABS: { label: string; value: FilterRole }[] = [
     { label: "All",       value: "all"      },
     { label: "Clients",   value: "client"   },
@@ -256,8 +329,7 @@ export default function AdminUsersList({
           </div>
         </button>
         <button
-          onClick={() => router.push(buildUrl({ role: null, kyc: null, search: null, page: "1",
-            ...(roleFilter !== "provider" ? { role: "provider" } : {}) }))}
+          onClick={() => router.push(buildUrl({ role: "provider", approval: "pending_approval", kyc: null, search: null, suspended: null, page: "1" }))}
           className={`flex items-center gap-2.5 px-3 py-2 rounded-2xl border shadow-sm hover:border-amber-200 transition-colors text-left ${
             userStats.pendingProviders > 0 ? "border-amber-200 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-800" : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700"
           }`}
@@ -285,9 +357,9 @@ export default function AdminUsersList({
           </div>
         </button>
         <button
-          onClick={() => router.push(buildUrl({ role: null, kyc: null, search: null, page: "1" }))}
+          onClick={() => router.push(buildUrl({ suspended: showSuspended ? null : "true", role: null, kyc: null, search: null, approval: null, page: "1" }))}
           className={`flex items-center gap-2.5 px-3 py-2 rounded-2xl border shadow-sm hover:border-red-200 transition-colors text-left ${
-            userStats.suspended > 0 ? "border-red-200 bg-red-50 dark:bg-red-900/20 dark:border-red-800" : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700"
+            showSuspended || userStats.suspended > 0 ? "border-red-200 bg-red-50 dark:bg-red-900/20 dark:border-red-800" : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700"
           }`}
         >
           <UserX className={`h-4 w-4 flex-shrink-0 ${userStats.suspended > 0 ? "text-red-500" : "text-slate-300"}`} />
@@ -318,6 +390,11 @@ export default function AdminUsersList({
               {roleFilter === tab.value && (
                 <span className="ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-primary/10 text-primary">
                   {total}
+                </span>
+              )}
+              {tab.value === "provider" && providerFilterCount > 0 && roleFilter !== "provider" && (
+                <span className="ml-1 inline-flex items-center justify-center w-4 h-4 rounded-full bg-indigo-500 text-white text-[9px] font-bold">
+                  {providerFilterCount}
                 </span>
               )}
             </button>
@@ -358,8 +435,16 @@ export default function AdminUsersList({
 
           <a
             href={`/api/admin/users/export?${new URLSearchParams([
-              ...(roleFilter !== "all" ? [["role", roleFilter]] : []),
-              ...(searchDraft.trim()  ? [["search", searchDraft.trim()]] : []),
+              ...(roleFilter   !== "all" ? [["role",     roleFilter]]          : []),
+              ...(kycFilter    !== "all" ? [["kyc",      kycFilter]]           : []),
+              ...(approvalFilter        ? [["approval", approvalFilter]]       : []),
+              ...(showSuspended         ? [["suspended", "true"]]              : []),
+              ...(searchDraft.trim()    ? [["search",   searchDraft.trim()]]   : []),
+              ...(providerFilters.skill              ? [["skill",        providerFilters.skill]]                     : []),
+              ...(providerFilters.minRating > 0      ? [["minRating",    String(providerFilters.minRating)]]         : []),
+              ...(providerFilters.minJobs   > 0      ? [["minJobs",      String(providerFilters.minJobs)]]           : []),
+              ...(providerFilters.availability       ? [["availability", providerFilters.availability]]              : []),
+              ...(providerFilters.certified          ? [["certified",    "true"]]                                    : []),
             ]).toString()}`}
             download
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-600 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 hover:border-slate-300 transition-colors"
@@ -401,6 +486,95 @@ export default function AdminUsersList({
         ))}
       </div>
 
+      {/* ── Provider filters panel ───────────────────────────────────── */}
+      {roleFilter === "provider" && (
+        <div className="flex items-center gap-2 flex-wrap rounded-xl border border-indigo-100 dark:border-indigo-900/40 bg-indigo-50/50 dark:bg-indigo-950/20 px-4 py-3">
+          <SlidersHorizontal className="h-3.5 w-3.5 text-indigo-400 flex-shrink-0" />
+          <span className="text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 mr-1">Provider filters</span>
+
+          {/* Skill */}
+          <select
+            value={providerFilters.skill}
+            onChange={(e) => router.push(buildUrl({ skill: e.target.value || null, page: "1" }))}
+            className="px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-600 text-xs bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+          >
+            <option value="">All skills</option>
+            {skillOptions.map((s) => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
+
+          {/* Min rating */}
+          <div className="flex items-center gap-1">
+            <Star className="h-3 w-3 text-amber-400" />
+            <select
+              value={providerFilters.minRating > 0 ? String(providerFilters.minRating) : ""}
+              onChange={(e) => router.push(buildUrl({ minRating: e.target.value || null, page: "1" }))}
+              className="px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-600 text-xs bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+            >
+              <option value="">Any rating</option>
+              {["1", "2", "3", "4", "4.5"].map((v) => (
+                <option key={v} value={v}>≥ {v} ★</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Min completed jobs */}
+          <div className="flex items-center gap-1">
+            <Briefcase className="h-3 w-3 text-slate-400" />
+            <select
+              value={providerFilters.minJobs > 0 ? String(providerFilters.minJobs) : ""}
+              onChange={(e) => router.push(buildUrl({ minJobs: e.target.value || null, page: "1" }))}
+              className="px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-600 text-xs bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+            >
+              <option value="">Any jobs</option>
+              {["1", "5", "10", "25", "50", "100"].map((v) => (
+                <option key={v} value={v}>≥ {v} jobs</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Availability pills */}
+          {(["available", "busy", "unavailable"] as const).map((av) => (
+            <button
+              key={av}
+              onClick={() => router.push(buildUrl({ availability: providerFilters.availability === av ? null : av, page: "1" }))}
+              className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-all capitalize ${
+                providerFilters.availability === av
+                  ? av === "available" ? "bg-emerald-500 text-white border-emerald-500"
+                    : av === "busy"    ? "bg-amber-500  text-white border-amber-500"
+                    : "bg-slate-500 text-white border-slate-500"
+                  : "bg-white border-slate-200 text-slate-500 hover:border-slate-300 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-400"
+              }`}
+            >
+              {av}
+            </button>
+          ))}
+
+          {/* Certified-only toggle */}
+          <button
+            onClick={() => router.push(buildUrl({ certified: providerFilters.certified ? null : "true", page: "1" }))}
+            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border transition-all ${
+              providerFilters.certified
+                ? "bg-indigo-600 text-white border-indigo-600"
+                : "bg-white border-slate-200 text-slate-500 hover:border-slate-300 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-400"
+            }`}
+          >
+            <BadgeCheck className="h-3 w-3" />Certified only
+          </button>
+
+          {/* Clear all */}
+          {providerFilterCount > 0 && (
+            <button
+              onClick={() => router.push(buildUrl({ skill: null, minRating: null, minJobs: null, availability: null, certified: null, page: "1" }))}
+              className="ml-auto inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] text-indigo-600 dark:text-indigo-400 hover:underline"
+            >
+              <X className="h-3 w-3" />Clear filters ({providerFilterCount})
+            </button>
+          )}
+        </div>
+      )}
+
       {/* ── Pending approval banner ────────────────────────────────────── */}
       {pendingCount > 0 && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-center justify-between gap-2 text-amber-800 text-sm">
@@ -408,7 +582,7 @@ export default function AdminUsersList({
             <span className="font-semibold">{pendingCount}</span> provider{pendingCount !== 1 ? "s" : ""} on this page awaiting approval.
           </span>
           <button
-            onClick={() => router.push(buildUrl({ role: "provider", page: "1" }))}
+            onClick={() => router.push(buildUrl({ role: "provider", approval: "pending_approval", page: "1" }))}
             className="text-xs font-medium text-amber-700 hover:underline flex-shrink-0"
           >
             Show only pending →
@@ -476,7 +650,7 @@ export default function AdminUsersList({
         ) : (
           <ul className="flex flex-col gap-2 p-2">
             {users.map((u) => {
-              const initials = u.name.split(" ").filter(Boolean).map((w: string) => w[0]).join("").slice(0, 2).toUpperCase() || "?";
+              const initials = (u.name ?? "").split(" ").filter(Boolean).map((w: string) => w[0]).join("").slice(0, 2).toUpperCase() || "?";
               const approvalStatus = u.approvalStatus ?? "approved";
               const isPendingProvider = u.role === "provider" && approvalStatus === "pending_approval";
               const uid = u._id.toString();
@@ -493,56 +667,83 @@ export default function AdminUsersList({
                     isSelected ? "border-primary/40 bg-primary/5 dark:bg-primary/10" : "",
                   ].join(" ")}
                 >
-                  {/* Checkbox */}
-                  <input type="checkbox" checked={isSelected} onChange={() => toggleOne(uid)}
-                    className="rounded border-slate-300 text-primary focus:ring-primary/30 flex-shrink-0"
-                    aria-label={`Select ${u.name}`} />
+                  {/* ── Left group ────────────────────────────────────── */}
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    {/* Checkbox */}
+                    <input type="checkbox" checked={isSelected} onChange={() => toggleOne(uid)}
+                      className="rounded border-slate-300 text-primary focus:ring-primary/30 flex-shrink-0"
+                      aria-label={`Select ${u.name}`} />
 
-                  {/* Avatar */}
-                  <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 overflow-hidden">
-                    {u.avatar
-                      ? <Image src={u.avatar} alt={u.name} width={36} height={36} className="object-cover w-full h-full" />
-                      : <span className="text-xs font-bold text-primary">{initials}</span>}
-                  </div>
+                    {/* Avatar */}
+                    <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                      {u.avatar
+                        ? <Image src={u.avatar} alt={u.name} width={36} height={36} className="object-cover w-full h-full" />
+                        : <span className="text-xs font-bold text-primary">{initials}</span>}
+                    </div>
 
-                  {/* Name + email */}
-                  <div className="min-w-0 flex-1">
-                    <p className="font-semibold text-slate-900 dark:text-white text-sm truncate leading-tight">{u.name}</p>
-                    <p className="text-xs text-slate-400 dark:text-slate-500 truncate">{u.email}</p>
-                  </div>
+                    {/* Name + email + phone */}
+                    <div className="min-w-0 w-64 flex-shrink-0">
+                      <p className="font-semibold text-slate-900 dark:text-white text-sm truncate leading-tight">{u.name}</p>
+                      <p className="text-xs text-slate-400 dark:text-slate-500 truncate">{u.email}</p>
+                      <PhoneCell phone={u.phone} />
+                    </div>
 
-                  {/* Badges: role + status */}
-                  <div className="hidden sm:flex flex-wrap items-center gap-1.5 flex-shrink-0">
-                    <span className={`badge capitalize ${ROLE_COLOR[u.role] ?? "bg-slate-100 text-slate-600"}`}>{u.role}</span>
-                    {u.isSuspended
-                      ? <span className="badge bg-red-100 text-red-700 font-semibold">Suspended</span>
-                      : (
-                        <>
-                          {u.role === "provider" && (
-                            <span className={`badge capitalize ${APPROVAL_COLOR[approvalStatus] ?? "bg-slate-100 text-slate-500"}`}>
-                              {approvalStatus.replace(/_/g, " ")}
+                    {/* Address */}
+                    <div className="hidden lg:flex flex-col justify-center min-w-0 w-64 flex-shrink-0">
+                      {(() => {
+                        const addr = (u.addresses ?? []).find((a) => a.isDefault) ?? u.addresses?.[0];
+                        return addr ? (
+                          <>
+                            {addr.label && (
+                              <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500 truncate">{addr.label}</span>
+                            )}
+                            <span className="inline-flex items-center gap-1 text-[11px] text-slate-500 dark:text-slate-400">
+                              <MapPin size={10} className="flex-shrink-0 text-slate-300 dark:text-slate-600" />
+                              <span className="truncate">{addr.address}</span>
                             </span>
-                          )}
-                          <span className={u.isVerified ? "badge bg-green-100 text-green-700" : "badge bg-slate-100 text-slate-400"}>
-                            {u.isVerified ? "✓ Verified" : "Unverified"}
+                          </>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-[11px] text-slate-300 dark:text-slate-600 italic">
+                            <MapPin size={10} />No address
                           </span>
-                        </>
-                      )
-                    }
+                        );
+                      })()}
+                    </div>
                   </div>
 
-                  {/* Completeness */}
-                  <div className="hidden lg:block flex-shrink-0">
-                    <CompletenessCell u={u} />
-                  </div>
+                  {/* ── Right group ───────────────────────────────────── */}
+                  <div className="flex items-center gap-3 flex-shrink-0">
+                    {/* Badges: role + status */}
+                    <div className="hidden sm:flex flex-wrap items-center gap-1.5">
+                      <span className={`badge capitalize ${ROLE_COLOR[u.role] ?? "bg-slate-100 text-slate-600"}`}>{u.role}</span>
+                      {u.isSuspended
+                        ? <span className="badge bg-red-100 text-red-700 font-semibold">Suspended</span>
+                        : (
+                          <>
+                            {u.role === "provider" && (
+                              <span className={`badge capitalize ${APPROVAL_COLOR[approvalStatus] ?? "bg-slate-100 text-slate-500"}`}>
+                                {approvalStatus.replace(/_/g, " ")}
+                              </span>
+                            )}
+                            <span className={u.isVerified ? "badge bg-green-100 text-green-700" : "badge bg-slate-100 text-slate-400"}>
+                              {u.isVerified ? "✓ Verified" : "Unverified"}
+                            </span>
+                          </>
+                        )
+                      }
+                    </div>
 
-                  {/* Joined */}
-                  <div className="hidden md:flex items-center gap-1 text-xs text-slate-400 dark:text-slate-500 flex-shrink-0">
-                    <Clock size={11} className="flex-shrink-0" />{formatDate(u.createdAt)}
-                  </div>
+                    {/* Completeness */}
+                    <div className="hidden xl:block">
+                      <CompletenessCell u={u} />
+                    </div>
 
-                  {/* Actions dropdown */}
-                  <div className="flex-shrink-0">
+                    {/* Joined */}
+                    <div className="hidden md:flex items-center gap-1 text-xs text-slate-400 dark:text-slate-500">
+                      <Clock size={11} className="flex-shrink-0" />{formatDate(u.createdAt)}
+                    </div>
+
+                    {/* Actions dropdown */}
                     <UserActions
                       userId={uid} userName={u.name} role={u.role}
                       isVerified={u.isVerified} isSuspended={u.isSuspended}

@@ -111,6 +111,37 @@ export class ProviderProfileRepository extends BaseRepository<ProviderProfileDoc
       .select("userId skills workExperiences yearsExperience")
       .lean() as never;
   }
+
+  /** Return every distinct skill string across all provider profiles, sorted A→Z. */
+  async findDistinctSkills(): Promise<string[]> {
+    await this.connect();
+    const skills = await ProviderProfile.distinct("skills");
+    return (skills as string[]).filter(Boolean).sort((a, b) => a.localeCompare(b));
+  }
+
+  /**
+   * Return the userId strings of providers whose profile matches ALL supplied filters.
+   * Any filter left undefined / 0 / false is ignored.
+   */
+  async findUserIdsByFilters(filters: {
+    skill?: string;
+    minRating?: number;
+    minJobs?: number;
+    availability?: string;
+    certified?: boolean;
+  }): Promise<string[]> {
+    await this.connect();
+    const q: Record<string, unknown> = {};
+    if (filters.skill)                  q.skills             = filters.skill;
+    if ((filters.minRating ?? 0) > 0)   q.avgRating          = { $gte: filters.minRating };
+    if ((filters.minJobs   ?? 0) > 0)   q.completedJobCount  = { $gte: filters.minJobs };
+    if (filters.availability)           q.availabilityStatus = filters.availability;
+    if (filters.certified === true)     q.isLocalProCertified = true;
+    const docs = await ProviderProfile.find(q)
+      .select("userId")
+      .lean() as Array<{ userId: { toString(): string } }>;
+    return docs.map((d) => d.userId.toString());
+  }
 }
 
 export const providerProfileRepository = new ProviderProfileRepository();

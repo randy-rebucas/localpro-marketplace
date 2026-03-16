@@ -161,7 +161,13 @@ export default function ImportUsersModal({ onClose, onSuccess }: Props) {
         return;
       }
 
-      const parsed: ParsedRow[] = allRows.slice(1).map((cells, i) => {
+      const dataRows = allRows.slice(1);
+      if (dataRows.length > 500) {
+        toast.error(`CSV exceeds the 500-row limit (${dataRows.length} rows). Please split the file.`);
+        return;
+      }
+
+      const parsed: ParsedRow[] = dataRows.map((cells, i) => {
         const raw: Record<string, string> = {
           name:              cells[nameIdx]     ?? "",
           email:             cells[emailIdx]    ?? "",
