@@ -9,6 +9,7 @@ import {
   Clock,
   Award,
   ChevronRight,
+  PlayCircle,
   Loader2,
   Wallet,
   CreditCard,
@@ -109,9 +110,11 @@ export default function ProviderTrainingPage() {
     }
   }
 
-  const filtered = filter === "all" ? courses : courses.filter((c) => c.category === filter);
+  const filtered = (filter === "all" ? courses : courses.filter((c) => c.category === filter))
+    .filter((c) => !c.enrolled);
   const completedCount = courses.filter((c) => c.enrollmentStatus === "completed").length;
   const enrolledCount  = courses.filter((c) => c.enrolled).length;
+  const myCourses      = courses.filter((c) => c.enrolled);
 
   if (loading) {
     return (
@@ -147,6 +150,57 @@ export default function ProviderTrainingPage() {
         </div>
       )}
 
+      {/* My Courses — all enrolled */}
+      {myCourses.length > 0 && (
+        <div className="space-y-3">
+          <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+            <PlayCircle className="h-4 w-4 text-indigo-500" /> My Courses
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {myCourses.map((course) => {
+              const isCompleted = course.enrollmentStatus === "completed";
+              return (
+                <Link
+                  key={course._id}
+                  href={`/provider/training/${course._id}`}
+                  className={`flex items-center gap-3 border rounded-xl px-4 py-3 transition-colors group ${
+                    isCompleted
+                      ? "bg-emerald-50 border-emerald-200 hover:bg-emerald-100"
+                      : "bg-indigo-50 border-indigo-200 hover:bg-indigo-100"
+                  }`}
+                >
+                  <div className={`p-2 rounded-lg flex-shrink-0 transition-colors ${
+                    isCompleted
+                      ? "bg-emerald-100 group-hover:bg-emerald-200"
+                      : "bg-indigo-100 group-hover:bg-indigo-200"
+                  }`}>
+                    {isCompleted
+                      ? <Award className="h-4 w-4 text-emerald-600" />
+                      : <GraduationCap className="h-4 w-4 text-indigo-600" />}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className={`text-sm font-semibold leading-snug truncate ${isCompleted ? "text-emerald-800" : "text-indigo-800"}`}>
+                      {course.title}
+                    </p>
+                    <p className={`text-xs mt-0.5 flex items-center gap-1 ${isCompleted ? "text-emerald-600" : "text-indigo-500"}`}>
+                      {isCompleted ? (
+                        <><CheckCircle2 className="h-3 w-3" /> Completed</>
+                      ) : (
+                        <><BookOpen className="h-3 w-3" /> {course.lessons.length} lesson{course.lessons.length !== 1 ? "s" : ""}
+                          <span className="mx-1">·</span>
+                          <Clock className="h-3 w-3" /> {course.durationMinutes} min</>
+                      )}
+                    </p>
+                  </div>
+                  <ChevronRight className={`h-4 w-4 flex-shrink-0 ${isCompleted ? "text-emerald-400" : "text-indigo-400"}`} />
+                </Link>
+              );
+            })}
+          </div>
+          <hr className="border-slate-200" />
+        </div>
+      )}
+
       {/* Category filter */}
       <div className="flex flex-wrap gap-2">
         {(["all", "basic", "advanced", "safety", "custom"] as const).map((cat) => (
@@ -168,7 +222,7 @@ export default function ProviderTrainingPage() {
       {filtered.length === 0 ? (
         <div className="text-center py-12 text-slate-400">
           <BookOpen className="h-10 w-10 mx-auto mb-3 opacity-40" />
-          <p>No courses available yet.</p>
+          <p>{myCourses.length > 0 ? "You're enrolled in all available courses!" : "No courses available yet."}</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -208,9 +262,9 @@ export default function ProviderTrainingPage() {
                 ) : course.enrolled ? (
                   <Link
                     href={`/provider/training/${course._id}`}
-                    className="flex items-center gap-1 bg-indigo-50 text-indigo-700 text-xs font-semibold px-3 py-1.5 rounded-lg hover:bg-indigo-100 transition-colors"
+                    className="flex items-center gap-1 bg-indigo-600 text-white text-xs font-semibold px-3 py-1.5 rounded-lg hover:bg-indigo-700 transition-colors"
                   >
-                    Continue <ChevronRight className="h-3.5 w-3.5" />
+                    <PlayCircle className="h-3.5 w-3.5" /> Start Course
                   </Link>
                 ) : course.price === 0 ? (
                   <button

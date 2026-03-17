@@ -1,14 +1,18 @@
 "use client";
 
-import { useEffect, useState, use } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState, useCallback, use, useRef } from "react";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { marked } from "marked";
 import {
-  GraduationCap,
+  ArrowLeft,
+  BookOpen,
   CheckCircle2,
   Circle,
   Clock,
   Award,
-  ChevronLeft,
+  ChevronRight,
+  GraduationCap,
   Loader2,
   Lock,
 } from "lucide-react";
@@ -17,7 +21,7 @@ import toast from "react-hot-toast";
 interface Lesson {
   _id: string;
   title: string;
-  content?: string; // Only present when enrolled
+  content?: string;
   durationMinutes: number;
   order: number;
 }
@@ -26,6 +30,8 @@ interface Enrollment {
   _id: string;
   status: "enrolled" | "completed";
   completedLessons: string[];
+  completedAt?: string;
+  badgeGranted?: boolean;
 }
 
 interface Course {
@@ -33,83 +39,163 @@ interface Course {
   title: string;
   description: string;
   category: string;
-  badgeSlug: string;
+  price: number;
   durationMinutes: number;
+  badgeSlug: string;
   lessons: Lesson[];
   enrollment: Enrollment | null;
 }
 
+function renderMarkdown(src: string): string {
+  return marked.parse(src, { async: false }) as string;
+}
+
+function ProgressBar({ done, total }: { done: number; total: number }) {
+  const pct = total === 0 ? 0 : Math.round((done / total) * 100);
+  return (
+    <div className="space-y-1">
+      <div className="flex justify-between text-xs text-slate-500">
+        <span>{done} / {total} lessons completed</span>
+        <span className="font-semibold">{pct}%</span>
+      </div>
+      <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+        <div
+          className="h-full bg-indigo-500 rounded-full transition-all duration-500"
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
 export default function TrainingCoursePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const router = useRouter();
-  const [course, setCourse] = useState<Course | null>(null);
-  const [loading, setLoading]     = useState(true);
-  const [activeLesson, setActiveLesson] = useState<Lesson | null>(null);
-  const [marking, setMarking]     = useState<string | null>(null);
-  const [completing, setCompleting] = useState(false);
+  const searchParams = useSearchParams();
 
-  useEffect(() => {
-    void (async () => {
-      setLoading(true);
-      try {
-        const res = await fetch(`/api/provider/training/${id}`);
-        const data = await res.json() as { course: Course };
-        setCourse(data.course);
-        if (data.course?.lessons?.length > 0) {
-          setActiveLesson(data.course.lessons[0]);
-        }
-      } catch {
-        toast.error("Failed to load course.");
-      } finally {
-        setLoading(false);
-      }
-    })();
+  const [course, setCourse] = useState<Course | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [activeLesson, setActiveLesson] = useState<Lesson | null>(null);
+  const [marking, setMarking] = useState(false);
+  const [completing, setCompleting] = useState(false);
+  const [awaitingActivation, setAwaitingActivation] = useState(false);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const fetchCourse = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/provider/training/${id}`);
+      if (!res.ok) { toast.error("Course not found."); return; }
+      const data = await res.json() as { course: Course };
+      const c = data.course;
+      setCourse(c);
+      // Auto-select first incomplete lesson, or first lesson
+      const sorted = [...(c.lessons ?? [])].sort((a, b) => a.order - b.order);
+      const doneSet = new Set(c.enrollment?.completedLessons ?? []);
+      const firstIncomplete = sorted.find((l) => !doneSet.has(l._id));
+      setActiveLesson(firstIncomplete ?? sorted[0] ?? null);
+      return c;
+    } catch {
+      toast.error("Failed to load course.");
+      return null;
+    } finally {
+      setLoading(false);
+    }
   }, [id]);
 
-  async function markLessonDone(lessonId: string) {
-    if (!course?.enrollment) return;
-    setMarking(lessonId);
+  useEffect(() => { void fetchCourse(); }, [fetchCourse]);
+
+  // Handle ?payment=success / ?payment=cancelled from PayMongo redirect
+  useEffect(() => {
+    const payment = searchParams.get("payment");
+    if (!payment) return;
+
+    // Clean the URL without navigating away
+    const cleanUrl = window.location.pathname;
+    window.history.replaceState({}, "", cleanUrl);
+
+    if (payment === "cancelled") {
+      toast.error("Payment was cancelled. You can try again from the course catalog.");
+      return;
+    }
+
+    if (payment === "success") {
+      toast.success("Payment received! Setting up your enrollment…");
+      setAwaitingActivation(true);
+
+      // Poll every 3s up to 5 times waiting for webhook to activate enrollment
+      let attempts = 0;
+      pollRef.current = setInterval(async () => {
+        attempts += 1;
+        try {
+          const res = await fetch(`/api/provider/training/${id}`);
+          const data = await res.json() as { course: Course };
+          if (data.course?.enrollment) {
+            clearInterval(pollRef.current!);
+            pollRef.current = null;
+            setAwaitingActivation(false);
+            setCourse(data.course);
+            const sorted = [...(data.course.lessons ?? [])].sort((a, b) => a.order - b.order);
+            setActiveLesson(sorted[0] ?? null);
+            toast.success("Enrollment activated! You can now start learning.");
+            return;
+          }
+        } catch { /* ignore polling errors */ }
+        if (attempts >= 5) {
+          clearInterval(pollRef.current!);
+          pollRef.current = null;
+          setAwaitingActivation(false);
+          toast("Enrollment is being processed. Please refresh in a moment.", { icon: "⏳" });
+        }
+      }, 3000);
+    }
+
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);  // Run once on mount only
+
+  async function handleMarkComplete() {
+    if (!course?.enrollment || !activeLesson) return;
+    setMarking(true);
     try {
       const res = await fetch(
-        `/api/provider/training/enrollments/${course.enrollment._id}/lessons/${lessonId}/complete`,
+        `/api/provider/training/enrollments/${course.enrollment._id}/lessons/${activeLesson._id}/complete`,
         { method: "POST" }
       );
-      const data = await res.json() as { enrollment?: Enrollment; error?: string };
-      if (!res.ok) { toast.error(data.error ?? "Failed."); return; }
+      const data = await res.json() as { enrollment?: { completedLessons: string[] }; error?: string };
+      if (!res.ok) { toast.error(data.error ?? "Failed to mark complete."); return; }
+      const freshIds = data.enrollment?.completedLessons ?? [];
       setCourse((prev) =>
         prev
-          ? {
-              ...prev,
-              enrollment: data.enrollment
-                ? {
-                    ...prev.enrollment!,
-                    completedLessons: (data.enrollment as Enrollment).completedLessons,
-                  }
-                : prev.enrollment,
-            }
+          ? { ...prev, enrollment: prev.enrollment ? { ...prev.enrollment, completedLessons: freshIds } : prev.enrollment }
           : prev
       );
-      toast.success("Lesson marked complete!");
+      toast.success("Lesson completed!");
+      // Advance to next incomplete lesson
+      const updatedDone = new Set(freshIds);
+      const sorted = [...(course.lessons ?? [])].sort((a, b) => a.order - b.order);
+      const next = sorted.find((l) => l.order > activeLesson.order && !updatedDone.has(l._id));
+      if (next) setActiveLesson(next);
     } catch {
       toast.error("Something went wrong.");
     } finally {
-      setMarking(null);
+      setMarking(false);
     }
   }
 
   async function handleCompleteCourse() {
     if (!course?.enrollment) return;
-    if (!confirm("Mark this course as completed and earn your badge?")) return;
     setCompleting(true);
     try {
       const res = await fetch(
         `/api/provider/training/enrollments/${course.enrollment._id}/complete`,
         { method: "POST" }
       );
-      const data = await res.json() as { enrollment?: Enrollment; error?: string };
-      if (!res.ok) { toast.error(data.error ?? "Failed."); return; }
-      toast.success("🎓 Course completed! Badge granted.");
-      setTimeout(() => router.push("/provider/training"), 1500);
+      const data = await res.json() as { error?: string };
+      if (!res.ok) { toast.error(data.error ?? "Could not complete course."); return; }
+      toast.success("🎓 Course completed! Badge awarded.");
+      void fetchCourse();
     } catch {
       toast.error("Something went wrong.");
     } finally {
@@ -127,137 +213,221 @@ export default function TrainingCoursePage({ params }: { params: Promise<{ id: s
 
   if (!course) {
     return (
-      <div className="text-center py-16 text-slate-400">
-        <Lock className="h-10 w-10 mx-auto mb-3 opacity-40" />
-        <p>Course not found or not yet published.</p>
+      <div className="text-center py-20 text-slate-400">
+        <BookOpen className="h-10 w-10 mx-auto mb-3 opacity-40" />
+        <p>Course not found.</p>
+        <Link href="/provider/training" className="text-indigo-600 text-sm mt-2 inline-block hover:underline">
+          ← Back to courses
+        </Link>
       </div>
     );
   }
 
   const enrollment = course.enrollment;
   const completedSet = new Set(enrollment?.completedLessons ?? []);
-  const allDone = course.lessons.length > 0 && completedSet.size >= course.lessons.length;
+  const sortedLessons = [...course.lessons].sort((a, b) => a.order - b.order);
+  const doneCount = sortedLessons.filter((l) => completedSet.has(l._id)).length;
+  const allDone = sortedLessons.length > 0 && doneCount === sortedLessons.length;
+  const isEnrolled = !!enrollment;
+  const courseComplete = enrollment?.status === "completed";
+  const activeLessonDone = activeLesson ? completedSet.has(activeLesson._id) : false;
 
   return (
     <div className="space-y-4">
-      {/* Back + header */}
-      <button
-        onClick={() => router.back()}
-        className="flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700 transition-colors"
-      >
-        <ChevronLeft className="h-4 w-4" /> Back to Training
-      </button>
-
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-            <GraduationCap className="h-5 w-5 text-indigo-500" />
-            {course.title}
-          </h2>
-          <p className="text-sm text-slate-500 mt-1">{course.description}</p>
+      {/* Back + Title */}
+      <div>
+        <Link
+          href="/provider/training"
+          className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 mb-3 transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4" /> Back to Courses
+        </Link>
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-start gap-3 min-w-0">
+            <div className="p-2 bg-indigo-50 rounded-xl flex-shrink-0">
+              <GraduationCap className="h-5 w-5 text-indigo-600" />
+            </div>
+            <div className="min-w-0">
+              <h2 className="text-xl font-bold text-slate-900 leading-snug">{course.title}</h2>
+              <div className="flex flex-wrap items-center gap-3 mt-1 text-xs text-slate-500">
+                <span className="flex items-center gap-1"><BookOpen className="h-3.5 w-3.5" /> {sortedLessons.length} lessons</span>
+                <span className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> {course.durationMinutes} min</span>
+              </div>
+            </div>
+          </div>
+          {courseComplete && (
+            <span className="flex items-center gap-1.5 text-emerald-700 font-semibold text-xs bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-full whitespace-nowrap flex-shrink-0">
+              <Award className="h-4 w-4" /> Badge earned
+            </span>
+          )}
         </div>
-        {enrollment?.status === "completed" && (
-          <span className="flex items-center gap-1.5 text-emerald-600 font-semibold text-sm bg-emerald-50 px-3 py-1.5 rounded-full whitespace-nowrap">
-            <Award className="h-4 w-4" /> Badge earned
-          </span>
-        )}
       </div>
 
-      {!enrollment ? (
-        <div className="bg-amber-50 border border-amber-200 text-amber-700 px-4 py-3 rounded-lg text-sm">
-          You must enroll to access lesson content. Go back to the{" "}
-          <button onClick={() => router.push("/provider/training")} className="underline font-medium">
-            course catalog
-          </button>{" "}
-          to enroll.
+      {/* Progress bar */}
+      {isEnrolled && (
+        <div className="bg-white border border-slate-200 rounded-xl px-4 py-3">
+          <ProgressBar done={doneCount} total={sortedLessons.length} />
         </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Lesson sidebar */}
-          <div className="md:col-span-1 space-y-1">
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Lessons</p>
-            {course.lessons
-              .slice()
-              .sort((a, b) => a.order - b.order)
-              .map((lesson) => {
-                const done = completedSet.has(lesson._id);
-                return (
+      )}
+
+      {/* Activation pending banner */}
+      {awaitingActivation && (
+        <div className="bg-indigo-50 border border-indigo-200 rounded-xl px-4 py-3 flex items-center gap-3">
+          <Loader2 className="h-5 w-5 text-indigo-500 flex-shrink-0 animate-spin" />
+          <p className="text-sm text-indigo-800 font-medium">
+            Activating your enrollment… This usually takes a few seconds.
+          </p>
+        </div>
+      )}
+
+      {/* Not enrolled notice */}
+      {!isEnrolled && !awaitingActivation && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-center gap-3">
+          <Lock className="h-5 w-5 text-amber-500 flex-shrink-0" />
+          <p className="text-sm text-amber-800">
+            You are not enrolled.{" "}
+            <Link href="/provider/training" className="underline font-medium hover:text-amber-900">Enroll first</Link>
+            {" "}to unlock lesson content.
+          </p>
+        </div>
+      )}
+
+      {/* Main layout: sidebar + content */}
+      <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-4 items-start">
+
+        {/* Lesson sidebar */}
+        <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+          <div className="px-4 py-3 border-b border-slate-100">
+            <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Lessons</h3>
+          </div>
+          <ul className="divide-y divide-slate-100">
+            {sortedLessons.map((lesson, idx) => {
+              const done = completedSet.has(lesson._id);
+              const isActive = activeLesson?._id === lesson._id;
+              return (
+                <li key={lesson._id}>
                   <button
-                    key={lesson._id}
                     onClick={() => setActiveLesson(lesson)}
-                    className={`w-full text-left px-3 py-2.5 rounded-lg text-sm flex items-start gap-2 transition-colors ${
-                      activeLesson?._id === lesson._id
-                        ? "bg-indigo-50 text-indigo-700 font-medium"
-                        : "hover:bg-slate-50 text-slate-700"
+                    className={`w-full flex items-start gap-3 px-4 py-3 text-left transition-colors ${
+                      isActive ? "bg-indigo-50" : "hover:bg-slate-50"
                     }`}
                   >
                     {done ? (
-                      <CheckCircle2 className="h-4 w-4 text-emerald-500 mt-0.5 shrink-0" />
+                      <CheckCircle2 className="h-4 w-4 text-emerald-500 flex-shrink-0 mt-0.5" />
                     ) : (
-                      <Circle className="h-4 w-4 text-slate-300 mt-0.5 shrink-0" />
+                      <Circle className={`h-4 w-4 flex-shrink-0 mt-0.5 ${isActive ? "text-indigo-400" : "text-slate-300"}`} />
                     )}
-                    <span className="leading-snug">{lesson.title}</span>
-                    <span className="ml-auto text-xs text-slate-400 shrink-0 flex items-center gap-0.5">
-                      <Clock className="h-3 w-3" /> {lesson.durationMinutes}m
-                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className={`text-sm leading-snug ${isActive ? "font-semibold text-indigo-700" : done ? "text-slate-400" : "text-slate-700"}`}>
+                        {idx + 1}. {lesson.title}
+                      </p>
+                      <p className="text-xs text-slate-400 mt-0.5 flex items-center gap-1">
+                        <Clock className="h-3 w-3" /> {lesson.durationMinutes} min
+                      </p>
+                    </div>
+                    {isActive && <ChevronRight className="h-4 w-4 text-indigo-400 flex-shrink-0 mt-0.5" />}
                   </button>
-                );
-              })}
+                </li>
+              );
+            })}
+          </ul>
 
-            {/* Complete course button */}
-            {enrollment.status !== "completed" && allDone && (
+          {/* Complete course CTA */}
+          {isEnrolled && allDone && !courseComplete && (
+            <div className="p-4 border-t border-slate-100">
               <button
-                disabled={completing}
                 onClick={() => void handleCompleteCourse()}
-                className="w-full mt-3 bg-emerald-600 text-white text-sm font-semibold py-2.5 rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                disabled={completing}
+                className="w-full flex items-center justify-center gap-2 bg-emerald-600 text-white text-sm font-semibold px-4 py-2.5 rounded-lg hover:bg-emerald-700 disabled:opacity-50 transition-colors"
               >
                 {completing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Award className="h-4 w-4" />}
-                Complete Course &amp; Earn Badge
+                Claim Badge &amp; Complete
               </button>
-            )}
-          </div>
+            </div>
+          )}
 
-          {/* Lesson content */}
-          <div className="md:col-span-2 bg-white border border-slate-200 rounded-xl p-5">
-            {activeLesson ? (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
+          {courseComplete && (
+            <div className="px-4 py-3 border-t border-slate-100 flex items-center gap-2 text-emerald-700 text-sm font-semibold">
+              <Award className="h-4 w-4" /> Badge awarded!
+            </div>
+          )}
+        </div>
+
+        {/* Lesson content */}
+        <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+          {activeLesson ? (
+            <>
+              {/* Lesson header */}
+              <div className="flex items-center justify-between gap-4 px-6 py-4 border-b border-slate-100">
+                <div>
                   <h3 className="font-semibold text-slate-800">{activeLesson.title}</h3>
-                  {!completedSet.has(activeLesson._id) && enrollment.status !== "completed" && (
-                    <button
-                      disabled={marking === activeLesson._id}
-                      onClick={() => void markLessonDone(activeLesson._id)}
-                      className="flex items-center gap-1.5 bg-indigo-600 text-white text-xs font-semibold px-3 py-1.5 rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
-                    >
-                      {marking === activeLesson._id ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      ) : (
-                        <CheckCircle2 className="h-3.5 w-3.5" />
-                      )}
-                      Mark Done
-                    </button>
-                  )}
-                  {completedSet.has(activeLesson._id) && (
-                    <span className="text-emerald-600 text-xs font-medium flex items-center gap-1">
-                      <CheckCircle2 className="h-4 w-4" /> Done
-                    </span>
-                  )}
+                  <p className="text-xs text-slate-400 mt-0.5 flex items-center gap-1">
+                    <Clock className="h-3 w-3" /> {activeLesson.durationMinutes} min
+                  </p>
                 </div>
-                {activeLesson.content ? (
-                  <div
-                    className="prose prose-sm max-w-none text-slate-700"
-                    dangerouslySetInnerHTML={{ __html: activeLesson.content.replace(/\n/g, "<br />") }}
-                  />
-                ) : (
-                  <p className="text-slate-400 text-sm">Lesson content not available.</p>
+                {activeLessonDone && (
+                  <span className="flex items-center gap-1 text-emerald-600 text-xs font-semibold flex-shrink-0">
+                    <CheckCircle2 className="h-4 w-4" /> Completed
+                  </span>
                 )}
               </div>
-            ) : (
-              <p className="text-slate-400 text-sm">Select a lesson from the list.</p>
-            )}
-          </div>
+
+              {/* Lesson body — rendered markdown */}
+              <div className="px-6 py-5">
+                {activeLesson.content ? (
+                  <div
+                    className="prose prose-sm prose-slate max-w-none
+                      prose-headings:font-bold prose-headings:text-slate-800
+                      prose-h1:text-xl prose-h2:text-lg prose-h3:text-base
+                      prose-p:text-slate-600 prose-li:text-slate-600
+                      prose-strong:text-slate-800
+                      prose-table:text-sm prose-td:py-1.5 prose-th:py-1.5
+                      prose-code:bg-slate-100 prose-code:px-1 prose-code:rounded prose-code:text-xs
+                      prose-blockquote:border-indigo-300 prose-blockquote:text-slate-500"
+                    dangerouslySetInnerHTML={{ __html: renderMarkdown(activeLesson.content) }}
+                  />
+                ) : (
+                  <div className="flex flex-col items-center gap-2 py-12 text-slate-400">
+                    <Lock className="h-6 w-6" />
+                    <p className="text-sm">Enroll to unlock lesson content.</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Footer: Mark complete or Next lesson */}
+              {isEnrolled && (
+                <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-between gap-3">
+                  <span />
+                  {!activeLessonDone && !courseComplete && activeLesson.content ? (
+                    <button
+                      onClick={() => void handleMarkComplete()}
+                      disabled={marking}
+                      className="flex items-center gap-2 bg-indigo-600 text-white text-sm font-semibold px-5 py-2.5 rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+                    >
+                      {marking ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                      Mark Lesson Complete
+                    </button>
+                  ) : activeLessonDone && (() => {
+                    const next = sortedLessons.find((l) => l.order > activeLesson.order);
+                    return next ? (
+                      <button
+                        onClick={() => setActiveLesson(next)}
+                        className="flex items-center gap-1.5 text-indigo-600 text-sm font-semibold hover:underline"
+                      >
+                        Next: {next.title} <ChevronRight className="h-4 w-4" />
+                      </button>
+                    ) : null;
+                  })()}
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="flex items-center justify-center py-20 text-slate-400">
+              <BookOpen className="h-8 w-8 opacity-40" />
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }

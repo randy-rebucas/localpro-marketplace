@@ -37,7 +37,7 @@ interface DbStats {
   totalCollections: number;
 }
 
-type ActionType = "full_reset" | "seed_only" | "seed_settings" | "seed_skills" | "clear_collection";
+type ActionType = "full_reset" | "seed_only" | "seed_settings" | "seed_skills" | "seed_courses" | "clear_collection";
 
 interface AtlasSnapshot {
   id: string;
@@ -89,6 +89,7 @@ function ConfirmDialog({
     seed_only:        { title: "Seed Missing Data",          desc: "This will insert missing seed data (categories, skills) without deleting any existing records.", color: "text-amber-700" },
     seed_settings:    { title: "Seed App Settings",          desc: "Inserts missing platform settings (commission rates, limits, etc.) without overwriting any existing values.", color: "text-amber-700" },
     seed_skills:      { title: "Seed Skills",                desc: "Inserts the canonical skill list without overwriting any existing skills.", color: "text-amber-700" },
+    seed_courses:     { title: "Seed Training Courses",      desc: "Inserts the 10 default LocalPro training courses (platform guides + professional courses) without overwriting any existing course.", color: "text-amber-700" },
     clear_collection: { title: `Clear "${collection}"`,      desc: `This will delete ALL documents in the "${collection}" collection. Existing data cannot be recovered.`, color: "text-red-700" },
   };
   const meta = LABELS[action];
@@ -128,7 +129,7 @@ function ConfirmDialog({
             disabled={!token}
             className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-semibold hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            {action === "seed_only" || action === "seed_settings" || action === "seed_skills" ? "Confirm Seed" : "Confirm Reset"}
+            {action === "seed_only" || action === "seed_settings" || action === "seed_skills" || action === "seed_courses" ? "Confirm Seed" : "Confirm Reset"}
           </button>
         </div>
       </div>
@@ -242,7 +243,7 @@ export default function DatabaseClient({ resetEnabled }: { resetEnabled: boolean
   const [refreshing, setRefreshing] = useState(false);
   const [running, setRunning] = useState(false);
   const [downloading, setDownloading] = useState(false);
-  const [activeAction, setActiveAction] = useState<"backup" | "restore" | "seed_only" | "seed_settings" | "seed_skills" | "full_reset" | "clear_collection" | null>(null);
+  const [activeAction, setActiveAction] = useState<"backup" | "restore" | "seed_only" | "seed_settings" | "seed_skills" | "seed_courses" | "full_reset" | "clear_collection" | null>(null);
   const [log, setLog] = useState<string[]>([]);
   const [logStatus, setLogStatus] = useState<"idle" | "success" | "error">("idle");
   const [confirm, setConfirm] = useState<{ action: ActionType; collection?: string } | null>(null);
@@ -762,6 +763,27 @@ export default function DatabaseClient({ resetEnabled }: { resetEnabled: boolean
 
             <div className="flex items-start justify-between gap-4 px-5 py-4">
               <div className="flex items-start gap-3">
+                <div className="p-2 bg-teal-50 dark:bg-teal-900/30 rounded-lg mt-0.5">
+                  <Sprout className="w-4 h-4 text-teal-600 dark:text-teal-400" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-slate-800 dark:text-white">Seed Training Courses</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Inserts the 10 default LocalPro training courses (platform guides + professional courses) without overwriting existing ones.</p>
+                </div>
+              </div>
+              <button
+                onClick={() => handleAction("seed_courses")}
+                disabled={!resetEnabled || running || downloading}
+                className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 border border-teal-200 text-teal-700 bg-teal-50 hover:bg-teal-100 rounded-lg text-xs font-semibold disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                {activeAction === "seed_courses"
+                  ? <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Seeding…</>
+                  : <><Sprout className="w-3.5 h-3.5" /> Seed Courses</>}
+              </button>
+            </div>
+
+            <div className="flex items-start justify-between gap-4 px-5 py-4">
+              <div className="flex items-start gap-3">
                 <div className="p-2 bg-red-50 dark:bg-red-900/30 rounded-lg mt-0.5">
                   <RotateCcw className="w-4 h-4 text-red-600 dark:text-red-400" />
                 </div>
@@ -897,9 +919,10 @@ export default function DatabaseClient({ resetEnabled }: { resetEnabled: boolean
           const ACTION_LABELS: Record<string, { label: string; color: string; bg: string; border: string }> = {
             backup:           { label: "Exporting backup…",      color: "text-blue-700",   bg: "bg-blue-50",   border: "border-blue-200"   },
             restore:          { label: "Restoring from backup…", color: "text-indigo-700", bg: "bg-indigo-50", border: "border-indigo-200" },
-            seed_only:        { label: "Seeding data…",          color: "text-green-700",  bg: "bg-green-50",  border: "border-green-200"  },
-            seed_settings:    { label: "Seeding app settings…", color: "text-amber-700",  bg: "bg-amber-50",  border: "border-amber-200"  },
-            seed_skills:      { label: "Seeding skills…",        color: "text-amber-700",  bg: "bg-amber-50",  border: "border-amber-200"  },
+            seed_only:        { label: "Seeding data…",            color: "text-green-700",  bg: "bg-green-50",  border: "border-green-200"  },
+            seed_settings:    { label: "Seeding app settings…",   color: "text-amber-700",  bg: "bg-amber-50",  border: "border-amber-200"  },
+            seed_skills:      { label: "Seeding skills…",          color: "text-amber-700",  bg: "bg-amber-50",  border: "border-amber-200"  },
+            seed_courses:     { label: "Seeding training courses…",color: "text-teal-700",   bg: "bg-teal-50",   border: "border-teal-200"   },
             full_reset:       { label: "Resetting database…",   color: "text-red-700",    bg: "bg-red-50",    border: "border-red-200"    },
             clear_collection: { label: "Clearing collection…",  color: "text-red-700",    bg: "bg-red-50",    border: "border-red-200"    },
           };

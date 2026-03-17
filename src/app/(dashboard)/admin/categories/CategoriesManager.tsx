@@ -196,7 +196,7 @@ export default function CategoriesManager({ initialCategories }: Props) {
                     {cat.name}
                   </span>
                   {cat.description && (
-                    <p className="text-xs text-slate-400 dark:text-slate-500 truncate mt-0.5">{cat.description}</p>
+                    <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5 leading-relaxed">{cat.description}</p>
                   )}
                 </div>
                 <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wide ${

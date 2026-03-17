@@ -13,7 +13,6 @@
  */
 
 import mongoose from "mongoose";
-import { getPaymentSettings } from "@/lib/appSettings";
 import { walletRepository } from "@/repositories/wallet.repository";
 import { trainingCourseRepository } from "@/repositories/trainingCourse.repository";
 import { trainingEnrollmentRepository } from "@/repositories/trainingEnrollment.repository";
@@ -39,11 +38,14 @@ export class TrainingService {
       trainingEnrollmentRepository.findByProvider(user.userId),
     ]);
 
+    // findByProvider populates courseId, so after .lean() it becomes a plain object
+    // { _id: ObjectId, title, ... } — must use ._id.toString(), not .toString()
     const enrolledMap = new Map(
-      enrollments.map((e) => [
-        (e as unknown as { courseId: { toString(): string } }).courseId.toString(),
-        e,
-      ])
+      enrollments.map((e) => {
+        const cId = e as unknown as { courseId: { _id?: { toString(): string }; toString(): string } };
+        const key = cId.courseId?._id?.toString() ?? cId.courseId?.toString();
+        return [key, e];
+      })
     );
 
     return courses.map((c) => {
@@ -94,11 +96,6 @@ export class TrainingService {
   async enrollFromWallet(user: TokenPayload, courseId: string) {
     if (user.role !== "provider")
       throw new ForbiddenError("Only providers can enroll in training courses.");
-
-    const settings = await getPaymentSettings();
-    if (!settings["payments.trainingEnabled" as keyof typeof settings]) {
-      throw new UnprocessableError("The training system is currently disabled.");
-    }
 
     const course = await trainingCourseRepository.findById(courseId);
     if (!course || !(course as unknown as { isPublished: boolean }).isPublished) {
@@ -182,11 +179,6 @@ export class TrainingService {
     if (user.role !== "provider")
       throw new ForbiddenError("Only providers can enroll in training courses.");
 
-    const settings = await getPaymentSettings();
-    if (!settings["payments.trainingEnabled" as keyof typeof settings]) {
-      throw new UnprocessableError("The training system is currently disabled.");
-    }
-
     const course = await trainingCourseRepository.findById(courseId);
     if (!course || !(course as unknown as { isPublished: boolean }).isPublished) {
       throw new NotFoundError("Course not found.");
@@ -200,7 +192,6 @@ export class TrainingService {
       throw new UnprocessableError("You are already enrolled in this course.");
     }
 
-    // Dev / no PayMongo key — fall back to wallet path
     if (!process.env.PAYMONGO_SECRET_KEY) {
       return this.enrollFromWallet(user, courseId);
     }
@@ -348,7 +339,7 @@ export class TrainingService {
     const courseTitle = (enrollment as unknown as { courseTitle: string }).courseTitle;
     await notificationService.push({
       userId: user.userId,
-      type: "payment_confirmed",
+      type: "system_notice",
       title: "Course completed! 🎓",
       message: `Congratulations! You've completed "${courseTitle}" and earned your badge.`,
     });

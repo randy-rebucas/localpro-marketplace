@@ -80,8 +80,8 @@ export async function getPaymentSettings() {
     "payments.cancellationFeePercent": 20 as number,
     /** Flat case handling fee charged to the losing party when a dispute escalates to investigation (PHP). Default: ₱100. */
     "payments.disputeHandlingFee": 100 as number,
-    /** Whether the training / upskilling course system is enabled for providers. Default: false. */
-    "payments.trainingEnabled": false as boolean,
+    /** Whether the training / upskilling course system is enabled for providers. Default: true. */
+    "payments.trainingEnabled": true as boolean,
   });
 }
 
