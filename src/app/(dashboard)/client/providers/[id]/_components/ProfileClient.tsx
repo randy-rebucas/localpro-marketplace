@@ -7,7 +7,7 @@ import toast from "react-hot-toast";
 import {
   Star, Heart, Sparkles, Briefcase, Timer, Clock, CheckCircle2,
   XCircle, MapPin, Calendar, ChevronLeft, TrendingUp, Award,
-  MessageSquare, Flame, User, Building2,
+  MessageSquare, Flame, User, Building2, ShieldCheck,
 } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { apiFetch } from "@/lib/fetchClient";
@@ -37,6 +37,7 @@ export interface ProviderProfileData {
   schedule?: Record<string, WorkSlot>;
   isLocalProCertified?: boolean;
   agency?: { name: string; staffCount: number; plan: string } | null;
+  earnedBadges?: { badgeSlug: string; courseTitle: string; earnedAt: string }[];
   breakdown?: {
     quality: number; professionalism: number;
     punctuality: number; communication: number; count: number;
@@ -280,6 +281,11 @@ export default function ProfileClient({
                   <Building2 className="h-3 w-3" /> {profile.agency.name} &middot; {profile.agency.staffCount} staff
                 </span>
               )}
+              {profile.earnedBadges?.map((badge) => (
+                <span key={badge.badgeSlug} className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded bg-yellow-100 text-yellow-800 border border-yellow-300">
+                  <ShieldCheck className="h-3 w-3 text-yellow-600" /> {badge.courseTitle}
+                </span>
+              ))}
             </div>
 
             {/* Availability pill */}

@@ -122,31 +122,58 @@ export default function TrainingCoursePage({ params }: { params: Promise<{ id: s
       toast.success("Payment received! Setting up your enrollment…");
       setAwaitingActivation(true);
 
-      // Poll every 3s up to 5 times waiting for webhook to activate enrollment
-      let attempts = 0;
-      pollRef.current = setInterval(async () => {
-        attempts += 1;
-        try {
-          const res = await fetch(`/api/provider/training/${id}`);
-          const data = await res.json() as { course: Course };
-          if (data.course?.enrollment) {
+      const storedSessionId = sessionStorage.getItem(`training_session_${id}`);
+
+      void (async () => {
+        // Try to activate immediately using the stored session ID
+        if (storedSessionId) {
+          sessionStorage.removeItem(`training_session_${id}`);
+          try {
+            const activateRes = await fetch(`/api/provider/training/${id}/activate`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ sessionId: storedSessionId }),
+            });
+            const activateData = await activateRes.json() as { activated?: boolean; error?: string };
+            if (activateRes.ok && activateData.activated) {
+              const courseData = await fetchCourse();
+              setAwaitingActivation(false);
+              if (courseData?.enrollment) {
+                toast.success("Enrollment activated! You can now start learning.");
+              }
+              return;
+            }
+          } catch {
+            // Fall through to polling below
+          }
+        }
+
+        // Fallback: poll every 3s up to 8 times (24s) waiting for webhook to activate enrollment
+        let attempts = 0;
+        pollRef.current = setInterval(async () => {
+          attempts += 1;
+          try {
+            const res = await fetch(`/api/provider/training/${id}`);
+            const data = await res.json() as { course: Course };
+            if (data.course?.enrollment) {
+              clearInterval(pollRef.current!);
+              pollRef.current = null;
+              setAwaitingActivation(false);
+              setCourse(data.course);
+              const sorted = [...(data.course.lessons ?? [])].sort((a, b) => a.order - b.order);
+              setActiveLesson(sorted[0] ?? null);
+              toast.success("Enrollment activated! You can now start learning.");
+              return;
+            }
+          } catch { /* ignore polling errors */ }
+          if (attempts >= 8) {
             clearInterval(pollRef.current!);
             pollRef.current = null;
             setAwaitingActivation(false);
-            setCourse(data.course);
-            const sorted = [...(data.course.lessons ?? [])].sort((a, b) => a.order - b.order);
-            setActiveLesson(sorted[0] ?? null);
-            toast.success("Enrollment activated! You can now start learning.");
-            return;
+            toast("Enrollment is being processed. Please refresh in a moment.", { icon: "⏳" });
           }
-        } catch { /* ignore polling errors */ }
-        if (attempts >= 5) {
-          clearInterval(pollRef.current!);
-          pollRef.current = null;
-          setAwaitingActivation(false);
-          toast("Enrollment is being processed. Please refresh in a moment.", { icon: "⏳" });
-        }
-      }, 3000);
+        }, 3000);
+      })();
     }
 
     return () => {
@@ -347,8 +374,16 @@ export default function TrainingCoursePage({ params }: { params: Promise<{ id: s
           )}
 
           {courseComplete && (
-            <div className="px-4 py-3 border-t border-slate-100 flex items-center gap-2 text-emerald-700 text-sm font-semibold">
-              <Award className="h-4 w-4" /> Badge awarded!
+            <div className="px-4 py-3 border-t border-slate-100 flex flex-col gap-2">
+              <div className="flex items-center gap-2 text-emerald-700 text-sm font-semibold">
+                <Award className="h-4 w-4" /> Badge awarded!
+              </div>
+              <Link
+                href={`/provider/training/${id}/certificate`}
+                className="flex items-center justify-center gap-1.5 bg-amber-500 text-white text-xs font-semibold px-3 py-1.5 rounded-lg hover:bg-amber-600 transition-colors"
+              >
+                <Award className="h-3.5 w-3.5" /> Download Certificate
+              </Link>
             </div>
           )}
         </div>

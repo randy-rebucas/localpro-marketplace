@@ -13,10 +13,11 @@ import {
   Loader2,
   Wallet,
   CreditCard,
+  ShieldCheck,
 } from "lucide-react";
 import toast from "react-hot-toast";
 
-type CourseCategory = "basic" | "advanced" | "safety" | "custom";
+type CourseCategory = "basic" | "advanced" | "safety" | "custom" | "certification";
 
 interface Lesson {
   _id: string;
@@ -38,20 +39,23 @@ interface Course {
   lessons: Lesson[];
   enrolled: boolean;
   enrollmentStatus: "enrolled" | "completed" | null;
+  completedLessonsCount: number;
 }
 
 const CATEGORY_LABELS: Record<CourseCategory, string> = {
-  basic:    "Basic",
-  advanced: "Advanced",
-  safety:   "Safety",
-  custom:   "Specialty",
+  basic:         "Basic",
+  advanced:      "Advanced",
+  safety:        "Safety",
+  custom:        "Specialty",
+  certification: "Certification",
 };
 
 const CATEGORY_COLORS: Record<CourseCategory, string> = {
-  basic:    "bg-blue-100 text-blue-700",
-  advanced: "bg-purple-100 text-purple-700",
-  safety:   "bg-red-100 text-red-700",
-  custom:   "bg-amber-100 text-amber-700",
+  basic:         "bg-blue-100 text-blue-700",
+  advanced:      "bg-purple-100 text-purple-700",
+  safety:        "bg-red-100 text-red-700",
+  custom:        "bg-amber-100 text-amber-700",
+  certification: "bg-yellow-100 text-yellow-800",
 };
 
 export default function ProviderTrainingPage() {
@@ -76,12 +80,22 @@ export default function ProviderTrainingPage() {
   useEffect(() => { void fetchCourses(); }, [fetchCourses]);
 
   async function handleEnroll(courseId: string, price: number) {
-    if (!confirm(`Enroll for ₱${price.toLocaleString()} from your wallet?`)) return;
+    if (price > 0 && !confirm(`Enroll for ₱${price.toLocaleString()} from your wallet?`)) return;
     setEnrolling(courseId);
     try {
       const res = await fetch(`/api/provider/training/${courseId}/enroll`, { method: "POST" });
       const data = await res.json() as { activated?: boolean; error?: string };
-      if (!res.ok) { toast.error(data.error ?? "Enrollment failed."); return; }
+      if (!res.ok) {
+        // Insufficient wallet balance → fall through to PayMongo
+        if (data.error?.startsWith("Insufficient wallet balance")) {
+          toast("Not enough wallet balance. Redirecting to online payment…", { icon: "💳" });
+          setEnrolling(null);
+          await handlePayMongo(courseId);
+          return;
+        }
+        toast.error(data.error ?? "Enrollment failed.");
+        return;
+      }
       toast.success("Enrolled successfully!");
       void fetchCourses();
     } catch {
@@ -95,10 +109,17 @@ export default function ProviderTrainingPage() {
     setEnrolling(courseId);
     try {
       const res = await fetch(`/api/provider/training/${courseId}/checkout`, { method: "POST" });
-      const data = await res.json() as { checkoutUrl?: string; activated?: boolean; error?: string };
+      const data = await res.json() as { checkoutUrl?: string; checkoutSessionId?: string; activated?: boolean; error?: string };
       if (!res.ok) { toast.error(data.error ?? "Could not initiate checkout."); return; }
       if (data.checkoutUrl) {
+        // Save session ID so the player page can activate enrollment immediately on return
+        if (data.checkoutSessionId) {
+          sessionStorage.setItem(`training_session_${courseId}`, data.checkoutSessionId);
+        }
+        // Keep the spinner going — page is about to redirect
+        // (don't call setEnrolling(null) — let the redirect happen)
         window.location.href = data.checkoutUrl;
+        return; // skip the finally block clearing the spinner
       } else if (data.activated) {
         toast.success("Enrolled successfully!");
         void fetchCourses();
@@ -110,11 +131,14 @@ export default function ProviderTrainingPage() {
     }
   }
 
+  const myCertifications = courses.filter((c) => c.enrollmentStatus === "completed");
+  const myCourses = courses.filter(
+    (c) => c.enrolled && c.enrollmentStatus !== "completed"
+  );
   const filtered = (filter === "all" ? courses : courses.filter((c) => c.category === filter))
     .filter((c) => !c.enrolled);
   const completedCount = courses.filter((c) => c.enrollmentStatus === "completed").length;
   const enrolledCount  = courses.filter((c) => c.enrolled).length;
-  const myCourses      = courses.filter((c) => c.enrolled);
 
   if (loading) {
     return (
@@ -147,6 +171,59 @@ export default function ProviderTrainingPage() {
             <Award className="h-4 w-4 text-emerald-400" />
             <span><strong>{completedCount}</strong> completed</span>
           </div>
+        </div>
+      )}
+
+      {/* My Certifications — completed certification badges */}
+      {myCertifications.length > 0 && (
+        <div className="space-y-3">
+          <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+            <Award className="h-4 w-4 text-yellow-500" /> My Certificates
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {myCertifications.map((cert) => (
+              <div
+                key={cert._id}
+                className={`flex items-center gap-3 border-2 rounded-xl px-4 py-3 ${
+                  cert.category === "certification"
+                    ? "border-yellow-400 bg-gradient-to-br from-yellow-50 to-amber-50"
+                    : "border-emerald-300 bg-gradient-to-br from-emerald-50 to-teal-50"
+                }`}
+              >
+                <div className={`p-2 rounded-lg flex-shrink-0 ${
+                  cert.category === "certification" ? "bg-yellow-100" : "bg-emerald-100"
+                }`}>
+                  {cert.category === "certification"
+                    ? <ShieldCheck className="h-5 w-5 text-yellow-600" />
+                    : <Award className="h-5 w-5 text-emerald-600" />}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className={`text-sm font-bold leading-snug truncate ${
+                    cert.category === "certification" ? "text-yellow-900" : "text-emerald-900"
+                  }`}>{cert.title}</p>
+                  <p className={`text-xs mt-0.5 flex items-center gap-1 ${
+                    cert.category === "certification" ? "text-yellow-700" : "text-emerald-700"
+                  }`}>
+                    <CheckCircle2 className="h-3 w-3" />
+                    {cert.category === "certification" ? "LocalPro Certified" : "Certificate Earned"}
+                  </p>
+                </div>
+                <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
+                  <Link
+                    href={`/provider/training/${cert._id}/certificate`}
+                    className={`flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-lg transition-colors ${
+                      cert.category === "certification"
+                        ? "bg-yellow-200 text-yellow-900 hover:bg-yellow-300"
+                        : "bg-emerald-200 text-emerald-900 hover:bg-emerald-300"
+                    }`}
+                  >
+                    <Award className="h-3 w-3" /> Get Certificate
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
+          <hr className="border-slate-200" />
         </div>
       )}
 
@@ -186,11 +263,17 @@ export default function ProviderTrainingPage() {
                       {isCompleted ? (
                         <><CheckCircle2 className="h-3 w-3" /> Completed</>
                       ) : (
-                        <><BookOpen className="h-3 w-3" /> {course.lessons.length} lesson{course.lessons.length !== 1 ? "s" : ""}
-                          <span className="mx-1">·</span>
-                          <Clock className="h-3 w-3" /> {course.durationMinutes} min</>
+                        <><BookOpen className="h-3 w-3" /> {course.completedLessonsCount}/{course.lessons.length} lessons</>
                       )}
                     </p>
+                    {!isCompleted && course.lessons.length > 0 && (
+                      <div className="mt-1.5 h-1 bg-indigo-100 rounded-full overflow-hidden w-full">
+                        <div
+                          className="h-full bg-indigo-500 rounded-full transition-all"
+                          style={{ width: `${Math.round((course.completedLessonsCount / course.lessons.length) * 100)}%` }}
+                        />
+                      </div>
+                    )}
                   </div>
                   <ChevronRight className={`h-4 w-4 flex-shrink-0 ${isCompleted ? "text-emerald-400" : "text-indigo-400"}`} />
                 </Link>
@@ -203,7 +286,7 @@ export default function ProviderTrainingPage() {
 
       {/* Category filter */}
       <div className="flex flex-wrap gap-2">
-        {(["all", "basic", "advanced", "safety", "custom"] as const).map((cat) => (
+        {(["all", "basic", "advanced", "safety", "custom", "certification"] as const).map((cat) => (
           <button
             key={cat}
             onClick={() => setFilter(cat)}
@@ -222,14 +305,18 @@ export default function ProviderTrainingPage() {
       {filtered.length === 0 ? (
         <div className="text-center py-12 text-slate-400">
           <BookOpen className="h-10 w-10 mx-auto mb-3 opacity-40" />
-          <p>{myCourses.length > 0 ? "You're enrolled in all available courses!" : "No courses available yet."}</p>
+          <p>{myCourses.length > 0 || myCertifications.length > 0 ? "You're enrolled in all available courses!" : "No courses available yet."}</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {filtered.map((course) => (
             <div
               key={course._id}
-              className="bg-white border border-slate-200 rounded-xl p-5 flex flex-col gap-3 shadow-sm hover:shadow-md transition-shadow"
+              className={`rounded-xl p-5 flex flex-col gap-3 shadow-sm hover:shadow-md transition-shadow ${
+                course.category === "certification"
+                  ? "bg-gradient-to-br from-yellow-50 to-amber-50 border-2 border-yellow-300"
+                  : "bg-white border border-slate-200"
+              }`}
             >
               {/* Category badge */}
               <span className={`self-start text-xs font-semibold px-2 py-0.5 rounded-full ${CATEGORY_COLORS[course.category]}`}>

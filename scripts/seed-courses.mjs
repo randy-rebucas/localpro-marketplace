@@ -56,7 +56,7 @@ const TrainingCourseSchema = new mongoose.Schema(
     title:           { type: String, required: true, trim: true },
     slug:            { type: String, required: true, unique: true, trim: true, lowercase: true },
     description:     { type: String, required: true, trim: true },
-    category:        { type: String, enum: ["basic", "advanced", "safety", "custom"], default: "basic" },
+    category:        { type: String, enum: ["basic", "advanced", "safety", "custom", "certification"], default: "basic" },
     price:           { type: Number, required: true, min: 0 },
     durationMinutes: { type: Number, default: 0, min: 0 },
     badgeSlug:       { type: String, required: true, trim: true, unique: true },
@@ -512,7 +512,78 @@ const PROFESSIONAL_COURSES = [
   },
 ];
 
-const ALL_COURSES = [...PLATFORM_GUIDES, ...PROFESSIONAL_COURSES];
+// ─── Certification Programmes ────────────────────────────────────────────────
+
+const CERTIFICATION_COURSES = [
+  {
+    title:           "LocalPro Verified Cleaner",
+    slug:            "localpro-verified-cleaner",
+    description:     "The official LocalPro certification for cleaning professionals. Complete all 5 lessons to earn the LocalPro Verified Cleaner badge and stand out to clients.",
+    category:        "certification",
+    price:           0,
+    durationMinutes: 40,
+    badgeSlug:       "localpro-verified-cleaner",
+    isPublished:     true,
+    lessons: [
+      { title: "Service Delivery SOP", content: "# Service Delivery SOP\n\nA Standard Operating Procedure (SOP) is the backbone of a professional cleaning service.\n\n## Pre-arrival checklist\n- Confirm booking details with the client the evening before\n- Prepare your kit: check supplies are stocked and tools are clean\n- Arrive on time — punctuality signals professionalism\n\n## On-site protocol\n1. Greet the client and confirm the scope of work\n2. Do a quick walkthrough to flag pre-existing damage\n3. Follow the room sequence: top to bottom, back to front\n4. Never leave without a client sign-off", durationMinutes: 8, order: 0 },
+      { title: "Customer Handling Standards", content: "# Customer Handling Standards\n\n## First impressions matter\n- Wear your branded shirt or a clean, presentable uniform\n- Address clients respectfully\n\n## Handling complaints\n1. Listen completely without interrupting\n2. Acknowledge: \"I understand, I'm sorry about that.\"\n3. Offer an immediate remedy — re-do the area now, not later\n4. Thank the client for telling you", durationMinutes: 8, order: 1 },
+      { title: "Safety Protocols for Cleaning Jobs", content: "# Safety Protocols\n\n## Chemical safety\n- Never mix bleach and ammonia (produces toxic fumes)\n- Wear gloves when using disinfectants\n\n## Physical safety\n- Use a stable step stool — never stand on chairs\n- Lift heavy objects with your legs, not your back", durationMinutes: 8, order: 2 },
+      { title: "Tools & Supplies Checklist", content: "# Tools & Supplies Checklist\n\n## Essential cleaning kit\n- Microfiber cloths (color-coded by area)\n- Mop and bucket with wringer\n- Vacuum cleaner with attachments\n- Spray bottles (labeled)\n\n## Maintenance\n- Wash microfiber cloths after every job\n- Disinfect mop heads weekly", durationMinutes: 8, order: 3 },
+      { title: "Reporting & App Usage Standards", content: "# Reporting & App Usage Standards\n\n## Before the job\n- Mark yourself \"On the way\" when you depart\n- Upload a photo of your clean kit before entering\n\n## After the job\n- Upload completion photos\n- Request client confirmation in the app\n- Collect payment through the platform", durationMinutes: 8, order: 4 },
+    ],
+  },
+  {
+    title:           "LocalPro Certified Technician",
+    slug:            "localpro-certified-technician",
+    description:     "The official LocalPro certification for appliance and electrical technicians. Master the professional standards required to carry the LocalPro Certified Technician badge.",
+    category:        "certification",
+    price:           0,
+    durationMinutes: 45,
+    badgeSlug:       "localpro-certified-technician",
+    isPublished:     true,
+    lessons: [
+      { title: "Technician Code of Practice", content: "# Technician Code of Practice\n\n## Core principles\n1. Safety first — never rush a job to save time\n2. Honesty — provide accurate diagnoses; never invent faults\n3. Transparency — quote before you start; charge what you quoted\n\n## Scope creep\n- Get approval for additional charges before proceeding\n- Document everything through the app", durationMinutes: 9, order: 0 },
+      { title: "Client Communication Standards", content: "# Client Communication Standards\n\n## Three-step diagnostic conversation\n1. Ask the client to describe the problem in their own words\n2. Ask how long the issue has been present\n3. Confirm the symptoms before touching anything\n\n## Post-repair handover\n- Demonstrate the unit works correctly\n- Explain what you did in plain language\n- Advise on maintenance to prevent recurrence", durationMinutes: 9, order: 1 },
+      { title: "Workshop Safety & PPE", content: "# Workshop Safety & PPE\n\n## Mandatory PPE by task\n- Electrical work: Insulated gloves, safety glasses\n- Refrigerant handling: Chemical-resistant gloves, eye protection\n\n## Electrical safety non-negotiables\n- Always isolate and tag-out before working on live panels\n- Use a voltage tester before touching any wire\n- Never work alone on high-voltage systems", durationMinutes: 9, order: 2 },
+      { title: "Equipment Checklist & Maintenance Protocols", content: "# Equipment Checklist\n\n## Field kit essentials\n- Digital multimeter (calibrated)\n- Insulated screwdriver set\n- Crimping tool and wire strippers\n- Spare fuses and contactors\n\n## Tool maintenance\n- Inspect insulation on all leads before every job\n- Calibrate your multimeter quarterly", durationMinutes: 9, order: 3 },
+      { title: "Reporting Standards & App Usage", content: "# Reporting Standards\n\n## Before the job\n- Confirm appointment and arrival window\n- Mark \"On the way\" in the app when departing\n\n## Completing the job\n- Photograph the repaired unit operating normally\n- Submit the completion report through the app\n- Issue an itemised invoice", durationMinutes: 9, order: 4 },
+    ],
+  },
+  {
+    title:           "LocalPro Professional Contractor",
+    slug:            "localpro-professional-contractor",
+    description:     "The official LocalPro certification for general contractors and construction professionals. Demonstrate mastery of project standards, safety, and client management to earn the badge.",
+    category:        "certification",
+    price:           0,
+    durationMinutes: 50,
+    badgeSlug:       "localpro-professional-contractor",
+    isPublished:     true,
+    lessons: [
+      { title: "Contractor Standards & Professional Ethics", content: "# Contractor Standards & Professional Ethics\n\n## Core standards\n1. Deliver what you scope — never substitute materials without approval\n2. Timeline integrity — communicate delays 24 hours in advance\n3. Safety compliance — your workers are your responsibility\n\n## Ethical practices\n- Provide itemised quotations\n- Never request more than 50% upfront on residential projects", durationMinutes: 10, order: 0 },
+      { title: "Client & Site Management", content: "# Client & Site Management\n\n## Pre-construction client meeting\n- Walk the full scope with the client\n- Clarify all grey areas in writing before work begins\n\n## Daily site management\n- Hold a 5-minute morning huddle with your crew\n- Keep a site diary: weather, workers present, tasks completed\n\n## Managing client expectations\n- Share weekly progress photos through the app\n- Flag potential delays the moment you know", durationMinutes: 10, order: 1 },
+      { title: "Safety Compliance & Risk Assessment", content: "# Safety Compliance & Risk Assessment\n\n## Pre-job risk assessment (5 minutes)\n1. What can go wrong on this site today?\n2. Who will be harmed, and how?\n3. What control measures are in place?\n\n## DOLE requirements (Philippines)\n- PPE is mandatory: hard hat, safety boots, high-vis vest on all sites\n- Scaffolding must bear a load tag and pass visual inspection before use", durationMinutes: 10, order: 2 },
+      { title: "Materials & Tools Management", content: "# Materials & Tools Management\n\n## Procurement best practices\n- Obtain at least two supplier quotes for materials above ₱5,000\n- Verify brand and specification match the approved bill of quantities\n- Inspect deliveries immediately — refuse substandard goods\n\n## On-site storage\n- Store cement and sand away from standing water\n- Lock away tools at end of each day", durationMinutes: 10, order: 3 },
+      { title: "Project Reporting & Handover", content: "# Project Reporting & Handover\n\n## Progress reporting (weekly minimum)\n- Photos: wide shot, close-up of completed work, next area to be started\n- Summary: tasks completed, tasks deferred, issues encountered\n\n## Formal handover checklist\n1. Punch list walk-through with the client\n2. Hand over all warranties, manuals, and as-built documentation\n3. Obtain signed completion certificate\n4. Process final payment through LocalPro platform", durationMinutes: 10, order: 4 },
+    ],
+  },  {
+    title:           "LocalPro Verified Provider",
+    slug:            "localpro-verified-provider",
+    description:     "The universal baseline certification every LocalPro provider must complete. Master professional standards, platform discipline, safety compliance, and data privacy to earn the LocalPro Verified Provider badge.",
+    category:        "certification",
+    price:           0,
+    durationMinutes: 50,
+    badgeSlug:       "localpro-verified-provider",
+    isPublished:     true,
+    lessons: [
+      { title: "Professional Standards — Appearance, Punctuality & Etiquette", content: "# Professional Standards\n\n## Grooming & Appearance\n- Wear clean, presentable clothing or a branded shirt on every job\n- Keep hands and tools clean — your appearance reflects your quality\n- Remove footwear or use shoe covers when entering homes, unless told otherwise\n- No strong perfume or cologne; some clients have sensitivities\n\n## Punctuality Rules\n- Arrive within the agreed time window — being late costs you stars\n- If you are running late, message the client **at least 30 minutes before** the scheduled time\n- If you cannot make the job, cancel through the app immediately — do not ghost\n- Repeated tardiness will trigger an account review\n\n## Client Etiquette\n- Greet clients by name; introduce yourself professionally\n- Do not bring guests, family members, or unofficial helpers to a job site\n- Ask permission before using the client's electricity, water, or restroom\n- Keep conversations professional — avoid personal or political topics\n- Leave the work area cleaner than you found it", durationMinutes: 10, order: 0 },
+      { title: "Communication Scripts & Complaint Handling", content: "# Communication Scripts & Complaint Handling\n\n## Standard Communication Scripts\n\n### Opening script (on arrival)\n> *\"Good morning / afternoon, I'm [Name] from LocalPro. I'm here for the [service] booking. May I proceed?\"*\n\n### When confirming scope\n> *\"Before I begin, let me confirm the scope so we're aligned. Will that be okay?\"*\n\n### When delay is expected\n> *\"I want to let you know that [reason] is taking slightly longer than expected. I expect to finish by [new time]. I apologise for the inconvenience.\"*\n\n### When closing a job\n> *\"I've completed the work. May I walk you through what I did? Please let me know if anything needs attention.\"*\n\n## Complaint Handling — 4-Step Method\n1. **Listen** — let the client speak without interrupting\n2. **Acknowledge** — *\"I understand, and I'm sorry about that.\"*\n3. **Act** — offer an immediate remedy (redo the area, fix the issue now)\n4. **Follow up** — confirm the client is satisfied before leaving\n\n## What NOT to do\n- Never argue or place blame on the client\n- Never dismiss a concern as minor\n- Never leave a complaint unresolved — escalate through the app if needed", durationMinutes: 10, order: 1 },
+      { title: "Platform Discipline — App, Quotations, Job Tracking & Anti-Cancellation", content: "# Platform Discipline\n\n## App Usage Standards\n- Update your availability calendar every week\n- Mark yourself **On the way** when you depart for a booking\n- Upload before and after photos for every job\n- Never request payment outside the LocalPro platform\n\n## Quotation System\n- Always provide an itemised quote before starting work\n- Quote honestly — hidden charges after the fact will result in a dispute\n- If you discover additional work is needed on-site, get written approval through the app before proceeding\n- For jobs over ₱5,000, a signed quotation is required to protect both parties\n\n## Job Tracking\n- Use the app status flow: **Accepted → On the way → In progress → Completed**\n- Never mark a job complete before the client confirms it is done\n- Keep the client updated on progress for jobs longer than 2 hours\n- If issues arise mid-job, log them in the app immediately\n\n## Anti-Cancellation Policy\n- You may cancel penalty-free up to **24 hours before** the scheduled time\n- Same-day cancellations will incur a ₱150 cancellation fee deducted from your next payout\n- Two no-shows within 30 days will result in a **7-day account suspension**\n- Three no-shows within 60 days will trigger a **permanent review** of your account\n- Emergency exceptions (hospitalisation, natural disaster) must be documented and submitted within 48 hours", durationMinutes: 10, order: 2 },
+      { title: "Workplace Safety, Liability & Compliance", content: "# Workplace Safety, Liability & Compliance\n\n## Basic Workplace Safety Rules\n- Inspect your tools and equipment before every job — do not use damaged tools\n- Use the correct Personal Protective Equipment (PPE) for the task\n- Never rush — most injuries happen when providers skip steps under time pressure\n- Secure the work area: barricade open holes, wet floors, and exposed wiring\n- Know the location of the nearest emergency exit or evacuation route\n\n## Liability Awareness\n- You are responsible for any damage you cause while on a job\n- Document the condition of the client's property **before** you begin (photos in the app)\n- If you break or damage something, report it immediately — do not hide it\n- LocalPro's escrow system protects clients; fraudulent claims against you are reviewed by our team\n- You are not liable for pre-existing damage — documenting it on arrival protects you\n\n## Incident Response\n1. Stop work and secure the area\n2. Provide first aid if needed; call emergency services for serious injuries\n3. Notify the client immediately\n4. Document the incident through the app within 1 hour\n5. LocalPro Support will guide you on next steps\n\n## Your Legal Standing\n- As an independent provider, you are responsible for your own tax obligations\n- LocalPro does not withhold tax — file your own BIR returns as required\n- Keep receipts for tools, supplies, and transport — these are deductible expenses", durationMinutes: 10, order: 3 },
+      { title: "Data Privacy & Documentation Standards", content: "# Data Privacy & Documentation Standards\n\n## Data Privacy (Republic Act 10173 — Data Privacy Act of 2012)\n- You will collect and access personal data from clients (name, address, contact number)\n- This information must only be used to deliver the booked service\n- Never share, sell, or post client data on social media or with third parties\n- Do not photograph client property or family members without explicit consent\n- Delete or discard any written client information after the job is complete\n\n## Common Violations to Avoid\n- Taking photos of a client's home interior and sharing them publicly ❌\n- Saving client phone numbers for personal use after a booking ❌\n- Passing client contact details to other providers ❌\n- Uploading client photos to group chats or social media ❌\n\n## Documentation Standards\n- Every job must have: a before photo, an after photo, and a client confirmation\n- Keep your own records for jobs over ₱5,000 (invoice, receipt, bank transfer proof)\n- For certification or trade work, keep a log of jobs completed — this supports future TESDA applications\n- If a dispute arises, your documentation is your strongest evidence\n\n## Profile Documentation\n- Keep your profile up to date: valid ID, current skills, active service areas\n- Upload TESDA certificates or trade licences as they are earned\n- Outdated or false information on your profile is grounds for suspension", durationMinutes: 10, order: 4 },
+    ],
+  },];
+
+const ALL_COURSES = [...PLATFORM_GUIDES, ...PROFESSIONAL_COURSES, ...CERTIFICATION_COURSES];
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 

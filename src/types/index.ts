@@ -642,7 +642,7 @@ export interface IProviderProfile {
 
 // ─── Training / Upskilling ─────────────────────────────────────────────────────────────
 
-export type TrainingCourseCategory = "basic" | "advanced" | "safety" | "custom";
+export type TrainingCourseCategory = "basic" | "advanced" | "safety" | "custom" | "certification";
 export type TrainingEnrollmentStatus = "enrolled" | "completed" | "refunded";
 
 export interface IProviderEarnedBadge {

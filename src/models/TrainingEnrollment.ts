@@ -39,9 +39,8 @@ const TrainingEnrollmentSchema = new Schema<TrainingEnrollmentDocument>(
 TrainingEnrollmentSchema.index({ providerId: 1, courseId: 1 }, { unique: true });
 TrainingEnrollmentSchema.index({ status: 1, createdAt: -1 });
 
-delete (mongoose.models as Record<string, unknown>).TrainingEnrollment;
-
 const TrainingEnrollment: Model<TrainingEnrollmentDocument> =
+  (mongoose.models.TrainingEnrollment as Model<TrainingEnrollmentDocument>) ??
   mongoose.model<TrainingEnrollmentDocument>("TrainingEnrollment", TrainingEnrollmentSchema);
 
 export default TrainingEnrollment;

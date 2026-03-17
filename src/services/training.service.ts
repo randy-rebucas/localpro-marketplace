@@ -23,6 +23,7 @@ import type { TokenPayload } from "@/lib/auth";
 import type { TrainingCourseCategory } from "@/types";
 import { connectDB } from "@/lib/db";
 import ProviderProfile from "@/models/ProviderProfile";
+import { getCheckoutSession, getPaymentIntent } from "@/lib/paymongo";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? process.env.APP_URL ?? "http://localhost:3000";
 
@@ -51,10 +52,15 @@ export class TrainingService {
     return courses.map((c) => {
       const cId = (c as unknown as { _id: { toString(): string } })._id.toString();
       const enrollment = enrolledMap.get(cId);
+      const e = enrollment as unknown as {
+        status: string;
+        completedLessons: unknown[];
+      } | undefined;
       return {
         ...c,
         enrolled: !!enrollment,
-        enrollmentStatus: enrollment ? (enrollment as unknown as { status: string }).status : null,
+        enrollmentStatus: e ? e.status : null,
+        completedLessonsCount: e ? (e.completedLessons?.length ?? 0) : 0,
       };
     });
   }
@@ -218,6 +224,52 @@ export class TrainingService {
       checkoutUrl: session.checkoutUrl,
       checkoutSessionId: session.id,
     };
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Enrollment — direct checkout session verification (instant activation)
+  // ─────────────────────────────────────────────────────────────────────────
+
+  /**
+   * Called when the provider returns from PayMongo with a session ID.
+   * Verifies the session directly with PayMongo — no webhook dependency.
+   * Idempotent: safe to call multiple times for the same session.
+   */
+  async activateEnrollmentFromSession(user: TokenPayload, courseId: string, sessionId: string) {
+    if (user.role !== "provider")
+      throw new ForbiddenError("Only providers can activate enrollments.");
+
+    // Already enrolled? Return immediately.
+    const alreadyEnrolled = await trainingEnrollmentRepository.existsByProviderAndCourse(
+      user.userId,
+      courseId
+    );
+    if (alreadyEnrolled) return { activated: true };
+
+    // Verify payment with PayMongo.
+    // Step 1: get the checkout session to find the payment intent ID.
+    const session = await getCheckoutSession(sessionId);
+
+    // Step 2: if the checkout session response includes the payment intent status (expanded), use it.
+    // Otherwise fall back to a direct payment intent lookup — PayMongo does not always expand by default.
+    let paymentSucceeded = session.paymentIntentStatus === "succeeded";
+
+    if (!paymentSucceeded && session.paymentIntentId) {
+      const pi = await getPaymentIntent(session.paymentIntentId);
+      paymentSucceeded = pi.status === "succeeded";
+    }
+
+    if (!paymentSucceeded) {
+      throw new UnprocessableError("Payment has not been confirmed yet. Please wait a moment and try again.");
+    }
+
+    const course = await trainingCourseRepository.findById(courseId);
+    if (!course) throw new NotFoundError("Course not found.");
+
+    const price = (course as unknown as { price: number }).price;
+
+    await this.activateFromWebhook(user.userId, courseId, sessionId, price);
+    return { activated: true };
   }
 
   // ─────────────────────────────────────────────────────────────────────────

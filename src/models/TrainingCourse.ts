@@ -20,7 +20,7 @@ const TrainingCourseSchema = new Schema<TrainingCourseDocument>(
     description: { type: String, required: true, trim: true, maxlength: 2000 },
     category: {
       type: String,
-      enum: ["basic", "advanced", "safety", "custom"],
+      enum: ["basic", "advanced", "safety", "custom", "certification"],
       default: "basic",
     },
     price:           { type: Number, required: true, min: 0 },
@@ -37,9 +37,8 @@ const TrainingCourseSchema = new Schema<TrainingCourseDocument>(
 TrainingCourseSchema.index({ isPublished: 1, category: 1 });
 // slug already has unique: true on the field — no separate index needed
 
-delete (mongoose.models as Record<string, unknown>).TrainingCourse;
-
 const TrainingCourse: Model<TrainingCourseDocument> =
+  (mongoose.models.TrainingCourse as Model<TrainingCourseDocument>) ??
   mongoose.model<TrainingCourseDocument>("TrainingCourse", TrainingCourseSchema);
 
 export default TrainingCourse;

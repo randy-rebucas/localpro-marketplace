@@ -12,7 +12,7 @@ import MdEditor from "@/components/ui/MdEditor";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type CourseCategory = "basic" | "advanced" | "safety" | "custom";
+type CourseCategory = "basic" | "advanced" | "safety" | "custom" | "certification";
 
 interface Lesson {
   _id?: string;
@@ -39,14 +39,15 @@ interface Course {
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const CATEGORY_LABELS: Record<CourseCategory, string> = {
-  basic: "Basic", advanced: "Advanced", safety: "Safety", custom: "Specialty",
+  basic: "Basic", advanced: "Advanced", safety: "Safety", custom: "Specialty", certification: "Certification",
 };
 
 const CATEGORY_COLOR: Record<CourseCategory, string> = {
-  basic:    "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
-  advanced: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400",
-  safety:   "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
-  custom:   "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
+  basic:         "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
+  advanced:      "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400",
+  safety:        "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
+  custom:        "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
+  certification: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400",
 };
 
 const EMPTY_LESSON = (): Lesson => ({ title: "", content: "", durationMinutes: 5, order: 0 });
@@ -99,12 +100,11 @@ function LessonRow({
       </div>
       {open && (
         <div className="p-3">
-          <textarea
+          <MdEditor
             value={lesson.content}
-            onChange={(e) => onChange(index, { content: e.target.value })}
-            rows={5}
+            onChange={(v) => onChange(index, { content: v })}
             placeholder="Lesson content (Markdown supported)…"
-            className="w-full text-xs font-mono bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500/30 text-slate-700 dark:text-slate-300 placeholder:text-slate-400"
+            rows={6}
           />
         </div>
       )}
@@ -162,16 +162,21 @@ function CourseModal({
 
   function addLesson() {
     const order = form.lessons.length;
-    set("lessons", [...form.lessons, { ...EMPTY_LESSON(), order }]);
+    const next = [...form.lessons, { ...EMPTY_LESSON(), order }];
+    set("lessons", next);
+    set("durationMinutes", String(next.reduce((s, l) => s + l.durationMinutes, 0)));
   }
 
   function updateLesson(i: number, patch: Partial<Lesson>) {
     const next = form.lessons.map((l, idx) => idx === i ? { ...l, ...patch } : l);
     set("lessons", next);
+    set("durationMinutes", String(next.reduce((s, l) => s + l.durationMinutes, 0)));
   }
 
   function removeLesson(i: number) {
-    set("lessons", form.lessons.filter((_, idx) => idx !== i).map((l, idx) => ({ ...l, order: idx })));
+    const next = form.lessons.filter((_, idx) => idx !== i).map((l, idx) => ({ ...l, order: idx }));
+    set("lessons", next);
+    set("durationMinutes", String(next.reduce((s, l) => s + l.durationMinutes, 0)));
   }
 
   async function handleSubmit(e: React.FormEvent) {

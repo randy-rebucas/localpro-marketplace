@@ -41,6 +41,7 @@ export interface ProviderProfileData {
   pesoReferredBy?: string | null;
   certifications?: { title: string; issuer: string; issuedAt: string }[];
   barangay?: string | null;
+  earnedBadges?: { badgeSlug: string; courseTitle: string; earnedAt: string }[];
   breakdown?: {
     quality: number; professionalism: number;
     punctuality: number; communication: number; count: number;
@@ -331,6 +332,11 @@ export default function PublicProfileClient({
                       <Building2 className="h-3 w-3" /> {profile.agency.name} &middot; {profile.agency.staffCount} staff
                     </span>
                   )}
+                  {profile.earnedBadges?.map((badge) => (
+                    <span key={badge.badgeSlug} className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded bg-yellow-100 text-yellow-800 border border-yellow-300 whitespace-nowrap">
+                      <ShieldCheck className="h-3 w-3 text-yellow-600" /> {badge.courseTitle}
+                    </span>
+                  ))}
                 </div>
 
                 <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${availabilityConfig[avail].classes}`}>
