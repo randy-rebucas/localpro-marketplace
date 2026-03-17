@@ -20,6 +20,8 @@ interface Lesson {
   content: string;
   durationMinutes: number;
   order: number;
+  videoUrl?: string;
+  imageUrl?: string;
 }
 
 interface Course {
@@ -50,7 +52,7 @@ const CATEGORY_COLOR: Record<CourseCategory, string> = {
   certification: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400",
 };
 
-const EMPTY_LESSON = (): Lesson => ({ title: "", content: "", durationMinutes: 5, order: 0 });
+const EMPTY_LESSON = (): Lesson => ({ title: "", content: "", durationMinutes: 5, order: 0, videoUrl: "", imageUrl: "" });
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -99,7 +101,34 @@ function LessonRow({
         </button>
       </div>
       {open && (
-        <div className="p-3">
+        <div className="p-3 space-y-3">
+          {/* Video URL */}
+          <div>
+            <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Video URL <span className="text-slate-300 font-normal normal-case tracking-normal">(YouTube, Vimeo, or .mp4)</span></label>
+            <input
+              value={lesson.videoUrl ?? ""}
+              onChange={(e) => onChange(index, { videoUrl: e.target.value })}
+              placeholder="https://www.youtube.com/watch?v=…"
+              className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-400 font-mono"
+            />
+          </div>
+          {/* Guide image URL */}
+          <div>
+            <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Guide Image URL <span className="text-slate-300 font-normal normal-case tracking-normal">(Cloudinary or any image)</span></label>
+            <div className="flex items-start gap-2">
+              <input
+                value={lesson.imageUrl ?? ""}
+                onChange={(e) => onChange(index, { imageUrl: e.target.value })}
+                placeholder="https://res.cloudinary.com/…"
+                className="flex-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-400 font-mono"
+              />
+              {lesson.imageUrl && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={lesson.imageUrl} alt="preview" className="w-12 h-12 rounded-lg object-cover flex-shrink-0 border border-slate-200 dark:border-slate-600" />
+              )}
+            </div>
+          </div>
+          {/* Markdown content */}
           <MdEditor
             value={lesson.content}
             onChange={(v) => onChange(index, { content: v })}
@@ -200,6 +229,8 @@ function CourseModal({
         content:         l.content,
         durationMinutes: l.durationMinutes,
         order:           i,
+        videoUrl:        l.videoUrl?.trim() ?? "",
+        imageUrl:        l.imageUrl?.trim() ?? "",
       })),
     };
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, use } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { Loader2, Download, ArrowLeft, ShieldCheck, Award } from "lucide-react";
 import toast from "react-hot-toast";
@@ -133,6 +134,18 @@ export default function CertificatePage({ params }: { params: Promise<{ id: stri
             </div>
           ))}
 
+          {/* Logo — top-left corner */}
+          <div className="absolute top-5 left-6 z-10">
+            <Image
+              src="/logo-only.jpg"
+              alt="LocalPro"
+              width={42}
+              height={42}
+              className="rounded-xl object-contain shadow-sm"
+              priority
+            />
+          </div>
+
           {/* Background watermark seal */}
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.04]">
             <svg viewBox="0 0 200 200" className={`w-96 h-96 ${isCertification ? "text-yellow-600" : "text-indigo-600"}`} fill="currentColor">
@@ -146,23 +159,6 @@ export default function CertificatePage({ params }: { params: Promise<{ id: stri
 
           {/* Content */}
           <div className="absolute inset-0 flex flex-col items-center justify-center px-16 py-10 text-center">
-
-            {/* Header row */}
-            <div className="flex items-center gap-3 mb-4">
-              <div className={`p-2 rounded-full ${isCertification ? "bg-yellow-100" : "bg-indigo-100"}`}>
-                {isCertification
-                  ? <ShieldCheck className="h-6 w-6 text-yellow-600" />
-                  : <Award className="h-6 w-6 text-indigo-600" />}
-              </div>
-              <div className="text-left">
-                <p className={`text-xs font-bold tracking-[0.2em] uppercase ${isCertification ? "text-yellow-700" : "text-indigo-600"}`}>
-                  LocalPro
-                </p>
-                <p className="text-[10px] tracking-widest uppercase text-slate-400 font-medium">
-                  Philippines
-                </p>
-              </div>
-            </div>
 
             {/* Certificate of Completion heading */}
             <p className="text-xs font-semibold tracking-[0.35em] uppercase text-slate-400 mb-2">

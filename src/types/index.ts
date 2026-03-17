@@ -657,6 +657,8 @@ export interface ITrainingLesson {
   content: string;           // Markdown
   durationMinutes: number;
   order: number;
+  videoUrl?: string;         // YouTube, Vimeo, or direct .mp4/.webm URL
+  imageUrl?: string;         // Guide image (Cloudinary or any URL)
 }
 
 export interface ITrainingCourse {

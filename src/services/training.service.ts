@@ -239,36 +239,70 @@ export class TrainingService {
     if (user.role !== "provider")
       throw new ForbiddenError("Only providers can activate enrollments.");
 
-    // Already enrolled? Return immediately.
+    // Already enrolled? Return immediately (idempotent).
     const alreadyEnrolled = await trainingEnrollmentRepository.existsByProviderAndCourse(
       user.userId,
       courseId
     );
     if (alreadyEnrolled) return { activated: true };
 
-    // Verify payment with PayMongo.
-    // Step 1: get the checkout session to find the payment intent ID.
-    const session = await getCheckoutSession(sessionId);
+    // ── Step 1: get the checkout session ─────────────────────────────────
+    let session: Awaited<ReturnType<typeof getCheckoutSession>>;
+    try {
+      session = await getCheckoutSession(sessionId);
+    } catch (err) {
+      console.error("[activate] getCheckoutSession failed:", err);
+      throw new UnprocessableError(
+        "Could not verify payment session. Please wait a moment and try again."
+      );
+    }
 
-    // Step 2: if the checkout session response includes the payment intent status (expanded), use it.
-    // Otherwise fall back to a direct payment intent lookup — PayMongo does not always expand by default.
-    let paymentSucceeded = session.paymentIntentStatus === "succeeded";
+    // ── Step 2: resolve payment status ───────────────────────────────────
+    // PayMongo may or may not expand payment_intent.attributes in the session response.
+    // Also accept session.status === "completed" as a direct paid signal.
+    let paymentSucceeded =
+      session.paymentIntentStatus === "succeeded" ||
+      session.status === "completed" ||
+      session.status === "paid";
 
     if (!paymentSucceeded && session.paymentIntentId) {
-      const pi = await getPaymentIntent(session.paymentIntentId);
-      paymentSucceeded = pi.status === "succeeded";
+      try {
+        const pi = await getPaymentIntent(session.paymentIntentId);
+        paymentSucceeded = pi.status === "succeeded";
+      } catch (err) {
+        console.error("[activate] getPaymentIntent failed:", err);
+        // Don't block activation on this — fall back to session status check below
+      }
     }
 
     if (!paymentSucceeded) {
-      throw new UnprocessableError("Payment has not been confirmed yet. Please wait a moment and try again.");
+      throw new UnprocessableError(
+        "Payment has not been confirmed yet. Please wait a moment and try again."
+      );
     }
 
+    // ── Step 3: activate enrollment ───────────────────────────────────────
     const course = await trainingCourseRepository.findById(courseId);
     if (!course) throw new NotFoundError("Course not found.");
 
     const price = (course as unknown as { price: number }).price;
 
-    await this.activateFromWebhook(user.userId, courseId, sessionId, price);
+    try {
+      await this.activateFromWebhook(user.userId, courseId, sessionId, price);
+    } catch (err) {
+      // If enrollment was created by webhook in the tiny window between our idempotency
+      // check above and now, treat as success rather than failing.
+      const isAlreadyEnrolled = await trainingEnrollmentRepository.existsByProviderAndCourse(
+        user.userId,
+        courseId
+      );
+      if (isAlreadyEnrolled) return { activated: true };
+      console.error("[activate] activateFromWebhook failed:", err);
+      throw new UnprocessableError(
+        "Enrollment could not be activated. Please contact support if this persists."
+      );
+    }
+
     return { activated: true };
   }
 

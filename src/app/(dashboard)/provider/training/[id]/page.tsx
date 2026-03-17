@@ -24,6 +24,8 @@ interface Lesson {
   content?: string;
   durationMinutes: number;
   order: number;
+  videoUrl?: string;
+  imageUrl?: string;
 }
 
 interface Enrollment {
@@ -407,8 +409,47 @@ export default function TrainingCoursePage({ params }: { params: Promise<{ id: s
                 )}
               </div>
 
-              {/* Lesson body — rendered markdown */}
-              <div className="px-6 py-5">
+              {/* Lesson body — video, image, rendered markdown */}
+              <div className="px-6 py-5 space-y-5">
+                {/* Video embed */}
+                {activeLesson.content && activeLesson.videoUrl && (() => {
+                  const ytMatch = activeLesson.videoUrl.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+                  const vimeoMatch = activeLesson.videoUrl.match(/vimeo\.com\/(\d+)/);
+                  const embedSrc = ytMatch
+                    ? `https://www.youtube.com/embed/${ytMatch[1]}`
+                    : vimeoMatch
+                    ? `https://player.vimeo.com/video/${vimeoMatch[1]}`
+                    : null;
+                  return embedSrc ? (
+                    <div className="aspect-video w-full rounded-xl overflow-hidden border border-slate-200 bg-black">
+                      <iframe
+                        src={embedSrc}
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                        className="w-full h-full"
+                        title={activeLesson.title}
+                      />
+                    </div>
+                  ) : (
+                    <video
+                      src={activeLesson.videoUrl}
+                      controls
+                      className="w-full rounded-xl border border-slate-200 bg-black"
+                    />
+                  );
+                })()}
+
+                {/* Guide image */}
+                {activeLesson.content && activeLesson.imageUrl && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={activeLesson.imageUrl}
+                    alt={`${activeLesson.title} guide`}
+                    className="w-full rounded-xl border border-slate-200 object-cover max-h-96"
+                  />
+                )}
+
+                {/* Markdown content */}
                 {activeLesson.content ? (
                   <div
                     className="prose prose-sm prose-slate max-w-none

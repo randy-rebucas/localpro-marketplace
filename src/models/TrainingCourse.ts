@@ -9,6 +9,8 @@ const LessonSchema = new Schema(
     content:         { type: String, required: true },          // Markdown
     durationMinutes: { type: Number, default: 0, min: 0 },
     order:           { type: Number, required: true, min: 0 },
+    videoUrl:        { type: String, default: "", trim: true }, // YouTube / Vimeo / direct
+    imageUrl:        { type: String, default: "", trim: true }, // Guide image
   },
   { _id: true }
 );
