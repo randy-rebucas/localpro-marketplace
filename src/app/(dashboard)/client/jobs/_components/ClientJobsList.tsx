@@ -87,11 +87,11 @@ export default function ClientJobsList({
   ];
 
   const LIFECYCLE = [
-    t("jobsList_lifecycle1"),
-    t("jobsList_lifecycle2"),
-    t("jobsList_lifecycle3"),
-    t("jobsList_lifecycle4"),
-    t("jobsList_lifecycle5"),
+    t("jobsList_lcPosted"),
+    t("jobsList_lcOpen"),
+    t("jobsList_lcAssigned"),
+    t("jobsList_lcInProgress"),
+    t("jobsList_lcDone"),
   ] as const;
 
   const STATUS_STEP: Record<JobStatus | "all", number> = {
@@ -172,7 +172,7 @@ export default function ClientJobsList({
             <Briefcase className="h-4 w-4 text-primary" />
           </div>
           <div className="min-w-0">
-            <p className="text-xs text-slate-400 leading-none truncate">{t("jobsList_totalLabel")}</p>
+            <p className="text-xs text-slate-400 leading-none truncate">{t("jobsList_statTotal")}</p>
             <p className="text-lg sm:text-xl font-bold text-slate-900 leading-tight">{jobs.length}</p>
           </div>
         </div>

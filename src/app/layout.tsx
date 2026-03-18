@@ -157,9 +157,9 @@ export default async function RootLayout({
           )}
           {children}
           {/* NextIntlClientProvider makes translations available to client components */}
+          <PwaSetup />
+          <CookieConsent />
         </NextIntlClientProvider>
-        <PwaSetup />
-        <CookieConsent />
         <Analytics />
         <SpeedInsights />
         <Toaster
