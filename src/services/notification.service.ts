@@ -183,3 +183,20 @@ export class NotificationService {
 
 export const notificationService = new NotificationService();
 
+/**
+ * Returns a locale-aware `t` function scoped to the "notifications" namespace,
+ * using the recipient's stored preferredLocale. Safe to call from any server
+ * context (Route Handlers, cron jobs, webhooks, etc.).
+ */
+export async function getNotificationT(recipientUserId: string) {
+  const User = (await import("@/models/User")).default;
+  const user = await (User as { findById(id: string): { select(f: string): { lean(): Promise<unknown> } } })
+    .findById(recipientUserId)
+    .select("preferredLocale")
+    .lean();
+  const locale: "en" | "tl" =
+    (user as { preferredLocale?: string } | null)?.preferredLocale === "tl" ? "tl" : "en";
+  const { getTranslations } = await import("next-intl/server");
+  return getTranslations({ locale, namespace: "notifications" });
+}
+

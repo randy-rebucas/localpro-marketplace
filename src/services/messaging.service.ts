@@ -78,10 +78,12 @@ export class MessagingService {
     pushMessage(input.threadId, message);
 
     // Create in-app notification for receiver
+    const { getNotificationT } = await import("@/services/notification.service");
+    const t = await getNotificationT(receiverId);
     const notification = await notificationRepository.create({
       userId: receiverId,
       type: "new_message",
-      title: "New message",
+      title: t("newMessageTitle"),
       message: input.body.slice(0, 80) + (input.body.length > 80 ? "…" : ""),
       data: { messageThreadId: input.threadId },
     });

@@ -84,11 +84,13 @@ export class SupportService {
     pushSupportToAdmin({ userId: targetUserId, message: payload });
 
     // In-app notification for the user
+    const { getNotificationT } = await import("@/services/notification.service");
+    const t = await getNotificationT(targetUserId);
     const notification = await notificationRepository.create({
       userId: targetUserId,
       type: "new_message",
-      title: "Support reply",
-      message: body.slice(0, 80) + (body.length > 80 ? "…" : ""),
+      title: t("supportReplyTitle"),
+      message: t("supportReplyMessage", { preview: body.slice(0, 80) }),
       data: {},
     });
     pushNotification(targetUserId, notification);

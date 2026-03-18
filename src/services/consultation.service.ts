@@ -1,5 +1,5 @@
 import { Types } from "mongoose";
-import { consultationRepository, activityRepository, userRepository } from "@/repositories";
+import { consultationRepository, activityRepository, userRepository, notificationRepository } from "@/repositories";
 import { NotFoundError, ForbiddenError, ConflictError, UnprocessableError } from "@/lib/errors";
 import { getAppSetting } from "@/lib/appSettings";
 import type { TokenPayload } from "@/lib/auth";
@@ -151,12 +151,14 @@ export class ConsultationService {
     const initiatorDoc = await userRepository.findById(user.userId) as { name?: string } | null;
     const initiatorName = initiatorDoc?.name || "A user";
 
-    const { notificationService } = await import("@/services/notification.service");
-    await notificationService.push({
+    const { getNotificationT } = await import("@/services/notification.service");
+    const t = await getNotificationT(input.targetUserId);
+    const consultationType = input.type === "site_inspection" ? "siteInspection" : "chat";
+    await notificationRepository.create({
       userId: input.targetUserId,
       type: "consultation_request",
-      title: `${initiatorName} requested a consultation`,
-      message: `${input.type === "site_inspection" ? "Site inspection" : "Chat"} consultation: ${input.title}`,
+      title: t("consultationRequestTitle", { initiatorName }),
+      message: t(`consultationRequest${consultationType.charAt(0).toUpperCase() + consultationType.slice(1)}Message`, { consultationTitle: input.title }),
       data: {
         consultationId: consultation._id?.toString(),
         initiatorId: user.userId,
@@ -292,13 +294,16 @@ export class ConsultationService {
     const responderDoc = await userRepository.findById(user.userId) as { name?: string } | null;
     const responderName = responderDoc?.name || "Provider";
 
-    const { notificationService } = await import("@/services/notification.service");
+    const { getNotificationT } = await import("@/services/notification.service");
+    const t = await getNotificationT(consultation.initiatorId.toString());
+    const { notificationRepository } = await import("@/repositories");
+    
     if (input.action === "accept" && input.estimateAmount !== undefined) {
-      await notificationService.push({
+      await notificationRepository.create({
         userId: consultation.initiatorId.toString(),
         type: "estimate_provided",
-        title: `${responderName} provided an estimate`,
-        message: `₱${input.estimateAmount} - ${input.estimateNote?.substring(0, 50)}...`,
+        title: t("estimateProvidedTitle", { responderName }),
+        message: t("estimateProvidedMessage", { amount: input.estimateAmount, note: (input.estimateNote?.substring(0, 50) || "") }),
         data: {
           consultationId: consultationId,
           estimateAmount: input.estimateAmount,
@@ -306,18 +311,18 @@ export class ConsultationService {
       });
     } else if (input.action === "accept") {
       // Accepted without an estimate — still notify the client
-      await notificationService.push({
+      await notificationRepository.create({
         userId: consultation.initiatorId.toString(),
         type: "consultation_accepted",
-        title: `${responderName} accepted your consultation`,
-        message: `Your consultation "${consultation.title}" has been accepted. You can now convert it to a job.`,
+        title: t("consultationAcceptedTitle", { responderName }),
+        message: t("consultationAcceptedMessage", { consultationTitle: consultation.title }),
         data: { consultationId: consultationId },
       });
     } else if (input.action === "decline") {
-      await notificationService.push({
+      await notificationRepository.create({
         userId: consultation.initiatorId.toString(),
         type: "new_message",
-        title: `${responderName} declined your consultation`,
+        title: t("consultationDeclinedTitle", { responderName }),
         message: consultation.title,
         data: {
           consultationId: consultationId,
@@ -455,13 +460,15 @@ export class ConsultationService {
     );
 
     // Send notifications
-    const { notificationService } = await import("@/services/notification.service");
+    const { getNotificationT } = await import("@/services/notification.service");
+    const { notificationRepository } = await import("@/repositories");
     for (const consultation of expiredConsultations) {
-      await notificationService.push({
+      const t = await getNotificationT(consultation.initiatorId.toString());
+      await notificationRepository.create({
         userId: consultation.initiatorId.toString(),
         type: "consultation_expired",
-        title: "Consultation request expired",
-        message: `Your consultation request "${consultation.title}" has expired after 7 days`,
+        title: t("consultationExpiredTitle"),
+        message: t("consultationExpiredMessage", { consultationTitle: consultation.title }),
         data: {
           consultationId: consultation._id?.toString(),
         },
@@ -482,7 +489,8 @@ export class ConsultationService {
 
     if (stale.length === 0) return 0;
 
-    const { notificationService } = await import("@/services/notification.service");
+    const { getNotificationT } = await import("@/services/notification.service");
+    const { notificationRepository } = await import("@/repositories");
 
     for (const consultation of stale) {
       // Admin activity log entry
@@ -500,11 +508,12 @@ export class ConsultationService {
       });
 
       // Nudge the client to convert or close
-      await notificationService.push({
+      const t = await getNotificationT(consultation.initiatorId.toString());
+      await notificationRepository.create({
         userId: consultation.initiatorId.toString(),
         type: "consultation_stale",
-        title: "Ready to book your service?",
-        message: `Your accepted consultation "${consultation.title}" has been open for over 7 days. Convert it to a job or close it.`,
+        title: t("consultationStaleTitle"),
+        message: t("consultationStaleMessage", { consultationTitle: consultation.title }),
         data: { consultationId: consultation._id?.toString() },
       });
     }

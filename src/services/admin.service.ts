@@ -78,12 +78,14 @@ export class AdminService {
     });
 
     // Notify client
-    const statusLabel = j.invitedProviderId ? "assigned to your chosen provider" : "live and accepting quotes from providers";
+    const { getNotificationT } = await import("@/services/notification.service");
+    const tClient = await getNotificationT(j.clientId.toString());
+    const statusLabel = j.invitedProviderId ? tClient("jobApprovedStatusAssigned") : tClient("jobApprovedStatusLive");
     const notification = await notificationRepository.create({
       userId: j.clientId.toString(),
       type: "job_approved",
-      title: "Your job has been approved!",
-      message: `"${j.title}" is now ${statusLabel}.`,
+      title: tClient("jobApprovedTitle"),
+      message: tClient("jobApprovedMessage", { jobTitle: j.title, statusLabel }),
       data: { jobId },
     });
     pushNotification(j.clientId.toString(), notification);
@@ -95,11 +97,12 @@ export class AdminService {
 
     // Notify invited provider about the direct job
     if (j.invitedProviderId) {
+      const tProvider = await getNotificationT(j.invitedProviderId.toString());
       const providerNotif = await notificationRepository.create({
         userId: j.invitedProviderId.toString(),
         type: "job_direct_invite",
-        title: "You have a new job!",
-        message: `A client has posted "${j.title}" directly to you. Check your active jobs.`,
+        title: tProvider("jobDirectInviteTitle"),
+        message: tProvider("jobDirectInviteMessage", { jobTitle: j.title }),
         data: { jobId },
       });
       pushNotification(j.invitedProviderId.toString(), providerNotif);
@@ -139,11 +142,12 @@ export class AdminService {
 
             await Promise.all(
               preferredIds.map(async (providerId) => {
+                const tPref = await getNotificationT(providerId);
                 const notif = await notificationRepository.create({
                   userId: providerId,
                   type: "job_direct_invite",
-                  title: `New job from ${org.name}`,
-                  message: `${org.name} posted a new job: "${j.title}". You're a preferred provider — be the first to quote!`,
+                  title: tPref("businessJobInviteTitle", { orgName: org.name }),
+                  message: tPref("businessJobInviteMessage", { orgName: org.name, jobTitle: j.title }),
                   data: { jobId, jobTitle: j.title },
                 });
                 pushNotification(providerId, notif);
@@ -192,11 +196,13 @@ export class AdminService {
     await activityRepository.log({ userId: adminUserId, eventType: "job_rejected", jobId });
 
     // Notify client
+    const { getNotificationT } = await import("@/services/notification.service");
+    const tReject = await getNotificationT(j.clientId.toString());
     const notification = await notificationRepository.create({
       userId: j.clientId.toString(),
       type: "job_rejected",
-      title: "Job not approved",
-      message: `"${j.title}" was not approved. Please review our guidelines and resubmit.`,
+      title: tReject("jobRejectedTitle"),
+      message: tReject("jobRejectedMessage", { jobTitle: j.title }),
       data: { jobId },
     });
     pushNotification(j.clientId.toString(), notification);

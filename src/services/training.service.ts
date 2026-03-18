@@ -166,12 +166,14 @@ export class TrainingService {
     await trainingEnrollmentRepository.updateById(enrollmentId, { ledgerJournalId: journalId });
 
     // Notification
-    const { notificationService } = await import("@/services/notification.service");
-    await notificationService.push({
+    const { getNotificationT } = await import("@/services/notification.service");
+    const t = await getNotificationT(user.userId);
+    const { notificationRepository } = await import("@/repositories");
+    await notificationRepository.create({
       userId: user.userId,
       type: "payment_confirmed",
-      title: "Enrollment confirmed!",
-      message: `You're now enrolled in "${courseTitle}". ₱${price.toLocaleString()} was deducted from your wallet.`,
+      title: t("enrollmentConfirmedTitle"),
+      message: t("enrollmentConfirmedMessage", { courseTitle, amount: price.toLocaleString() }),
     });
 
     return { activated: true, enrollment };
@@ -356,12 +358,14 @@ export class TrainingService {
     await trainingEnrollmentRepository.updateById(enrollmentId, { ledgerJournalId: journalId });
 
     // Notification
-    const { notificationService } = await import("@/services/notification.service");
-    await notificationService.push({
+    const { getNotificationT } = await import("@/services/notification.service");
+    const t = await getNotificationT(providerId);
+    const { notificationRepository } = await import("@/repositories");
+    await notificationRepository.create({
       userId: providerId,
       type: "payment_confirmed",
-      title: "Enrollment confirmed!",
-      message: `You're now enrolled in "${courseTitle}".`,
+      title: t("enrollmentConfirmedTitle"),
+      message: t("enrollmentConfirmedProviderMessage", { courseTitle }),
     });
   }
 
@@ -421,13 +425,15 @@ export class TrainingService {
     await this.grantBadge(user.userId, enrollment);
 
     // Notification
-    const { notificationService } = await import("@/services/notification.service");
+    const { getNotificationT } = await import("@/services/notification.service");
+    const t = await getNotificationT(user.userId);
+    const { notificationRepository } = await import("@/repositories");
     const courseTitle = (enrollment as unknown as { courseTitle: string }).courseTitle;
-    await notificationService.push({
+    await notificationRepository.create({
       userId: user.userId,
       type: "system_notice",
-      title: "Course completed! 🎓",
-      message: `Congratulations! You've completed "${courseTitle}" and earned your badge.`,
+      title: t("courseCompletedTitle"),
+      message: t("courseCompletedMessage", { courseTitle }),
     });
 
     return { enrollment: updated };

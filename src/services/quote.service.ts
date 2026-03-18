@@ -90,11 +90,13 @@ export class QuoteService {
 
     // Notify client via notification service (SSE + email)
     const { notificationService } = await import("@/services/notification.service");
+    const { getNotificationT } = await import("@/services/notification.service");
+    const t = await getNotificationT(j.clientId.toString());
     await notificationService.push({
       userId: j.clientId.toString(),
       type: "quote_received",
-      title: "New quote received",
-      message: `A provider submitted a quote of ₱${input.proposedAmount.toLocaleString()} for "${j.title}".`,
+      title: t("quoteReceivedTitle"),
+      message: t("quoteReceivedMessage", { amount: input.proposedAmount.toLocaleString(), jobTitle: j.title }),
       data: { jobId: input.jobId, quoteId: quote._id!.toString() },
     });
     // Signal the client's job detail page to refresh (new quote appeared)
@@ -185,11 +187,13 @@ export class QuoteService {
     // Notify provider via notification service (SSE + email)
     if (q.providerId) {
       const { notificationService } = await import("@/services/notification.service");
+      const { getNotificationT } = await import("@/services/notification.service");
+      const t = await getNotificationT(q.providerId.toString());
       await notificationService.push({
         userId: q.providerId.toString(),
         type: "quote_accepted",
-        title: "Your quote was accepted!",
-        message: `The client accepted your quote for "${j.title}". They'll fund escrow to get started.`,
+        title: t("quoteAcceptedTitle"),
+        message: t("quoteAcceptedMessage", { jobTitle: j.title }),
         data: { jobId: j._id.toString(), quoteId: q._id.toString() },
       });
     }
@@ -230,11 +234,13 @@ export class QuoteService {
     // Notify provider via notification service (SSE + email)
     if (q.providerId) {
       const { notificationService } = await import("@/services/notification.service");
+      const { getNotificationT } = await import("@/services/notification.service");
+      const t = await getNotificationT(q.providerId.toString());
       await notificationService.push({
         userId: q.providerId.toString(),
         type: "quote_rejected",
-        title: "Quote not selected",
-        message: "The client chose a different provider for this job.",
+        title: t("quoteRejectedTitle"),
+        message: t("quoteRejectedMessage"),
         data: { jobId: q.jobId.toString(), quoteId },
       });
       pushStatusUpdate(q.providerId.toString(), { entity: "quote", id: quoteId, status: "rejected" });

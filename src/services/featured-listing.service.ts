@@ -118,12 +118,14 @@ export class FeaturedListingService {
     await featuredListingRepository.updateById(listingId, { ledgerJournalId: journalId });
 
     // Push notification
-    const { notificationService } = await import("@/services/notification.service");
-    await notificationService.push({
+    const { getNotificationT } = await import("@/services/notification.service");
+    const t = await getNotificationT(user.userId);
+    const { notificationRepository } = await import("@/repositories");
+    await notificationRepository.create({
       userId: user.userId,
       type: "payment_confirmed",
-      title: "Boost activated! 🚀",
-      message: `Your ${FEATURED_LISTING_LABELS[type]} boost is now active for 7 days. ₱${price.toLocaleString()} was deducted from your wallet.`,
+      title: t("boostActivatedTitle"),
+      message: t("boostActivatedMessage", { boostType: FEATURED_LISTING_LABELS[type], amount: price.toLocaleString() }),
       data: { listingId },
     });
 
@@ -211,12 +213,14 @@ export class FeaturedListingService {
 
     await featuredListingRepository.updateById(listingId, { ledgerJournalId: journalId });
 
-    const { notificationService } = await import("@/services/notification.service");
-    await notificationService.push({
+    const { getNotificationT } = await import("@/services/notification.service");
+    const t = await getNotificationT(providerId);
+    const { notificationRepository } = await import("@/repositories");
+    await notificationRepository.create({
       userId: providerId,
       type: "payment_confirmed",
-      title: "Boost activated! 🚀",
-      message: `Your ${FEATURED_LISTING_LABELS[listingType]} boost is now active for 7 days.`,
+      title: t("boostActivatedTitle"),
+      message: t("boostActivatedProviderMessage", { boostType: FEATURED_LISTING_LABELS[listingType] }),
       data: { listingId },
     });
   }
@@ -262,17 +266,20 @@ export class FeaturedListingService {
     // Bulk notify affected providers
     const stale = await featuredListingRepository.findExpiredActive();
     if (stale.length > 0) {
-      const { notificationService } = await import("@/services/notification.service");
+      const { getNotificationT } = await import("@/services/notification.service");
+      const { notificationRepository } = await import("@/repositories");
       await Promise.allSettled(
-        stale.map((l) =>
-          notificationService.push({
-            userId: (l as { providerId: { toString(): string } }).providerId.toString(),
-            type: "system" as never,
-            title: "Boost expired",
-            message: `Your ${FEATURED_LISTING_LABELS[(l as { type: FeaturedListingType }).type]} boost has expired. Renew to stay featured.`,
+        stale.map(async (l) => {
+          const providerId = (l as { providerId: { toString(): string } }).providerId.toString();
+          const t = await getNotificationT(providerId);
+          return notificationRepository.create({
+            userId: providerId,
+            type: "system",
+            title: t("boostExpiredTitle"),
+            message: t("boostExpiredMessage", { boostType: FEATURED_LISTING_LABELS[(l as { type: FeaturedListingType }).type] }),
             data: { listingId: (l as { _id: { toString(): string } })._id.toString() },
-          })
-        )
+          });
+        })
       );
     }
 

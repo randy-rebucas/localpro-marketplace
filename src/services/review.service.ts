@@ -90,11 +90,13 @@ export class ReviewService {
 
     // Notify provider
     const stars = "★".repeat(input.rating) + "☆".repeat(5 - input.rating);
+    const { getNotificationT } = await import("@/services/notification.service");
+    const t = await getNotificationT(j.providerId.toString());
     const notification = await notificationRepository.create({
       userId: j.providerId.toString(),
       type: "review_received",
-      title: "New review received",
-      message: `${stars} — "${input.feedback.slice(0, 60)}${input.feedback.length > 60 ? "…" : ""}"`,
+      title: t("reviewReceivedTitle"),
+      message: t("reviewReceivedMessage", { stars, feedback: input.feedback.slice(0, 60) }),
       data: { jobId: input.jobId },
     });
     pushNotification(j.providerId.toString(), notification);

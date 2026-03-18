@@ -258,14 +258,16 @@ export class RecurringScheduleService {
         }
 
         // Notify client
-        const { notificationService } = await import(
+        const { getNotificationT } = await import(
           "@/services/notification.service"
         );
-        await notificationService.push({
+        const t = await getNotificationT(clientId);
+        const { notificationRepository } = await import("@/repositories");
+        await notificationRepository.create({
           userId: clientId,
           type: "recurring_job_spawned",
-          title: "Recurring job posted",
-          message: `Your recurring "${schedule.title}" job has been auto-posted for ${new Date(schedule.nextRunAt).toLocaleDateString()}.`,
+          title: t("recurringJobPostedTitle"),
+          message: t("recurringJobPostedMessage", { jobTitle: schedule.title, date: new Date(schedule.nextRunAt).toLocaleDateString() }),
           data: { jobId: job._id!.toString() },
         });
 
@@ -277,20 +279,20 @@ export class RecurringScheduleService {
         //    At spawn time, we simply notify the client and leave funding to the
         //    post-validation webhook/cron.
         if (schedule.autoPayEnabled) {
-          await notificationService.push({
+          await notificationRepository.create({
             userId: clientId,
             type: "payment_reminder",
-            title: "Recurring job pending admin review",
-            message: `Your recurring "${schedule.title}" job has been submitted for review. Auto-pay will be triggered once it's approved.`,
+            title: t("recurringJobPendingTitle"),
+            message: t("recurringJobPendingMessage", { jobTitle: schedule.title }),
             data: { jobId: job._id!.toString() },
           });
         } else {
           // Manual fund notification
-          await notificationService.push({
+          await notificationRepository.create({
             userId: clientId,
             type: "payment_reminder",
-            title: "Fund escrow for your recurring job",
-            message: `Please fund the ₱${schedule.budget.toLocaleString()} escrow for "${schedule.title}" to activate the job.`,
+            title: t("fundEscrowRecurringTitle"),
+            message: t("fundEscrowRecurringMessage", { amount: schedule.budget.toLocaleString(), jobTitle: schedule.title }),
             data: { jobId: job._id!.toString() },
           });
         }

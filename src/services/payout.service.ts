@@ -130,11 +130,13 @@ export class PayoutService {
     });
 
     const { notificationService } = await import("@/services/notification.service");
+    const { getNotificationT } = await import("@/services/notification.service");
+    const t = await getNotificationT(user.userId);
     await notificationService.push({
       userId: user.userId,
       type: "payout_requested",
-      title: "Payout request submitted",
-      message: `Your payout of ₱${amount.toLocaleString()} has been submitted. A withdrawal fee of ₱${withdrawalFee} applies — you will receive ₱${netAmount.toLocaleString()}.`,
+      title: t("payoutRequestedTitle"),
+      message: t("payoutRequestedMessage", { amount: amount.toLocaleString(), fee: withdrawalFee, netAmount: netAmount.toLocaleString() }),
       data: { payoutId: payout._id?.toString() },
     });
 
@@ -225,18 +227,31 @@ export class PayoutService {
     // Notify provider
     const { notificationService } = await import("@/services/notification.service");
 
-    const messages: Record<string, string> = {
-      processing: "Your payout request is now being processed.",
-      completed: `Your payout of ₱${p.amount.toLocaleString()} has been completed. Net amount sent: ₱${netPayout.toLocaleString()}.`,
-      rejected: `Your payout request was rejected.${data.notes ? ` Reason: ${data.notes}` : ""} Note: the ₱${p.withdrawalFee ?? 0} withdrawal fee is non-refundable.`,
+    const messageKeys = {
+      processing: { title: "payoutProcessingTitle", message: "payoutProcessingMessage" },
+      completed: { title: "payoutCompletedTitle", message: "payoutCompletedMessage" },
+      rejected: { title: "payoutRejectedTitle", message: "payoutRejectedMessage" },
     };
 
-    if (messages[data.status]) {
+    if (messageKeys[data.status as keyof typeof messageKeys]) {
+      const { getNotificationT } = await import("@/services/notification.service");
+      const t = await getNotificationT(p.providerId.toString());
+      const keys = messageKeys[data.status as keyof typeof messageKeys];
+      
+      let messageParams: any = {};
+      if (data.status === "completed") {
+        const netPayout = p.amount - (p.withdrawalFee ?? 0);
+        messageParams = { amount: p.amount.toLocaleString(), netAmount: netPayout.toLocaleString() };
+      } else if (data.status === "rejected") {
+        const reason = data.notes ? t("payoutRejectedReason", { notes: data.notes }) : "";
+        messageParams = { reason, fee: (p.withdrawalFee ?? 0) };
+      }
+      
       await notificationService.push({
         userId: p.providerId.toString(),
         type: "payout_status_update",
-        title: `Payout ${data.status}`,
-        message: messages[data.status],
+        title: t(keys.title),
+        message: t(keys.message, messageParams),
         data: { payoutId },
       });
     }

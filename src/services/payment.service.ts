@@ -134,19 +134,22 @@ export class PaymentService {
 
       // Notify parties via notification service
       const { notificationService } = await import("@/services/notification.service");
+      const { getNotificationT } = await import("@/services/notification.service");
+      const tClient = await getNotificationT(user.userId);
       await notificationService.push({
         userId: user.userId,
         type: "payment_confirmed",
-        title: "Payment confirmed (simulation)",
-        message: `Escrow of ₱${amount.toLocaleString()} funded (dev mode). Fees: escrow ₱${escrowFee.toLocaleString()}, processing ₱${processingFee.toLocaleString()}${urgencyFee > 0 ? `, urgency ₱${urgencyFee.toLocaleString()}` : ""}${platformServiceFee > 0 ? `, platform ₱${platformServiceFee.toLocaleString()}` : ""}.`,
+        title: tClient("paymentConfirmedSimTitle"),
+        message: tClient("paymentConfirmedSimMessage", { amount: amount.toLocaleString(), escrowFee: escrowFee.toLocaleString(), processingFee: processingFee.toLocaleString(), urgencyFee, platformServiceFee }),
         data: { jobId: job._id!.toString() },
       });
       if (job.providerId) {
+        const tProvider = await getNotificationT(job.providerId.toString());
         await notificationService.push({
           userId: job.providerId.toString(),
           type: "escrow_funded",
-          title: "Escrow funded",
-          message: "The client has funded escrow. You may begin work.",
+          title: tProvider("escrowFundedTitle"),
+          message: tProvider("escrowFundedMessage"),
           data: { jobId: job._id!.toString() },
         });
       }
@@ -333,22 +336,27 @@ export class PaymentService {
     });
 
     const { notificationService } = await import("@/services/notification.service");
+    const { getNotificationT } = await import("@/services/notification.service");
 
     if (p.providerId) {
+      const tProvider = await getNotificationT(p.providerId.toString());
       await notificationService.push({
         userId: p.providerId.toString(),
         type: "escrow_funded",
-        title: "Escrow funded",
-        message: "The client has funded escrow for your job. You may begin work.",
+        title: tProvider("escrowFundedTitle"),
+        message: tProvider("escrowFundedJobMessage"),
         data: { jobId: p.jobId.toString() },
       });
     }
 
+    const tClient = await getNotificationT(p.clientId.toString());
+    const urgencyMsg = (p.urgencyFee ?? 0) > 0 ? tClient("feeUrgency", { fee: (p.urgencyFee ?? 0) }) : "";
+    const platformMsg = (p.platformServiceFee ?? 0) > 0 ? tClient("feePlatform", { fee: (p.platformServiceFee ?? 0) }) : "";
     await notificationService.push({
       userId: p.clientId.toString(),
       type: "payment_confirmed",
-      title: "Payment confirmed",
-        message: `Your payment of ₱${p.amount.toLocaleString()} has been confirmed. Fees: escrow ₱${(p.escrowFee ?? 0).toLocaleString()}, processing ₱${(p.processingFee ?? 0).toLocaleString()}${(p.urgencyFee ?? 0) > 0 ? `, urgency ₱${(p.urgencyFee ?? 0).toLocaleString()}` : ""}${(p.platformServiceFee ?? 0) > 0 ? `, platform ₱${(p.platformServiceFee ?? 0).toLocaleString()}` : ""}.`,
+      title: tClient("paymentConfirmedTitle"),
+      message: tClient("paymentConfirmedMessage", { amount: p.amount.toLocaleString(), escrowFee: (p.escrowFee ?? 0).toLocaleString(), processingFee: (p.processingFee ?? 0).toLocaleString(), feesSuffix: urgencyMsg + platformMsg }),
       data: { jobId: p.jobId.toString() },
     });
 
@@ -453,20 +461,25 @@ export class PaymentService {
     });
 
     const { notificationService } = await import("@/services/notification.service");
+    const { getNotificationT } = await import("@/services/notification.service");
+    const tClient = await getNotificationT(clientId);
+    const urgencyMsg = urgencyFee > 0 ? tClient("feeUrgency", { fee: urgencyFee }) : "";
+    const platformMsg = platformServiceFee > 0 ? tClient("feePlatform", { fee: platformServiceFee }) : "";
     await notificationService.push({
       userId: clientId,
       type: "payment_confirmed",
-      title: "Auto-pay successful ✅",
-      message: `₱${totalCharge.toLocaleString()} charged automatically for "${jobTitle}" (service ₱${job.budget.toLocaleString()}, escrow ₱${escrowFee.toLocaleString()}, processing ₱${processingFee.toLocaleString()}${urgencyFee > 0 ? `, urgency ₱${urgencyFee.toLocaleString()}` : ""}${platformServiceFee > 0 ? `, platform ₱${platformServiceFee.toLocaleString()}` : ""}).`,
+      title: tClient("autoPayTitle"),
+      message: tClient("autoPayMessage", { totalCharge: totalCharge.toLocaleString(), jobTitle, serviceCost: job.budget.toLocaleString(), escrowFee: escrowFee.toLocaleString(), processingFee: processingFee.toLocaleString(), feesSuffix: urgencyMsg + platformMsg }),
       data: { jobId },
     });
 
     if (job.providerId) {
+      const tProvider = await getNotificationT(job.providerId.toString());
       await notificationService.push({
         userId: job.providerId.toString(),
         type: "escrow_funded",
-        title: "Escrow funded",
-        message: "The client has funded escrow for your recurring job. You may begin work.",
+        title: tProvider("escrowFundedTitle"),
+        message: tProvider("escrowFundedRecurringMessage"),
         data: { jobId },
       });
     }
@@ -517,11 +530,13 @@ export class PaymentService {
     };
 
     const { notificationService } = await import("@/services/notification.service");
+    const { getNotificationT } = await import("@/services/notification.service");
+    const t = await getNotificationT(p.clientId.toString());
     await notificationService.push({
       userId: p.clientId.toString(),
       type: "payment_failed",
-      title: "Payment failed",
-      message: "Your payment attempt failed. Please try funding escrow again.",
+      title: t("paymentFailedTitle"),
+      message: t("paymentFailedMessage"),
       data: { jobId: p.jobId.toString(), paymentIntentId },
     });
   }

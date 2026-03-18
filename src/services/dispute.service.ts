@@ -88,11 +88,13 @@ export class DisputeService {
     // Notify the other party
     const otherPartyId = isClient ? job.providerId?.toString() : job.clientId.toString();
     if (otherPartyId) {
+      const { getNotificationT } = await import("@/services/notification.service");
+      const t = await getNotificationT(otherPartyId);
       const notification = await notificationRepository.create({
         userId: otherPartyId,
         type: "dispute_opened",
-        title: "A dispute has been opened",
-        message: "A dispute was raised on one of your jobs. An admin will review it.",
+        title: t("disputeOpenedTitle"),
+        message: t("disputeOpenedMessage"),
         data: { jobId: input.jobId, disputeId: dispute._id!.toString() },
       });
       pushNotification(otherPartyId, notification);
@@ -291,20 +293,21 @@ export class DisputeService {
       }
 
       for (const userId of recipients) {
+        const { getNotificationT } = await import("@/services/notification.service");
+        const t = await getNotificationT(userId);
+        const baseMsg = input.escrowAction === "release"
+          ? t("disputeResolvedRelease")
+          : t("disputeResolvedRefund");
         const feeMsg = feeCharged && feeAmount > 0 && (
           (userId === job.clientId.toString() && (input.handlingFeeChargedTo === "client" || input.handlingFeeChargedTo === "both")) ||
           (userId === job.providerId?.toString() && (input.handlingFeeChargedTo === "provider" || input.handlingFeeChargedTo === "both"))
-        ) ? ` A case handling fee of ₱${feeAmount.toLocaleString()} was deducted from your wallet.` : "";
+        ) ? t("disputeResolvedFee", { feeAmount: feeAmount.toLocaleString() }) : "";
 
         const notification = await notificationRepository.create({
           userId,
           type: "dispute_resolved",
-          title: "Dispute resolved",
-          message: (
-            input.escrowAction === "release"
-              ? "The dispute was resolved. Payment has been released to the provider."
-              : "The dispute was resolved. A refund has been issued."
-          ) + feeMsg,
+          title: t("disputeResolvedTitle"),
+          message: baseMsg + feeMsg,
           data: { jobId: d.jobId.toString(), disputeId },
         });
         pushNotification(userId, notification);

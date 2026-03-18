@@ -87,11 +87,13 @@ export class EscrowService {
     });
 
     const { notificationService } = await import("@/services/notification.service");
+    const { getNotificationT } = await import("@/services/notification.service");
+    const t = await getNotificationT(job.clientId.toString());
     await notificationService.push({
       userId: job.clientId.toString(),
       type: "job_completed",
-      title: "Job marked as completed",
-      message: "The provider has marked the job as done. Please review and release payment.",
+      title: t("jobMarkedCompleteTitle"),
+      message: t("jobMarkedCompleteMessage"),
       data: { jobId: job._id!.toString() },
     });
 
@@ -215,11 +217,13 @@ export class EscrowService {
 
     if (job.providerId) {
       const { notificationService } = await import("@/services/notification.service");
+      const { getNotificationT } = await import("@/services/notification.service");
+      const t = await getNotificationT(job.providerId.toString());
       await notificationService.push({
         userId: job.providerId.toString(),
         type: "escrow_released",
-        title: "Payment released!",
-        message: "The client approved the job. Your payment has been released.",
+        title: t("escrowReleasedTitle"),
+        message: t("escrowReleasedMessage"),
         data: { jobId: job._id!.toString() },
       });
     }
@@ -327,11 +331,13 @@ export class EscrowService {
 
     // Notify the client
     const { notificationService } = await import("@/services/notification.service");
+    const { getNotificationT } = await import("@/services/notification.service");
+    const t = await getNotificationT(job.clientId.toString());
     await notificationService.push({
       userId: job.clientId.toString(),
       type: "job_update" as never,
-      title: "Provider withdrew from your job",
-      message: `Your provider could not proceed with the job. It has been re-opened and is now accepting new providers.`,
+      title: t("providerWithdrewTitle"),
+      message: t("providerWithdrewMessage"),
       data: { jobId: job._id!.toString() },
     });
 

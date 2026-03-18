@@ -99,11 +99,13 @@ export class AuthService {
           await Promise.all(
             staffList.map(async (admin) => {
               const adminId = admin._id.toString();
+              const { getNotificationT } = await import("@/services/notification.service");
+              const t = await getNotificationT(adminId);
               const note = await notificationRepository.create({
                 userId: adminId,
                 type: "new_provider_signup",
-                title: "New Provider Application",
-                message: `${user.name} has registered as a provider and is awaiting approval.`,
+                title: t("newProviderApplicationTitle"),
+                message: t("newProviderApplicationMessage", { userName: user.name }),
                 data: { providerId: userId },
               });
               pushNotification(adminId, note);

@@ -131,12 +131,14 @@ export class LeadService {
       );
       // Notify if low balance
       if (result.newBalance <= 3) {
-        const { notificationService } = await import("@/services/notification.service");
-        await notificationService.push({
+        const { getNotificationT } = await import("@/services/notification.service");
+        const t = await getNotificationT(user.userId);
+        const { notificationRepository } = await import("@/repositories");
+        await notificationRepository.create({
           userId: user.userId,
           type: "system_notice",
-          title: "Low bid credits",
-          message: `You have ${result.newBalance} bid credit${result.newBalance !== 1 ? "s" : ""} remaining. Top up to keep submitting quotes.`,
+          title: t("lowBidCreditsTitle"),
+          message: t("lowBidCreditsMessage", { remaining: result.newBalance }),
           data: { page: "/provider/lead-credits" },
         });
       }
@@ -238,12 +240,14 @@ export class LeadService {
 
     const newBalance = await bidCreditAccountRepository.getBalance(user.userId);
 
-    const { notificationService } = await import("@/services/notification.service");
-    await notificationService.push({
+    const { getNotificationT } = await import("@/services/notification.service");
+    const t = await getNotificationT(user.userId);
+    const { notificationRepository } = await import("@/repositories");
+    await notificationRepository.create({
       userId: user.userId,
       type: "payment_confirmed",
-      title: "Bid credits added!",
-      message: `${quantity} bid credit${quantity !== 1 ? "s" : ""} added to your account. Balance: ${newBalance} credit${newBalance !== 1 ? "s" : ""}.`,
+      title: t("bidCreditsAddedTitle"),
+      message: t("bidCreditsAddedMessage", { quantity, newBalance }),
       data: { page: "/provider/lead-credits" },
     });
 
@@ -319,12 +323,14 @@ export class LeadService {
       }
     );
 
-    const { notificationService } = await import("@/services/notification.service");
-    await notificationService.push({
+    const { getNotificationT } = await import("@/services/notification.service");
+    const t = await getNotificationT(providerId);
+    const { notificationRepository } = await import("@/repositories");
+    await notificationRepository.create({
       userId: providerId,
       type: "payment_confirmed",
-      title: "Bid credits added!",
-      message: `${quantity} bid credit${quantity !== 1 ? "s" : ""} added to your account.`,
+      title: t("bidCreditsAddedTitle"),
+      message: t("bidCreditsAddedPaymongoMessage", { quantity }),
       data: { page: "/provider/lead-credits" },
     });
   }
@@ -384,12 +390,14 @@ export class LeadService {
     await walletRepository.setTransactionLedgerJournalId(walletTxId, journalId);
     await leadSubscriptionRepository.updateStatus(subId, "active");
 
-    const { notificationService } = await import("@/services/notification.service");
-    await notificationService.push({
+    const { getNotificationT } = await import("@/services/notification.service");
+    const t = await getNotificationT(user.userId);
+    const { notificationRepository } = await import("@/repositories");
+    await notificationRepository.create({
       userId: user.userId,
       type: "payment_confirmed",
-      title: "Lead subscription activated!",
-      message: `Your unlimited-leads subscription is active until ${expiresAt.toLocaleDateString("en-PH", { month: "long", day: "numeric", year: "numeric" })}. Quote freely!`,
+      title: t("leadSubscriptionActivatedTitle"),
+      message: t("leadSubscriptionActivatedMessage", { expiresAt: expiresAt.toLocaleDateString("en-PH", { month: "long", day: "numeric", year: "numeric" }) }),
       data: { page: "/provider/lead-credits" },
     });
 
@@ -462,12 +470,14 @@ export class LeadService {
       "lead_subscription"
     );
 
-    const { notificationService } = await import("@/services/notification.service");
-    await notificationService.push({
+    const { getNotificationT } = await import("@/services/notification.service");
+    const t = await getNotificationT(providerId);
+    const { notificationRepository } = await import("@/repositories");
+    await notificationRepository.create({
       userId: providerId,
       type: "payment_confirmed",
-      title: "Lead subscription activated!",
-      message: `Your unlimited-leads subscription is active until ${expiresAt.toLocaleDateString("en-PH", { month: "long", day: "numeric", year: "numeric" })}.`,
+      title: t("leadSubscriptionActivatedTitle"),
+      message: t("leadSubscriptionActivatedPaymongoMessage", { expiresAt: expiresAt.toLocaleDateString("en-PH", { month: "long", day: "numeric", year: "numeric" }) }),
       data: { page: "/provider/lead-credits" },
     });
   }

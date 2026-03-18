@@ -46,11 +46,13 @@ export class CronService {
         metadata: { daysOpen: threshold },
       });
 
+      const { getNotificationT } = await import("@/services/notification.service");
+      const t = await getNotificationT(j.clientId.toString());
       await notificationService.push({
         userId: j.clientId.toString(),
         type: "job_expired",
-        title: "Job listing expired",
-        message: `Your job "${j.title}" expired after ${threshold} days with no accepted quote. You can repost it anytime.`,
+        title: t("jobExpiredTitle"),
+        message: t("jobExpiredMessage", { jobTitle: j.title, days: threshold }),
         data: { jobId: j._id.toString() },
       });
 
@@ -100,21 +102,24 @@ export class CronService {
       });
 
       // Notify client
+      const { getNotificationT: getNotifT } = await import("@/services/notification.service");
+      const tClient = await getNotifT(j.clientId.toString());
       await notificationService.push({
         userId: j.clientId.toString(),
         type: "job_expired" as never,
-        title: "Job reopened — payment not completed",
-        message: `Your job "${j.title}" was reopened because escrow was not funded within ${threshold} hours. Providers can quote again.`,
+        title: tClient("jobReopenedTitle"),
+        message: tClient("jobReopenedMessage", { jobTitle: j.title, hours: threshold }),
         data: { jobId: j._id.toString() },
       });
 
       // Notify the provider that was previously assigned
       if (j.providerId) {
+        const tProvider = await getNotifT(j.providerId.toString());
         await notificationService.push({
           userId: j.providerId.toString(),
           type: "job_expired" as never,
-          title: "Job assignment cancelled",
-          message: `The client did not fund escrow for "${j.title}" within ${threshold} hours, so the job has been reopened.`,
+          title: tProvider("assignmentCancelledTitle"),
+          message: tProvider("assignmentCancelledMessage", { jobTitle: j.title, hours: threshold }),
           data: { jobId: j._id.toString() },
         });
       }
@@ -157,21 +162,25 @@ export class CronService {
 
       // Notify provider
       if (j.providerId) {
+        const { getNotificationT: getNotifT } = await import("@/services/notification.service");
+        const tProvider = await getNotifT(j.providerId.toString());
         await notificationService.push({
           userId: j.providerId.toString(),
           type: "escrow_auto_released",
-          title: "Payment released",
-          message: `₱${j.budget.toLocaleString()} has been automatically released to your account for "${j.title}".`,
+          title: tProvider("scheduleReleaseTitle"),
+          message: tProvider("scheduleReleaseMessage", { amount: j.budget.toLocaleString(), jobTitle: j.title }),
           data: { jobId: j._id.toString() },
         });
       }
 
       // Notify client
+      const { getNotificationT: getNotifT2 } = await import("@/services/notification.service");
+      const tClient = await getNotifT2(j.clientId.toString());
       await notificationService.push({
         userId: j.clientId.toString(),
         type: "escrow_auto_released",
-        title: "Escrow auto-released",
-        message: `Payment for "${j.title}" was automatically released to the provider after ${threshold} days.`,
+        title: tClient("escrowAutoReleasedTitle"),
+        message: tClient("escrowAutoReleasedMessage", { jobTitle: j.title, days: threshold }),
         data: { jobId: j._id.toString() },
       });
 
@@ -208,11 +217,13 @@ export class CronService {
         jobId: { toString(): string };
       };
 
+      const { getNotificationT } = await import("@/services/notification.service");
+      const t = await getNotificationT(q.providerId.toString());
       await notificationService.push({
         userId: q.providerId.toString(),
         type: "quote_expired",
-        title: "Quote expired",
-        message: `Your quote was automatically closed after ${days} days with no response from the client.`,
+        title: t("quoteExpiredTitle"),
+        message: t("quoteExpiredMessage", { days }),
         data: { jobId: q.jobId.toString(), quoteId: q._id.toString() },
       });
 
@@ -250,11 +261,13 @@ export class CronService {
         title: string;
       };
 
+      const { getNotificationT } = await import("@/services/notification.service");
+      const t = await getNotificationT(j.clientId.toString());
       await notificationService.push({
         userId: j.clientId.toString(),
         type: "reminder_fund_escrow",
-        title: "Action needed: Fund escrow",
-        message: `Your job "${j.title}" has an accepted provider waiting. Please fund escrow to get started.`,
+        title: t("fundEscrowReminderTitle"),
+        message: t("fundEscrowReminderMessage", { jobTitle: j.title }),
         data: { jobId: j._id.toString() },
       });
     }
@@ -274,11 +287,13 @@ export class CronService {
       const quotes = await quoteRepository.findForJob(j._id.toString());
       if (quotes.length > 0) continue;
 
+      const { getNotificationT } = await import("@/services/notification.service");
+      const t = await getNotificationT(j.clientId.toString());
       await notificationService.push({
         userId: j.clientId.toString(),
         type: "reminder_no_quotes",
-        title: "No quotes yet on your job",
-        message: `Your job "${j.title}" has been open for 3+ days with no quotes. Consider adjusting the budget or description.`,
+        title: t("noQuotesReminderTitle"),
+        message: t("noQuotesReminderMessage", { jobTitle: j.title }),
         data: { jobId: j._id.toString() },
       });
 
@@ -297,11 +312,13 @@ export class CronService {
       };
       if (!j.providerId) continue;
 
+      const { getNotificationT } = await import("@/services/notification.service");
+      const t = await getNotificationT(j.providerId.toString());
       await notificationService.push({
         userId: j.providerId.toString(),
         type: "reminder_start_job",
-        title: "Reminder: start your job",
-        message: `The client has funded escrow for "${j.title}". Please begin work and mark the job as started.`,
+        title: t("startJobReminderTitle"),
+        message: t("startJobReminderMessage", { jobTitle: j.title }),
         data: { jobId: j._id.toString() },
       });
     }
@@ -318,11 +335,13 @@ export class CronService {
       };
       if (!j.providerId) continue;
 
+      const { getNotificationT } = await import("@/services/notification.service");
+      const t = await getNotificationT(j.providerId.toString());
       await notificationService.push({
         userId: j.providerId.toString(),
         type: "reminder_complete_job",
-        title: "Reminder: mark your job as complete",
-        message: `"${j.title}" has been in progress for over 7 days. Please mark it as complete once finished.`,
+        title: t("completeJobReminderTitle"),
+        message: t("completeJobReminderMessage", { jobTitle: j.title }),
         data: { jobId: j._id.toString() },
       });
     }
@@ -342,11 +361,13 @@ export class CronService {
       const reviewed = await reviewRepository.existsForJob(j._id.toString());
       if (reviewed) continue;
 
+      const { getNotificationT } = await import("@/services/notification.service");
+      const t = await getNotificationT(j.clientId.toString());
       await notificationService.push({
         userId: j.clientId.toString(),
         type: "reminder_leave_review",
-        title: "How did it go? Leave a review",
-        message: `Your job "${j.title}" is complete. Take a moment to rate your provider — it helps the community.`,
+        title: t("reviewReminderTitle"),
+        message: t("reviewReminderMessage", { jobTitle: j.title }),
         data: { jobId: j._id.toString() },
       });
 
@@ -415,11 +436,13 @@ export class CronService {
         metadata: { payoutId: p._id.toString(), status: "rejected", autoExpired: true },
       });
 
+      const { getNotificationT } = await import("@/services/notification.service");
+      const t = await getNotificationT(p.providerId.toString());
       await notificationService.push({
         userId: p.providerId.toString(),
         type: "payout_status_update",
-        title: "Payout request expired",
-        message: `Your payout request of ₱${p.amount.toLocaleString()} was automatically closed after ${days} days. Please resubmit if you still wish to withdraw.`,
+        title: t("payoutExpiredTitle"),
+        message: t("payoutExpiredMessage", { amount: p.amount.toLocaleString(), days }),
         data: { payoutId: p._id.toString() },
       });
     }
@@ -523,21 +546,24 @@ export class CronService {
         });
 
         // Notify the client
+        const { getNotificationT } = await import("@/services/notification.service");
+        const tClient = await getNotificationT(j.clientId.toString());
         await notificationService.push({
           userId: j.clientId.toString(),
           type: "dispute_opened",
-          title: "Dispute opened automatically",
-          message: `Your job "${j.title}" was not completed by the scheduled date. A dispute has been opened for review.`,
+          title: tClient("disputeAutoOpenedTitle"),
+          message: tClient("disputeAutoOpenedMessage", { jobTitle: j.title }),
           data: { jobId: j._id.toString(), disputeId: dispute._id!.toString() },
         });
 
         // Notify the provider
         if (j.providerId) {
+          const tProvider = await getNotificationT(j.providerId.toString());
           await notificationService.push({
             userId: j.providerId.toString(),
             type: "dispute_opened",
-            title: "Dispute opened — overdue job",
-            message: `Job "${j.title}" was flagged as overdue and a dispute has been automatically opened. Please respond promptly.`,
+            title: tProvider("disputeOverdueTitle"),
+            message: tProvider("disputeOverdueMessage", { jobTitle: j.title }),
             data: { jobId: j._id.toString(), disputeId: dispute._id!.toString() },
           });
         }
@@ -618,11 +644,13 @@ export class CronService {
 
       const listText = missing.map((m, i) => `${i + 1}. ${m[0].toUpperCase()}${m.slice(1)}`).join(", ");
 
+      const { getNotificationT } = await import("@/services/notification.service");
+      const t = await getNotificationT(userId);
       await notificationService.push({
         userId,
         type: "reminder_profile_incomplete",
-        title: "Your profile is incomplete",
-        message: `Hi ${user.name.split(" ")[0]}, a complete profile helps you get more from LocalPro. Still to do: ${listText}. It only takes a couple of minutes!`,
+        title: t("profileIncompleteTitle"),
+        message: t("profileIncompleteMessage", { name: user.name.split(" ")[0], items: listText }),
       });
 
       notified++;

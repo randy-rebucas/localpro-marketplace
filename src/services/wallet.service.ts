@@ -55,11 +55,13 @@ export class WalletService {
     }
 
     if (!opts?.silent) {
+      const { getNotificationT } = await import("@/services/notification.service");
+      const t = await getNotificationT(userId);
       const note = await notificationRepository.create({
         userId,
         type: "wallet_credited" as never,
-        title: "Wallet credited",
-        message: `₱${amount.toLocaleString()} has been added to your wallet. New balance: ₱${newBalance.toLocaleString()}.`,
+        title: t("walletCreditedTitle"),
+        message: t("walletCreditedMessage", { amount: amount.toLocaleString(), newBalance: newBalance.toLocaleString() }),
         data: { jobId: opts?.jobId },
       });
       pushNotification(userId, note);
@@ -92,11 +94,13 @@ export class WalletService {
     );
 
     if (!opts?.silent) {
+      const { getNotificationT } = await import("@/services/notification.service");
+      const t = await getNotificationT(userId);
       const note = await notificationRepository.create({
         userId,
         type: "wallet_debited" as never,
-        title: "Wallet debited",
-        message: `₱${amount.toLocaleString()} has been deducted from your wallet. ${description}`,
+        title: t("walletDebitedTitle"),
+        message: t("walletDebitedMessage", { amount: amount.toLocaleString(), description }),
         data: {},
       });
       pushNotification(userId, note);
@@ -191,11 +195,13 @@ export class WalletService {
     // Notify provider
     if (job.providerId) {
       const { notificationService } = await import("@/services/notification.service");
+      const { getNotificationT } = await import("@/services/notification.service");
+      const t = await getNotificationT(job.providerId.toString());
       await notificationService.push({
         userId: job.providerId.toString(),
         type: "escrow_funded",
-        title: "Escrow funded",
-        message: "The client has funded escrow. You may begin work.",
+        title: t("escrowFundedTitle"),
+        message: t("escrowFundedMessage"),
         data: { jobId: job._id!.toString() },
       });
     }
@@ -398,11 +404,13 @@ export class WalletService {
 
     // 4. Notify user (non-critical)
     try {
+      const { getNotificationT } = await import("@/services/notification.service");
+      const t = await getNotificationT(userId);
       const note = await notificationRepository.create({
         userId,
         type:    "wallet_credited" as never,
-        title:   "Wallet topped up",
-        message: `₱${amountPHP.toLocaleString()} has been added to your wallet.`,
+        title:   t("walletToppedUpTitle"),
+        message: t("walletToppedUpMessage", { amount: amountPHP.toLocaleString() }),
         data:    { source: "topup", sessionId },
       });
       pushNotification(userId, note);
@@ -468,11 +476,13 @@ export class WalletService {
       metadata: { source: "wallet", withdrawalId: withdrawal._id?.toString(), amount },
     });
 
+    const { getNotificationT } = await import("@/services/notification.service");
+    const t = await getNotificationT(user.userId);
     const note = await notificationRepository.create({
       userId: user.userId,
       type: "wallet_withdrawal_update" as never,
-      title: "Withdrawal request submitted",
-      message: `Your withdrawal of ₱${amount.toLocaleString()} is pending review.`,
+      title: t("withdrawalSubmittedTitle"),
+      message: t("withdrawalSubmittedMessage", { amount: amount.toLocaleString() }),
       data: {},
     });
     pushNotification(user.userId, note);
@@ -533,11 +543,13 @@ export class WalletService {
       } catch { /* non-critical */ }
 
       // Notify user
+      const { getNotificationT } = await import("@/services/notification.service");
+      const t = await getNotificationT(w.userId.toString());
       const note = await notificationRepository.create({
         userId: w.userId.toString(),
         type: "wallet_withdrawal_update" as never,
-        title: "Withdrawal rejected",
-        message: `Your withdrawal of ₱${w.amount.toLocaleString()} was rejected. The amount has been returned to your wallet.${notes ? ` Reason: ${notes}` : ""}`,
+        title: t("withdrawalRejectedTitle"),
+        message: t("withdrawalRejectedMessage", { amount: w.amount.toLocaleString(), reason: notes ? t("withdrawalRejectedReason", { notes }) : "" }),
         data: {},
       });
       pushNotification(w.userId.toString(), note);
@@ -571,11 +583,13 @@ export class WalletService {
         );
       } catch { /* non-critical */ }
 
+      const { getNotificationT } = await import("@/services/notification.service");
+      const t = await getNotificationT(w.userId.toString());
       const note = await notificationRepository.create({
         userId: w.userId.toString(),
         type: "wallet_withdrawal_update" as never,
-        title: "Withdrawal completed",
-        message: `Your withdrawal of ₱${w.amount.toLocaleString()} has been sent to your bank account.`,
+        title: t("withdrawalCompletedTitle"),
+        message: t("withdrawalCompletedMessage", { amount: w.amount.toLocaleString() }),
         data: {},
       });
       pushNotification(w.userId.toString(), note);
