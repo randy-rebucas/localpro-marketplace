@@ -4,6 +4,7 @@ import { memo, useState, useCallback, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
 import { CheckCheck, Check, FileText, Download, X, ZoomIn, ZoomOut, ExternalLink } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 interface MessageBubbleProps {
   body: string;
@@ -62,6 +63,7 @@ function SenderAvatar({ name, visible }: { name: string; visible: boolean }) {
 }
 
 function ImageLightbox({ src, alt, onClose }: { src: string; alt: string; onClose: () => void }) {
+  const t = useTranslations("messageBubble");
   const [zoomed, setZoomed] = useState(false);
 
   useEffect(() => {
@@ -87,7 +89,7 @@ function ImageLightbox({ src, alt, onClose }: { src: string; alt: string; onClos
           href={src}
           download
           className="flex items-center justify-center text-white bg-black/50 hover:bg-black/70 rounded-full p-2 transition-colors"
-          aria-label="Download"
+          aria-label={t("downloadAriaLabel")}
         >
           <Download className="h-4 w-4" />
         </a>
@@ -96,7 +98,7 @@ function ImageLightbox({ src, alt, onClose }: { src: string; alt: string; onClos
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center justify-center text-white bg-black/50 hover:bg-black/70 rounded-full p-2 transition-colors"
-          aria-label="Open in new tab"
+          aria-label={t("openNewTabAriaLabel")}
         >
           <ExternalLink className="h-4 w-4" />
         </a>
@@ -140,7 +142,7 @@ function ImageLightbox({ src, alt, onClose }: { src: string; alt: string; onClos
       {/* Hint */}
       {!zoomed && (
         <p className="absolute bottom-5 left-1/2 -translate-x-1/2 text-white/40 text-xs select-none">
-          Click to zoom · Esc to close
+          {t("zoomHint")}
         </p>
       )}
     </div>,
@@ -162,6 +164,7 @@ const MessageBubble = memo(function MessageBubble({
   isFirst = true,
   isLast = true,
 }: MessageBubbleProps) {
+  const t = useTranslations("messageBubble");
   const time = new Date(createdAt).toLocaleTimeString([], {
     hour: "2-digit",
     minute: "2-digit",
@@ -273,8 +276,8 @@ const MessageBubble = memo(function MessageBubble({
             <span className="text-[11px] text-slate-400">{time}</span>
             {isMine && (
               readAt
-                ? <CheckCheck className="h-3.5 w-3.5 text-primary" aria-label="Read" />
-                : <Check className="h-3.5 w-3.5 text-slate-400" aria-label="Sent" />
+                ? <CheckCheck className="h-3.5 w-3.5 text-primary" aria-label={t("readAriaLabel")} />
+                : <Check className="h-3.5 w-3.5 text-slate-400" aria-label={t("sentAriaLabel")} />
             )}
           </div>
         )}

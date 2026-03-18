@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 import { Suspense } from "react";
 import { getCurrentUser } from "@/lib/auth";
 import { notFound } from "next/navigation";
@@ -56,6 +57,7 @@ export default async function ProviderJobDetailPage({
   const user = await getCurrentUser();
   if (!user) return null;
 
+  const t = await getTranslations("providerPages");
   const { id } = await params;
   const job = await jobRepository.findByProviderAndId(user.userId, id);
   if (!job) notFound();
@@ -75,12 +77,12 @@ export default async function ProviderJobDetailPage({
     job.escrowStatus !== "funded";
 
   const metaGrid = [
-    { icon: <Briefcase className="h-4 w-4" />,    label: "Category",   value: job.category },
-    { icon: <MapPin className="h-4 w-4" />,        label: "Location",   value: job.location },
-    { icon: <Banknote className="h-4 w-4" />,      label: "Budget",     value: formatCurrency(job.budget) },
-    { icon: <CalendarDays className="h-4 w-4" />,  label: "Scheduled",  value: formatDate(job.scheduleDate) },
-    { icon: <User2 className="h-4 w-4" />,         label: "Client",     value: job.clientId?.name ?? "—" },
-    { icon: <Clock className="h-4 w-4" />,         label: "Posted",     value: formatDate(job.createdAt) },
+    { icon: <Briefcase className="h-4 w-4" />,    label: t("metaCategory"), value: job.category },
+    { icon: <MapPin className="h-4 w-4" />,        label: t("metaLocation"),  value: job.location },
+    { icon: <Banknote className="h-4 w-4" />,      label: t("metaBudget"),    value: formatCurrency(job.budget) },
+    { icon: <CalendarDays className="h-4 w-4" />,  label: t("metaScheduled"), value: formatDate(job.scheduleDate) },
+    { icon: <User2 className="h-4 w-4" />,         label: t("metaClient"),    value: job.clientId?.name ?? "\u2014" },
+    { icon: <Clock className="h-4 w-4" />,         label: t("metaPosted"),    value: formatDate(job.createdAt) },
   ];
 
   return (
@@ -94,7 +96,7 @@ export default async function ProviderJobDetailPage({
           className="flex-shrink-0 mt-0.5 flex items-center gap-1 text-sm text-slate-400 hover:text-slate-700 transition-colors"
         >
           <ChevronLeft className="h-4 w-4" />
-          My Jobs
+          {t("backToJobs")}
         </Link>
       </div>
 
@@ -107,7 +109,7 @@ export default async function ProviderJobDetailPage({
             {escrowNotFunded && (
               <div className="bg-amber-50 border-b border-amber-100 px-6 py-2.5 flex items-center gap-2">
                 <AlertCircle className="h-3.5 w-3.5 text-amber-500 flex-shrink-0" />
-                <p className="text-xs text-amber-700 font-medium">Awaiting client to fund escrow before you can start</p>
+                <p className="text-xs text-amber-700 font-medium">{t("awaitingEscrow")}</p>
               </div>
             )}
             <div className="px-6 py-5">
@@ -140,7 +142,7 @@ export default async function ProviderJobDetailPage({
           <div className="bg-white rounded-xl border border-slate-200 shadow-card p-6 space-y-3">
             <h3 className="font-semibold text-slate-900 flex items-center gap-2">
               <FileText className="h-4 w-4 text-slate-400" />
-              Description
+              {t("sectionDescription")}
             </h3>
             <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">{job.description}</p>
 
@@ -148,7 +150,7 @@ export default async function ProviderJobDetailPage({
               <div className="mt-4 rounded-lg bg-blue-50 border border-blue-100 px-4 py-3 flex gap-2">
                 <Info className="h-4 w-4 text-blue-400 mt-0.5 flex-shrink-0" />
                 <div>
-                  <p className="text-xs font-semibold text-blue-700 mb-0.5">Special Instructions</p>
+                  <p className="text-xs font-semibold text-blue-700 mb-0.5">{t("specialInstructions")}</p>
                   <p className="text-sm text-blue-800 leading-relaxed">{job.specialInstructions}</p>
                 </div>
               </div>
@@ -160,7 +162,7 @@ export default async function ProviderJobDetailPage({
             <div className="bg-white rounded-xl border border-slate-200 shadow-card p-6 space-y-3">
               <h3 className="font-semibold text-slate-900 flex items-center gap-2">
                 <Camera className="h-4 w-4 text-slate-400" />
-                Job Photos
+                {t("sectionPhotos")}
               </h3>
               <JobPhotoGallery beforePhoto={beforePhoto} afterPhoto={afterPhoto} />
             </div>
@@ -174,13 +176,13 @@ export default async function ProviderJobDetailPage({
           <div className="bg-white rounded-xl border border-slate-200 shadow-card p-6 space-y-4">
             <h3 className="font-semibold text-slate-900 flex items-center gap-2">
               <ShieldCheck className="h-4 w-4 text-slate-400" />
-              Payment
+              {t("sectionPayment")}
             </h3>
 
             {commission ? (
               <div className="space-y-2.5">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-slate-500">Escrow funded</span>
+                  <span className="text-slate-500">{t("escrowFunded")}</span>
                   <span className="font-medium text-slate-900">{formatCurrency(commission.gross)}</span>
                 </div>
                 <div className="flex items-center justify-between text-sm">
@@ -188,7 +190,7 @@ export default async function ProviderJobDetailPage({
                   <span className="text-slate-500">−{formatCurrency(commission.commission)}</span>
                 </div>
                 <div className="flex items-center justify-between text-sm border-t border-slate-100 pt-2.5">
-                  <span className="font-semibold text-slate-900">You receive</span>
+                  <span className="font-semibold text-slate-900">{t("youReceive")}</span>
                   <span className="font-bold text-emerald-600 text-base">{formatCurrency(commission.netAmount)}</span>
                 </div>
                 {job.partialReleaseAmount != null && (
@@ -200,15 +202,15 @@ export default async function ProviderJobDetailPage({
             ) : (
               <div className="flex flex-col items-center gap-2 py-4 text-center">
                 <ShieldCheck className="h-6 w-6 text-slate-200" />
-                <p className="text-sm text-slate-400">Escrow not yet funded</p>
-                <p className="text-xs text-slate-400">The client needs to fund escrow before you can start.</p>
+                <p className="text-sm text-slate-400">{t("escrowNotFunded")}</p>
+                <p className="text-xs text-slate-400">{t("escrowNotFundedDesc")}</p>
               </div>
             )}
           </div>
 
           {/* Actions */}
           <div className="bg-white rounded-xl border border-slate-200 shadow-card p-6 space-y-3">
-            <h3 className="font-semibold text-slate-900">Actions</h3>
+            <h3 className="font-semibold text-slate-900">{t("sectionActions")}</h3>
             <ProviderJobActions
               jobId={id}
               status={job.status}

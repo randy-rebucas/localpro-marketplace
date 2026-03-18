@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { useTranslations } from "next-intl";
 import "driver.js/dist/driver.css";
 
 export interface TourStep {
@@ -28,6 +29,7 @@ interface TourGuideProps {
  * has been completed / dismissed.
  */
 export default function TourGuide({ pageKey, steps }: TourGuideProps) {
+  const t           = useTranslations("tourGuide");
   const storageKey  = `tour_completed_${pageKey}`;
   const initialized = useRef(false);
 
@@ -38,15 +40,15 @@ export default function TourGuide({ pageKey, steps }: TourGuideProps) {
     // Already seen — do nothing
     if (localStorage.getItem(storageKey) === "1") return;
 
-    const t = setTimeout(async () => {
+    const timer = setTimeout(async () => {
       const { driver } = await import("driver.js");
 
       const driverObj = driver({
         showProgress: true,
         progressText: "{{current}} / {{total}}",
-        nextBtnText:  "Next →",
-        prevBtnText:  "← Back",
-        doneBtnText:  "Got it ✓",
+        nextBtnText:  t("next"),
+        prevBtnText:  t("back"),
+        doneBtnText:  t("done"),
         smoothScroll: true,
         steps: steps.map((step) => ({
           ...(step.element ? { element: step.element } : {}),
@@ -63,7 +65,7 @@ export default function TourGuide({ pageKey, steps }: TourGuideProps) {
       driverObj.drive();
     }, 600);
 
-    return () => clearTimeout(t);
+    return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

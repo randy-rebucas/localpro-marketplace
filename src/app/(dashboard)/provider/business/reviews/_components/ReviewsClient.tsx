@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Star, RefreshCw, ChevronLeft, ChevronRight, Search, AlertCircle, Tag, SortAsc } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { fetchClient } from "@/lib/fetchClient";
 import toast from "react-hot-toast";
 
@@ -77,15 +78,15 @@ function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" });
 }
 
-const SORT_OPTIONS: { value: SortOption; label: string }[] = [
-  { value: "newest",  label: "Newest" },
-  { value: "highest", label: "Highest rated" },
-  { value: "lowest",  label: "Lowest rated" },
-];
-
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function ReviewsClient() {
+  const t = useTranslations("providerPages");
+  const SORT_OPTIONS: { value: SortOption; label: string }[] = [
+    { value: "newest",  label: t("provReviews_sortNewest") },
+    { value: "highest", label: t("provReviews_sortHighest") },
+    { value: "lowest",  label: t("provReviews_sortLowest") },
+  ];
   const [data, setData]             = useState<ReviewsResponse | null>(null);
   const [loading, setLoading]       = useState(true);
   const [loadError, setLoadError]   = useState(false);
@@ -108,7 +109,7 @@ export default function ReviewsClient() {
       setData(res);
     } catch {
       setLoadError(true);
-      toast.error("Failed to load reviews.");
+      toast.error(t("provReviews_toastFailLoad"));
     } finally {
       setLoading(false);
     }
@@ -142,8 +143,8 @@ export default function ReviewsClient() {
     return (
       <div className="flex flex-col items-center justify-center py-24 gap-4 text-center">
         <AlertCircle className="h-10 w-10 text-red-400" />
-        <p className="text-slate-600 font-medium">Failed to load reviews</p>
-        <button onClick={() => load()} className="btn-secondary text-sm px-4 py-2">Try Again</button>
+        <p className="text-slate-600 font-medium">{t("provReviews_errorTitle")}</p>
+        <button onClick={() => load()} className="btn-secondary text-sm px-4 py-2">{t("provReviews_tryAgain")}</button>
       </div>
     );
   }
@@ -171,8 +172,8 @@ export default function ReviewsClient() {
             <Star className="h-5 w-5 text-amber-600 dark:text-amber-400" />
           </div>
           <div>
-            <h1 className="text-base font-bold text-slate-800 dark:text-white">Reviews</h1>
-            <p className="text-xs text-slate-500 dark:text-slate-400">{stats?.totalCount ?? 0} review{(stats?.totalCount ?? 0) !== 1 ? "s" : ""}</p>
+            <h1 className="text-base font-bold text-slate-800 dark:text-white">{t("provReviews_heading")}</h1>
+            <p className="text-xs text-slate-500 dark:text-slate-400">{(stats?.totalCount ?? 0) !== 1 ? t("provReviews_subCountPlural", { count: stats?.totalCount ?? 0 }) : t("provReviews_subCount", { count: stats?.totalCount ?? 0 })}</p>
           </div>
         </div>
         <button
@@ -221,10 +222,10 @@ export default function ReviewsClient() {
             <div className="border-t border-slate-100 pt-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
               {(
                 [
-                  { key: "quality",         label: "Quality" },
-                  { key: "professionalism", label: "Professionalism" },
-                  { key: "punctuality",     label: "Punctuality" },
-                  { key: "communication",   label: "Communication" },
+                  { key: "quality",         label: t("provReviews_dimQuality") },
+                  { key: "professionalism", label: t("provReviews_dimProfessionalism") },
+                  { key: "punctuality",     label: t("provReviews_dimPunctuality") },
+                  { key: "communication",   label: t("provReviews_dimCommunication") },
                 ] as { key: keyof Dimensions; label: string }[]
               ).map(({ key, label }) => {
                 const val = stats.dimensions[key];
@@ -257,7 +258,7 @@ export default function ReviewsClient() {
               type="text"
               value={search}
               onChange={(e) => handleSearch(e.target.value)}
-              placeholder="Search feedback…"
+              placeholder={t("provReviews_searchPlaceholder")}
               className="input pl-8 py-1.5 text-sm w-full"
             />
           </div>
@@ -280,7 +281,7 @@ export default function ReviewsClient() {
           <button
             onClick={() => handleRating(null)}
             className={`px-3.5 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${ratingFilter == null ? "bg-primary text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
-          >All</button>
+          >{t("provReviews_filterAll")}</button>
           {[5, 4, 3, 2, 1].map((r) => (
             <button key={r} onClick={() => handleRating(r)}
               className={`flex items-center gap-1 px-3.5 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${ratingFilter === r ? "bg-amber-500 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
@@ -301,21 +302,21 @@ export default function ReviewsClient() {
           <Star className="h-9 w-9 text-slate-300" />
           <p className="text-slate-600 font-medium">
             {ratingFilter || search
-              ? "No reviews match your filters."
-              : "No reviews yet"}
+              ? t("provReviews_emptyFilterTitle")
+              : t("provReviews_emptyDefaultTitle")}
           </p>
           <p className="text-slate-400 text-sm max-w-xs">
             {ratingFilter || search
-              ? "Try adjusting the filters above."
-              : "Complete jobs and deliver great service to start receiving reviews from your clients."}
+              ? t("provReviews_emptyFilterDesc")
+              : t("provReviews_emptyDefaultDesc")}
           </p>
           {(ratingFilter || search) ? (
             <button
               onClick={() => { handleRating(null); handleSearch(""); }}
               className="text-sm text-primary hover:underline"
-            >Clear filters</button>
+            >{t("provReviews_clearFilters")}</button>
           ) : (
-            <Link href="/provider/jobs" className="btn-primary text-sm px-4 py-2">Browse jobs</Link>
+            <Link href="/provider/jobs" className="btn-primary text-sm px-4 py-2">{t("provReviews_browseJobs")}</Link>
           )}
         </div>
       ) : (
@@ -373,7 +374,7 @@ export default function ReviewsClient() {
       {/* Pagination */}
       {(data?.pages ?? 1) > 1 && (
         <div className="flex items-center justify-between text-sm text-slate-500">
-          <span>Page {data?.page} of {data?.pages}</span>
+          <span>{t("provReviews_pageOf", { page: data?.page ?? 1, pages: data?.pages ?? 1 })}</span>
           <div className="flex gap-1">
             <button onClick={() => handlePage(page - 1)} disabled={page <= 1} className="p-1.5 rounded-lg hover:bg-slate-100 disabled:opacity-40 transition-colors">
               <ChevronLeft className="h-4 w-4" />

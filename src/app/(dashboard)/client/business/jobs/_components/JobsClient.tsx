@@ -1,6 +1,5 @@
 "use client";
-
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useTranslations } from "next-intl";import { useEffect, useState, useCallback, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -129,8 +128,7 @@ function parseCsv(text: string): CsvRow[] {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export default function JobsClient() {
-  const [org, setOrg]             = useState<IBusinessOrganization | null>(null);
+export default function JobsClient() {  const t = useTranslations("clientPages");  const [org, setOrg]             = useState<IBusinessOrganization | null>(null);
   const [orgLoading, setOrgLoading] = useState(true);
 
   // filters
@@ -328,8 +326,8 @@ export default function JobsClient() {
             <Briefcase className="h-5 w-5 text-sky-600 dark:text-sky-400" />
           </div>
           <div>
-            <h1 className="text-base font-bold text-slate-800 dark:text-white">Job Management</h1>
-            <p className="text-xs text-slate-500 dark:text-slate-400">{total} job{total !== 1 ? "s" : ""} · {org.name}</p>
+            <h1 className="text-base font-bold text-slate-800 dark:text-white">{t("bizJobs_heading")}</h1>
+            <p className="text-xs text-slate-500 dark:text-slate-400">{total} {t("bizJobs_sub", { s: total !== 1 ? "s" : "" })} · {org.name}</p>
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
@@ -350,7 +348,7 @@ export default function JobsClient() {
               showRecurring ? "border-primary/40 bg-primary/5 text-primary" : "border-slate-200 text-slate-600 hover:bg-slate-50"
             }`}
           >
-            {!hasBulkRecurring ? <Lock className="h-3.5 w-3.5" /> : <RefreshCw className="h-3.5 w-3.5" />} Recurring
+            {!hasBulkRecurring ? <Lock className="h-3.5 w-3.5" /> : <RefreshCw className="h-3.5 w-3.5" />} {t("bizJobs_recurring")}
           </button>
           <button
             onClick={() => { if (hasBulkRecurring && !atJobLimitVal) { setShowBulk((v) => !v); setShowRecurring(false); } }}
@@ -360,15 +358,15 @@ export default function JobsClient() {
               showBulk ? "border-primary/40 bg-primary/5 text-primary" : "border-slate-200 text-slate-600 hover:bg-slate-50"
             }`}
           >
-            {(!hasBulkRecurring || (!showBulk && atJobLimitVal)) ? <Lock className="h-3.5 w-3.5" /> : <Upload className="h-3.5 w-3.5" />} Bulk Upload
+            {(!hasBulkRecurring || (!showBulk && atJobLimitVal)) ? <Lock className="h-3.5 w-3.5" /> : <Upload className="h-3.5 w-3.5" />} {t("bizJobs_bulkUpload")}
           </button>
           {atJobLimitVal ? (
             <span className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-medium border border-red-200 bg-red-50 text-red-500 cursor-not-allowed">
-              <Lock className="h-4 w-4" /> New Job
+              <Lock className="h-4 w-4" /> {t("bizJobs_newJob")}
             </span>
           ) : (
             <Link href="/client/post-job" className="btn-primary flex items-center gap-1.5">
-              <Plus className="h-4 w-4" /> New Job
+              <Plus className="h-4 w-4" /> {t("bizJobs_newJob")}
             </Link>
           )}
         </div>
@@ -421,8 +419,8 @@ export default function JobsClient() {
         <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="font-semibold text-slate-800">Bulk Job Upload</h2>
-              <p className="text-xs text-slate-400 mt-0.5">Upload a CSV to create up to 50 jobs at once.</p>
+              <h2 className="font-semibold text-slate-800">{t("bizJobs_bulkTitle")}</h2>
+              <p className="text-xs text-slate-400 mt-0.5">{t("bizJobs_bulkSub")}</p>
             </div>
             <button onClick={() => { setShowBulk(false); setCsvRows([]); }} className="p-1.5 hover:bg-slate-100 rounded-lg">
               <X className="h-4 w-4 text-slate-400" />
@@ -438,7 +436,7 @@ export default function JobsClient() {
             }}
             className="flex items-center gap-1.5 text-xs text-primary font-medium hover:underline"
           >
-            <Download className="h-3.5 w-3.5" /> Download CSV template
+            <Download className="h-3.5 w-3.5" /> {t("bizJobs_downloadTemplate")}
           </button>
 
           {/* Drop zone */}
@@ -449,8 +447,8 @@ export default function JobsClient() {
             onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) handleCsvFile(f); }}
           >
             <Upload className="h-7 w-7 text-slate-300 mx-auto mb-2" />
-            <p className="text-sm text-slate-500">Drop CSV here or <span className="text-primary font-medium">click to browse</span></p>
-            <p className="text-xs text-slate-400 mt-1">Required: title, category, description, budget, location, scheduleDate</p>
+            <p className="text-sm text-slate-500">{t("bizJobs_dropZoneLabel")} <span className="text-primary font-medium">{t("bizJobs_dropZoneBrowse")}</span></p>
+            <p className="text-xs text-slate-400 mt-1">{t("bizJobs_dropZoneHint")}</p>
             <input ref={fileRef} type="file" accept=".csv,text/csv" className="hidden"
               onChange={(e) => { const f = e.target.files?.[0]; if (f) handleCsvFile(f); }} />
           </div>
@@ -458,12 +456,12 @@ export default function JobsClient() {
           {/* Preview table */}
           {csvRows.length > 0 && (
             <div className="space-y-3">
-              <p className="text-sm font-medium text-slate-700">{csvRows.length} row{csvRows.length !== 1 ? "s" : ""} — preview:</p>
+              <p className="text-sm font-medium text-slate-700">{t("bizJobs_previewRows", { n: csvRows.length, s: csvRows.length !== 1 ? "s" : "" })}</p>
               <div className="overflow-x-auto rounded-xl border border-slate-200">
                 <table className="w-full text-xs">
                   <thead>
                     <tr className="bg-slate-50 border-b border-slate-100">
-                      {["Title","Category","Budget","Location","Date"].map((h) => (
+                      {[t("bizJobs_colTitle"), t("bizJobs_colCategory"), "Budget", "Location", "Date"].map((h) => (
                         <th key={h} className="text-left px-3 py-2 font-semibold text-slate-400">{h}</th>
                       ))}
                     </tr>
@@ -486,9 +484,9 @@ export default function JobsClient() {
               </div>
               <div className="flex gap-3">
                 <button onClick={submitBulk} disabled={bulkUploading} className="btn-primary">
-                  {bulkUploading ? "Creating jobs…" : `Create ${csvRows.length} Job${csvRows.length !== 1 ? "s" : ""}`}
+                  {bulkUploading ? t("bizJobs_creatingJobs") : t("bizJobs_createNJobs", { n: csvRows.length, s: csvRows.length !== 1 ? "s" : "" })}
                 </button>
-                <button onClick={() => setCsvRows([])} className="btn-secondary">Clear</button>
+                <button onClick={() => setCsvRows([])} className="btn-secondary">{t("bizJobs_clearButton")}</button>
               </div>
             </div>
           )}

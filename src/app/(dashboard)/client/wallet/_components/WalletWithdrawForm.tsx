@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import toast from "react-hot-toast";
 import Button from "@/components/ui/Button";
 import { apiFetch } from "@/lib/fetchClient";
@@ -12,6 +13,7 @@ interface Props {
 }
 
 export default function WalletWithdrawForm({ available }: Props) {
+  const t = useTranslations("clientPages");
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
@@ -29,15 +31,15 @@ export default function WalletWithdrawForm({ available }: Props) {
     e.preventDefault();
     const amount = parseFloat(form.amount);
     if (isNaN(amount) || amount <= 0) {
-      toast.error("Enter a valid withdrawal amount");
+      toast.error(t("wallet_errorInvalidAmount", { defaultValue: "Enter a valid withdrawal amount" }));
       return;
     }
     if (amount > available) {
-      toast.error(`Amount exceeds available balance (${formatCurrency(available)})`);
+      toast.error(t("wallet_errorExceedsBalance", { amount: formatCurrency(available) }));
       return;
     }
     if (!form.bankName.trim() || !form.accountNumber.trim() || !form.accountName.trim()) {
-      toast.error("Please fill in all bank details");
+      toast.error(t("wallet_errorMissingDetails", { defaultValue: "Please fill in all bank details" }));
       return;
     }
     setLoading(true);
@@ -48,12 +50,12 @@ export default function WalletWithdrawForm({ available }: Props) {
         body: JSON.stringify({ ...form, amount }),
       });
       const data = await res.json();
-      if (!res.ok) { toast.error(data.error ?? "Withdrawal request failed"); return; }
-      toast.success("Withdrawal request submitted");
+      if (!res.ok) { toast.error(data.error ?? t("wallet_errorWithdrawalFailed", { defaultValue: "Withdrawal request failed" })); return; }
+      toast.success(t("wallet_successWithdrawal", { defaultValue: "Withdrawal request submitted" }));
       setForm({ bankName: "", accountNumber: "", accountName: "", amount: "" });
       router.refresh();
     } catch {
-      toast.error("Something went wrong");
+      toast.error(t("wallet_errorGeneral", { defaultValue: "Something went wrong" }));
     } finally {
       setLoading(false);
     }
@@ -63,30 +65,30 @@ export default function WalletWithdrawForm({ available }: Props) {
     <form onSubmit={submit} className="space-y-4">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label className="label block mb-1">Bank Name</label>
+          <label className="label block mb-1">{t("wallet_withdrawBankLabel")}</label>
           <input
             className="input w-full"
-            placeholder="e.g. BDO, BPI, GCash"
+            placeholder={t("wallet_withdrawBankPlaceholder")}
             value={form.bankName}
             onChange={(e) => update("bankName", e.target.value)}
             required
           />
         </div>
         <div>
-          <label className="label block mb-1">Account Number</label>
+          <label className="label block mb-1">{t("wallet_withdrawAccountNumLabel")}</label>
           <input
             className="input w-full"
-            placeholder="Your bank account number"
+            placeholder={t("wallet_withdrawAccountNumPlaceholder")}
             value={form.accountNumber}
             onChange={(e) => update("accountNumber", e.target.value)}
             required
           />
         </div>
         <div className="sm:col-span-2">
-          <label className="label block mb-1">Account Name</label>
+          <label className="label block mb-1">{t("wallet_withdrawAccountNameLabel")}</label>
           <input
             className="input w-full"
-            placeholder="Account holder's full name"
+            placeholder={t("wallet_withdrawAccountNamePlaceholder")}
             value={form.accountName}
             onChange={(e) => update("accountName", e.target.value)}
             required
@@ -94,7 +96,7 @@ export default function WalletWithdrawForm({ available }: Props) {
         </div>
         <div>
           <label className="label block mb-1">
-            Amount (available: {formatCurrency(available)})
+            {t("wallet_withdrawAmountLabel", { amount: formatCurrency(available) })}
           </label>
           <input
             className="input w-full"
@@ -109,7 +111,7 @@ export default function WalletWithdrawForm({ available }: Props) {
         </div>
       </div>
       <Button type="submit" isLoading={loading} disabled={available <= 0}>
-        Request Withdrawal
+        {t("wallet_withdrawButton")}
       </Button>
     </form>
   );

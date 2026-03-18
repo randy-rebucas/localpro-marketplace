@@ -1,13 +1,7 @@
 import { CheckCircle2, Clock } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 
 /* ─── Progress Bar ─────────────────────────────────────────────── */
-
-const PROGRESS_STAGES = [
-  { key: "assigned",    label: "Assigned",    pct: 20 },
-  { key: "funded",      label: "Funded",      pct: 40 },
-  { key: "in_progress", label: "In Progress", pct: 65 },
-  { key: "completed",   label: "Done",        pct: 100 },
-] as const;
 
 function deriveProgress(status: string, escrowStatus: string): number {
   if (status === "completed")  return 100;
@@ -17,7 +11,7 @@ function deriveProgress(status: string, escrowStatus: string): number {
   return 0;
 }
 
-export function JobProgressBar({
+export async function JobProgressBar({
   status,
   escrowStatus,
 }: {
@@ -26,14 +20,23 @@ export function JobProgressBar({
 }) {
   if (!["assigned", "in_progress", "completed"].includes(status)) return null;
 
+  const t = await getTranslations("clientPages");
+
+  const PROGRESS_STAGES = [
+    { key: "assigned",    label: t("jobTimeline_stageAssigned"),    pct: 20 },
+    { key: "funded",      label: t("jobTimeline_stageFunded"),      pct: 40 },
+    { key: "in_progress", label: t("jobTimeline_stageInProgress"), pct: 65 },
+    { key: "completed",   label: t("jobTimeline_stageDone"),        pct: 100 },
+  ] as const;
+
   const pct   = deriveProgress(status, escrowStatus);
-  const label = PROGRESS_STAGES.find((s) => s.pct === pct)?.label ?? "In Progress";
+  const label = PROGRESS_STAGES.find((s) => s.pct === pct)?.label ?? t("jobTimeline_stageInProgress");
 
   return (
     <div className="bg-white rounded-xl border border-slate-200 shadow-card p-5">
       <div className="flex items-center justify-between mb-3">
         <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-          Job Progress
+          {t("jobTimeline_jobProgress")}
         </p>
         <span className="text-sm font-bold text-primary">{pct}%</span>
       </div>
@@ -87,7 +90,7 @@ export function JobProgressBar({
 
 /* ─── Service Checklist ────────────────────────────────────────── */
 
-export function JobServiceChecklist({
+export async function JobServiceChecklist({
   status,
   escrowStatus,
 }: {
@@ -96,12 +99,14 @@ export function JobServiceChecklist({
 }) {
   if (!["assigned", "in_progress", "completed", "disputed"].includes(status)) return null;
 
+  const t = await getTranslations("clientPages");
+
   const steps = [
-    { label: "Provider assigned",  done: true },
-    { label: "Escrow funded",       done: escrowStatus !== "not_funded" },
-    { label: "Work started",        done: ["in_progress", "completed", "disputed"].includes(status) },
-    { label: "Work completed",      done: ["completed", "disputed"].includes(status) },
-    { label: "Payment released",    done: escrowStatus === "released" },
+    { label: t("jobTimeline_stepProviderAssigned"),  done: true },
+    { label: t("jobTimeline_stepEscrowFunded"),      done: escrowStatus !== "not_funded" },
+    { label: t("jobTimeline_stepWorkStarted"),       done: ["in_progress", "completed", "disputed"].includes(status) },
+    { label: t("jobTimeline_stepWorkCompleted"),     done: ["completed", "disputed"].includes(status) },
+    { label: t("jobTimeline_stepPaymentReleased"),   done: escrowStatus === "released" },
   ];
 
   const doneCount = steps.filter((s) => s.done).length;
@@ -110,10 +115,10 @@ export function JobServiceChecklist({
     <div className="bg-white rounded-xl border border-slate-200 shadow-card p-5">
       <div className="flex items-center justify-between mb-4">
         <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-          Service Checklist
+          {t("jobTimeline_serviceChecklist")}
         </p>
         <span className="text-xs text-slate-400 font-medium">
-          {doneCount}/{steps.length} complete
+          {t("jobTimeline_complete", { done: doneCount, total: steps.length })}
         </span>
       </div>
       <ul className="space-y-2.5">
@@ -139,7 +144,7 @@ export function JobServiceChecklist({
             </span>
             {s.done && (
               <span className="ml-auto text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full">
-                ✓ Done
+                {t("jobTimeline_doneBadge")}
               </span>
             )}
           </li>

@@ -5,6 +5,7 @@ import toast from "react-hot-toast";
 import { Users, UserPlus, Trash2, Building2, ShieldCheck, Loader2, X, Mail, MapPin } from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
 import { apiFetch } from "@/lib/fetchClient";
+import { useTranslations } from "next-intl";
 
 interface Officer {
   _id: string;
@@ -37,6 +38,7 @@ interface Office {
 
 export default function OfficersPage() {
   const { user } = useAuthStore();
+  const t = useTranslations("pesoPages");
   const [office, setOffice] = useState<Office | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -147,9 +149,9 @@ export default function OfficersPage() {
   return (
     <div className="max-w-2xl mx-auto space-y-5">
       <div>
-        <h1 className="text-xl font-bold text-slate-800">My PESO Office</h1>
+        <h1 className="text-xl font-bold text-slate-800">{t("myOffice")}</h1>
         <p className="text-sm text-slate-500 mt-0.5">
-          {isHead ? "As head officer, you can add or remove staff officers." : "View your office and fellow officers."}
+          {isHead ? t("myOfficeSubHead") : t("myOfficeSub")}
         </p>
       </div>
 
@@ -158,7 +160,7 @@ export default function OfficersPage() {
         <div className="flex items-start gap-3">
           <Building2 className="h-6 w-6 opacity-80 mt-0.5 shrink-0" />
           <div className="min-w-0">
-            <p className="text-xs font-semibold uppercase tracking-widest opacity-60">PESO Office</p>
+            <p className="text-xs font-semibold uppercase tracking-widest opacity-60">{t("pesoOfficeBadge")}</p>
             <p className="text-lg font-bold mt-0.5 truncate">{office.officeName}</p>
             <p className="flex items-center gap-1 text-sm opacity-80 mt-1">
               <MapPin className="h-3.5 w-3.5 opacity-70 shrink-0" />

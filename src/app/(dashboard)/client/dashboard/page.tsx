@@ -9,13 +9,17 @@ import { RecentJobs } from "./_components/RecentJobs";
 import { LoyaltyWidget } from "./_components/LoyaltyWidget";
 import { QuickActions } from "./_components/QuickActions";
 import { HeaderSkeleton, KpiSkeleton, RecentJobsSkeleton, SidebarSkeleton } from "./_components/skeletons";
+import { getTranslations } from "next-intl/server";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default async function ClientDashboardPage() {
-  const currentUser = await getCurrentUser();
+  const [currentUser, t] = await Promise.all([
+    getCurrentUser(),
+    getTranslations("clientPages"),
+  ]);
   if (!currentUser) redirect("/login");
 
   return (
@@ -23,12 +27,12 @@ export default async function ClientDashboardPage() {
       {/* ── Onboarding guide ── */}
       <TourGuide
         pageKey="client-dashboard"
-        title="How your Client Dashboard works"
+        title={t("dash_tourTitle")}
         steps={[
-          { icon: "📋", title: "Post a Job", description: "Click '+ Post a Job' to describe your service need, set a budget, and schedule a date." },
-          { icon: "💬", title: "Review Quotes", description: "Providers will send you quotes. Open each job to compare quotes and accept the best one." },
-          { icon: "🔒", title: "Fund Escrow", description: "After accepting a quote, fund escrow to secure your payment. Your money is held safely until the job is done." },
-          { icon: "✅", title: "Release Payment", description: "Once the provider completes the job and you're satisfied, release payment from escrow." },
+          { icon: "📋", title: t("dash_tourStep1Title"), description: t("dash_tourStep1Desc") },
+          { icon: "💬", title: t("dash_tourStep2Title"), description: t("dash_tourStep2Desc") },
+          { icon: "🔒", title: t("dash_tourStep3Title"), description: t("dash_tourStep3Desc") },
+          { icon: "✅", title: t("dash_tourStep4Title"), description: t("dash_tourStep4Desc") },
         ]}
       />
 

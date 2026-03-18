@@ -4,11 +4,14 @@ import { useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { CheckCircle, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 
 function ResetPasswordFormInner() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const token = searchParams.get("token") ?? "";
+  const t = useTranslations("auth");
+  const tc = useTranslations("common");
 
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -19,9 +22,9 @@ function ResetPasswordFormInner() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!token) { setError("Invalid reset link. Please request a new one."); return; }
-    if (password.length < 8) { setError("Password must be at least 8 characters"); return; }
-    if (password !== confirm) { setError("Passwords do not match"); return; }
+    if (!token) { setError(t("invalidResetLink")); return; }
+    if (password.length < 8) { setError(t("passwordMin8")); return; }
+    if (password !== confirm) { setError(t("passwordsDontMatch")); return; }
 
     setError("");
     setLoading(true);
@@ -32,11 +35,11 @@ function ResetPasswordFormInner() {
         body: JSON.stringify({ token, password }),
       });
       const data = await res.json();
-      if (!res.ok) { setError(data.error ?? "Reset failed"); return; }
+      if (!res.ok) { setError(data.error ?? t("resetFailed")); return; }
       setDone(true);
       setTimeout(() => router.push("/login"), 2500);
     } catch {
-      setError("Something went wrong. Please try again.");
+      setError(tc("somethingWentWrong"));
     } finally {
       setLoading(false);
     }
@@ -46,22 +49,22 @@ function ResetPasswordFormInner() {
     return (
       <div className="text-center space-y-4">
         <CheckCircle className="h-12 w-12 text-green-500 mx-auto" />
-        <h2 className="text-xl font-semibold text-slate-900">Password updated!</h2>
-        <p className="text-slate-500 text-sm">Redirecting you to login…</p>
+        <h2 className="text-xl font-semibold text-slate-900">{t("passwordUpdated")}</h2>
+        <p className="text-slate-500 text-sm">{t("redirectingToLogin")}</p>
       </div>
     );
   }
 
   return (
     <>
-      <h2 className="text-2xl font-bold text-slate-900 mb-1">Set a new password</h2>
+      <h2 className="text-2xl font-bold text-slate-900 mb-1">{t("setNewPassword")}</h2>
       <p className="text-slate-500 text-sm mb-6">
-        Choose a strong password with uppercase, lowercase, and a number.
+        {t("setNewPasswordSubtitle")}
       </p>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label htmlFor="password" className="label block mb-1">New password</label>
+          <label htmlFor="password" className="label block mb-1">{t("newPassword")}</label>
           <div className="relative">
             <input
               id="password"
@@ -84,7 +87,7 @@ function ResetPasswordFormInner() {
         </div>
 
         <div>
-          <label htmlFor="confirm" className="label block mb-1">Confirm new password</label>
+          <label htmlFor="confirm" className="label block mb-1">{t("confirmNewPassword")}</label>
           <input
             id="confirm"
             type={showPw ? "text" : "password"}
@@ -99,13 +102,13 @@ function ResetPasswordFormInner() {
         </div>
 
         <button type="submit" className="btn-primary w-full py-2.5" disabled={loading}>
-          {loading ? "Updating…" : "Reset password"}
+          {loading ? t("updating") : t("resetPassword")}
         </button>
       </form>
 
       <p className="mt-6 text-center text-sm text-slate-500">
         <Link href="/login" className="font-medium text-primary hover:text-primary-700 transition-colors">
-          Back to login
+          {t("backToLogin")}
         </Link>
       </p>
     </>

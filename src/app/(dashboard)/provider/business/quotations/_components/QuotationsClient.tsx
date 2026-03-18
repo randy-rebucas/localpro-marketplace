@@ -5,6 +5,7 @@ import {
   FileText, RefreshCw, ChevronLeft, ChevronRight,
   Search, TrendingUp, CheckCircle2, Clock, XCircle, ChevronDown, ChevronUp,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { fetchClient } from "@/lib/fetchClient";
 import { formatCurrency } from "@/lib/utils";
 import toast from "react-hot-toast";
@@ -62,13 +63,6 @@ const JOB_STATUS_STYLES: Record<string, string> = {
   disputed:    "bg-red-50 text-red-600",
 };
 
-const STATUSES: { value: string; label: string }[] = [
-  { value: "",         label: "All" },
-  { value: "pending",  label: "Pending" },
-  { value: "accepted", label: "Accepted" },
-  { value: "rejected", label: "Rejected" },
-];
-
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" });
 }
@@ -76,6 +70,13 @@ function formatDate(iso: string) {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function QuotationsClient() {
+  const t = useTranslations("providerPages");
+  const STATUSES = [
+    { value: "",         label: t("provQuotations_filterAll") },
+    { value: "pending",  label: t("provQuotations_filterPending") },
+    { value: "accepted", label: t("provQuotations_filterAccepted") },
+    { value: "rejected", label: t("provQuotations_filterRejected") },
+  ];
   const [data, setData]         = useState<QuotesResponse | null>(null);
   const [loading, setLoading]   = useState(true);
   const [status, setStatus]     = useState("");
@@ -92,7 +93,7 @@ export default function QuotationsClient() {
       const res = await fetchClient<QuotesResponse>(`/api/provider/agency/quotations?${params}`);
       setData(res);
     } catch {
-      toast.error("Failed to load quotations.");
+      toast.error(t("provQuotations_toastFailLoad"));
     } finally {
       setLoading(false);
     }
@@ -139,8 +140,8 @@ export default function QuotationsClient() {
             <FileText className="h-5 w-5 text-sky-600 dark:text-sky-400" />
           </div>
           <div>
-            <h1 className="text-base font-bold text-slate-800 dark:text-white">Quotations</h1>
-            <p className="text-xs text-slate-500 dark:text-slate-400">{data?.total ?? 0} quote{(data?.total ?? 0) !== 1 ? "s" : ""} found</p>
+            <h1 className="text-base font-bold text-slate-800 dark:text-white">{t("provQuotations_heading")}</h1>
+            <p className="text-xs text-slate-500 dark:text-slate-400">{(data?.total ?? 0) !== 1 ? t("provQuotations_subCountPlural", { count: data?.total ?? 0 }) : t("provQuotations_subCount", { count: data?.total ?? 0 })}</p>
           </div>
         </div>
         <button
@@ -156,11 +157,11 @@ export default function QuotationsClient() {
       {stats && (
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
           {[
-            { label: "Total",       value: stats.total,     icon: FileText,     color: "text-slate-700",   bg: "bg-slate-50",   ring: "ring-slate-100" },
-            { label: "Pending",     value: stats.pending,   icon: Clock,        color: "text-amber-600",   bg: "bg-amber-50",   ring: "ring-amber-100" },
-            { label: "Accepted",    value: stats.accepted,  icon: CheckCircle2, color: "text-emerald-600", bg: "bg-emerald-50", ring: "ring-emerald-100" },
-            { label: "Rejected",    value: stats.rejected,  icon: XCircle,      color: "text-red-500",     bg: "bg-red-50",     ring: "ring-red-100" },
-            { label: "Accept Rate", value: acceptRate !== null ? `${acceptRate}%` : "—", icon: TrendingUp, color: "text-blue-600", bg: "bg-blue-50", ring: "ring-blue-100" },
+            { label: t("provQuotations_kpiTotal"),      value: stats.total,     icon: FileText,     color: "text-slate-700",   bg: "bg-slate-50",   ring: "ring-slate-100" },
+            { label: t("provQuotations_kpiPending"),     value: stats.pending,   icon: Clock,        color: "text-amber-600",   bg: "bg-amber-50",   ring: "ring-amber-100" },
+            { label: t("provQuotations_kpiAccepted"),    value: stats.accepted,  icon: CheckCircle2, color: "text-emerald-600", bg: "bg-emerald-50", ring: "ring-emerald-100" },
+            { label: t("provQuotations_kpiRejected"),    value: stats.rejected,  icon: XCircle,      color: "text-red-500",     bg: "bg-red-50",     ring: "ring-red-100" },
+            { label: t("provQuotations_kpiAcceptRate"),  value: acceptRate !== null ? `${acceptRate}%` : "\u2014", icon: TrendingUp, color: "text-blue-600", bg: "bg-blue-50", ring: "ring-blue-100" },
           ].map((c) => (
             <div key={c.label} className="bg-white rounded-2xl border border-slate-200 p-4 space-y-2">
               <div className={`${c.bg} ring-4 ${c.ring} p-2 rounded-xl w-fit`}>
@@ -181,7 +182,7 @@ export default function QuotationsClient() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
           <input
             className="input w-full pl-9"
-            placeholder="Search by job title or client name…"
+            placeholder={t("provQuotations_searchPlaceholder")}
             value={search}
             onChange={(e) => handleSearch(e.target.value)}
           />
@@ -212,19 +213,19 @@ export default function QuotationsClient() {
         ) : quotes.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 gap-3 text-center">
             <FileText className="h-9 w-9 text-slate-300" />
-            <p className="text-slate-500 text-sm">No quotations found{status ? ` with status "${status}"` : ""}.</p>
+            <p className="text-slate-500 text-sm">{status ? t("provQuotations_emptyWithStatus", { status }) : t("provQuotations_emptyDefault")}</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm min-w-[700px]">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-100 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-                  <th className="text-left px-5 py-3">Job</th>
-                  <th className="text-left px-5 py-3">Client</th>
-                  <th className="text-right px-5 py-3">Budget</th>
-                  <th className="text-right px-5 py-3">Proposed</th>
-                  <th className="text-center px-5 py-3">Status</th>
-                  <th className="text-right px-5 py-3">Date</th>
+                  <th className="text-left px-5 py-3">{t("provQuotations_thJob")}</th>
+                  <th className="text-left px-5 py-3">{t("provQuotations_thClient")}</th>
+                  <th className="text-right px-5 py-3">{t("provQuotations_thBudget")}</th>
+                  <th className="text-right px-5 py-3">{t("provQuotations_thProposed")}</th>
+                  <th className="text-center px-5 py-3">{t("provQuotations_thStatus")}</th>
+                  <th className="text-right px-5 py-3">{t("provQuotations_thDate")}</th>
                   <th className="w-10" />
                 </tr>
               </thead>
@@ -263,7 +264,7 @@ export default function QuotationsClient() {
                             <p className={`text-[10px] font-medium mt-0.5 ${
                               diff > 0 ? "text-red-500" : diff < 0 ? "text-emerald-600" : "text-slate-400"
                             }`}>
-                              {diff > 0 ? `+${formatCurrency(diff)}` : diff < 0 ? `-${formatCurrency(Math.abs(diff))}` : "at budget"}
+                              {diff > 0 ? `+${formatCurrency(diff)}` : diff < 0 ? `-${formatCurrency(Math.abs(diff))}` : t("provQuotations_atBudget")}
                             </p>
                           )}
                         </td>
@@ -292,7 +293,7 @@ export default function QuotationsClient() {
                       {isExpanded && q.message && (
                         <tr className="bg-slate-50">
                           <td colSpan={7} className="px-5 pb-4 pt-2">
-                            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Quote Message</p>
+                            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">{t("provQuotations_quoteMessage")}</p>
                             <p className="text-sm text-slate-700 whitespace-pre-line leading-relaxed">{q.message}</p>
                           </td>
                         </tr>
@@ -308,7 +309,7 @@ export default function QuotationsClient() {
         {/* Pagination */}
         {(data?.pages ?? 1) > 1 && (
           <div className="flex items-center justify-between px-5 py-3 border-t border-slate-100 text-sm text-slate-500">
-            <span>Page {data?.page} of {data?.pages}</span>
+            <span>{t("provQuotations_pageOf", { page: data?.page ?? 1, pages: data?.pages ?? 1 })}</span>
             <div className="flex gap-1">
               <button
                 onClick={() => handlePage(page - 1)}

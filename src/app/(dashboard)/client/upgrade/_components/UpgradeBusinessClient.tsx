@@ -8,45 +8,23 @@ import {
 } from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
 import toast from "react-hot-toast";
-
-const BENEFITS = [
-  {
-    icon: <Briefcase className="h-4.5 w-4.5 text-primary-300" />,
-    title: "Unlimited Job Postings",
-    description: "Post as many jobs as your business needs — no caps, no queues.",
-  },
-  {
-    icon: <Users className="h-4.5 w-4.5 text-primary-300" />,
-    title: "Team Management",
-    description: "Add team members and delegate job posting across your organization.",
-  },
-  {
-    icon: <ShieldCheck className="h-4.5 w-4.5 text-primary-300" />,
-    title: "Business Profile Badge",
-    description: "Stand out with a verified Business badge that builds trust with providers.",
-  },
-  {
-    icon: <Zap className="h-4.5 w-4.5 text-primary-300" />,
-    title: "Priority Matching",
-    description: "Your jobs are surfaced first to top-rated providers in the marketplace.",
-  },
-  {
-    icon: <Headphones className="h-4.5 w-4.5 text-primary-300" />,
-    title: "Priority Support",
-    description: "Skip the queue — business accounts get faster response times from our team.",
-  },
-  {
-    icon: <Building2 className="h-4.5 w-4.5 text-primary-300" />,
-    title: "Business Hub",
-    description: "Access analytics, spend summaries, and recurring job management in one place.",
-  },
-];
+import { useTranslations } from "next-intl";
 
 export default function UpgradeBusinessClient({ userName }: { userName: string }) {
+  const t = useTranslations("clientPages");
   const router = useRouter();
   const { fetchMe } = useAuthStore();
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
+
+  const BENEFITS = [
+    { icon: <Briefcase className="h-4.5 w-4.5 text-primary-300" />, title: t("clientUpgrade_benefit1Title"), description: t("clientUpgrade_benefit1Desc") },
+    { icon: <Users className="h-4.5 w-4.5 text-primary-300" />,     title: t("clientUpgrade_benefit2Title"), description: t("clientUpgrade_benefit2Desc") },
+    { icon: <ShieldCheck className="h-4.5 w-4.5 text-primary-300" />, title: t("clientUpgrade_benefit3Title"), description: t("clientUpgrade_benefit3Desc") },
+    { icon: <Zap className="h-4.5 w-4.5 text-primary-300" />,       title: t("clientUpgrade_benefit4Title"), description: t("clientUpgrade_benefit4Desc") },
+    { icon: <Headphones className="h-4.5 w-4.5 text-primary-300" />, title: t("clientUpgrade_benefit5Title"), description: t("clientUpgrade_benefit5Desc") },
+    { icon: <Building2 className="h-4.5 w-4.5 text-primary-300" />,  title: t("clientUpgrade_benefit6Title"), description: t("clientUpgrade_benefit6Desc") },
+  ];
 
   async function handleActivate() {
     setLoading(true);
@@ -55,16 +33,16 @@ export default function UpgradeBusinessClient({ userName }: { userName: string }
       const data = await res.json();
 
       if (!res.ok) {
-        toast.error(data?.message ?? "Something went wrong. Please try again.");
+        toast.error(data?.message ?? t("clientUpgrade_toastError"));
         return;
       }
 
       setDone(true);
-      toast.success("🎉 Business account activated!");
+      toast.success(t("clientUpgrade_toastSuccess"));
       await fetchMe();
       setTimeout(() => router.push("/client/business"), 1_800);
     } catch {
-      toast.error("Network error. Please try again.");
+      toast.error(t("clientUpgrade_toastNetwork"));
     } finally {
       setLoading(false);
     }
@@ -80,8 +58,8 @@ export default function UpgradeBusinessClient({ userName }: { userName: string }
           </div>
         </div>
         <div className="space-y-1.5">
-          <h1 className="text-2xl font-bold text-primary-100">You&apos;re now a Business!</h1>
-          <p className="text-slate-400 text-sm">Taking you to the Business Hub…</p>
+          <h1 className="text-2xl font-bold text-primary-100">{t("clientUpgrade_successTitle")}</h1>
+          <p className="text-slate-400 text-sm">{t("clientUpgrade_successSub")}</p>
         </div>
       </div>
     );
@@ -97,23 +75,22 @@ export default function UpgradeBusinessClient({ userName }: { userName: string }
         </div>
         <div className="space-y-1.5">
           <h1 className="text-2xl font-extrabold text-primary-100 tracking-tight leading-tight">
-            Go Business — It&apos;s Free
+            {t("clientUpgrade_heroTitle")}
           </h1>
           <p className="text-slate-200 text-sm leading-relaxed max-w-sm mx-auto">
-            Hi <span className="text-primary-300 font-semibold">{userName}</span>! Unlock the full
-            power of LocalPro for your business. No credit card. No commitment. Forever free.
+            {t("clientUpgrade_heroSub", { user: userName })}
           </p>
         </div>
         <div className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/25 px-3 py-1 rounded-full">
           <CheckCircle2 className="h-3 w-3" />
-          Always free — no hidden charges ever
+          {t("clientUpgrade_freeBadge")}
         </div>
       </div>
 
       {/* Benefits */}
       <div className="space-y-2">
         <p className="text-xs font-bold text-slate-400 uppercase tracking-widest px-0.5">
-          Everything included
+          {t("clientUpgrade_everythingIncluded")}
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           {BENEFITS.map((b) => (
@@ -149,13 +126,13 @@ export default function UpgradeBusinessClient({ userName }: { userName: string }
           ) : (
             <Sparkles className="h-4 w-4" />
           )}
-          <span>{loading ? "Activating…" : "Activate Business Account for Free"}</span>
+          <span>{loading ? t("clientUpgrade_btnActivating") : t("clientUpgrade_btnActivate")}</span>
           {!loading && <ArrowRight className="h-4 w-4 ml-auto" />}
         </button>
         <p className="text-xs text-slate-400 text-center">
-          By activating, you agree to LocalPro&apos;s{" "}
-          <a href="/terms" className="underline hover:text-slate-200 transition-colors">Terms of Service</a>.
-          You can downgrade anytime from Settings.
+          {t("clientUpgrade_termsPre")}{" "}
+          <a href="/terms" className="underline hover:text-slate-200 transition-colors">{t("clientUpgrade_termsLink")}</a>
+          {t("clientUpgrade_termsPost")}
         </p>
       </div>
 

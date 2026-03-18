@@ -2,15 +2,10 @@
 
 import { useState } from "react";
 import { CheckSquare, Square, ChevronDown, ChevronUp, ClipboardCheck } from "lucide-react";
+import { useTranslations } from "next-intl";
 
-const CHECKLIST_ITEMS = [
-  { id: "scope",    label: "Scope of work is clearly agreed upon" },
-  { id: "timeline", label: "Timeline & completion date confirmed" },
-  { id: "price",    label: "Total price and payment terms agreed" },
-  { id: "access",   label: "Site/access requirements discussed" },
-  { id: "materials",label: "Materials & tools responsibility clarified" },
-  { id: "contact",  label: "Emergency contact info exchanged" },
-];
+const CHECKLIST_IDS = ["scope", "timeline", "price", "access", "materials", "contact"] as const;
+type ChecklistId = typeof CHECKLIST_IDS[number];
 
 interface Props {
   /** The current user's role — determines copy */
@@ -20,6 +15,15 @@ interface Props {
 }
 
 export default function ChatChecklist({ role, onComplete }: Props) {
+  const t = useTranslations("chatChecklist");
+  const CHECKLIST_ITEMS: { id: ChecklistId; label: string }[] = [
+    { id: "scope",     label: t("itemScope") },
+    { id: "timeline",  label: t("itemTimeline") },
+    { id: "price",     label: t("itemPrice") },
+    { id: "access",    label: t("itemAccess") },
+    { id: "materials", label: t("itemMaterials") },
+    { id: "contact",   label: t("itemContact") },
+  ];
   const [checked, setChecked] = useState<Set<string>>(new Set());
   const [collapsed, setCollapsed] = useState(false);
 
@@ -45,7 +49,7 @@ export default function ChatChecklist({ role, onComplete }: Props) {
         <div className="flex items-center gap-2">
           <ClipboardCheck className="h-4 w-4 text-amber-600 flex-shrink-0" />
           <span className="font-semibold text-amber-800 text-sm">
-            Pre-Job Checklist
+            {t("heading")}
           </span>
           <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
             allDone
@@ -71,8 +75,8 @@ export default function ChatChecklist({ role, onComplete }: Props) {
         <div className="px-4 pb-4">
           <p className="text-xs text-amber-700 mb-3">
             {role === "client"
-              ? "Confirm these items with your provider before work begins."
-              : "Review these items with your client before starting work."}
+              ? t("clientHint")
+              : t("providerHint")}
           </p>
           <ul className="space-y-2">
             {CHECKLIST_ITEMS.map((item) => {
@@ -106,7 +110,7 @@ export default function ChatChecklist({ role, onComplete }: Props) {
               onClick={onComplete}
               className="mt-3 w-full py-2 rounded-lg bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700 transition-colors"
             >
-              ✓ All confirmed — ready to start work
+              {t("allConfirmedBtn")}
             </button>
           )}
         </div>

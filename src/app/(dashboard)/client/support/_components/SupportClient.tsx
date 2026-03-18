@@ -7,6 +7,7 @@ import MyTickets from "@/components/shared/MyTickets";
 import TourGuide from "@/components/shared/TourGuide";
 import { fetchClient } from "@/lib/fetchClient";
 import { hasPrioritySupportAccess, PLAN_LABELS, PLAN_UPGRADE_NEXT } from "@/lib/businessPlan";
+import { useTranslations } from "next-intl";
 import type { IBusinessOrganization } from "@/types";
 
 const ChatWindow = dynamic(() => import("@/components/chat/ChatWindow"), {
@@ -23,8 +24,15 @@ const INFO_CHIPS = [
 ];
 
 export default function SupportClient({ userId }: { userId: string }) {
+  const t = useTranslations("clientPages");
   const [org, setOrg] = useState<IBusinessOrganization | null | undefined>(undefined);
   const [tab, setTab] = useState<"chat" | "tickets">("chat");
+
+  const INFO_CHIPS = [
+    { icon: <Clock className="h-3 w-3" />, text: t("clientSupport_chipHours") },
+    { icon: <Headphones className="h-3 w-3" />, text: t("clientSupport_chipReply") },
+    { icon: <ShieldCheck className="h-3 w-3" />, text: t("clientSupport_chipDisputes") },
+  ];
 
   useEffect(() => {
     fetchClient<{ org: IBusinessOrganization | null }>("/api/business/org")
@@ -41,8 +49,8 @@ export default function SupportClient({ userId }: { userId: string }) {
       <div className="flex flex-col gap-4 h-[calc(100vh-8rem)]">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
-            <h2 className="text-2xl font-bold text-slate-900">Support</h2>
-            <p className="text-slate-500 text-sm mt-1">Chat with our team for help with jobs, payments, or disputes.</p>
+            <h2 className="text-2xl font-bold text-slate-900">{t("clientSupport_heading")}</h2>
+            <p className="text-slate-500 text-sm mt-1">{t("clientSupport_subheading")}</p>
           </div>
         </div>
 
@@ -55,11 +63,9 @@ export default function SupportClient({ userId }: { userId: string }) {
             </div>
           </div>
           <div className="max-w-sm">
-            <h3 className="text-xl font-bold text-slate-900 mb-2">Priority Support</h3>
+            <h3 className="text-xl font-bold text-slate-900 mb-2">{t("clientSupport_wallTitle")}</h3>
             <p className="text-slate-500 text-sm leading-relaxed">
-              Priority Support — including a dedicated account manager, 4-hour response SLA, and white-glove onboarding — is available on the{" "}
-              <span className="font-semibold text-slate-700">Enterprise</span> plan.
-              Your current plan is <span className="font-semibold text-slate-700">{planLabel}</span>.
+              {t("clientSupport_wallDesc", { plan: planLabel })}
             </p>
           </div>
           {nextPlan && (
@@ -67,12 +73,12 @@ export default function SupportClient({ userId }: { userId: string }) {
               href="/client/business/billing"
               className="inline-flex items-center gap-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold px-5 py-2.5 transition-colors"
             >
-              Upgrade to {nextLabel}
+              {t("clientSupport_wallUpgradeBtn", { plan: nextLabel })}
               <ArrowUpRight className="h-4 w-4" />
             </a>
           )}
           <a href="/client/business" className="text-xs text-slate-400 hover:text-slate-600 transition-colors">
-            Back to Dashboard
+            {t("clientSupport_wallBackBtn")}
           </a>
 
           {/* Blurred preview */}
@@ -83,8 +89,8 @@ export default function SupportClient({ userId }: { userId: string }) {
                   <Headphones className="h-4 w-4 text-primary" />
                 </div>
                 <div className="text-left">
-                  <p className="text-sm font-semibold text-slate-800">LocalPro Support</p>
-                  <span className="text-[11px] text-emerald-600">Online · 4-hour SLA</span>
+                  <p className="text-sm font-semibold text-slate-800">{t("clientSupport_previewName")}</p>
+                  <span className="text-[11px] text-emerald-600">{t("clientSupport_previewStatus")}</span>
                 </div>
               </div>
               <div className="px-4 py-6 space-y-3">
@@ -98,7 +104,7 @@ export default function SupportClient({ userId }: { userId: string }) {
               </div>
             </div>
             <div className="absolute inset-0 flex items-center justify-center">
-              <span className="text-xs font-semibold text-slate-500 bg-white/80 rounded-full px-3 py-1 border border-slate-200">Enterprise only</span>
+              <span className="text-xs font-semibold text-slate-500 bg-white/80 rounded-full px-3 py-1 border border-slate-200">{t("clientSupport_previewBadge")}</span>
             </div>
           </div>
         </div>
@@ -118,7 +124,7 @@ export default function SupportClient({ userId }: { userId: string }) {
               : "text-slate-500 hover:text-slate-700"
           }`}
         >
-          <MessageCircle className="h-4 w-4" /> Live Chat
+          <MessageCircle className="h-4 w-4" /> {t("clientSupport_tabChat")}
         </button>
         <button
           onClick={() => setTab("tickets")}
@@ -128,7 +134,7 @@ export default function SupportClient({ userId }: { userId: string }) {
               : "text-slate-500 hover:text-slate-700"
           }`}
         >
-          <Ticket className="h-4 w-4" /> My Tickets
+          <Ticket className="h-4 w-4" /> {t("clientSupport_tabTickets")}
         </button>
       </div>
 
@@ -136,20 +142,20 @@ export default function SupportClient({ userId }: { userId: string }) {
       {tab === "chat" && <>
       <TourGuide
         pageKey="client-support"
-        title="How Support works"
+        title={t("clientSupport_tourTitle")}
         steps={[
-          { icon: "🎧", title: "Chat with support", description: "Send a message below and our support team will get back to you as soon as possible." },
-          { icon: "⏱️", title: "Response times", description: "We typically respond within a few hours during business hours (Mon–Sat, 8am–6pm)." },
-          { icon: "🔍", title: "Report issues", description: "Having trouble with a job or payment? Describe the problem clearly and include relevant job IDs." },
-          { icon: "📋", title: "Disputes handled here", description: "For payment disputes, our team can escalate and involve both parties to reach a fair resolution." },
+          { icon: "🎧", title: t("clientSupport_tourStep1Title"), description: t("clientSupport_tourStep1Desc") },
+          { icon: "⏱️", title: t("clientSupport_tourStep2Title"), description: t("clientSupport_tourStep2Desc") },
+          { icon: "🔍", title: t("clientSupport_tourStep3Title"), description: t("clientSupport_tourStep3Desc") },
+          { icon: "📋", title: t("clientSupport_tourStep4Title"), description: t("clientSupport_tourStep4Desc") },
         ]}
       />
 
       {/* Page header */}
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900">Support</h2>
-          <p className="text-slate-500 text-sm mt-1">Chat with our team for help with jobs, payments, or disputes.</p>
+          <h2 className="text-2xl font-bold text-slate-900">{t("clientSupport_heading")}</h2>
+          <p className="text-slate-500 text-sm mt-1">{t("clientSupport_subheading")}</p>
         </div>
       </div>
 
@@ -167,7 +173,8 @@ export default function SupportClient({ userId }: { userId: string }) {
       <div className="flex items-start gap-2.5 rounded-xl bg-amber-50 border border-amber-100 px-4 py-3">
         <AlertCircle className="h-4 w-4 text-amber-500 flex-shrink-0 mt-0.5" />
         <p className="text-xs text-amber-700">
-          For faster help, include the <strong>Job ID</strong> and a brief description of the issue in your first message.
+          {t("clientSupport_tipPre")} <strong>{t("clientSupport_tipBold")}</strong>{" "}
+          {t("clientSupport_tipPost")}
         </p>
       </div>
 
@@ -183,15 +190,15 @@ export default function SupportClient({ userId }: { userId: string }) {
               <Headphones className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <p className="text-sm font-semibold text-slate-800">LocalPro Support</p>
+              <p className="text-sm font-semibold text-slate-800">{t("clientSupport_chatName")}</p>
               <span className="inline-flex items-center gap-1 text-[11px] text-emerald-600">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                Online · Mon–Sat, 8 am–6 pm
+                {t("clientSupport_chatStatus")}
               </span>
             </div>
           </div>
         }
-        emptyMessage="Send us a message and our support team will get back to you shortly."
+        emptyMessage={t("clientSupport_emptyMessage")}
       />
       </>}
     </div>

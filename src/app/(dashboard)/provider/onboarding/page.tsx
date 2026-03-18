@@ -10,6 +10,7 @@ import {
 import Button from "@/components/ui/Button";
 import { apiFetch } from "@/lib/fetchClient";
 import LocationAutocomplete from "@/components/shared/LocationAutocomplete";
+import { useTranslations } from "next-intl";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -26,17 +27,24 @@ const DOC_TYPES: { value: DocType; label: string }[] = [
 interface UploadedDoc { type: DocType; url: string }
 
 const STEPS = [
-  { id: 1, label: "Skills",       icon: Tag },
-  { id: 2, label: "Service Area", icon: MapPin },
-  { id: 3, label: "Documents",    icon: ShieldCheck },
+  { id: 1, icon: Tag },
+  { id: 2, icon: MapPin },
+  { id: 3, icon: ShieldCheck },
 ];
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function ProviderOnboardingPage() {
   const router = useRouter();
+  const t = useTranslations("providerOnboarding");
   const [step, setStep] = useState(1);
   const [checking, setChecking] = useState(true);
+
+  const stepLabels: Record<number, string> = {
+    1: t("stepSkills"),
+    2: t("stepServiceArea"),
+    3: t("stepDocuments"),
+  };
 
   // Step 1 — Skills
   const [skills, setSkills] = useState<string[]>([]);
@@ -142,7 +150,7 @@ export default function ProviderOnboardingPage() {
   }
 
   async function saveSkills() {
-    if (skills.length === 0) { toast.error("Add at least one skill or service"); return; }
+    if (skills.length === 0) { toast.error(t("skillsRequired")); return; }
     setSavingSkills(true);
     try {
       const res = await apiFetch("/api/providers/profile", {
@@ -150,7 +158,7 @@ export default function ProviderOnboardingPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ skills }),
       });
-      if (!res.ok) { const d = await res.json(); toast.error(d.error ?? "Failed to save skills"); return; }
+      if (!res.ok) { const d = await res.json(); toast.error(d.error ?? t("skillsSaveFailed")); return; }
       setStep(2);
     } catch { toast.error("Something went wrong"); }
     finally { setSavingSkills(false); }
@@ -159,7 +167,7 @@ export default function ProviderOnboardingPage() {
   // ── Step 2 ──────────────────────────────────────────────────────────────────
 
   async function addServiceArea() {
-    if (!areaLabel.trim() || !areaAddress.trim()) { toast.error("Please fill in both fields"); return; }
+    if (!areaLabel.trim() || !areaAddress.trim()) { toast.error(t("areaFieldsRequired")); return; }
     setAddingArea(true);
     try {
       const res = await apiFetch("/api/providers/profile/service-areas", {
@@ -167,9 +175,9 @@ export default function ProviderOnboardingPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ label: areaLabel.trim(), address: areaAddress.trim() }),
       });
-      if (!res.ok) { const d = await res.json(); toast.error(d.error ?? "Failed to add service area"); return; }
+      if (!res.ok) { const d = await res.json(); toast.error(d.error ?? t("areaAddFailed")); return; }
       setAreaAdded(true);
-      toast.success("Service area saved!");
+      toast.success(t("areaSaved"));
     } catch { toast.error("Something went wrong"); }
     finally { setAddingArea(false); }
   }
@@ -184,15 +192,15 @@ export default function ProviderOnboardingPage() {
       fd.append("folder", "kyc");
       const res = await apiFetch("/api/upload", { method: "POST", body: fd });
       const data = await res.json();
-      if (!res.ok) { toast.error(data.error ?? "Upload failed"); return; }
+      if (!res.ok) { toast.error(data.error ?? t("uploadFailed")); return; }
       setDocs((prev) => [...prev, { type: selectedType, url: data.url }]);
-      toast.success("Document uploaded");
-    } catch { toast.error("Upload error"); }
+      toast.success(t("docUploaded"));
+    } catch { toast.error(t("uploadError")); }
     finally { setUploading(false); if (fileRef.current) fileRef.current.value = ""; }
   }
 
   async function submitKyc() {
-    if (docs.length === 0) { toast.error("Upload at least one document"); return; }
+    if (docs.length === 0) { toast.error(t("docRequired")); return; }
     setSubmitting(true);
     try {
       const res = await apiFetch("/api/kyc", {
@@ -200,8 +208,8 @@ export default function ProviderOnboardingPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ documents: docs }),
       });
-      if (!res.ok) { const d = await res.json(); toast.error(d.error ?? "Failed to submit documents"); return; }
-      toast.success("Documents submitted for review!");
+      if (!res.ok) { const d = await res.json(); toast.error(d.error ?? t("submitFailed")); return; }
+      toast.success(t("kycSubmitted"));
       router.push("/provider/dashboard");
     } catch { toast.error("Something went wrong"); }
     finally { setSubmitting(false); }
@@ -222,8 +230,8 @@ export default function ProviderOnboardingPage() {
 
       {/* Header */}
       <div className="mb-8 text-center">
-        <h1 className="text-2xl font-bold text-slate-900">Complete Your Provider Profile</h1>
-        <p className="text-slate-500 text-sm mt-1">Just a few steps before your account goes live</p>
+        <h1 className="text-2xl font-bold text-slate-900">{t("heading")}</h1>
+        <p className="text-slate-500 text-sm mt-1">{t("subheading")}</p>
       </div>
 
       {/* Step indicator */}
@@ -243,7 +251,7 @@ export default function ProviderOnboardingPage() {
                   {done ? <CheckCircle2 className="h-5 w-5" /> : <Icon className="h-4 w-4" />}
                 </div>
                 <span className={`text-xs mt-1.5 font-medium ${done || active ? "text-primary" : "text-slate-400"}`}>
-                  {s.label}
+                  {stepLabels[s.id]}
                 </span>
               </div>
               {i < STEPS.length - 1 && (
@@ -258,11 +266,11 @@ export default function ProviderOnboardingPage() {
       {step === 1 && (
         <div className="bg-white rounded-2xl border border-slate-200 shadow-card p-6 space-y-5">
           <div>
-            <h2 className="text-lg font-semibold text-slate-900">What services do you offer?</h2>
+            <h2 className="text-lg font-semibold text-slate-900">{t("step1Heading")}</h2>
             <p className="text-sm text-slate-500 mt-1">
-              Search and select from the list, or type your own and press{" "}
+              {t("step1Hint")}{" "}
               <kbd className="bg-slate-100 border border-slate-200 rounded px-1.5 py-0.5 text-xs font-mono text-slate-700">Enter</kbd>
-              {" "}or{" "}
+              {" "}{t("step1HintOr")}{" "}
               <kbd className="bg-slate-100 border border-slate-200 rounded px-1.5 py-0.5 text-xs font-mono text-slate-700">,</kbd>.
             </p>
           </div>
@@ -272,7 +280,7 @@ export default function ProviderOnboardingPage() {
             <input
               ref={inputRef}
               className="input w-full pr-10"
-              placeholder="Search skills — e.g. Plumbing, Electrical…"
+              placeholder={t("placeholderSkill")}
               value={skillInput}
               onChange={(e) => setSkillInput(e.target.value)}
               onKeyDown={handleSkillKeyDown}
@@ -305,7 +313,7 @@ export default function ProviderOnboardingPage() {
           {skills.length > 0 ? (
             <div>
               <p className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-2">
-                Selected ({skills.length})
+                {t("selectedCount", { count: skills.length })}
               </p>
               <div className="flex flex-wrap gap-2">
                 {skills.map((s) => (
@@ -326,12 +334,12 @@ export default function ProviderOnboardingPage() {
               </div>
             </div>
           ) : (
-            <p className="text-xs text-slate-400 italic">No skills added yet — search above or type your own.</p>
+            <p className="text-xs text-slate-400 italic">{t("noSkills")}</p>
           )}
 
           <div className="flex justify-end pt-1">
             <Button onClick={saveSkills} isLoading={savingSkills} disabled={skills.length === 0 || savingSkills}>
-              Continue <ChevronRight className="h-4 w-4 ml-1" />
+              {t("continue")} <ChevronRight className="h-4 w-4 ml-1" />
             </Button>
           </div>
         </div>
@@ -341,16 +349,16 @@ export default function ProviderOnboardingPage() {
       {step === 2 && (
         <div className="bg-white rounded-2xl border border-slate-200 shadow-card p-6 space-y-5">
           <div>
-            <h2 className="text-lg font-semibold text-slate-900">Where do you provide services?</h2>
-            <p className="text-sm text-slate-500 mt-1">Add the city, district, or address range you cover.</p>
+            <h2 className="text-lg font-semibold text-slate-900">{t("step2Heading")}</h2>
+            <p className="text-sm text-slate-500 mt-1">{t("step2Subheading")}</p>
           </div>
 
           <div className="space-y-3">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Area label</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">{t("areaLabel")}</label>
               <input
                 className="input w-full"
-                placeholder="e.g. Metro Manila"
+                placeholder={t("placeholderArea")}
                 value={areaLabel}
                 onChange={(e) => setAreaLabel(e.target.value)}
                 disabled={areaAdded}
@@ -358,32 +366,32 @@ export default function ProviderOnboardingPage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">
-                Full address / coverage area
+                {t("coverageArea")}
               </label>
               <LocationAutocomplete
                 value={areaAddress}
                 onChange={(address) => setAreaAddress(address)}
-                placeholder="Search address or coverage area…"
+                placeholder={t("placeholderCoverage")}
               />
             </div>
           </div>
 
           {!areaAdded ? (
             <Button onClick={addServiceArea} isLoading={addingArea} variant="outline" disabled={addingArea}>
-              <MapPin className="h-4 w-4 mr-1.5" /> Save Service Area
+              <MapPin className="h-4 w-4 mr-1.5" /> {t("saveArea")}
             </Button>
           ) : (
             <p className="text-sm text-emerald-600 font-medium flex items-center gap-1.5">
-              <CheckCircle2 className="h-4 w-4" /> Service area saved
+              <CheckCircle2 className="h-4 w-4" /> {t("areaSavedStatus")}
             </p>
           )}
 
           <div className="flex justify-between pt-1">
             <Button variant="outline" onClick={() => setStep(1)}>
-              <ChevronLeft className="h-4 w-4 mr-1" /> Back
+              <ChevronLeft className="h-4 w-4 mr-1" /> {t("back")}
             </Button>
             <Button onClick={() => setStep(3)} disabled={!areaAdded}>
-              Continue <ChevronRight className="h-4 w-4 ml-1" />
+              {t("continue")} <ChevronRight className="h-4 w-4 ml-1" />
             </Button>
           </div>
         </div>
@@ -393,16 +401,16 @@ export default function ProviderOnboardingPage() {
       {step === 3 && (
         <div className="bg-white rounded-2xl border border-slate-200 shadow-card p-6 space-y-5">
           <div>
-            <h2 className="text-lg font-semibold text-slate-900">Upload Identity Documents</h2>
+            <h2 className="text-lg font-semibold text-slate-900">{t("step3Heading")}</h2>
             <p className="text-sm text-slate-500 mt-1">
-              Required for identity verification. Supports government IDs, TESDA certificates, and more.
+              {t("step3Subheading")}
             </p>
           </div>
 
           <div className="space-y-3">
             {/* Doc type selector */}
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Document type</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">{t("docType")}</label>
               <select
                 className="input w-full"
                 value={selectedType}
@@ -430,8 +438,8 @@ export default function ProviderOnboardingPage() {
                 className="w-full flex items-center justify-center gap-2 border-2 border-dashed border-slate-200 hover:border-primary hover:text-primary rounded-xl px-4 py-4 text-sm text-slate-500 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {uploading
-                  ? <><span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" /> Uploading…</>
-                  : <><Upload className="h-4 w-4" /> Click to upload document</>}
+                  ? <><span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" /> {t("uploading")}</>
+                  : <><Upload className="h-4 w-4" /> {t("clickToUpload")}</>}
               </button>
             </div>
           </div>
@@ -439,7 +447,7 @@ export default function ProviderOnboardingPage() {
           {/* Uploaded docs list */}
           {docs.length > 0 && (
             <div className="space-y-1.5">
-              <p className="text-xs font-medium text-slate-400 uppercase tracking-wide">Uploaded ({docs.length})</p>
+              <p className="text-xs font-medium text-slate-400 uppercase tracking-wide">{t("uploadedCount", { count: docs.length })}</p>
               {docs.map((d, i) => (
                 <div key={i} className="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-lg px-3 py-2.5">
                   <span className="text-sm font-medium text-slate-700 capitalize">{d.type.replace(/_/g, " ")}</span>
@@ -450,7 +458,7 @@ export default function ProviderOnboardingPage() {
                       rel="noopener noreferrer"
                       className="text-xs text-primary hover:underline inline-flex items-center gap-1"
                     >
-                      View <ExternalLink className="h-3 w-3" />
+                      {t("view")} <ExternalLink className="h-3 w-3" />
                     </a>
                     <button
                       type="button"
@@ -467,14 +475,14 @@ export default function ProviderOnboardingPage() {
 
           <div className="flex justify-between pt-1">
             <Button variant="outline" onClick={() => setStep(2)}>
-              <ChevronLeft className="h-4 w-4 mr-1" /> Back
+              <ChevronLeft className="h-4 w-4 mr-1" /> {t("back")}
             </Button>
             <div className="flex gap-2">
               <Button variant="ghost" onClick={() => router.push("/provider/dashboard")} className="text-slate-400 text-sm">
-                Skip for now
+                {t("skipForNow")}
               </Button>
               <Button onClick={submitKyc} isLoading={submitting} disabled={docs.length === 0 || submitting}>
-                Submit & Finish
+                {t("submitFinish")}
               </Button>
             </div>
           </div>

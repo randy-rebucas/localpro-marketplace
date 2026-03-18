@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { CalendarClock } from "lucide-react";
 import { getMaintenanceLabel } from "@/lib/recommendations";
 
@@ -14,6 +15,7 @@ interface MaintenanceItem {
 }
 
 export default function MaintenanceReminder() {
+  const t = useTranslations("maintenanceReminder");
   const [items, setItems] = useState<MaintenanceItem[]>([]);
 
   useEffect(() => {
@@ -31,7 +33,7 @@ export default function MaintenanceReminder() {
     <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-2">
       <div className="flex items-center gap-2 mb-1">
         <CalendarClock className="h-4 w-4 text-amber-600" />
-        <span className="text-sm font-semibold text-amber-800">Service reminders</span>
+        <span className="text-sm font-semibold text-amber-800">{t("heading")}</span>
       </div>
       <ul className="space-y-2">
         {visible.map((item) => (
@@ -39,24 +41,24 @@ export default function MaintenanceReminder() {
             <div className="min-w-0">
               <p className="text-sm font-medium text-slate-800 truncate">{item.category}</p>
               <p className="text-xs text-slate-500">
-                Recommended {getMaintenanceLabel(item.category) ?? "periodically"}
+                {t("recommended", { period: getMaintenanceLabel(item.category) ?? t("periodically") })}
               </p>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
               {item.overdue ? (
                 <span className="text-xs font-semibold text-red-600 bg-red-50 border border-red-200 px-2 py-0.5 rounded-full">
-                  Overdue
+                  {t("overdue")}
                 </span>
               ) : (
                 <span className="text-xs font-medium text-amber-700 bg-amber-100 border border-amber-200 px-2 py-0.5 rounded-full">
-                  Due in {item.daysUntilDue}d
+                  {t("dueIn", { n: item.daysUntilDue })}
                 </span>
               )}
               <Link
                 href={`/client/post-job?category=${encodeURIComponent(item.category)}`}
                 className="text-xs font-semibold text-primary hover:underline whitespace-nowrap"
               >
-                Book →
+                {t("book")}
               </Link>
             </div>
           </li>

@@ -1,16 +1,21 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import type { DayOfWeek, WeeklySchedule, WorkSlot } from "@/types";
 
-const DAYS: { key: DayOfWeek; label: string; short: string }[] = [
-  { key: "mon", label: "Monday",    short: "Mon" },
-  { key: "tue", label: "Tuesday",   short: "Tue" },
-  { key: "wed", label: "Wednesday", short: "Wed" },
-  { key: "thu", label: "Thursday",  short: "Thu" },
-  { key: "fri", label: "Friday",    short: "Fri" },
-  { key: "sat", label: "Saturday",  short: "Sat" },
-  { key: "sun", label: "Sunday",    short: "Sun" },
-];
+type TFunc = ReturnType<typeof useTranslations>;
+
+function getDays(t: TFunc): { key: DayOfWeek; label: string; short: string }[] {
+  return [
+    { key: "mon", label: t("monLabel"), short: t("monShort") },
+    { key: "tue", label: t("tueLabel"), short: t("tueShort") },
+    { key: "wed", label: t("wedLabel"), short: t("wedShort") },
+    { key: "thu", label: t("thuLabel"), short: t("thuShort") },
+    { key: "fri", label: t("friLabel"), short: t("friShort") },
+    { key: "sat", label: t("satLabel"), short: t("satShort") },
+    { key: "sun", label: t("sunLabel"), short: t("sunShort") },
+  ];
+}
 
 interface ScheduleEditorProps {
   value: WeeklySchedule;
@@ -18,6 +23,9 @@ interface ScheduleEditorProps {
 }
 
 export default function ScheduleEditor({ value, onChange }: ScheduleEditorProps) {
+  const t    = useTranslations("scheduleEditor");
+  const DAYS = getDays(t);
+
   function updateSlot(day: DayOfWeek, patch: Partial<WorkSlot>) {
     onChange({ ...value, [day]: { ...value[day], ...patch } });
   }
@@ -80,11 +88,11 @@ export default function ScheduleEditor({ value, onChange }: ScheduleEditorProps)
                     className="rounded-md border border-slate-200 px-2 py-1 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
                   />
                   <span className="text-xs text-slate-400 ml-1">
-                    {formatHours(slot.from, slot.to)}
+                    {formatHours(slot.from, slot.to, t)}
                   </span>
                 </div>
               ) : (
-                <span className="text-sm text-slate-400 italic">Unavailable</span>
+                <span className="text-sm text-slate-400 italic">{t("unavailable")}</span>
               )}
             </div>
 
@@ -105,9 +113,9 @@ export default function ScheduleEditor({ value, onChange }: ScheduleEditorProps)
                   onChange={(e) => updateSlot(key, { to: e.target.value })}
                   className="flex-1 rounded-md border border-slate-200 px-2 py-1.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
                 />
-                {formatHours(slot.from, slot.to) && (
+                {formatHours(slot.from, slot.to, t) && (
                   <span className="text-xs text-slate-400 flex-shrink-0">
-                    {formatHours(slot.from, slot.to)}
+                    {formatHours(slot.from, slot.to, t)}
                   </span>
                 )}
               </div>
@@ -119,8 +127,8 @@ export default function ScheduleEditor({ value, onChange }: ScheduleEditorProps)
   );
 }
 
-/** Returns "X hrs" between two HH:MM strings, or empty string if invalid. */
-function formatHours(from: string, to: string): string {
+/** Returns translated hour string between two HH:MM strings, or empty string if invalid. */
+function formatHours(from: string, to: string, t: TFunc): string {
   const [fh, fm] = from.split(":").map(Number);
   const [th, tm] = to.split(":").map(Number);
   if (isNaN(fh) || isNaN(th)) return "";
@@ -128,5 +136,6 @@ function formatHours(from: string, to: string): string {
   if (mins <= 0) return "";
   const h = Math.floor(mins / 60);
   const m = mins % 60;
-  return m === 0 ? `${h} hr${h !== 1 ? "s" : ""}` : `${h}h ${m}m`;
+  if (m === 0) return h === 1 ? t("hours", { n: h }) : t("hoursPlural", { n: h });
+  return t("hoursMinutes", { h, m });
 }

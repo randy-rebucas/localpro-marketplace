@@ -2,6 +2,7 @@
 
 import { useState, useId } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import toast from "react-hot-toast";
 import { apiFetch } from "@/lib/fetchClient";
 import { formatCurrency } from "@/lib/utils";
@@ -16,6 +17,7 @@ interface Props {
 }
 
 export default function WalletTopUpForm({ currentBalance }: Props) {
+  const t = useTranslations("clientPages");
   const inputId = useId();
   const router = useRouter();
 
@@ -47,11 +49,11 @@ export default function WalletTopUpForm({ currentBalance }: Props) {
     e.preventDefault();
     if (!isValid) {
       if (isNaN(amount) || amount <= 0) {
-        setError("Please enter or select an amount.");
+        setError(t("wallet_errorNoAmount", { defaultValue: "Please enter or select an amount." }));
       } else if (amount < MIN) {
-        setError(`Minimum top-up amount is ${formatCurrency(MIN)}.`);
+        setError(t("wallet_errorMinAmount", { min: formatCurrency(MIN) }));
       } else if (amount > MAX) {
-        setError(`Maximum top-up amount is ${formatCurrency(MAX)} per transaction.`);
+        setError(t("wallet_errorMaxAmount", { max: formatCurrency(MAX) }));
       }
       return;
     }
@@ -93,8 +95,8 @@ export default function WalletTopUpForm({ currentBalance }: Props) {
     return (
       <div className="flex flex-col items-center justify-center py-10 gap-4 text-slate-500">
         <Loader2 className="h-8 w-8 animate-spin text-violet-500" />
-        <p className="text-sm font-medium">Redirecting to PayMongo checkout…</p>
-        <p className="text-xs text-slate-400">Do not close this tab.</p>
+        <p className="text-sm font-medium">{t("wallet_redirecting")}</p>
+        <p className="text-xs text-slate-400">{t("wallet_doNotClose")}</p>
       </div>
     );
   }
@@ -105,22 +107,22 @@ export default function WalletTopUpForm({ currentBalance }: Props) {
       <div className="space-y-5">
         <div className="rounded-xl border border-violet-200 bg-white divide-y divide-slate-100 overflow-hidden">
           <div className="px-4 py-3 flex justify-between text-sm">
-            <span className="text-slate-500">Top-up amount</span>
+            <span className="text-slate-500">{t("wallet_topupAmountLabel")}</span>
             <span className="font-semibold text-slate-900">{formatCurrency(amount)}</span>
           </div>
           <div className="px-4 py-3 flex justify-between text-sm">
-            <span className="text-slate-500">Current balance</span>
+            <span className="text-slate-500">{t("wallet_topupCurrentBalance")}</span>
             <span className="text-slate-700">{formatCurrency(currentBalance)}</span>
           </div>
           <div className="px-4 py-3 flex justify-between text-sm bg-violet-50">
-            <span className="font-medium text-slate-700">Balance after top-up</span>
+            <span className="font-medium text-slate-700">{t("wallet_topupBalanceAfter")}</span>
             <span className="font-bold text-violet-700">{formatCurrency(balanceAfter)}</span>
           </div>
         </div>
 
         <div className="flex items-start gap-2 rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-xs text-amber-800">
           <Shield className="h-3.5 w-3.5 mt-0.5 flex-shrink-0 text-amber-500" />
-          <span>You will be redirected to PayMongo's secure checkout page. We do not store your card or payment details.</span>
+          <span>{t("wallet_securityNotice")}</span>
         </div>
 
         <div className="flex gap-3">
@@ -129,7 +131,7 @@ export default function WalletTopUpForm({ currentBalance }: Props) {
             onClick={handleBack}
             className="flex-1 sm:flex-none rounded-lg border border-slate-200 px-5 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50 active:bg-slate-100 transition-colors"
           >
-            Back
+            {t("wallet_backButton")}
           </button>
           <button
             type="button"
@@ -137,14 +139,14 @@ export default function WalletTopUpForm({ currentBalance }: Props) {
             className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 rounded-lg bg-violet-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-violet-700 active:bg-violet-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-500 transition-colors"
           >
             <CreditCard className="h-4 w-4" />
-            Pay {formatCurrency(amount)}
+            {t("wallet_payButton", { amount: formatCurrency(amount) })}
             <ChevronRight className="h-4 w-4" />
           </button>
         </div>
 
         <p className="text-xs text-slate-400 flex items-center gap-1.5">
           <Wallet className="h-3.5 w-3.5 flex-shrink-0" />
-          Supports GCash, Maya, and credit/debit cards.
+          {t("wallet_paymentNote")}
         </p>
       </div>
     );
@@ -155,7 +157,7 @@ export default function WalletTopUpForm({ currentBalance }: Props) {
     <form onSubmit={handleContinue} noValidate className="space-y-5">
       {/* Quick select */}
       <div>
-        <p className="text-xs font-medium text-slate-500 mb-2">Quick select</p>
+        <p className="text-xs font-medium text-slate-500 mb-2">{t("wallet_quickSelect")}</p>
         <div className="flex flex-wrap gap-2">
           {QUICK_AMOUNTS.map((a) => (
             <button
@@ -180,7 +182,7 @@ export default function WalletTopUpForm({ currentBalance }: Props) {
           htmlFor={inputId}
           className="block text-sm font-medium text-slate-700 mb-1"
         >
-          Custom amount
+          {t("wallet_customAmount")}
         </label>
         <div className="relative">
           <span
@@ -196,7 +198,7 @@ export default function WalletTopUpForm({ currentBalance }: Props) {
             pattern="[0-9]*"
             autoComplete="off"
             className={`input w-full pl-8 ${error ? "border-red-400 focus:ring-red-400" : ""}`}
-            placeholder="e.g. 1500"
+            placeholder={t("wallet_customPlaceholder")}
             value={raw}
             onChange={handleCustomChange}
             aria-describedby={error ? `${inputId}-error` : `${inputId}-hint`}
@@ -209,7 +211,7 @@ export default function WalletTopUpForm({ currentBalance }: Props) {
           </p>
         ) : (
           <p id={`${inputId}-hint`} className="text-xs text-slate-400 mt-1">
-            Minimum {formatCurrency(MIN)} · Maximum {formatCurrency(MAX)} per transaction
+            {t("wallet_amountHint", { min: formatCurrency(MIN), max: formatCurrency(MAX) })}
           </p>
         )}
       </div>
@@ -217,7 +219,7 @@ export default function WalletTopUpForm({ currentBalance }: Props) {
       {/* Preview pill when valid amount is entered */}
       {isValid && (
         <div className="rounded-lg bg-violet-50 border border-violet-100 px-4 py-3 flex items-center justify-between text-sm">
-          <span className="text-slate-500">Balance after top-up</span>
+          <span className="text-slate-500">{t("wallet_previewLabel")}</span>
           <span className="font-bold text-violet-700">{formatCurrency(balanceAfter)}</span>
         </div>
       )}
@@ -228,13 +230,13 @@ export default function WalletTopUpForm({ currentBalance }: Props) {
         className="inline-flex items-center justify-center gap-2 rounded-lg bg-violet-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-violet-700 active:bg-violet-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors w-full sm:w-auto"
       >
         <CreditCard className="h-4 w-4" />
-        {isValid ? `Continue with ${formatCurrency(amount)}` : "Select an amount"}
+        {isValid ? t("wallet_continueButton", { amount: formatCurrency(amount) }) : t("wallet_selectAmount")}
         {isValid && <ChevronRight className="h-4 w-4" />}
       </button>
 
       <p className="text-xs text-slate-400 flex items-center gap-1.5">
         <Shield className="h-3.5 w-3.5 flex-shrink-0 text-slate-300" />
-        Secured by PayMongo. Supports GCash, Maya, and credit/debit cards.
+        {t("wallet_securedBy")}
       </p>
     </form>
   );

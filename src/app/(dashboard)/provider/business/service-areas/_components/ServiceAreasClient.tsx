@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { MapPin, Plus, X, Save, Search, RefreshCw, AlertCircle } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { fetchClient } from "@/lib/fetchClient";
 import { useGooglePlaces } from "@/hooks/useGooglePlaces";
 import toast from "react-hot-toast";
@@ -26,6 +27,7 @@ const COMMON_AREAS = [
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function ServiceAreasClient() {
+  const t = useTranslations("providerPages");
   const [agency, setAgency]         = useState<AgencyProfile | null>(null);
   const [loading, setLoading]       = useState(true);
   const [areas, setAreas]           = useState<string[]>([]);
@@ -56,7 +58,7 @@ export default function ServiceAreasClient() {
         setAreas(data.agency.serviceAreas ?? []);
         setDirty(false);
       }
-    } catch { toast.error("Failed to load agency profile."); }
+    } catch { toast.error(t("provServiceAreas_toastFailLoad")); }
     finally { setLoading(false); }
   }, []);
 
@@ -90,11 +92,11 @@ export default function ServiceAreasClient() {
         method: "PATCH",
         body: JSON.stringify({ serviceAreas: areas }),
       });
-      toast.success("Service areas saved.");
+      toast.success(t("provServiceAreas_toastSaved"));
       setDirty(false);
       await load();
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Failed to save.");
+      toast.error(e instanceof Error ? e.message : t("provServiceAreas_toastFailSave"));
     } finally {
       setSaving(false);
     }
@@ -115,8 +117,8 @@ export default function ServiceAreasClient() {
       <div className="flex flex-col items-center justify-center py-24 gap-3 text-center">
         <MapPin className="h-10 w-10 text-slate-300" />
         <p className="text-slate-500">
-          No agency profile found.{" "}
-          <a href="/provider/business" className="text-primary underline">Create one first.</a>
+          {t("provServiceAreas_noAgencyTitle")}{" "}
+          <a href="/provider/business" className="text-primary underline">{t("provServiceAreas_noAgencyLink")}</a>
         </p>
       </div>
     );
@@ -137,7 +139,7 @@ export default function ServiceAreasClient() {
             <MapPin className="h-5 w-5 text-teal-600 dark:text-teal-400" />
           </div>
           <div>
-            <h1 className="text-base font-bold text-slate-800 dark:text-white">Service Areas</h1>
+            <h1 className="text-base font-bold text-slate-800 dark:text-white">{t("provServiceAreas_heading")}</h1>
             <p className="text-xs text-slate-500 dark:text-slate-400">
               {agency.name} · {areas.length} area{areas.length !== 1 ? "s" : ""}
             </p>
@@ -154,7 +156,7 @@ export default function ServiceAreasClient() {
           {dirty && (
             <button onClick={handleSave} disabled={saving} className="btn-primary flex items-center gap-2">
               <Save className="h-4 w-4" />
-              {saving ? "Saving…" : "Save Changes"}
+              {saving ? t("provServiceAreas_btnSaving") : t("provServiceAreas_btnSaveChanges")}
             </button>
           )}
         </div>
@@ -164,7 +166,7 @@ export default function ServiceAreasClient() {
       {dirty && (
         <div className="flex items-center gap-2 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-4 py-2.5">
           <AlertCircle className="h-4 w-4 flex-shrink-0" />
-          You have unsaved changes.
+          {t("provServiceAreas_unsaved")}
         </div>
       )}
 
@@ -172,14 +174,14 @@ export default function ServiceAreasClient() {
       <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-4">
         <div className="flex items-center justify-between gap-2 flex-wrap">
           <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-            Current Service Areas
+            {t("provServiceAreas_currentLabel")}
           </label>
           {areas.length > 0 && (
             <button
               onClick={() => { setAreas([]); setDirty(true); }}
               className="text-xs text-red-500 hover:underline"
             >
-              Remove all
+              {t("provServiceAreas_removeAll")}
             </button>
           )}
         </div>
@@ -200,10 +202,10 @@ export default function ServiceAreasClient() {
         {areas.length === 0 ? (
           <div className="flex flex-col items-center gap-2 py-8 text-center bg-slate-50 rounded-xl">
             <MapPin className="h-6 w-6 text-slate-300" />
-            <p className="text-sm text-slate-400">No service areas added yet.</p>
+            <p className="text-sm text-slate-400">{t("provServiceAreas_emptyAreas")}</p>
           </div>
         ) : filteredAreas.length === 0 ? (
-          <p className="text-sm text-slate-400 text-center py-4">No areas match your filter.</p>
+          <p className="text-sm text-slate-400 text-center py-4">{t("provServiceAreas_noFilterMatch")}</p>
         ) : (
           <div className="flex flex-wrap gap-2">
             {filteredAreas.map((area) => (
@@ -228,7 +230,7 @@ export default function ServiceAreasClient() {
         {/* ── Add new area ── */}
         <div>
           <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
-            Add Area
+            {t("provServiceAreas_addSectionLabel")}
           </label>
           <div className="flex gap-2">
             <input
@@ -244,11 +246,11 @@ export default function ServiceAreasClient() {
               disabled={!newArea.trim()}
               className="btn-secondary flex items-center gap-1.5 flex-shrink-0 disabled:opacity-40"
             >
-              <Plus className="h-4 w-4" /> Add
+              <Plus className="h-4 w-4" /> {t("provServiceAreas_btnAdd")}
             </button>
           </div>
           <p className="text-[10px] text-slate-400 mt-1">
-            Start typing to search via Google Places, or add any custom area name.
+            {t("provServiceAreas_addHint")}
           </p>
         </div>
       </div>
@@ -258,13 +260,13 @@ export default function ServiceAreasClient() {
         <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-3">
           <div className="flex items-center justify-between gap-2">
             <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-              Quick Add — Common Cebu Areas
+              {t("provServiceAreas_quickAddTitle")}
             </label>
             <button
               onClick={addAllCommon}
               className="text-xs text-primary hover:underline whitespace-nowrap"
             >
-              Add all
+              {t("provServiceAreas_quickAddAll")}
             </button>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -287,13 +289,13 @@ export default function ServiceAreasClient() {
         <div className="flex gap-3">
           <button onClick={handleSave} disabled={saving} className="btn-primary flex items-center gap-2">
             <Save className="h-4 w-4" />
-            {saving ? "Saving…" : "Save Changes"}
+            {saving ? t("provServiceAreas_btnSaving") : t("provServiceAreas_btnSaveChanges")}
           </button>
           <button
             onClick={() => { setAreas(agency.serviceAreas ?? []); setDirty(false); setAreaSearch(""); }}
             className="btn-secondary"
           >
-            Discard
+            {t("provServiceAreas_btnDiscard")}
           </button>
         </div>
       )}

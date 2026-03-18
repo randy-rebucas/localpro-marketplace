@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
 import { apiFetch } from "@/lib/fetchClient";
+import { useTranslations } from "next-intl";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -105,6 +106,7 @@ function FieldRow({ children }: { children: React.ReactNode }) {
 
 export default function PesoSettingsPage() {
   const { user } = useAuthStore();
+  const t = useTranslations("pesoPages");
   const [office, setOffice]               = useState<OfficeSettings | null>(null);
   const [loading, setLoading]             = useState(true);
   const [form, setForm]                   = useState<FormState>(EMPTY_FORM);
@@ -306,18 +308,18 @@ export default function PesoSettingsPage() {
         <div>
           <h1 className="text-xl font-bold text-slate-800 flex items-center gap-2">
             <Settings className="h-5 w-5 text-blue-600" />
-            PESO Settings
+            {t("pesoSettings")}
           </h1>
           <p className="text-sm text-slate-500 mt-0.5">
             {isHead
-              ? "Manage your office details and configuration."
-              : "View your office settings. Only the head officer can make changes."}
+              ? t("pesoSettingsSub")
+              : t("pesoSettingsSubRO")}
           </p>
         </div>
         {!isHead && (
           <span className="flex items-center gap-1.5 text-xs font-semibold text-slate-400 border border-slate-200 rounded-lg px-3 py-1.5">
             <LockKeyhole className="h-3.5 w-3.5" />
-            Read-only view
+            {t("readOnlyView")}
           </span>
         )}
       </div>

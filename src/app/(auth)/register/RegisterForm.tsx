@@ -6,26 +6,23 @@ import { useRouter, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
 import { useAuthStore } from "@/stores/authStore";
 import { trackRegistration, trackProviderRegistration } from "@/lib/analytics";
+import { useTranslations } from "next-intl";
 
 type Role = "client" | "provider";
 
-const ROLES: { value: Role; label: string; description: string }[] = [
-  {
-    value: "client",
-    label: "Client",
-    description: "I need to hire local service professionals",
-  },
-  {
-    value: "provider",
-    label: "Service Provider",
-    description: "I offer professional services to clients",
-  },
-];
+const ROLES: { value: Role; label: string; description: string }[] = [];
 
 export default function RegisterForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { setUser } = useAuthStore();
+  const t = useTranslations("auth");
+  const tc = useTranslations("common");
+
+  const ROLE_OPTIONS: { value: Role; label: string; description: string }[] = [
+    { value: "client",   label: t("client"),   description: t("clientDesc") },
+    { value: "provider", label: t("provider"), description: t("providerDesc") },
+  ];
   const [isLoading, setIsLoading] = useState(false);
   const refCode = searchParams.get("ref") ?? "";
   const [form, setForm] = useState({
@@ -38,12 +35,12 @@ export default function RegisterForm() {
 
   function validate() {
     const errs: Record<string, string> = {};
-    if (!form.name || form.name.length < 2) errs.name = "Name must be at least 2 characters";
-    if (!form.email || !/^\S+@\S+\.\S+$/.test(form.email)) errs.email = "Invalid email";
+    if (!form.name || form.name.length < 2) errs.name = t("nameMin");
+    if (!form.email || !/^\S+@\S+\.\S+$/.test(form.email)) errs.email = t("emailInvalid");
     if (!form.password || form.password.length < 8) {
-      errs.password = "Password must be at least 8 characters";
+      errs.password = t("passwordMin8");
     } else if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(form.password)) {
-      errs.password = "Must contain uppercase, lowercase, and a number";
+      errs.password = t("passwordStrength");
     }
     return errs;
   }
@@ -68,12 +65,12 @@ export default function RegisterForm() {
       const data = await res.json();
 
       if (!res.ok) {
-        toast.error(data.error ?? "Registration failed");
+        toast.error(data.error ?? t("registrationFailed"));
         return;
       }
 
       setUser(data.user);
-      toast.success("Account created successfully!");
+      toast.success(t("accountCreated"));
       // Fire analytics events
       trackRegistration({ role: data.user.role });
       if (data.user.role === "provider") trackProviderRegistration({ role: "provider" });
@@ -81,7 +78,7 @@ export default function RegisterForm() {
       const destination = data.user.role === "provider" ? "/provider/onboarding" : `/${data.user.role}/dashboard`;
       router.push(destination);
     } catch {
-      toast.error("Something went wrong. Please try again.");
+      toast.error(tc("somethingWentWrong"));
     } finally {
       setIsLoading(false);
     }
@@ -89,15 +86,15 @@ export default function RegisterForm() {
 
   return (
     <>
-      <h2 className="text-2xl font-bold text-slate-900 mb-1">Create account</h2>
-      <p className="text-slate-500 text-sm mb-6">Join LocalPro today</p>
+      <h2 className="text-2xl font-bold text-slate-900 mb-1">{t("createAccount")}</h2>
+      <p className="text-slate-500 text-sm mb-6">{t("joinToday")}</p>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Role selection */}
         <div>
-          <p className="label mb-2">I am a...</p>
+          <p className="label mb-2">{t("iAmA")}...</p>
           <div className="grid grid-cols-2 gap-3">
-            {ROLES.map((r) => (
+            {ROLE_OPTIONS.map((r) => (
               <button
                 key={r.value}
                 type="button"
@@ -118,7 +115,7 @@ export default function RegisterForm() {
         </div>
 
         <div>
-          <label htmlFor="name" className="label block mb-1">Full name</label>
+          <label htmlFor="name" className="label block mb-1">{t("fullName")}</label>
           <input
             id="name"
             type="text"
@@ -133,7 +130,7 @@ export default function RegisterForm() {
         </div>
 
         <div>
-          <label htmlFor="email" className="label block mb-1">Email address</label>
+          <label htmlFor="email" className="label block mb-1">{t("email")}</label>
           <input
             id="email"
             type="email"
@@ -148,7 +145,7 @@ export default function RegisterForm() {
         </div>
 
         <div>
-          <label htmlFor="password" className="label block mb-1">Password</label>
+          <label htmlFor="password" className="label block mb-1">{t("password")}</label>
           <input
             id="password"
             type="password"
@@ -163,20 +160,20 @@ export default function RegisterForm() {
         </div>
 
         <button type="submit" className="btn-primary w-full py-2.5" disabled={isLoading}>
-          {isLoading ? "Creating account..." : "Create account"}
+          {isLoading ? t("creatingAccount") : t("createAccount")}
         </button>
         <p className="text-center text-xs text-slate-400 mt-2">
-          By creating an account you agree to our{" "}
-          <Link href="/terms"   className="underline hover:text-primary transition-colors">Terms of Service</Link>
-          {" "}&amp;{" "}
-          <Link href="/privacy" className="underline hover:text-primary transition-colors">Privacy Policy</Link>.
+          {t("byCreatingAccount")}{" "}
+          <Link href="/terms"   className="underline hover:text-primary transition-colors">{t("termsOfService")}</Link>
+          {" "}{t("andAmpersand")}{" "}
+          <Link href="/privacy" className="underline hover:text-primary transition-colors">{t("privacyPolicy")}</Link>.
         </p>
       </form>
 
       <p className="mt-6 text-center text-sm text-slate-500">
-        Already have an account?{" "}
+        {t("alreadyHaveAccount")}{" "}
         <Link href="/login" className="font-medium text-primary hover:text-primary-700 transition-colors">
-          Sign in
+          {t("signIn")}
         </Link>
       </p>
 

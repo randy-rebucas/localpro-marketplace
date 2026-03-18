@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useEffect, useState, useCallback, useMemo } from "react";
 import {
   Wallet, MapPin, AlertTriangle, CheckCircle, XCircle,
@@ -17,6 +18,7 @@ const CAT_COLORS = [
 ];
 
 export default function BudgetClient() {
+  const t = useTranslations("clientPages");
   const [org, setOrg]           = useState<IBusinessOrganization | null>(null);
   const [expenses, setExpenses] = useState<MonthlyExpenseRow[]>([]);
   const [alerts, setAlerts]     = useState<BudgetAlertRow[]>([]);
@@ -144,8 +146,8 @@ export default function BudgetClient() {
       <div className="flex flex-col items-center justify-center py-24 gap-3 text-center">
         <Wallet className="h-10 w-10 text-slate-300" />
         <p className="text-slate-500">
-          No business profile found.{" "}
-          <a href="/client/business" className="text-primary underline">Create one first.</a>
+          {t("bizBudget_noOrg")}{" "}
+          <a href="/client/business" className="text-primary underline">{t("bizAnalytics_createFirst")}</a>
         </p>
       </div>
     );
@@ -161,7 +163,7 @@ export default function BudgetClient() {
             <Wallet className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
           </div>
           <div>
-            <h1 className="text-base font-bold text-slate-800 dark:text-white">Budget Tracking</h1>
+            <h1 className="text-base font-bold text-slate-800 dark:text-white">{t("bizBudget_heading")}</h1>
             <p className="text-xs text-slate-500 dark:text-slate-400">{org.name}</p>
           </div>
         </div>
@@ -174,9 +176,9 @@ export default function BudgetClient() {
             value={months}
             onChange={(e) => handleMonthsChange(Number(e.target.value))}
           >
-            <option value={3}>Last 3 months</option>
-            <option value={6}>Last 6 months</option>
-            <option value={12}>Last 12 months</option>
+            <option value={3}>{t("bizBudget_last3mo")}</option>
+            <option value={6}>{t("bizBudget_last6mo")}</option>
+            <option value={12}>{t("bizBudget_last12mo")}</option>
           </select>
         </div>
       </div>
@@ -186,7 +188,7 @@ export default function BudgetClient() {
         <div className="flex items-start gap-3 bg-red-50 border border-red-200 rounded-2xl p-4">
           <XCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
           <div>
-            <p className="font-semibold text-red-800 text-sm">Critical — over threshold</p>
+            <p className="font-semibold text-red-800 text-sm">{t("bizBudget_critical")}</p>
             <ul className="mt-1 space-y-0.5 text-xs text-red-700">
               {criticalAlerts.map((a) => (
                 <li key={a.locationId}>
@@ -202,7 +204,7 @@ export default function BudgetClient() {
         <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-2xl p-4">
           <AlertTriangle className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
           <div>
-            <p className="font-semibold text-amber-800 text-sm">Warning — approaching limit</p>
+            <p className="font-semibold text-amber-800 text-sm">{t("bizBudget_warning")}</p>
             <ul className="mt-1 space-y-0.5 text-xs text-amber-700">
               {warningAlerts.map((a) => (
                 <li key={a.locationId}>
@@ -217,7 +219,7 @@ export default function BudgetClient() {
       {alerts.length > 0 && criticalAlerts.length === 0 && warningAlerts.length === 0 && (
         <div className="flex items-center gap-3 bg-emerald-50 border border-emerald-200 rounded-2xl p-4">
           <CheckCircle className="h-5 w-5 text-emerald-500 flex-shrink-0" />
-          <p className="text-sm font-medium text-emerald-800">All branches are within budget this month.</p>
+          <p className="text-sm font-medium text-emerald-800">{t("bizBudget_allWithin")}</p>
         </div>
       )}
 
@@ -225,25 +227,25 @@ export default function BudgetClient() {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[
           {
-            label: "Monthly Budget",
+            label: t("bizBudget_monthlyBudget"),
             value: formatCurrency(totalBudget),
-            sub: "total across branches",
+            sub: t("bizBudget_totalAcross"),
             icon: Wallet,
             color: "text-blue-600", bg: "bg-blue-50", ring: "ring-blue-100",
           },
           {
-            label: "This Month's Spend",
+            label: t("bizBudget_monthSpend"),
             value: formatCurrency(thisMonthSpend),
-            sub: `${budgetPct.toFixed(0)}% of budget used`,
+            sub: t("bizBudget_percentUsed", { n: budgetPct.toFixed(0) }),
             icon: TrendingDown,
             color: budgetPct >= 90 ? "text-red-600" : budgetPct >= 70 ? "text-amber-600" : "text-emerald-600",
             bg:    budgetPct >= 90 ? "bg-red-50"    : budgetPct >= 70 ? "bg-amber-50"    : "bg-emerald-50",
             ring:  budgetPct >= 90 ? "ring-red-100" : budgetPct >= 70 ? "ring-amber-100" : "ring-emerald-100",
           },
           {
-            label: "Remaining",
+            label: t("bizBudget_remaining"),
             value: formatCurrency(remaining),
-            sub: "left this month",
+            sub: t("bizBudget_leftThisMonth"),
             icon: Layers,
             color: "text-violet-600", bg: "bg-violet-50", ring: "ring-violet-100",
           },
@@ -347,12 +349,12 @@ export default function BudgetClient() {
                       <div className="flex items-center gap-1.5 flex-shrink-0">
                         {locStatus === "critical" && (
                           <span className="text-[10px] font-semibold bg-red-100 text-red-600 px-2 py-0.5 rounded-full">
-                            Critical
+                            {t("bizBudget_critical")}
                           </span>
                         )}
                         {locStatus === "warning" && (
                           <span className="text-[10px] font-semibold bg-amber-100 text-amber-600 px-2 py-0.5 rounded-full">
-                            Warning
+                            {t("bizBudget_warning")}
                           </span>
                         )}
                         <button
@@ -409,14 +411,14 @@ export default function BudgetClient() {
 
                     {loc.monthlyBudget === 0 && (
                       <p className="text-xs text-slate-400">
-                        No budget set.{" "}
-                        <a href="/client/business/locations" className="text-primary underline">Set one in Locations.</a>
+                        {t("bizBudget_noBudget")}{" "}
+                        <a href="/client/business/locations" className="text-primary underline">{t("bizBudget_setInLocations")}</a>
                       </p>
                     )}
 
                     {isEditing && (
                       <div className="flex items-center gap-2 pt-1 border-t border-slate-100">
-                        <label className="text-xs text-slate-500 flex-shrink-0">Alert at</label>
+                        <label className="text-xs text-slate-500 flex-shrink-0">{t("bizBudget_alertAtLabel")}</label>
                         <input
                           type="number"
                           min={1} max={99}
@@ -424,19 +426,19 @@ export default function BudgetClient() {
                           value={thresholdInput}
                           onChange={(e) => setThresholdInput(Number(e.target.value))}
                         />
-                        <span className="text-xs text-slate-400">%</span>
+                        <span className="text-xs text-slate-400">{t("bizBudget_percentSuffix")}</span>
                         <button
                           onClick={() => saveThreshold(loc._id.toString())}
                           disabled={savingThreshold}
                           className="text-xs bg-primary text-white px-3 py-1 rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-colors"
                         >
-                          {savingThreshold ? "Saving…" : "Save"}
+                          {savingThreshold ? t("bizBudget_savingButton") : t("bizBudget_saveButton")}
                         </button>
                         <button
                           onClick={() => setEditThresholdId(null)}
                           className="text-xs text-slate-400 hover:text-slate-600"
                         >
-                          Cancel
+                          {t("bizBudget_cancelButton")}
                         </button>
                       </div>
                     )}
@@ -453,11 +455,11 @@ export default function BudgetClient() {
           {/* Category breakdown */}
           <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="font-semibold text-slate-800">By Category</h2>
+              <h2 className="font-semibold text-slate-800">{t("bizBudget_byCategory")}</h2>
               <span className="text-xs text-slate-400">{currentMonthLabel}</span>
             </div>
             {topCats.length === 0 ? (
-              <p className="text-sm text-slate-400 text-center py-4">No data this month.</p>
+              <p className="text-sm text-slate-400 text-center py-4">{t("bizBudget_noData")}</p>
             ) : (
               <div className="space-y-3">
                 {topCats.map(([cat, amt], i) => (
@@ -492,7 +494,7 @@ export default function BudgetClient() {
               <div className="flex items-center justify-between">
                 <h2 className="font-semibold text-slate-800 flex items-center gap-1.5">
                   <TrendingUp className="h-4 w-4 text-violet-500" />
-                  Forecast
+                  {t("bizBudget_forecast")}
                 </h2>
                 <span className="text-xs text-slate-400">{forecastData.nextLabel}</span>
               </div>
@@ -500,11 +502,11 @@ export default function BudgetClient() {
               <div className="flex flex-wrap gap-1.5">
                 {forecastData.overBudget ? (
                   <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-1 rounded-md">
-                    <AlertTriangle className="h-3 w-3" /> Exceeds budget
+                    <AlertTriangle className="h-3 w-3" /> {t("bizBudget_forecastExceeds")}
                   </span>
                 ) : totalBudget > 0 ? (
                   <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-1 rounded-md">
-                    <CheckCircle className="h-3 w-3" /> Within budget
+                    <CheckCircle className="h-3 w-3" /> {t("bizBudget_forecastWithin")}
                   </span>
                 ) : null}
                 <span className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-1 rounded-md border ${
@@ -512,7 +514,7 @@ export default function BudgetClient() {
                   forecastData.trendDir === "down" ? "text-emerald-600 bg-emerald-50 border-emerald-200" :
                   "text-slate-500 bg-slate-50 border-slate-200"
                 }`}>
-                  {forecastData.trendDir === "up" ? "▲ Rising" : forecastData.trendDir === "down" ? "▼ Falling" : "→ Stable"}
+                  {forecastData.trendDir === "up" ? t("bizBudget_forecastRising") : forecastData.trendDir === "down" ? t("bizBudget_forecastFalling") : t("bizBudget_forecastStable")}
                 </span>
               </div>
               <p className="text-[11px] text-slate-400 leading-relaxed">
@@ -526,8 +528,8 @@ export default function BudgetClient() {
           {/* Download Reports */}
           <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-3">
             <div>
-              <h2 className="font-semibold text-slate-800">Reports</h2>
-              <p className="text-xs text-slate-400 mt-0.5">Export for records or accounting.</p>
+              <h2 className="font-semibold text-slate-800">{t("bizBudget_reportsTitle")}</h2>
+              <p className="text-xs text-slate-400 mt-0.5">{t("bizBudget_reportsSub")}</p>
             </div>
             <div className="space-y-2">
               {[

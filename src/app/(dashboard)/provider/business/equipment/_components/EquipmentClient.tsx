@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Wrench, Plus, Pencil, Trash2, X, Save, RefreshCw, Building2, Search, AlertCircle, Lock, ArrowUpRight } from "lucide-react";
 import { fetchClient } from "@/lib/fetchClient";
 import { EQUIPMENT_LIMITS, PLAN_LABELS, PLAN_UPGRADE_NEXT, isAtEquipmentLimit, getEquipmentLimit } from "@/lib/businessPlan";
+import { useTranslations } from "next-intl";
 import toast from "react-hot-toast";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -36,18 +37,20 @@ const STATUS_STYLES: Record<EqStatus, string> = {
   retired:     "bg-slate-100 text-slate-500 border-slate-200",
 };
 
-const STATUS_LABELS: Record<EqStatus, string> = {
-  available:   "Available",
-  in_use:      "In Use",
-  maintenance: "Maintenance",
-  retired:     "Retired",
-};
-
-const EQ_TYPES = ["Vehicle", "Tool", "Device", "Safety Gear", "Cleaning Equipment", "Machinery", "Other"];
+const EQ_TYPE_KEYS = ["Vehicle", "Tool", "Device", "Safety Gear", "Cleaning Equipment", "Machinery", "Other"];
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function EquipmentClient() {
+  const t = useTranslations("providerPages");
+
+  const STATUS_LABELS: Record<EqStatus, string> = {
+    available:   t("provEquip_statusAvailable"),
+    in_use:      t("provEquip_statusInUse"),
+    maintenance: t("provEquip_statusMaintenance"),
+    retired:     t("provEquip_statusRetired"),
+  };
+
   const [agency, setAgency]         = useState<Agency | null>(null);
   const [items, setItems]           = useState<Equipment[]>([]);
   const [hasAgency, setHasAgency]   = useState<boolean | null>(null);
@@ -73,7 +76,7 @@ export default function EquipmentClient() {
       setHasAgency(data.hasAgency);
     } catch {
       setLoadError(true);
-      toast.error("Failed to load equipment.");
+      toast.error(t("provEquip_errLoad"));
       setHasAgency(false);
     } finally {
       setLoading(false);
@@ -88,7 +91,7 @@ export default function EquipmentClient() {
     const planLabel = agency ? PLAN_LABELS[agency.plan] : "";
 
     if (atLimit) {
-      toast.error(`You've reached the ${planLabel} plan limit of ${limit} equipment slots. Upgrade your plan to add more.`);
+      toast.error(t("provEquip_errPlanLimit", { plan: planLabel, limit: String(limit) }));
       return;
     }
     setEditing(null);
@@ -111,7 +114,7 @@ export default function EquipmentClient() {
   }
 
   async function handleSubmit() {
-    if (!form.name.trim()) { toast.error("Name is required."); return; }
+    if (!form.name.trim()) { toast.error(t("provEquip_errNameRequired")); return; }
     setSaving(true);
     try {
       if (editing) {
@@ -119,18 +122,18 @@ export default function EquipmentClient() {
           method: "PATCH",
           body: JSON.stringify({ ...form, equipmentId: editing._id }),
         });
-        toast.success("Equipment updated.");
+        toast.success(t("provEquip_successUpdated"));
       } else {
         await fetchClient("/api/provider/agency/equipment", {
           method: "POST",
           body: JSON.stringify(form),
         });
-        toast.success("Equipment added.");
+        toast.success(t("provEquip_successAdded"));
       }
       closeForm();
       await load();
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Failed to save.");
+      toast.error(e instanceof Error ? e.message : t("provEquip_errSave"));
     } finally {
       setSaving(false);
     }
@@ -144,7 +147,7 @@ export default function EquipmentClient() {
       });
       await load();
     } catch {
-      toast.error("Failed to update status.");
+      toast.error(t("provEquip_errUpdateStatus"));
     }
   }
 
@@ -152,10 +155,10 @@ export default function EquipmentClient() {
     setConfirmDelete(null);
     try {
       await fetchClient(`/api/provider/agency/equipment?equipmentId=${id}`, { method: "DELETE" });
-      toast.success("Equipment removed.");
+      toast.success(t("provEquip_successRemoved"));
       await load();
     } catch {
-      toast.error("Failed to delete.");
+      toast.error(t("provEquip_errDelete"));
     }
   }
 
@@ -178,8 +181,8 @@ export default function EquipmentClient() {
     return (
       <div className="flex flex-col items-center justify-center py-24 gap-4 text-center">
         <AlertCircle className="h-10 w-10 text-red-400" />
-        <p className="text-slate-600 font-medium">Failed to load equipment</p>
-        <button onClick={load} className="btn-secondary text-sm px-4 py-2">Try Again</button>
+        <p className="text-slate-600 font-medium">{t("provEquip_errorHeading")}</p>
+        <button onClick={load} className="btn-secondary text-sm px-4 py-2">{t("provEquip_btnTryAgain")}</button>
       </div>
     );
   }
@@ -204,12 +207,12 @@ export default function EquipmentClient() {
     return (
       <div className="flex flex-col items-center justify-center py-24 gap-3 text-center">
         <Building2 className="h-10 w-10 text-slate-300" />
-        <p className="font-semibold text-slate-700">No agency profile found</p>
+        <p className="font-semibold text-slate-700">{t("provEquip_noAgencyHeading")}</p>
         <p className="text-sm text-slate-400">
-          You need to create an agency profile before managing equipment.
+          {t("provEquip_noAgencyDesc")}
         </p>
         <Link href="/provider/business" className="btn-primary mt-2">
-          Create Agency Profile
+          {t("provEquip_btnCreateAgency")}
         </Link>
       </div>
     );
@@ -225,8 +228,8 @@ export default function EquipmentClient() {
             <Wrench className="h-5 w-5 text-orange-600 dark:text-orange-400" />
           </div>
           <div>
-            <h1 className="text-base font-bold text-slate-800 dark:text-white">Equipment</h1>
-            <p className="text-xs text-slate-500 dark:text-slate-400">{items.length} item{items.length !== 1 ? "s" : ""} in inventory</p>
+            <h1 className="text-base font-bold text-slate-800 dark:text-white">{t("provEquip_heading")}</h1>
+            <p className="text-xs text-slate-500 dark:text-slate-400">{items.length !== 1 ? t("provEquip_itemCountPlural", { count: items.length }) : t("provEquip_itemCount", { count: items.length })}</p>
           </div>
         </div>
         <div className="flex gap-2">
@@ -253,7 +256,7 @@ export default function EquipmentClient() {
             disabled={atLimit}
             className="btn-primary flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {atLimit ? <Lock className="h-4 w-4" /> : <Plus className="h-4 w-4" />} Add Equipment
+            {atLimit ? <Lock className="h-4 w-4" /> : <Plus className="h-4 w-4" />} {t("provEquip_btnAddEquipment")}
           </button>
         </div>
       </div>
@@ -267,7 +270,7 @@ export default function EquipmentClient() {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by name or type…"
+            placeholder={t("provEquip_searchPlaceholder")}
             className="input pl-8 py-1.5 text-sm w-full"
           />
         </div>
@@ -292,9 +295,10 @@ export default function EquipmentClient() {
           <div className="flex items-center gap-2.5 text-sm text-amber-800">
             <Lock className="h-4 w-4 shrink-0" />
             <span>
-              You&apos;ve reached the <strong>{planLabel}</strong> plan limit of{" "}
-              <strong>{equipmentLimit} equipment slot{equipmentLimit === 1 ? "" : "s"}</strong>.
-              {nextPlan && ` Upgrade to ${PLAN_LABELS[nextPlan]} to add more.`}
+              {equipmentLimit === 1
+                ? t("provEquip_bannerAtLimit", { plan: planLabel, limit: String(equipmentLimit) })
+                : t("provEquip_bannerAtLimitPlural", { plan: planLabel, limit: String(equipmentLimit) })}
+              {nextPlan && ` ${t("provEquip_bannerUpgrade", { plan: PLAN_LABELS[nextPlan] })}`}
             </span>
           </div>
           {nextPlan && (
@@ -302,7 +306,7 @@ export default function EquipmentClient() {
               href="/provider/business/plan"
               className="shrink-0 inline-flex items-center gap-1 text-xs font-semibold text-amber-700 hover:text-amber-900 underline underline-offset-2"
             >
-              Upgrade <ArrowUpRight className="h-3.5 w-3.5" />
+              {t("provEquip_btnUpgrade")} <ArrowUpRight className="h-3.5 w-3.5" />
             </a>
           )}
         </div>
@@ -312,7 +316,7 @@ export default function EquipmentClient() {
       {showForm && (
         <div ref={formRef} id="eq-form" className="bg-white border border-primary/20 rounded-2xl p-5 space-y-5">
           <div className="flex items-center justify-between">
-            <h2 className="font-semibold text-slate-800">{editing ? "Edit Equipment" : "Add Equipment"}</h2>
+            <h2 className="font-semibold text-slate-800">{editing ? t("provEquip_formEditTitle") : t("provEquip_formAddTitle")}</h2>
             <button onClick={closeForm} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 transition-colors">
               <X className="h-4 w-4" />
             </button>
@@ -320,22 +324,22 @@ export default function EquipmentClient() {
 
           <div className="grid sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Name *</label>
-              <input className="input w-full" placeholder="e.g. Steam Pressure Washer" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
+              <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">{t("provEquip_labelName")}</label>
+              <input className="input w-full" placeholder={t("provEquip_placeholderName")} value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
             </div>
             <div>
-              <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Type</label>
+              <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">{t("provEquip_labelType")}</label>
               <select className="input w-full" value={form.type} onChange={(e) => setForm((f) => ({ ...f, type: e.target.value }))}>
-                <option value="">Select type…</option>
-                {EQ_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                <option value="">{t("provEquip_selectType")}</option>
+                {EQ_TYPE_KEYS.map((k) => <option key={k} value={k}>{k}</option>)}
               </select>
             </div>
             <div>
-              <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Serial / ID No.</label>
-              <input className="input w-full" placeholder="Optional" value={form.serialNo} onChange={(e) => setForm((f) => ({ ...f, serialNo: e.target.value }))} />
+              <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">{t("provEquip_labelSerial")}</label>
+              <input className="input w-full" placeholder={t("provEquip_placeholderSerial")} value={form.serialNo} onChange={(e) => setForm((f) => ({ ...f, serialNo: e.target.value }))} />
             </div>
             <div>
-              <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Status</label>
+              <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">{t("provEquip_labelStatus")}</label>
               <select className="input w-full" value={form.status} onChange={(e) => setForm((f) => ({ ...f, status: e.target.value as EqStatus }))}>
                 {(Object.keys(STATUS_LABELS) as EqStatus[]).map((s) => (
                   <option key={s} value={s}>{STATUS_LABELS[s]}</option>
@@ -344,18 +348,18 @@ export default function EquipmentClient() {
             </div>
             <div className="sm:col-span-2">
               <div className="flex items-center justify-between mb-1">
-                <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Notes</label>
+                <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">{t("provEquip_labelNotes")}</label>
                 <span className={`text-[10px] tabular-nums ${form.notes.length > 480 ? "text-red-400" : "text-slate-300"}`}>{form.notes.length}/500</span>
               </div>
-              <textarea className="input w-full resize-none" rows={2} maxLength={500} placeholder="Optional notes…" value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} />
+              <textarea className="input w-full resize-none" rows={2} maxLength={500} placeholder={t("provEquip_placeholderNotes")} value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} />
             </div>
           </div>
 
           <div className="flex items-center gap-3">
             <button onClick={handleSubmit} disabled={saving} className="btn-primary flex items-center gap-2">
-              <Save className="h-4 w-4" /> {saving ? "Saving…" : editing ? "Update" : "Add"}
+              <Save className="h-4 w-4" /> {saving ? t("provEquip_btnSaving") : editing ? t("provEquip_btnUpdate") : t("provEquip_btnAdd")}
             </button>
-            <button onClick={closeForm} className="btn-secondary">Cancel</button>
+            <button onClick={closeForm} className="btn-secondary">{t("provEquip_btnCancel")}</button>
           </div>
         </div>
       )}
@@ -366,13 +370,13 @@ export default function EquipmentClient() {
           <Wrench className="h-9 w-9 text-slate-300" />
           <p className="text-slate-500 text-sm">
             {filterStatus || search
-              ? "No equipment matches your filters."
-              : "No equipment logged yet. Track tools, vehicles, and devices here."}
+              ? t("provEquip_emptyFiltered")
+              : t("provEquip_emptyDefault")}
           </p>
           {filterStatus || search ? (
-            <button onClick={() => { setFilterStatus(""); setSearch(""); }} className="text-sm text-primary hover:underline">Clear filters</button>
+            <button onClick={() => { setFilterStatus(""); setSearch(""); }} className="text-sm text-primary hover:underline">{t("provEquip_btnClearFilters")}</button>
           ) : (
-            <button onClick={openNew} className="btn-primary mt-1"><Plus className="h-4 w-4 mr-1.5" /> Add Equipment</button>
+            <button onClick={openNew} className="btn-primary mt-1"><Plus className="h-4 w-4 mr-1.5" /> {t("provEquip_btnAddEquipment")}</button>
           )}
         </div>
       ) : (
@@ -381,11 +385,11 @@ export default function EquipmentClient() {
             <table className="w-full text-sm min-w-[520px]">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-100 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-                  <th className="text-left px-5 py-3">Name</th>
-                  <th className="text-left px-5 py-3">Type</th>
-                  <th className="text-left px-5 py-3">Serial</th>
-                  <th className="text-center px-5 py-3">Status</th>
-                  <th className="text-right px-5 py-3">Actions</th>
+                  <th className="text-left px-5 py-3">{t("provEquip_thName")}</th>
+                  <th className="text-left px-5 py-3">{t("provEquip_thType")}</th>
+                  <th className="text-left px-5 py-3">{t("provEquip_thSerial")}</th>
+                  <th className="text-center px-5 py-3">{t("provEquip_thStatus")}</th>
+                  <th className="text-right px-5 py-3">{t("provEquip_thActions")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
@@ -415,7 +419,7 @@ export default function EquipmentClient() {
                         </button>
                         {confirmDelete === item._id ? (
                           <div className="flex items-center gap-1">
-                            <button onClick={() => handleDelete(item._id)} className="px-2 py-1 rounded-lg bg-red-500 text-white text-xs font-semibold hover:bg-red-600 transition-colors">Remove</button>
+                            <button onClick={() => handleDelete(item._id)} className="px-2 py-1 rounded-lg bg-red-500 text-white text-xs font-semibold hover:bg-red-600 transition-colors">{t("provEquip_btnRemove")}</button>
                             <button onClick={() => setConfirmDelete(null)} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 transition-colors"><X className="h-3.5 w-3.5" /></button>
                           </div>
                         ) : (

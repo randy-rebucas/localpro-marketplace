@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import { Settings, X, GripVertical, Eye, EyeOff } from "lucide-react";
 
 export interface DashboardPrefs {
@@ -21,14 +22,6 @@ const DEFAULT_PREFS: DashboardPrefs = {
 
 const STORAGE_KEY = "provider_dashboard_prefs";
 
-const WIDGET_META: { key: keyof DashboardPrefs; label: string; description: string }[] = [
-  { key: "kpis",     label: "KPI Cards",       description: "Earnings, ratings, active jobs & quotes" },
-  { key: "activity", label: "Recent Activity",  description: "Latest job events and status changes"    },
-  { key: "tier",     label: "Tier & Loyalty",   description: "Your LocalPro tier progress and points"  },
-  { key: "schedule", label: "Today's Schedule", description: "Jobs assigned or in-progress today"      },
-  { key: "actions",  label: "Quick Actions",    description: "Shortcut links to key pages"             },
-];
-
 interface Props {
   header:   React.ReactNode;
   kpis:     React.ReactNode;
@@ -39,6 +32,14 @@ interface Props {
 }
 
 export default function DashboardCustomizer({ header, kpis, activity, tier, schedule, actions }: Props) {
+  const t = useTranslations("providerPages");
+  const WIDGET_META: { key: keyof DashboardPrefs; label: string; description: string }[] = [
+    { key: "kpis",     label: t("provDash_custWidgetKpi"),      description: t("provDash_custWidgetKpiSub") },
+    { key: "activity", label: t("provDash_custWidgetActivity"),  description: t("provDash_custWidgetActivitySub") },
+    { key: "tier",     label: t("provDash_custWidgetTier"),      description: t("provDash_custWidgetTierSub") },
+    { key: "schedule", label: t("provDash_custWidgetSchedule"),  description: t("provDash_custWidgetScheduleSub") },
+    { key: "actions",  label: t("provDash_custWidgetActions"),   description: t("provDash_custWidgetActionsSub") },
+  ];
   const [prefs, setPrefs] = useState<DashboardPrefs>(DEFAULT_PREFS);
   const [panelOpen, setPanelOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -82,7 +83,7 @@ export default function DashboardCustomizer({ header, kpis, activity, tier, sche
           {!show.activity && (
             <div className="bg-white rounded-xl border border-dashed border-slate-200 p-10 flex flex-col items-center gap-2 text-center">
               <EyeOff className="h-6 w-6 text-slate-300" />
-              <p className="text-xs text-slate-400">All main widgets are hidden. <button onClick={() => setPanelOpen(true)} className="text-primary underline">Customize</button> to restore them.</p>
+              <p className="text-xs text-slate-400">{t("provDash_custMainHiddenPre")}{" "}<button onClick={() => setPanelOpen(true)} className="text-primary underline">{t("provDash_custOpenBtn")}</button>{" "}{t("provDash_custMainHiddenPost")}</p>
             </div>
           )}
         </div>
@@ -97,7 +98,7 @@ export default function DashboardCustomizer({ header, kpis, activity, tier, sche
           {!show.tier && !show.schedule && !show.actions && (
             <div className="bg-white rounded-xl border border-dashed border-slate-200 p-8 flex flex-col items-center gap-2 text-center">
               <EyeOff className="h-5 w-5 text-slate-300" />
-              <p className="text-xs text-slate-400">No sidebar widgets shown.</p>
+              <p className="text-xs text-slate-400">{t("provDash_custSidebarHidden")}</p>
             </div>
           )}
         </div>
@@ -109,7 +110,7 @@ export default function DashboardCustomizer({ header, kpis, activity, tier, sche
         className="fixed bottom-20 right-6 z-40 inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-white border border-slate-200 shadow-lg text-sm font-medium text-slate-600 hover:bg-slate-50 hover:border-slate-300 hover:shadow-xl transition-all active:scale-95"
       >
         <Settings className="h-4 w-4" />
-        Customize
+        {t("provDash_custOpenBtn")}
       </button>
 
       {/* ── Settings panel (side drawer) ── */}
@@ -127,7 +128,7 @@ export default function DashboardCustomizer({ header, kpis, activity, tier, sche
             <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
               <div className="flex items-center gap-2">
                 <Settings className="h-4 w-4 text-slate-500" />
-                <span className="font-semibold text-slate-900 text-sm">Customize Dashboard</span>
+                <span className="font-semibold text-slate-900 text-sm">{t("provDash_custPanelTitle")}</span>
               </div>
               <button
                 onClick={() => setPanelOpen(false)}
@@ -139,7 +140,7 @@ export default function DashboardCustomizer({ header, kpis, activity, tier, sche
 
             {/* widget list */}
             <div className="flex-1 overflow-y-auto px-5 py-4 space-y-2">
-              <p className="text-xs text-slate-400 mb-3">Toggle sections on or off. Changes save instantly.</p>
+              <p className="text-xs text-slate-400 mb-3">{t("provDash_custPanelHint")}</p>
               {WIDGET_META.map(({ key, label, description }) => {
                 const visible = prefs[key];
                 return (
@@ -175,7 +176,7 @@ export default function DashboardCustomizer({ header, kpis, activity, tier, sche
                 }}
                 className="w-full text-xs text-slate-500 hover:text-red-500 transition-colors font-medium"
               >
-                Reset to defaults
+                {t("provDash_custResetBtn")}
               </button>
             </div>
           </div>

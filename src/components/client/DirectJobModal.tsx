@@ -8,6 +8,7 @@ import Button from "@/components/ui/Button";
 import { apiFetch } from "@/lib/fetchClient";
 import LocationAutocomplete from "@/components/shared/LocationAutocomplete";
 import { formatCurrency } from "@/lib/utils";
+import { useTranslations } from "next-intl";
 import type { ICategory } from "@/types";
 
 interface Props {
@@ -38,6 +39,8 @@ const INITIAL: FormData = {
 
 export default function DirectJobModal({ providerId, providerName, onClose }: Props) {
   const router = useRouter();
+  const t = useTranslations("directJobModal");
+  const tCommon = useTranslations("common");
   const [step, setStep] = useState(0);
   const [form, setForm] = useState<FormData>(INITIAL);
   const [errors, setErrors] = useState<Partial<FormData>>({});
@@ -60,7 +63,7 @@ export default function DirectJobModal({ providerId, providerName, onClose }: Pr
 
   async function generateDescription() {
     if (!form.title || form.title.trim().length < 3) {
-      toast.error("Enter a job title first.");
+      toast.error(t("titleRequired"));
       return;
     }
     setIsGenerating(true);
@@ -71,10 +74,10 @@ export default function DirectJobModal({ providerId, providerName, onClose }: Pr
         body: JSON.stringify({ title: form.title, category: form.category }),
       });
       const data = await res.json();
-      if (!res.ok) { toast.error(data.error ?? "AI generation failed"); return; }
+      if (!res.ok) { toast.error(data.error ?? t("aiGenFailed")); return; }
       update("description", data.description);
     } catch {
-      toast.error("Could not reach AI service.");
+      toast.error(t("aiServiceError"));
     } finally {
       setIsGenerating(false);
     }
@@ -82,19 +85,19 @@ export default function DirectJobModal({ providerId, providerName, onClose }: Pr
 
   function validateStep0(): Partial<FormData> {
     const errs: Partial<FormData> = {};
-    if (!form.title || form.title.length < 5) errs.title = "Title needs at least 5 characters";
-    if (!form.category) errs.category = "Please select a category";
+    if (!form.title || form.title.length < 5) errs.title = t("errorTitleMin");
+    if (!form.category) errs.category = t("errorCategory");
     if (!form.description || form.description.length < 20)
-      errs.description = "Description needs at least 20 characters";
+      errs.description = t("errorDescMin");
     return errs;
   }
 
   function validateStep1(): Partial<FormData> {
     const errs: Partial<FormData> = {};
     if (!form.budget || isNaN(Number(form.budget)) || Number(form.budget) < 1)
-      errs.budget = "Enter a valid budget";
-    if (!form.location) errs.location = "Location is required";
-    if (!form.scheduleDate) errs.scheduleDate = "Schedule date is required";
+      errs.budget = t("errorBudget");
+    if (!form.location) errs.location = t("errorLocation");
+    if (!form.scheduleDate) errs.scheduleDate = t("errorSchedule");
     return errs;
   }
 
@@ -125,18 +128,18 @@ export default function DirectJobModal({ providerId, providerName, onClose }: Pr
         }),
       });
       const data = await res.json();
-      if (!res.ok) { toast.error(data.error ?? "Failed to post job"); return; }
-      toast.success(`Job posted! ${providerName} will be assigned once an admin approves it.`);
+      if (!res.ok) { toast.error(data.error ?? t("postFailed")); return; }
+      toast.success(t("postSuccess", { providerName }));
       onClose();
       router.push("/client/jobs");
     } catch {
-      toast.error("Something went wrong.");
+      toast.error(tCommon("somethingWentWrong"));
     } finally {
       setIsSubmitting(false);
     }
   }
 
-  const STEPS = ["Job Details", "Budget & Schedule", "Review"];
+  const STEPS = [t("stepDetails"), t("stepBudget"), t("stepReview")];
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
@@ -144,10 +147,10 @@ export default function DirectJobModal({ providerId, providerName, onClose }: Pr
         {/* Header */}
         <div className="flex items-start justify-between px-6 py-4 border-b border-slate-100 flex-shrink-0">
           <div>
-            <h3 className="text-lg font-semibold text-slate-900">Post Job Directly</h3>
+            <h3 className="text-lg font-semibold text-slate-900">{t("modalTitle")}</h3>
             <div className="flex items-center gap-1.5 mt-0.5">
               <UserCheck className="h-3.5 w-3.5 text-primary" />
-              <p className="text-xs text-primary font-medium">For {providerName}</p>
+              <p className="text-xs text-primary font-medium">{t("forProvider", { providerName })}</p>
             </div>
           </div>
           <button
@@ -188,10 +191,10 @@ export default function DirectJobModal({ providerId, providerName, onClose }: Pr
           {step === 0 && (
             <>
               <div>
-                <label className="label block mb-1">Job Title</label>
+                <label className="label block mb-1">{t("jobTitleLabel")}</label>
                 <input
                   className={`input w-full ${errors.title ? "border-red-400" : ""}`}
-                  placeholder="e.g. Fix leaking kitchen faucet"
+                  placeholder={t("jobTitlePlaceholder")}
                   value={form.title}
                   onChange={(e) => update("title", e.target.value)}
                 />
@@ -199,13 +202,13 @@ export default function DirectJobModal({ providerId, providerName, onClose }: Pr
               </div>
 
               <div>
-                <label className="label block mb-1">Category</label>
+                <label className="label block mb-1">{t("categoryLabel")}</label>
                 <select
                   className={`input w-full ${errors.category ? "border-red-400" : ""}`}
                   value={form.category}
                   onChange={(e) => update("category", e.target.value)}
                 >
-                  <option value="">Select a category</option>
+                  <option value="">{t("categoryPlaceholder")}</option>
                   {categories.map((c) => (
                     <option key={c} value={c}>{c}</option>
                   ))}
@@ -215,7 +218,7 @@ export default function DirectJobModal({ providerId, providerName, onClose }: Pr
 
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="label">Description</label>
+                  <label className="label">{t("descriptionLabel")}</label>
                   <button
                     type="button"
                     onClick={generateDescription}
@@ -223,12 +226,12 @@ export default function DirectJobModal({ providerId, providerName, onClose }: Pr
                     className="inline-flex items-center gap-1.5 rounded-lg border border-violet-200 bg-violet-50 px-2.5 py-1 text-xs font-medium text-violet-700 hover:bg-violet-100 disabled:opacity-50 transition-colors"
                   >
                     <Sparkles className={`h-3.5 w-3.5 ${isGenerating ? "animate-pulse" : ""}`} />
-                    {isGenerating ? "Generating…" : "AI Generate"}
+                    {isGenerating ? t("generating") : t("aiGenerate")}
                   </button>
                 </div>
                 <textarea
                   className={`input w-full min-h-[100px] resize-none ${errors.description ? "border-red-400" : ""}`}
-                  placeholder="Describe the work needed in detail…"
+                  placeholder={t("descriptionPlaceholder")}
                   value={form.description}
                   onChange={(e) => update("description", e.target.value)}
                 />
@@ -236,10 +239,10 @@ export default function DirectJobModal({ providerId, providerName, onClose }: Pr
               </div>
 
               <div>
-                <label className="label block mb-1">Special Instructions</label>
+                <label className="label block mb-1">{t("specialInstructionsLabel")}</label>
                 <textarea
                   className="input w-full min-h-[72px] resize-none"
-                  placeholder="Any special requirements? (optional)"
+                  placeholder={t("specialInstructionsPlaceholder")}
                   value={form.specialInstructions}
                   onChange={(e) => update("specialInstructions", e.target.value)}
                 />
@@ -250,7 +253,7 @@ export default function DirectJobModal({ providerId, providerName, onClose }: Pr
           {step === 1 && (
             <>
               <div>
-                <label className="label block mb-1">Budget (PHP)</label>
+                <label className="label block mb-1">{t("budgetLabel")}</label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">₱</span>
                   <input
@@ -269,7 +272,7 @@ export default function DirectJobModal({ providerId, providerName, onClose }: Pr
               </div>
 
               <div>
-                <label className="label block mb-1">Location</label>
+                <label className="label block mb-1">{t("locationLabel")}</label>
                 <LocationAutocomplete
                   value={form.location}
                   onChange={(val, c) => { update("location", val); if (c) setCoords(c); }}
@@ -278,7 +281,7 @@ export default function DirectJobModal({ providerId, providerName, onClose }: Pr
               </div>
 
               <div>
-                <label className="label block mb-1">Schedule Date</label>
+                <label className="label block mb-1">{t("scheduleDateLabel")}</label>
                 <input
                   type="datetime-local"
                   className={`input w-full ${errors.scheduleDate ? "border-red-400" : ""}`}
@@ -295,20 +298,19 @@ export default function DirectJobModal({ providerId, providerName, onClose }: Pr
               <div className="bg-primary/5 border border-primary/20 rounded-xl p-4">
                 <div className="flex items-center gap-2 mb-2">
                   <UserCheck className="h-4 w-4 text-primary" />
-                  <p className="text-sm font-semibold text-primary">Direct invite to {providerName}</p>
+                  <p className="text-sm font-semibold text-primary">{t("directInviteTitle", { providerName })}</p>
                 </div>
                 <p className="text-xs text-slate-500">
-                  Once admin approves this job, it will be automatically assigned to {providerName} —
-                  no open marketplace bidding.
+                  {t("directInviteDesc", { providerName })}
                 </p>
               </div>
 
               {[
-                { label: "Title", value: form.title },
-                { label: "Category", value: form.category },
-                { label: "Budget", value: formatCurrency(Number(form.budget)) },
-                { label: "Location", value: form.location },
-                { label: "Schedule", value: new Date(form.scheduleDate).toLocaleString() },
+                { label: t("reviewTitle"), value: form.title },
+                { label: t("reviewCategory"), value: form.category },
+                { label: t("reviewBudget"), value: formatCurrency(Number(form.budget)) },
+                { label: t("reviewLocation"), value: form.location },
+                { label: t("reviewSchedule"), value: new Date(form.scheduleDate).toLocaleString() },
               ].map(({ label, value }) => (
                 <div key={label} className="flex justify-between items-center py-2 border-b border-slate-100 last:border-0">
                   <span className="text-xs text-slate-500">{label}</span>
@@ -318,7 +320,7 @@ export default function DirectJobModal({ providerId, providerName, onClose }: Pr
 
               {form.description && (
                 <div className="bg-slate-50 rounded-lg p-3">
-                  <p className="text-xs text-slate-400 mb-1">Description</p>
+                  <p className="text-xs text-slate-400 mb-1">{t("reviewDescription")}</p>
                   <p className="text-sm text-slate-700 whitespace-pre-line line-clamp-4">{form.description}</p>
                 </div>
               )}
@@ -333,24 +335,24 @@ export default function DirectJobModal({ providerId, providerName, onClose }: Pr
               onClick={() => setStep((s) => s - 1)}
               className="flex-1 rounded-lg border border-slate-200 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors"
             >
-              Back
+              {t("back")}
             </button>
           ) : (
             <button
               onClick={onClose}
               className="flex-1 rounded-lg border border-slate-200 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors"
             >
-              Cancel
+              {tCommon("cancel")}
             </button>
           )}
 
           {step < 2 ? (
             <Button onClick={next} className="flex-1">
-              Next
+              {t("next")}
             </Button>
           ) : (
             <Button onClick={submit} isLoading={isSubmitting} className="flex-1">
-              Post Job
+              {t("postJobBtn")}
             </Button>
           )}
         </div>

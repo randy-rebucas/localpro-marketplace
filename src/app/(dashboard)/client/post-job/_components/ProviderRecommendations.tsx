@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { apiFetch } from "@/lib/fetchClient";
 import { Bot, Star, BadgeCheck, ChevronRight } from "lucide-react";
+import { useTranslations } from "next-intl";
 import type { RecommendedProvider } from "./types";
 
 interface Props {
@@ -11,6 +12,7 @@ interface Props {
 }
 
 export function ProviderRecommendations({ category, budget }: Props) {
+  const t = useTranslations("clientPages");
   const [providers, setProviders] = useState<RecommendedProvider[]>([]);
   const [loading, setLoading]     = useState(false);
 
@@ -37,8 +39,8 @@ export function ProviderRecommendations({ category, budget }: Props) {
           <Bot className="h-4 w-4 text-violet-600" />
         </div>
         <div>
-          <p className="text-sm font-semibold text-violet-900">AI-Matched Providers</p>
-          <p className="text-[11px] text-violet-500">Based on your job category and budget</p>
+          <p className="text-sm font-semibold text-violet-900">{t("postJob_aiMatchedProviders")}</p>
+          <p className="text-[11px] text-violet-500">{t("postJob_aiMatchedSub")}</p>
         </div>
       </div>
 
@@ -68,7 +70,7 @@ export function ProviderRecommendations({ category, budget }: Props) {
                   <span className="text-sm font-semibold text-slate-900 truncate">{p.name}</span>
                   {idx === 0 && (
                     <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-amber-700 bg-amber-100 rounded-full px-1.5 py-0.5">
-                      <BadgeCheck className="h-3 w-3" /> Top Match
+                      <BadgeCheck className="h-3 w-3" /> {t("postJob_topMatch")}
                     </span>
                   )}
                 </div>
@@ -78,7 +80,7 @@ export function ProviderRecommendations({ category, budget }: Props) {
                     {p.avgRating.toFixed(1)}
                   </span>
                   <span className="text-slate-300">·</span>
-                  <span className="text-xs text-slate-500">{p.completedJobCount} jobs done</span>
+                  <span className="text-xs text-slate-500">{t("postJob_jobsDone", { count: p.completedJobCount })}</span>
                 </div>
                 <p className="text-xs text-slate-500 mt-0.5 leading-snug italic">&ldquo;{p.reason}&rdquo;</p>
               </div>
@@ -88,7 +90,7 @@ export function ProviderRecommendations({ category, budget }: Props) {
         </ul>
       )}
       <div className="px-4 py-2 border-t border-violet-100 bg-violet-50/50">
-        <p className="text-[11px] text-violet-400 text-center">Providers will see your job after it&apos;s approved and can send you a quote.</p>
+        <p className="text-[11px] text-violet-400 text-center">{t("postJob_aiMatchFooter")}</p>
       </div>
     </div>
   );

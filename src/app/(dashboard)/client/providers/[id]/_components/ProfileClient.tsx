@@ -4,6 +4,7 @@ import { useState, useCallback } from "react";
 import dynamic from "next/dynamic";
 import Image from "next/image";
 import toast from "react-hot-toast";
+import { useTranslations } from "next-intl";
 import {
   Star, Heart, Sparkles, Briefcase, Timer, Clock, CheckCircle2,
   XCircle, MapPin, Calendar, ChevronLeft, TrendingUp, Award,
@@ -68,9 +69,9 @@ const DAY_LABELS: Record<Day, string> = {
 };
 
 const availabilityConfig = {
-  available:   { label: "Available",   classes: "bg-emerald-100 text-emerald-700", icon: CheckCircle2 },
-  busy:        { label: "Busy",        classes: "bg-amber-100 text-amber-700",     icon: Clock         },
-  unavailable: { label: "Unavailable", classes: "bg-slate-100 text-slate-500",     icon: XCircle       },
+  available:   { labelKey: "provProfile_available",   classes: "bg-emerald-100 text-emerald-700", icon: CheckCircle2 },
+  busy:        { labelKey: "provProfile_busy",        classes: "bg-amber-100 text-amber-700",     icon: Clock         },
+  unavailable: { labelKey: "provProfile_unavailable", classes: "bg-slate-100 text-slate-500",     icon: XCircle       },
 };
 
 function Stars({ rating, sm }: { rating: number; sm?: boolean }) {
@@ -189,6 +190,8 @@ export default function ProfileClient({
   const [reviewPage, setReviewPage] = useState(1);
   const [loadingReviews, setLoadingReviews] = useState(false);
 
+  const t = useTranslations("clientPages");
+
   const avail = profile.availabilityStatus ?? "unavailable";
   const AvailIcon = availabilityConfig[avail].icon;
   const name = profile.userId.name;
@@ -239,10 +242,10 @@ export default function ProfileClient({
   }
 
   const TABS: { key: Tab; label: string; count?: number }[] = [
-    { key: "overview",   label: "Overview"  },
-    { key: "reviews",    label: "Reviews",   count: reviewsTotal },
-    { key: "schedule",   label: "Schedule"  },
-    { key: "portfolio",  label: "Portfolio", count: profile.portfolioItems?.length },
+    { key: "overview",   label: t("provProfile_tabOverview")  },
+    { key: "reviews",    label: t("provProfile_tabReviews"),   count: reviewsTotal },
+    { key: "schedule",   label: t("provProfile_tabSchedule")  },
+    { key: "portfolio",  label: t("provProfile_tabPortfolio"), count: profile.portfolioItems?.length },
   ];
 
   return (
@@ -264,11 +267,11 @@ export default function ProfileClient({
             <div className="flex flex-wrap items-center gap-2 mb-1">
               <h1 className="text-xl font-bold text-slate-900">{name}</h1>
               {profile.userId.isVerified && (
-                <span className="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-semibold">✓ Verified</span>
+                <span className="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-semibold">{t("provProfile_verifiedBadge")}</span>
               )}
               {profile.isLocalProCertified && (
                 <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded bg-indigo-100 text-indigo-700 border border-indigo-200">
-                  🎖️ LocalPro Certified
+                  {t("provProfile_certifiedBadge")}
                 </span>
               )}
               {(profile.streak ?? 0) >= 3 && (
@@ -291,7 +294,7 @@ export default function ProfileClient({
             {/* Availability pill */}
             <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${availabilityConfig[avail].classes}`}>
               <AvailIcon className="h-3 w-3" />
-              {availabilityConfig[avail].label}
+              {t(availabilityConfig[avail].labelKey as Parameters<typeof t>[0])}
             </span>
 
             {/* Short stats row */}
@@ -316,11 +319,11 @@ export default function ProfileClient({
               }`}
             >
               <Heart className={`h-4 w-4 ${isFavorite ? "fill-red-500 text-red-500" : ""}`} />
-              {isFavorite ? "Unfavorite" : "Favorite"}
+              {isFavorite ? t("provProfile_unfavorite") : t("provProfile_favorite")}
             </button>
             <Button onClick={() => setShowPostJob(true)} className="flex items-center gap-1.5">
               <Sparkles className="h-4 w-4" />
-              Post a Job
+              {t("provProfile_postJob")}
             </Button>
           </div>
         </div>
@@ -328,27 +331,27 @@ export default function ProfileClient({
         {/* ── Stats strip ───────────────────────────────────── */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-5 border-t border-slate-100">
           <div className="text-center">
-            <p className="text-[11px] text-slate-400 mb-0.5">Completed Jobs</p>
+            <p className="text-[11px] text-slate-400 mb-0.5">{t("provProfile_completedJobs")}</p>
             <p className="text-lg font-bold text-slate-900 flex items-center justify-center gap-1">
               <Briefcase className="h-4 w-4 text-slate-400" />
               {profile.completedJobCount ?? 0}
             </p>
           </div>
           <div className="text-center">
-            <p className="text-[11px] text-slate-400 mb-0.5">Experience</p>
+            <p className="text-[11px] text-slate-400 mb-0.5">{t("provProfile_experience")}</p>
             <p className="text-lg font-bold text-slate-900 flex items-center justify-center gap-1">
               <Timer className="h-4 w-4 text-slate-400" />
               {profile.yearsExperience ? `${profile.yearsExperience}yr` : "—"}
             </p>
           </div>
           <div className="text-center">
-            <p className="text-[11px] text-slate-400 mb-0.5">Hourly Rate</p>
+            <p className="text-[11px] text-slate-400 mb-0.5">{t("provProfile_hourlyRate")}</p>
             <p className="text-lg font-bold text-slate-900">
               {profile.hourlyRate ? formatCurrency(profile.hourlyRate) : "—"}
             </p>
           </div>
           <div className="text-center">
-            <p className="text-[11px] text-slate-400 mb-0.5">Completion Rate</p>
+            <p className="text-[11px] text-slate-400 mb-0.5">{t("provProfile_completionRate")}</p>
             <p className="text-lg font-bold text-slate-900 flex items-center justify-center gap-1">
               <TrendingUp className="h-4 w-4 text-emerald-500" />
               {profile.completionRate ? `${profile.completionRate}%` : "—"}
@@ -390,7 +393,7 @@ export default function ProfileClient({
             {profile.bio && (
               <div className="bg-white rounded-xl border border-slate-200 p-5">
                 <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
-                  <User className="h-4 w-4 text-slate-400" /> About
+                  <User className="h-4 w-4 text-slate-400" /> {t("provProfile_about")}
                 </h3>
                 <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-line">{profile.bio}</p>
               </div>
@@ -400,7 +403,7 @@ export default function ProfileClient({
             {(profile.skills?.length ?? 0) > 0 && (
               <div className="bg-white rounded-xl border border-slate-200 p-5">
                 <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
-                  <Award className="h-4 w-4 text-slate-400" /> Skills
+                  <Award className="h-4 w-4 text-slate-400" /> {t("provProfile_skills")}
                 </h3>
                 <div className="flex flex-wrap gap-2">
                   {profile.skills?.map((s) => (
@@ -416,7 +419,7 @@ export default function ProfileClient({
             {(profile.workExperiences?.length ?? 0) > 0 && (
               <div className="bg-white rounded-xl border border-slate-200 p-5">
                 <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
-                  <Briefcase className="h-4 w-4 text-slate-400" /> Work Experience
+                  <Briefcase className="h-4 w-4 text-slate-400" /> {t("provProfile_workExp")}
                 </h3>
                 <ul className="space-y-2">
                   {profile.workExperiences?.map((exp, i) => (
@@ -433,7 +436,7 @@ export default function ProfileClient({
             {(profile.serviceAreas?.length ?? 0) > 0 && (
               <div className="bg-white rounded-xl border border-slate-200 p-5">
                 <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
-                  <MapPin className="h-4 w-4 text-slate-400" /> Service Areas
+                  <MapPin className="h-4 w-4 text-slate-400" /> {t("provProfile_serviceAreas")}
                 </h3>
                 <div className="space-y-2">
                   {profile.serviceAreas?.map((area) => (
@@ -456,15 +459,15 @@ export default function ProfileClient({
             {profile.breakdown && profile.breakdown.count > 0 && (
               <div className="bg-white rounded-xl border border-slate-200 p-5">
                 <h3 className="text-sm font-semibold text-slate-700 mb-4 flex items-center gap-2">
-                  <Star className="h-4 w-4 text-amber-400" /> Rating Breakdown
+                  <Star className="h-4 w-4 text-amber-400" /> {t("provProfile_ratingBreakdown")}
                 </h3>
                 <div className="space-y-3">
-                  <RatingBar label="Quality"         value={profile.breakdown.quality} />
-                  <RatingBar label="Professionalism" value={profile.breakdown.professionalism} />
-                  <RatingBar label="Punctuality"     value={profile.breakdown.punctuality} />
-                  <RatingBar label="Communication"   value={profile.breakdown.communication} />
+                  <RatingBar label={t("provProfile_quality")}         value={profile.breakdown.quality} />
+                  <RatingBar label={t("provProfile_professionalism")} value={profile.breakdown.professionalism} />
+                  <RatingBar label={t("provProfile_punctuality")}     value={profile.breakdown.punctuality} />
+                  <RatingBar label={t("provProfile_communication")}   value={profile.breakdown.communication} />
                 </div>
-                <p className="text-[11px] text-slate-400 mt-3">Based on {profile.breakdown.count} detailed review{profile.breakdown.count !== 1 ? "s" : ""}</p>
+                <p className="text-[11px] text-slate-400 mt-3">{t("provProfile_basedOn", { n: profile.breakdown.count, s: profile.breakdown.count !== 1 ? "s" : "" })}</p>
               </div>
             )}
 
@@ -475,7 +478,7 @@ export default function ProfileClient({
                   <Clock className="h-4 w-4 text-blue-500" />
                 </div>
                 <div>
-                  <p className="text-xs text-slate-400">Avg. Response Time</p>
+                  <p className="text-xs text-slate-400">{t("provProfile_avgResponseTime")}</p>
                   <p className="text-sm font-semibold text-slate-800">
                     {profile.avgResponseTimeHours! < 1
                       ? "Under 1 hour"
@@ -505,8 +508,8 @@ export default function ProfileClient({
           {reviews.length === 0 ? (
             <div className="bg-white rounded-xl border border-slate-200 p-12 text-center">
               <MessageSquare className="h-8 w-8 text-slate-300 mx-auto mb-3" />
-              <p className="text-sm font-semibold text-slate-700">No reviews yet</p>
-              <p className="text-xs text-slate-400 mt-1">Be the first to work with this provider and leave a review.</p>
+              <p className="text-sm font-semibold text-slate-700">{t("provProfile_noReviews")}</p>
+              <p className="text-xs text-slate-400 mt-1">{t("provProfile_noReviewsBody")}</p>
             </div>
           ) : (
             <>
@@ -516,14 +519,14 @@ export default function ProfileClient({
                   <div className="text-center flex-shrink-0">
                     <p className="text-5xl font-bold text-slate-900">{(profile.avgRating ?? 0).toFixed(1)}</p>
                     <Stars rating={profile.avgRating ?? 0} />
-                    <p className="text-xs text-slate-400 mt-1">{reviewsTotal} review{reviewsTotal !== 1 ? "s" : ""}</p>
+                    <p className="text-xs text-slate-400 mt-1">{t("provProfile_reviewsCount", { n: reviewsTotal, s: reviewsTotal !== 1 ? "s" : "" })}</p>
                   </div>
                   {profile.breakdown && profile.breakdown.count > 0 && (
                     <div className="flex-1 w-full space-y-2">
-                      <RatingBar label="Quality"         value={profile.breakdown.quality} />
-                      <RatingBar label="Professionalism" value={profile.breakdown.professionalism} />
-                      <RatingBar label="Punctuality"     value={profile.breakdown.punctuality} />
-                      <RatingBar label="Communication"   value={profile.breakdown.communication} />
+                      <RatingBar label={t("provProfile_quality")}         value={profile.breakdown.quality} />
+                      <RatingBar label={t("provProfile_professionalism")} value={profile.breakdown.professionalism} />
+                      <RatingBar label={t("provProfile_punctuality")}     value={profile.breakdown.punctuality} />
+                      <RatingBar label={t("provProfile_communication")}   value={profile.breakdown.communication} />
                     </div>
                   )}
                 </div>
@@ -541,7 +544,7 @@ export default function ProfileClient({
                     disabled={loadingReviews}
                     className="px-8"
                   >
-                    {loadingReviews ? "Loading…" : `Load more (${reviewsTotal - reviews.length} remaining)`}
+                    {loadingReviews ? t("provProfile_loading") : t("provProfile_loadMore", { n: reviewsTotal - reviews.length })}
                   </Button>
                 </div>
               )}
@@ -554,7 +557,7 @@ export default function ProfileClient({
       {tab === "schedule" && (
         <div className="bg-white rounded-xl border border-slate-200 p-5">
           <h3 className="text-sm font-semibold text-slate-700 mb-4 flex items-center gap-2">
-            <Calendar className="h-4 w-4 text-slate-400" /> Weekly Availability
+            <Calendar className="h-4 w-4 text-slate-400" /> {t("provProfile_weeklyAvail")}
           </h3>
           {profile.schedule ? (
             <div className="space-y-2">
@@ -569,7 +572,7 @@ export default function ProfileClient({
                         {slot?.from} – {slot?.to}
                       </span>
                     ) : (
-                      <span className="text-xs text-slate-400">Unavailable</span>
+                      <span className="text-xs text-slate-400">{t("provProfile_unavailableSlot")}</span>
                     )}
                     <div className={`w-2 h-2 rounded-full ${enabled ? "bg-emerald-500" : "bg-slate-300"}`} />
                   </div>
@@ -577,7 +580,7 @@ export default function ProfileClient({
               })}
             </div>
           ) : (
-            <p className="text-sm text-slate-400 text-center py-8">No schedule set yet.</p>
+            <p className="text-sm text-slate-400 text-center py-8">{t("provProfile_noSchedule")}</p>
           )}
         </div>
       )}
@@ -588,8 +591,8 @@ export default function ProfileClient({
           {(profile.portfolioItems?.length ?? 0) === 0 ? (
             <div className="bg-white rounded-xl border border-slate-200 p-12 text-center">
               <Briefcase className="h-8 w-8 text-slate-300 mx-auto mb-3" />
-              <p className="text-sm font-semibold text-slate-700">No portfolio items yet</p>
-              <p className="text-xs text-slate-400 mt-1">This provider hasn&apos;t added any past work samples.</p>
+              <p className="text-sm font-semibold text-slate-700">{t("provProfile_noPortfolio")}</p>
+              <p className="text-xs text-slate-400 mt-1">{t("provProfile_noPortfolioBody")}</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

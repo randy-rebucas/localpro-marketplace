@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Search, Briefcase, User, X, Loader2 } from "lucide-react";
 import type { SearchResult } from "@/app/api/search/route";
 
@@ -22,6 +23,7 @@ const TYPE_ICON: Record<SearchResult["type"], React.ElementType> = {
 
 export default function GlobalSearch() {
   const router = useRouter();
+  const t      = useTranslations("globalSearch");
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
@@ -117,7 +119,7 @@ export default function GlobalSearch() {
         className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50 text-slate-400 text-sm hover:bg-slate-100 hover:border-slate-300 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
       >
         <Search className="h-4 w-4" />
-        <span className="hidden sm:inline">Search…</span>
+        <span className="hidden sm:inline">{t("triggerPlaceholder")}</span>
         <kbd className="hidden sm:inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-white border border-slate-200 text-slate-400 leading-none">
           ⌘K
         </kbd>
@@ -144,7 +146,7 @@ export default function GlobalSearch() {
               <input
                 ref={inputRef}
                 type="text"
-                placeholder="Search jobs, users…"
+                placeholder={t("inputPlaceholder")}
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 onKeyDown={onKeyDown}
@@ -206,14 +208,14 @@ export default function GlobalSearch() {
             {/* Empty state */}
             {!loading && query.length >= 2 && results.length === 0 && (
               <div className="py-8 text-center text-sm text-slate-400">
-                No results for <span className="font-medium text-slate-600">"{query}"</span>
+                {t("noResults", { query })}
               </div>
             )}
 
             {/* Hint */}
             {query.length < 2 && (
               <div className="px-4 py-3 text-xs text-slate-400">
-                Type at least 2 characters to search
+                {t("typeHint")}
               </div>
             )}
           </div>

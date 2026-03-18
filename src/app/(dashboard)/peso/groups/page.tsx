@@ -8,6 +8,7 @@ import {
   Phone, MapPin, FileText, ToggleLeft, ToggleRight, Filter,
 } from "lucide-react";
 import { apiFetch } from "@/lib/fetchClient";
+import { useTranslations } from "next-intl";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -52,6 +53,7 @@ const LABEL_CLS = "text-[11px] font-semibold text-slate-500 uppercase tracking-w
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function GroupsPage() {
+  const t = useTranslations("pesoPages");
   const [groups, setGroups] = useState<LivelihoodGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -190,10 +192,10 @@ export default function GroupsPage() {
         <div>
           <h1 className="text-xl font-bold text-slate-800 flex items-center gap-2">
             <UsersRound className="h-5 w-5 text-blue-600" />
-            Livelihood Groups
+            {t("liveGroups")}
           </h1>
           <p className="text-sm text-slate-500 mt-0.5">
-            Manage community cooperatives, construction teams, and livelihood groups.
+            {t("liveGroupsSub")}
           </p>
         </div>
         <button
@@ -201,7 +203,7 @@ export default function GroupsPage() {
           className="flex items-center gap-1.5 bg-blue-600 text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-blue-700 active:bg-blue-800 transition-colors shrink-0"
         >
           <Plus className="h-4 w-4" />
-          New Group
+          {t("newGroup")}
         </button>
       </div>
 
@@ -209,9 +211,9 @@ export default function GroupsPage() {
       {!loading && (
         <div className="grid grid-cols-3 gap-3">
           {[
-            { label: "Total Groups",   value: groups.length, color: "text-blue-600",    bg: "bg-blue-50" },
-            { label: "Active Groups",  value: activeCount,   color: "text-emerald-600", bg: "bg-emerald-50" },
-            { label: "Total Members",  value: totalMembers,  color: "text-violet-600",  bg: "bg-violet-50" },
+            { label: t("totalGroups"),  value: groups.length, color: "text-blue-600",    bg: "bg-blue-50" },
+            { label: t("activeGroups"), value: activeCount,   color: "text-emerald-600", bg: "bg-emerald-50" },
+            { label: t("totalMembers"), value: totalMembers,  color: "text-violet-600",  bg: "bg-violet-50" },
           ].map((s) => (
             <div key={s.label} className={`${s.bg} rounded-xl px-4 py-3 text-center`}>
               <p className={`text-2xl font-extrabold ${s.color}`}>{s.value}</p>

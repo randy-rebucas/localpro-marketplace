@@ -1,4 +1,5 @@
 import { Sparkles, Lightbulb } from "lucide-react";
+import { useTranslations } from "next-intl";
 import type { FormData } from "../types";
 import type { ICategory } from "@/types";
 import MdEditor from "@/components/ui/MdEditor";
@@ -22,6 +23,7 @@ export function JobDetails({
   isGenerating, isClassifying,
   update, onGenerateDescription, onClassifyCategory,
 }: Props) {
+  const t = useTranslations("clientPages");
   const charCount = form.description.length;
   const charMax   = 1000;
   const charFill  = Math.min((charCount / charMax) * 100, 100);
@@ -33,31 +35,31 @@ export function JobDetails({
       <div className="flex items-start gap-2.5 rounded-xl bg-blue-50 border border-blue-100 px-4 py-3">
         <Lightbulb className="h-4 w-4 text-blue-500 flex-shrink-0 mt-0.5" />
         <p className="text-xs text-blue-700 leading-relaxed">
-          <span className="font-semibold">Tip:</span> A detailed description gets you <span className="font-semibold">3× more quotes</span>. Use AI to generate one from your title, then refine it.
+          <span className="font-semibold">{t("postJob_detailsTipPrefix")}</span> {t("postJob_detailsTip")}
         </p>
       </div>
 
       {/* Title */}
       <div>
-        <label className="label block mb-1 font-medium text-slate-700">Job Title</label>
+        <label className="label block mb-1 font-medium text-slate-700">{t("postJob_titleLabel")}</label>
         <input
           className={`input w-full ${errors.title ? "border-red-400 focus:ring-red-200" : ""}`}
-          placeholder="e.g. Fix leaking kitchen faucet"
+          placeholder={t("postJob_titlePlaceholder")}
           value={form.title}
           onChange={(e) => update("title", e.target.value)}
         />
         {errors.title
           ? <p className="mt-1 text-xs text-red-500">{errors.title}</p>
-          : <p className="mt-1 text-xs text-slate-400">Be specific — &ldquo;Fix leaking faucet in kitchen&rdquo; beats &ldquo;plumbing work&rdquo;</p>}
+          : <p className="mt-1 text-xs text-slate-400">{t("postJob_titleHint")}</p>}
       </div>
 
       {/* Category */}
       <div>
         <div className="flex items-center justify-between mb-1">
-          <label className="label font-medium text-slate-700">Service Category</label>
+          <label className="label font-medium text-slate-700">{t("postJob_categoryLabel")}</label>
           <button type="button" onClick={onClassifyCategory} disabled={isClassifying} className={AI_BTN}>
             <Sparkles className={`h-3.5 w-3.5 ${isClassifying ? "animate-pulse" : ""}`} />
-            {isClassifying ? "Detecting…" : "Auto-detect"}
+            {isClassifying ? t("postJob_detecting") : t("postJob_autodetect")}
           </button>
         </div>
         <select
@@ -65,7 +67,7 @@ export function JobDetails({
           value={form.category}
           onChange={(e) => update("category", e.target.value)}
         >
-          <option value="">Select a category…</option>
+          <option value="">{t("postJob_categoryPlaceholder")}</option>
           {categories.map((c) => (
             <option key={c.name} value={c.name}>{c.icon} {c.name}</option>
           ))}
@@ -85,16 +87,16 @@ export function JobDetails({
       {/* Description */}
       <div>
         <div className="flex items-center justify-between mb-1">
-          <label className="label font-medium text-slate-700">Description</label>
+          <label className="label font-medium text-slate-700">{t("postJob_descLabel")}</label>
           <button type="button" onClick={onGenerateDescription} disabled={isGenerating} className={AI_BTN}>
             <Sparkles className={`h-3.5 w-3.5 ${isGenerating ? "animate-pulse" : ""}`} />
-            {isGenerating ? "Generating…" : "AI Generate"}
+            {isGenerating ? t("postJob_generating") : t("postJob_aiGenerate")}
           </button>
         </div>
         <MdEditor
           value={form.description}
           onChange={(v) => update("description", v)}
-          placeholder="Describe the work needed in detail — what, where, any special requirements or concerns…"
+          placeholder={t("postJob_descPlaceholder")}
           rows={6}
           error={!!errors.description}
         />

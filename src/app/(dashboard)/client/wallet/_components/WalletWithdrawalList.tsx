@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   Clock, AlertCircle, CheckCircle, XCircle,
   BadgeCheck, AlertTriangle, ChevronDown, ChevronUp,
@@ -11,47 +12,49 @@ import type { IWalletWithdrawal } from "@/types";
 
 // ─── Status display config ────────────────────────────────────────────────────
 
-const STATUS_CONFIG: Record<string, {
+function BUILD_STATUS_CONFIG(t: ReturnType<typeof useTranslations>): Record<string, {
   label: string;
   badgeClass: string;
   icon: React.ReactNode;
   journalLabel: string;
   debit: string;
   credit: string;
-}> = {
+}> {
+  return {
   pending: {
-    label:        "Pending",
+    label:        t("wallet_statusPending"),
     badgeClass:   "bg-amber-100 text-amber-700",
     icon:         <Clock className="h-3.5 w-3.5" />,
-    journalLabel: "Withdrawal Reserved",
+    journalLabel: t("wallet_journalReserved"),
     debit:        "2200 Wallet Payable",
     credit:       "2300 Withdrawal Payable",
   },
   processing: {
-    label:        "Processing",
+    label:        t("wallet_statusProcessing"),
     badgeClass:   "bg-blue-100 text-blue-700",
     icon:         <AlertCircle className="h-3.5 w-3.5" />,
-    journalLabel: "Withdrawal Reserved",
+    journalLabel: t("wallet_journalReserved"),
     debit:        "2200 Wallet Payable",
     credit:       "2300 Withdrawal Payable",
   },
   completed: {
-    label:        "Completed",
+    label:        t("wallet_statusCompleted"),
     badgeClass:   "bg-emerald-100 text-emerald-700",
     icon:         <CheckCircle className="h-3.5 w-3.5" />,
-    journalLabel: "Withdrawal Disbursed",
+    journalLabel: t("wallet_journalDisbursed"),
     debit:        "2300 Withdrawal Payable",
     credit:       "1000 Gateway Receivable",
   },
   rejected: {
-    label:        "Rejected",
+    label:        t("wallet_statusRejected"),
     badgeClass:   "bg-red-100 text-red-700",
     icon:         <XCircle className="h-3.5 w-3.5" />,
-    journalLabel: "Withdrawal Reversed",
+    journalLabel: t("wallet_journalReversed"),
     debit:        "2300 Withdrawal Payable",
     credit:       "2200 Wallet Payable",
   },
-};
+  };
+}
 
 // ─── Detail field ─────────────────────────────────────────────────────────────
 
@@ -79,6 +82,8 @@ interface Props {
 }
 
 export default function WalletWithdrawalList({ withdrawals }: Props) {
+  const t = useTranslations("clientPages");
+  const STATUS_CONFIG = BUILD_STATUS_CONFIG(t);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   return (
@@ -122,12 +127,12 @@ export default function WalletWithdrawalList({ withdrawals }: Props) {
                 {w.ledgerJournalId ? (
                   <span className="inline-flex items-center gap-1 text-[10px] font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-0.5">
                     <BadgeCheck className="h-3 w-3" />
-                    Accounted
+                    {t("wallet_ledgerAccounted")}
                   </span>
                 ) : (
                   <span className="inline-flex items-center gap-1 text-[10px] font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5">
                     <AlertTriangle className="h-3 w-3" />
-                    Pending ledger
+                    {t("wallet_ledgerPending")}
                   </span>
                 )}
               </div>
@@ -144,18 +149,18 @@ export default function WalletWithdrawalList({ withdrawals }: Props) {
                 {/* Bank details */}
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                   <Detail
-                    label="Bank"
+                    label={t("wallet_detailBank")}
                     value={w.bankName}
                     icon={<Building2 className="h-3.5 w-3.5" />}
                   />
                   <Detail
-                    label="Account Number"
+                    label={t("wallet_detailAccountNumber")}
                     value={w.accountNumber}
                     mono
                     icon={<CreditCard className="h-3.5 w-3.5" />}
                   />
                   <Detail
-                    label="Account Name"
+                    label={t("wallet_detailAccountName")}
                     value={w.accountName}
                     icon={<User className="h-3.5 w-3.5" />}
                   />
@@ -164,7 +169,7 @@ export default function WalletWithdrawalList({ withdrawals }: Props) {
                 {/* Dates + ID */}
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 pt-4 border-t border-slate-200">
                   <Detail
-                    label="Requested"
+                    label={t("wallet_detailRequested")}
                     value={createdAt.toLocaleString("en-PH", {
                       month: "short", day: "numeric", year: "numeric",
                       hour: "2-digit", minute: "2-digit",
@@ -173,7 +178,7 @@ export default function WalletWithdrawalList({ withdrawals }: Props) {
                   />
                   {processedAt && (
                     <Detail
-                      label={w.status === "completed" ? "Completed" : "Processed"}
+                      label={w.status === "completed" ? t("wallet_statusCompleted") : t("wallet_detailProcessed")}
                       value={processedAt.toLocaleString("en-PH", {
                         month: "short", day: "numeric", year: "numeric",
                         hour: "2-digit", minute: "2-digit",
@@ -182,7 +187,7 @@ export default function WalletWithdrawalList({ withdrawals }: Props) {
                     />
                   )}
                   <Detail
-                    label="Withdrawal ID"
+                    label={t("wallet_detailWithdrawalId")}
                     value={id}
                     mono
                     icon={<Hash className="h-3.5 w-3.5" />}
@@ -192,14 +197,14 @@ export default function WalletWithdrawalList({ withdrawals }: Props) {
                 {/* Ledger / accounting */}
                 <div className="rounded-lg border border-slate-200 bg-white p-4 space-y-3">
                   <div className="flex items-center justify-between gap-2">
-                    <p className="text-xs font-semibold text-slate-700">Accounting Journal Entry</p>
+                    <p className="text-xs font-semibold text-slate-700">{t("wallet_journalSection")}</p>
                     {w.ledgerJournalId ? (
                       <span className="inline-flex items-center gap-1 text-[10px] font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-0.5">
-                        <BadgeCheck className="h-3 w-3" /> Recorded
+                        <BadgeCheck className="h-3 w-3" /> {t("wallet_journalAccounted")}
                       </span>
                     ) : (
                       <span className="inline-flex items-center gap-1 text-[10px] font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5">
-                        <AlertTriangle className="h-3 w-3" /> Not yet written
+                        <AlertTriangle className="h-3 w-3" /> {t("wallet_journalNotWritten")}
                       </span>
                     )}
                   </div>
@@ -221,7 +226,7 @@ export default function WalletWithdrawalList({ withdrawals }: Props) {
 
                   {w.ledgerJournalId && (
                     <p className="text-[10px] text-slate-400 font-mono break-all">
-                      Journal ref: {w.ledgerJournalId}
+                      {t("wallet_journalRef", { id: w.ledgerJournalId })}
                     </p>
                   )}
                 </div>

@@ -1,17 +1,18 @@
 import { FileText, CalendarDays, Camera, ClipboardCheck } from "lucide-react";
-
-const STEPS = [
-  { label: "Details",  shortLabel: "Details",  icon: FileText,      color: "blue"    },
-  { label: "Budget",   shortLabel: "Budget",   icon: CalendarDays,  color: "violet"  },
-  { label: "Photos",   shortLabel: "Photos",   icon: Camera,        color: "emerald" },
-  { label: "Review",   shortLabel: "Review",   icon: ClipboardCheck,color: "primary" },
-] as const;
+import { useTranslations } from "next-intl";
 
 interface StepIndicatorProps {
   current: number;
 }
 
 export function StepIndicator({ current }: StepIndicatorProps) {
+  const t = useTranslations("clientPages");
+  const STEPS = [
+    { label: t("postJob_indicatorDetails"), shortLabel: t("postJob_indicatorDetails"),  icon: FileText,      color: "blue"    },
+    { label: t("postJob_indicatorBudget"),  shortLabel: t("postJob_indicatorBudget"),   icon: CalendarDays,  color: "violet"  },
+    { label: t("postJob_indicatorPhotos"),  shortLabel: t("postJob_indicatorPhotos"),   icon: Camera,        color: "emerald" },
+    { label: t("postJob_indicatorReview"),  shortLabel: t("postJob_indicatorReview"),   icon: ClipboardCheck,color: "primary" },
+  ] as const;
   return (
     <div className="flex items-start gap-1">
       {STEPS.map(({ shortLabel, icon: Icon }, i) => {

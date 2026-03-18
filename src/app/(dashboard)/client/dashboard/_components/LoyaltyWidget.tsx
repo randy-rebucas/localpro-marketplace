@@ -4,9 +4,13 @@ import { formatCurrency } from "@/lib/utils";
 import { getClientTier } from "@/lib/loyalty";
 import Link from "next/link";
 import { Gift } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 
 export async function LoyaltyWidget({ userId }: { userId: string }) {
-  const account = await loyaltyRepository.findByUserId(userId);
+  const [account, t] = await Promise.all([
+    loyaltyRepository.findByUserId(userId),
+    getTranslations("clientPages"),
+  ]);
   if (!account) return null;
 
   const tierInfo = getClientTier(account.lifetimePoints);
@@ -36,7 +40,7 @@ export async function LoyaltyWidget({ userId }: { userId: string }) {
             </div>
             {tierInfo.next && (
               <span className="text-xs text-slate-400">
-                {tierInfo.pointsToNext} pts to {tierInfo.next}
+                {t("dash_ptsTo", { n: tierInfo.pointsToNext, next: tierInfo.next })}
               </span>
             )}
           </div>
@@ -44,9 +48,9 @@ export async function LoyaltyWidget({ userId }: { userId: string }) {
       </div>
       <div className="text-right flex-shrink-0">
         {account.credits > 0 && (
-          <p className="text-xs font-semibold text-green-600">{formatCurrency(account.credits)} credit</p>
+          <p className="text-xs font-semibold text-green-600">{formatCurrency(account.credits)} {t("dash_credit")}</p>
         )}
-        <p className="text-xs text-primary/70 group-hover:text-primary transition-colors">View Rewards →</p>
+        <p className="text-xs text-primary/70 group-hover:text-primary transition-colors">{t("dash_viewRewards")}</p>
       </div>
     </Link>
   );

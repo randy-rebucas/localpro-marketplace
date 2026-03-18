@@ -2,6 +2,7 @@
 
 import { useRef, useEffect, useState } from "react";
 import usePlacesAutocomplete, { getGeocode, getLatLng } from "use-places-autocomplete";
+import { useTranslations } from "next-intl";
 import { MapPin, X, Loader2 } from "lucide-react";
 import Image from "next/image";
 
@@ -15,13 +16,14 @@ interface Props {
 
 // ── Plain input fallback (no API key configured) ─────────────────────────────
 function PlainLocationInput({ value, onChange, placeholder, error, className = "" }: Props) {
+  const t = useTranslations("locationAutocomplete");
   return (
     <div className="relative">
       <MapPin className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
       <input
         type="text"
         className={`input w-full pl-9 ${error ? "border-red-400" : ""} ${className}`}
-        placeholder={placeholder ?? "e.g. 123 Main St, Manila"}
+        placeholder={placeholder ?? t("fallbackPlaceholder")}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         autoComplete="off"
@@ -32,6 +34,7 @@ function PlainLocationInput({ value, onChange, placeholder, error, className = "
 
 // ── Autocomplete (Google Maps loaded) ────────────────────────────────────────
 function AutocompleteInput({ value, onChange, placeholder, error, className = "" }: Props) {
+  const t = useTranslations("locationAutocomplete");
   const containerRef = useRef<HTMLDivElement>(null);
 
   const {
@@ -101,7 +104,7 @@ function AutocompleteInput({ value, onChange, placeholder, error, className = ""
         <input
           type="text"
           className={`input w-full pl-9 pr-9 ${error ? "border-red-400" : ""} ${className}`}
-          placeholder={ready ? placeholder : "Loading…"}
+          placeholder={ready ? placeholder : t("loading")}
           disabled={!ready}
           value={inputValue}
           onChange={(e) => {
@@ -155,7 +158,7 @@ function AutocompleteInput({ value, onChange, placeholder, error, className = ""
       {/* "no results" hint when user typed something but got nothing */}
       {status === "ZERO_RESULTS" && inputValue.length > 2 && (
         <div className="absolute z-50 mt-1 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-400 shadow-lg">
-          No matching addresses found.
+          {t("noResults")}
         </div>
       )}
 
@@ -164,7 +167,7 @@ function AutocompleteInput({ value, onChange, placeholder, error, className = ""
         <div className="mt-2 overflow-hidden rounded-xl border border-slate-200 shadow-sm">
           <Image
             src={`https://maps.googleapis.com/maps/api/staticmap?center=${coords.lat},${coords.lng}&zoom=16&size=640x180&markers=color:red%7Clabel:P%7C${coords.lat},${coords.lng}&scale=2&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`}
-            alt="Selected location"
+            alt={t("selectedLocationAlt")}
             width={640}
             height={160}
             className="w-full h-[160px] object-cover"
@@ -172,7 +175,7 @@ function AutocompleteInput({ value, onChange, placeholder, error, className = ""
           <div className="flex items-center justify-between bg-slate-50 px-3 py-1.5">
             <span className="flex items-center gap-1.5 text-xs font-medium text-green-700">
               <MapPin className="h-3.5 w-3.5 text-green-500" />
-              Location pinned
+              {t("locationPinned")}
             </span>
             <span className="font-mono text-xs text-slate-400">
               {coords.lat.toFixed(5)}, {coords.lng.toFixed(5)}

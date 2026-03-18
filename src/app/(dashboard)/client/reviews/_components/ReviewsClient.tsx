@@ -6,6 +6,7 @@ import toast from "react-hot-toast";
 import Button from "@/components/ui/Button";
 import { apiFetch } from "@/lib/fetchClient";
 import { formatDate, formatCurrency } from "@/lib/utils";
+import { useTranslations } from "next-intl";
 import type { IReview } from "@/types";
 import TourGuide from "@/components/shared/TourGuide";
 import { Briefcase, User, Calendar, Star } from "lucide-react";
@@ -29,6 +30,7 @@ interface Props {
 }
 
 export default function ReviewsClient({ initialJobs }: Props) {
+  const t = useTranslations("clientPages");
   const [reviewableJobs, setReviewableJobs] = useState<PopulatedJob[]>(initialJobs);
   const [reviewModal, setReviewModal] = useState<{ open: boolean; job: PopulatedJob | null }>({
     open: false, job: null,
@@ -44,7 +46,7 @@ export default function ReviewsClient({ initialJobs }: Props) {
     if (!reviewModal.job) return;
     const trimmed = feedback.trim();
     if (!trimmed || trimmed.length < 10) {
-      toast.error("Please write at least 10 characters of feedback");
+      toast.error(t("clientReviews_toastMinChars"));
       return;
     }
     setIsSubmitting(true);
@@ -55,12 +57,12 @@ export default function ReviewsClient({ initialJobs }: Props) {
         body: JSON.stringify({ jobId: reviewModal.job._id, rating, feedback: trimmed, breakdown }),
       });
       const data = await res.json() as IReview & { error?: string };
-      if (!res.ok) { toast.error(data.error ?? "Failed to submit review"); return; }
-      toast.success("Review submitted!");
+      if (!res.ok) { toast.error(data.error ?? t("clientReviews_toastFailed")); return; }
+      toast.success(t("clientReviews_toastSuccess"));
       resetModal();
       setReviewableJobs((prev) => prev.filter((j) => j._id !== reviewModal.job!._id));
     } catch {
-      toast.error("Something went wrong");
+      toast.error(t("clientReviews_toastError"));
     } finally {
       setIsSubmitting(false);
     }
@@ -79,21 +81,23 @@ export default function ReviewsClient({ initialJobs }: Props) {
     <div className="space-y-6">
       <TourGuide
         pageKey="client-reviews"
-        title="How Reviews works"
+        title={t("clientReviews_tourTitle")}
         steps={[
-          { icon: "📋", title: "Eligible jobs", description: "Jobs appear here once escrow has been released — meaning the job is fully complete." },
-          { icon: "⭐", title: "Rate 4 categories", description: "Score the provider on Quality of Work, Professionalism, Punctuality, and Communication." },
-          { icon: "💬", title: "Write a comment", description: "Add an optional comment to give more context to your rating." },
-          { icon: "🤝", title: "Help the community", description: "Your reviews help other clients choose reliable providers and reward great work." },
+          { icon: "📋", title: t("clientReviews_tourStep1Title"), description: t("clientReviews_tourStep1Desc") },
+          { icon: "⭐", title: t("clientReviews_tourStep2Title"), description: t("clientReviews_tourStep2Desc") },
+          { icon: "💬", title: t("clientReviews_tourStep3Title"), description: t("clientReviews_tourStep3Desc") },
+          { icon: "🤝", title: t("clientReviews_tourStep4Title"), description: t("clientReviews_tourStep4Desc") },
         ]}
       />
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900">Reviews</h2>
+          <h2 className="text-2xl font-bold text-slate-900">{t("clientReviews_heading")}</h2>
           <p className="text-slate-500 text-sm mt-1">
             {reviewableJobs.length > 0
-              ? `${reviewableJobs.length} job${reviewableJobs.length !== 1 ? "s" : ""} awaiting your review`
-              : "Rate providers for your completed jobs."}
+              ? (reviewableJobs.length !== 1
+                  ? t("clientReviews_subWaitingPlural", { count: reviewableJobs.length })
+                  : t("clientReviews_subWaiting", { count: reviewableJobs.length }))
+              : t("clientReviews_subEmpty")}
           </p>
         </div>
       </div>
@@ -101,8 +105,8 @@ export default function ReviewsClient({ initialJobs }: Props) {
       {reviewableJobs.length === 0 ? (
         <div className="bg-white rounded-xl border border-slate-200 p-12 text-center">
           <Star className="h-8 w-8 text-slate-200 mx-auto mb-3" />
-          <p className="text-slate-400 text-sm font-medium">No completed jobs to review yet.</p>
-          <p className="text-slate-300 text-xs mt-1">Reviews become available once escrow is released for a job.</p>
+          <p className="text-slate-400 text-sm font-medium">{t("clientReviews_emptyTitle")}</p>
+          <p className="text-slate-300 text-xs mt-1">{t("clientReviews_emptyDesc")}</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -138,7 +142,7 @@ export default function ReviewsClient({ initialJobs }: Props) {
                     setBreakdown(DEFAULT_BREAKDOWN);
                   }}
                 >
-                  Leave Review
+                  {t("clientReviews_btnLeaveReview")}
                 </Button>
               </div>
             </div>
@@ -146,15 +150,15 @@ export default function ReviewsClient({ initialJobs }: Props) {
         </div>
       )}
 
-      <Modal isOpen={reviewModal.open} onClose={resetModal} title="Leave a Review">
+      <Modal isOpen={reviewModal.open} onClose={resetModal} title={t("clientReviews_modalTitle")}>
         <div className="space-y-4">
           <p className="text-sm text-slate-600">
-            How was your experience with <strong>{reviewModal.job?.providerId?.name ?? "the provider"}</strong> on <strong>{reviewModal.job?.title}</strong>?
+            {t("clientReviews_modalPrompt", { provider: reviewModal.job?.providerId?.name ?? "the provider", job: reviewModal.job?.title ?? "" })}
           </p>
 
           {/* Overall star rating */}
           <div>
-            <p className="label mb-2">Overall Rating</p>
+            <p className="label mb-2">{t("clientReviews_labelOverall")}</p>
             <div className="flex items-center gap-1">
               {[1, 2, 3, 4, 5].map((star) => (
                 <button
@@ -170,19 +174,19 @@ export default function ReviewsClient({ initialJobs }: Props) {
                 </button>
               ))}
               <span className="ml-2 text-sm font-semibold text-slate-700">
-                {["Terrible","Poor","Average","Good","Excellent"][(hoveredRating || rating) - 1]}
+                {[t("clientReviews_ratingTerrible"),t("clientReviews_ratingPoor"),t("clientReviews_ratingAverage"),t("clientReviews_ratingGood"),t("clientReviews_ratingExcellent")][(hoveredRating || rating) - 1]}
               </span>
             </div>
           </div>
 
           {/* Sub-category breakdown */}
           <div className="rounded-xl border border-slate-100 bg-slate-50 p-4 space-y-3">
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Detailed Ratings</p>
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{t("clientReviews_detailedRatings")}</p>
             {([
-              { key: "quality",         label: "Quality" },
-              { key: "professionalism", label: "Professionalism" },
-              { key: "punctuality",     label: "Punctuality" },
-              { key: "communication",   label: "Communication" },
+              { key: "quality",         label: t("clientReviews_labelQuality") },
+              { key: "professionalism", label: t("clientReviews_labelProfessionalism") },
+              { key: "punctuality",     label: t("clientReviews_labelPunctuality") },
+              { key: "communication",   label: t("clientReviews_labelCommunication") },
             ] as { key: keyof typeof breakdown; label: string }[]).map(({ key, label }) => (
               <div key={key} className="flex items-center justify-between gap-2">
                 <span className="text-xs font-medium text-slate-600 min-w-[90px] sm:w-36 flex-shrink-0">{label}</span>
@@ -207,7 +211,7 @@ export default function ReviewsClient({ initialJobs }: Props) {
 
           <div>
             <label className="label block mb-1">
-              Feedback
+              {t("clientReviews_labelFeedback")}
               <span className={`ml-2 text-xs font-normal ${
                 feedback.trim().length < 10 ? "text-slate-400" : "text-emerald-600"
               }`}>
@@ -216,19 +220,19 @@ export default function ReviewsClient({ initialJobs }: Props) {
             </label>
             <textarea
               className="input w-full min-h-[100px] resize-none"
-              placeholder="Describe your experience with this provider..."
+              placeholder={t("clientReviews_feedbackPlaceholder")}
               value={feedback}
               maxLength={500}
               onChange={(e) => setFeedback(e.target.value)}
             />
             {feedback.trim().length > 0 && feedback.trim().length < 10 && (
-              <p className="text-xs text-red-500 mt-1">At least 10 characters required.</p>
+              <p className="text-xs text-red-500 mt-1">{t("clientReviews_feedbackMin")}</p>
             )}
           </div>
 
           <div className="flex flex-col-reverse sm:flex-row gap-3 sm:justify-end">
-            <Button variant="secondary" className="w-full sm:w-auto" onClick={resetModal}>Cancel</Button>
-            <Button className="w-full sm:w-auto" isLoading={isSubmitting} onClick={submitReview}>Submit Review</Button>
+            <Button variant="secondary" className="w-full sm:w-auto" onClick={resetModal}>{t("clientReviews_btnCancel")}</Button>
+            <Button className="w-full sm:w-auto" isLoading={isSubmitting} onClick={submitReview}>{t("clientReviews_btnSubmit")}</Button>
           </div>
         </div>
       </Modal>

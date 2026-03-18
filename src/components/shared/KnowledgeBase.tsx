@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { Search, ChevronRight, BookOpen } from "lucide-react";
 
 export interface KnowledgeArticleSummary {
@@ -17,6 +18,7 @@ interface Props {
 }
 
 export default function KnowledgeBase({ articles, basePath }: Props) {
+  const t = useTranslations("knowledgeBase");
   const [query, setQuery] = useState("");
 
   const filtered = useMemo(() => {
@@ -52,7 +54,7 @@ export default function KnowledgeBase({ articles, basePath }: Props) {
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search articles…"
+          placeholder={t("searchPlaceholder")}
           className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm bg-white outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition"
         />
       </div>
@@ -62,7 +64,7 @@ export default function KnowledgeBase({ articles, basePath }: Props) {
         <div className="flex flex-col items-center gap-3 py-16 text-slate-400">
           <BookOpen className="h-10 w-10 opacity-20" />
           <p className="text-sm">
-            {isSearching ? `No results for "${query}"` : "No articles available yet"}
+            {isSearching ? t("noResults", { query }) : t("noArticles")}
           </p>
         </div>
       )}
@@ -71,7 +73,7 @@ export default function KnowledgeBase({ articles, basePath }: Props) {
       {isSearching && filtered.length > 0 ? (
         <div className="space-y-2">
           <p className="text-xs text-slate-400 font-medium uppercase tracking-wider px-1">
-            {filtered.length} result{filtered.length !== 1 ? "s" : ""}
+            {filtered.length !== 1 ? t("resultCountPlural", { n: filtered.length }) : t("resultCount", { n: filtered.length })}
           </p>
           {filtered.map((a) => (
             <ArticleCard key={a._id} article={a} basePath={basePath} showGroup />

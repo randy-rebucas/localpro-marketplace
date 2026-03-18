@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useEffect, useState, useCallback, useRef } from "react";
 import Image from "next/image";
 import {
@@ -16,6 +17,7 @@ import { formatCurrency } from "@/lib/utils";
 import toast from "react-hot-toast";
 
 export default function AnalyticsClient() {
+  const t = useTranslations("clientPages");
   const [org, setOrg]           = useState<IBusinessOrganization | null>(null);
   const [expenses, setExpenses] = useState<MonthlyExpenseRow[]>([]);
   const [providers, setProviders] = useState<ProviderPerformanceRow[]>([]);
@@ -108,8 +110,8 @@ export default function AnalyticsClient() {
   if (!org) {
     return (
       <p className="text-slate-500 py-16 text-center">
-        No business profile found.{" "}
-        <a href="/client/business" className="text-primary underline">Create one first.</a>
+        {t("bizAnalytics_noOrg")}{" "}
+        <a href="/client/business" className="text-primary underline">{t("bizAnalytics_createFirst")}</a>
       </p>
     );
   }
@@ -123,11 +125,9 @@ export default function AnalyticsClient() {
           <Lock className="h-7 w-7 text-amber-500" />
         </div>
         <div className="space-y-2 max-w-md">
-          <h2 className="text-lg font-bold text-slate-800">Analytics &amp; Insights</h2>
+          <h2 className="text-lg font-bold text-slate-800">{t("bizAnalytics_upgradeTitle")}</h2>
           <p className="text-sm text-slate-500 leading-relaxed">
-            Expense reports, provider performance, and budget monitoring are available on the{" "}
-            <strong>Growth, Pro,</strong> and <strong>Enterprise</strong> plans.
-            Your current plan is <strong>{PLAN_LABELS[org.plan]}</strong>.
+            {t("bizAnalytics_upgradeBody", { plan: PLAN_LABELS[org.plan] })}
           </p>
         </div>
         <div className="flex flex-col sm:flex-row gap-3">
@@ -136,7 +136,7 @@ export default function AnalyticsClient() {
               href="/client/business/plan"
               className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary-700 transition-colors shadow-sm"
             >
-              Upgrade to {PLAN_LABELS[nextPlan]}
+              {t("bizAnalytics_upgradeTo", { plan: PLAN_LABELS[nextPlan] })}
               <ArrowUpRight className="h-4 w-4" />
             </a>
           )}
@@ -144,15 +144,15 @@ export default function AnalyticsClient() {
             href="/client/business"
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50 transition-colors"
           >
-            Back to Dashboard
+            {t("bizAnalytics_backToDash")}
           </a>
         </div>
         {/* Preview of what they'll unlock */}
         <div className="grid sm:grid-cols-3 gap-4 mt-4 w-full max-w-xl opacity-40 pointer-events-none select-none">
           {[
-            { icon: BarChart2, label: "Monthly Expense Breakdown" },
-            { icon: TrendingUp, label: "Provider Performance" },
-            { icon: FileText, label: "CSV Report Export" },
+            { icon: BarChart2, label: t("bizAnalytics_previewMonthly") },
+            { icon: TrendingUp, label: t("bizAnalytics_previewPerf") },
+            { icon: FileText, label: t("bizAnalytics_previewCsv") },
           ].map(({ icon: Icon, label }) => (
             <div key={label} className="flex flex-col items-center gap-2 p-4 bg-white rounded-xl border border-slate-200">
               <Icon className="h-6 w-6 text-slate-400" />
@@ -176,8 +176,8 @@ export default function AnalyticsClient() {
             <BarChart2 className="h-5 w-5 text-amber-600 dark:text-amber-400" />
           </div>
           <div>
-            <h1 className="text-base font-bold text-slate-800 dark:text-white">Analytics</h1>
-            <p className="text-xs text-slate-500 dark:text-slate-400">Expense trends and provider performance for {org.name}.</p>
+            <h1 className="text-base font-bold text-slate-800 dark:text-white">{t("bizAnalytics_heading")}</h1>
+            <p className="text-xs text-slate-500 dark:text-slate-400">{t("bizAnalytics_sub", { org: org.name })}</p>
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
@@ -186,10 +186,10 @@ export default function AnalyticsClient() {
             value={months}
             onChange={(e) => handleMonthsChange(Number(e.target.value))}
           >
-            <option value={3}>Last 3 months</option>
-            <option value={6}>Last 6 months</option>
-            <option value={12}>Last 12 months</option>
-            <option value={24}>Last 24 months</option>
+            <option value={3}>{t("bizAnalytics_last3mo")}</option>
+            <option value={6}>{t("bizAnalytics_last6mo")}</option>
+            <option value={12}>{t("bizAnalytics_last12mo")}</option>
+            <option value={24}>{t("bizAnalytics_last24mo")}</option>
           </select>
           <button
             onClick={() => setCompareMode((v) => !v)}
@@ -199,13 +199,13 @@ export default function AnalyticsClient() {
                 : "border-slate-200 text-slate-600 hover:bg-slate-50"
             }`}
           >
-            <BarChart2 className="h-4 w-4" /> Compare
+            <BarChart2 className="h-4 w-4" /> {t("bizAnalytics_compare")}
           </button>
           <button
             onClick={handleCsvDownload}
             className="btn-secondary flex items-center gap-1.5 text-sm"
           >
-            <Download className="h-4 w-4" /> Export CSV
+            <Download className="h-4 w-4" /> {t("bizAnalytics_exportCsv")}
           </button>
         </div>
       </div>
@@ -213,9 +213,9 @@ export default function AnalyticsClient() {
       {/* Summary KPIs */}
       <div className="grid sm:grid-cols-3 gap-4">
         {[
-          { label: "Total Spend",  value: formatCurrency(totalSpend), color: "text-blue-600",   bg: "bg-blue-50" },
-          { label: "Total Jobs",   value: totalJobs,                  color: "text-violet-600", bg: "bg-violet-50" },
-          { label: "Avg / Month",  value: formatCurrency(expenses.length > 0 ? totalSpend / expenses.length : 0), color: "text-emerald-600", bg: "bg-emerald-50" },
+          { label: t("bizAnalytics_totalSpend"),  value: formatCurrency(totalSpend), color: "text-blue-600",   bg: "bg-blue-50" },
+          { label: t("bizAnalytics_totalJobs"),   value: totalJobs,                  color: "text-violet-600", bg: "bg-violet-50" },
+          { label: t("bizAnalytics_avgPerMonth"), value: formatCurrency(expenses.length > 0 ? totalSpend / expenses.length : 0), color: "text-emerald-600", bg: "bg-emerald-50" },
         ].map((kpi) => (
           <div key={kpi.label} className="bg-white rounded-xl border border-slate-200 p-4 flex items-center gap-4">
             <div className={`${kpi.bg} p-2.5 rounded-lg`}>
@@ -235,13 +235,13 @@ export default function AnalyticsClient() {
           <div className="flex items-center justify-between">
             <h2 className="font-semibold text-slate-800 flex items-center gap-2">
               <BarChart2 className="h-4 w-4 text-primary" />
-              Provider Comparison
+              {t("bizAnalytics_comparisonTitle")}
             </h2>
             <button
               onClick={() => { setCompareMode(false); setCompareA(""); setCompareB(""); }}
               className="text-xs text-slate-400 hover:text-slate-600"
             >
-              Close
+              {t("bizAnalytics_close")}
             </button>
           </div>
           <div className="grid sm:grid-cols-2 gap-3">
@@ -252,14 +252,14 @@ export default function AnalyticsClient() {
               return (
                 <div key={side}>
                   <label className="text-xs font-medium text-slate-500 mb-1 block">
-                    Provider {side}
+                    {t("bizAnalytics_selectProviderSide", { side })}
                   </label>
                   <select
                     className="input text-sm w-full"
                     value={val}
                     onChange={(e) => setV(e.target.value)}
                   >
-                    <option value="">Select provider…</option>
+                    <option value="">{t("bizAnalytics_selectProvider")}</option>
                     {providers
                       .filter((p) => p.providerId !== other)
                       .map((p) => (
@@ -279,7 +279,7 @@ export default function AnalyticsClient() {
             if (!pA || !pB) {
               return (
                 <p className="text-sm text-slate-400 text-center py-4">
-                  Select two providers above to compare.
+                  {t("bizAnalytics_selectPrompt")}
                 </p>
               );
             }
@@ -291,12 +291,12 @@ export default function AnalyticsClient() {
               higherBetter: boolean;
               max?: number;
             }> = [
-              { label: "Jobs Completed",  a: pA.completedJobs,          b: pB.completedJobs,          fmt: (v) => v.toString(),         higherBetter: true  },
-              { label: "Avg Rating",      a: pA.avgRating,              b: pB.avgRating,              fmt: (v) => v.toFixed(1),         higherBetter: true, max: 5   },
-              { label: "On-Time Rate",    a: 100 - pA.delayFrequency,   b: 100 - pB.delayFrequency,   fmt: (v) => `${v.toFixed(0)}%`,   higherBetter: true, max: 100 },
-              { label: "Disputes",        a: pA.disputeCount,           b: pB.disputeCount,           fmt: (v) => v.toString(),         higherBetter: false },
-              { label: "Efficiency",      a: pA.costEfficiencyScore,    b: pB.costEfficiencyScore,    fmt: (v) => v.toString(),         higherBetter: true, max: 100 },
-              { label: "Total Spend",     a: pA.totalSpend,             b: pB.totalSpend,             fmt: (v) => formatCurrency(v),    higherBetter: false },
+              { label: t("bizAnalytics_jobsCompleted"),  a: pA.completedJobs,          b: pB.completedJobs,          fmt: (v) => v.toString(),         higherBetter: true  },
+              { label: t("bizAnalytics_avgRating"),      a: pA.avgRating,              b: pB.avgRating,              fmt: (v) => v.toFixed(1),         higherBetter: true, max: 5   },
+              { label: t("bizAnalytics_onTimeRate"),     a: 100 - pA.delayFrequency,   b: 100 - pB.delayFrequency,   fmt: (v) => `${v.toFixed(0)}%`,   higherBetter: true, max: 100 },
+              { label: t("bizAnalytics_disputes"),       a: pA.disputeCount,           b: pB.disputeCount,           fmt: (v) => v.toString(),         higherBetter: false },
+              { label: t("bizAnalytics_efficiency"),     a: pA.costEfficiencyScore,    b: pB.costEfficiencyScore,    fmt: (v) => v.toString(),         higherBetter: true, max: 100 },
+              { label: t("bizAnalytics_totalSpend"),     a: pA.totalSpend,             b: pB.totalSpend,             fmt: (v) => formatCurrency(v),    higherBetter: false },
             ];
             return (
               <div className="space-y-4 pt-2 border-t border-slate-100">
@@ -373,13 +373,13 @@ export default function AnalyticsClient() {
                     <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-lg p-3">
                       <CheckCircle className="h-4 w-4 text-emerald-600 flex-shrink-0" />
                       <p className="text-sm text-emerald-800">
-                        <strong>{winner.providerName}</strong> leads in {wins.a > wins.b ? wins.a : wins.b} of {metrics.length} metrics.
+                        {t("bizAnalytics_leadsIn", { name: winner.providerName, n: wins.a > wins.b ? wins.a : wins.b, total: metrics.length })}
                       </p>
                     </div>
                   ) : (
                     <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg p-3">
                       <AlertTriangle className="h-4 w-4 text-slate-400 flex-shrink-0" />
-                      <p className="text-sm text-slate-500">Tied — both providers are evenly matched.</p>
+                      <p className="text-sm text-slate-500">{t("bizAnalytics_tied")}</p>
                     </div>
                   );
                 })()}
@@ -391,9 +391,9 @@ export default function AnalyticsClient() {
 
       {/* ── Monthly expense bar chart with MoM arrows ── */}
       <div className="bg-white rounded-xl border border-slate-200 p-5">
-        <h2 className="font-semibold text-slate-800 mb-4">Monthly Expenses</h2>
+        <h2 className="font-semibold text-slate-800 mb-4">{t("bizAnalytics_monthlyExpenses")}</h2>
         {expenses.length === 0 ? (
-          <p className="text-sm text-slate-400 text-center py-8">No expense data for this period.</p>
+          <p className="text-sm text-slate-400 text-center py-8">{t("bizAnalytics_noExpenseData")}</p>
         ) : (
           <div className="space-y-2">
             {[...expenses].reverse().map((row) => {
@@ -445,27 +445,27 @@ export default function AnalyticsClient() {
       {/* ── Provider performance (enhanced) ── */}
       <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
         <div className="px-5 py-4 border-b border-slate-100">
-          <h2 className="font-semibold text-slate-800">Provider Performance</h2>
+          <h2 className="font-semibold text-slate-800">{t("bizAnalytics_providerPerf")}</h2>
           <p className="text-xs text-slate-500 mt-0.5">
-            Completed jobs across all org members. ★ marks preferred vendors.
+            {t("bizAnalytics_providerPerfSub")}
           </p>
         </div>
         {providers.length === 0 ? (
-          <p className="text-sm text-slate-400 text-center py-10">No completed jobs yet.</p>
+          <p className="text-sm text-slate-400 text-center py-10">{t("bizAnalytics_noJobs")}</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm min-w-[680px]">
               <thead className="bg-slate-50 border-b border-slate-100">
                 <tr>
                   <th className="text-left px-4 py-2.5 font-medium text-slate-600">#</th>
-                  <th className="text-left px-4 py-2.5 font-medium text-slate-600">Provider</th>
-                  <th className="text-right px-4 py-2.5 font-medium text-slate-600">Jobs</th>
-                  <th className="text-right px-4 py-2.5 font-medium text-slate-600">Rating</th>
-                  <th className="text-right px-4 py-2.5 font-medium text-slate-600">Total Spend</th>
-                  <th className="text-right px-4 py-2.5 font-medium text-slate-600">On-Time</th>
-                  <th className="text-right px-4 py-2.5 font-medium text-slate-600">Disputes</th>
-                  <th className="text-right px-4 py-2.5 font-medium text-slate-600">Efficiency</th>
-                  <th className="text-center px-4 py-2.5 font-medium text-slate-600">Preferred</th>
+                  <th className="text-left px-4 py-2.5 font-medium text-slate-600">{t("bizAnalytics_colProvider")}</th>
+                  <th className="text-right px-4 py-2.5 font-medium text-slate-600">{t("bizAnalytics_colJobs")}</th>
+                  <th className="text-right px-4 py-2.5 font-medium text-slate-600">{t("bizAnalytics_colRating")}</th>
+                  <th className="text-right px-4 py-2.5 font-medium text-slate-600">{t("bizAnalytics_colSpend")}</th>
+                  <th className="text-right px-4 py-2.5 font-medium text-slate-600">{t("bizAnalytics_colOnTime")}</th>
+                  <th className="text-right px-4 py-2.5 font-medium text-slate-600">{t("bizAnalytics_colDisputes")}</th>
+                  <th className="text-right px-4 py-2.5 font-medium text-slate-600">{t("bizAnalytics_colEfficiency")}</th>
+                  <th className="text-center px-4 py-2.5 font-medium text-slate-600">{t("bizAnalytics_colPreferred")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -485,7 +485,7 @@ export default function AnalyticsClient() {
                         <div className="min-w-0">
                           <p className="font-medium text-slate-800 truncate">{p.providerName}</p>
                           {p.isPreferred && (
-                            <span className="text-[10px] text-amber-600 font-semibold">★ Preferred</span>
+                            <span className="text-[10px] text-amber-600 font-semibold">{t("bizAnalytics_preferredBadge")}</span>
                           )}
                         </div>
                       </div>
@@ -530,7 +530,7 @@ export default function AnalyticsClient() {
                           togglePreferred(p.providerId, defaultLocationId, p.isPreferred)
                         }
                         disabled={togglingId === p.providerId || !defaultLocationId}
-                        title={p.isPreferred ? "Remove from preferred" : "Add to preferred"}
+                        title={p.isPreferred ? t("bizAnalytics_removePreferred") : t("bizAnalytics_addPreferred")}
                         className={`p-1.5 rounded transition-colors ${
                           p.isPreferred
                             ? "text-amber-500 hover:text-amber-600 bg-amber-50"
@@ -551,37 +551,37 @@ export default function AnalyticsClient() {
       {/* ── Download Reports ── */}
       <div className="bg-white rounded-xl border border-slate-200 p-5 space-y-4">
         <div>
-          <h2 className="font-semibold text-slate-800">Download Reports</h2>
+          <h2 className="font-semibold text-slate-800">{t("bizAnalytics_reportsTitle")}</h2>
           <p className="text-xs text-slate-400 mt-0.5">
-            Export expense and performance data for accounting or procurement review.
+            {t("bizAnalytics_reportsSub")}
           </p>
         </div>
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {[
             {
-              title: "Monthly Expense",
-              desc:  `Last ${months} months · All branches`,
+              title: t("bizAnalytics_rptMonthly"),
+              desc:  t("bizAnalytics_rptMonthlyDesc", { n: months }),
               href:  `/api/business/analytics/report?orgId=${orgId}&months=${months}`,
               icon:  FileText,
               color: "text-blue-600",    bg: "bg-blue-50",
             },
             {
-              title: "Per Branch",
-              desc:  "Spend breakdown by branch",
+              title: t("bizAnalytics_rptBranch"),
+              desc:  t("bizAnalytics_rptBranchDesc"),
               href:  `/api/business/analytics/report?orgId=${orgId}&months=${months}&type=branch`,
               icon:  FileText,
               color: "text-violet-600",  bg: "bg-violet-50",
             },
             {
-              title: "Per Provider",
-              desc:  "Jobs, ratings & spend per provider",
+              title: t("bizAnalytics_rptProvider"),
+              desc:  t("bizAnalytics_rptProviderDesc"),
               href:  `/api/business/analytics/report?orgId=${orgId}&months=${months}&type=providers`,
               icon:  Download,
               color: "text-emerald-600", bg: "bg-emerald-50",
             },
             {
-              title: "Per Category",
-              desc:  "Spend split by service category",
+              title: t("bizAnalytics_rptCategory"),
+              desc:  t("bizAnalytics_rptCategoryDesc"),
               href:  `/api/business/analytics/report?orgId=${orgId}&months=${months}&type=categories`,
               icon:  Download,
               color: "text-amber-600",   bg: "bg-amber-50",
@@ -605,7 +605,7 @@ export default function AnalyticsClient() {
           ))}
         </div>
         <p className="text-[11px] text-slate-400">
-          Reports include completed &amp; paid jobs only. Depth follows the selected time range above.
+          {t("bizAnalytics_reportFooter")}
         </p>
       </div>
     </div>

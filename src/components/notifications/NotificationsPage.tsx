@@ -8,13 +8,14 @@ import { useAuthStore } from "@/stores/authStore";
 import { getNotificationLink } from "@/lib/notificationLinks";
 import { formatDate, formatRelativeTime } from "@/lib/utils";
 import { NotifIcon } from "@/components/shared/notificationIcons";
+import { useTranslations } from "next-intl";
 import type { INotification } from "@/types";
 
 // ─── Date grouping ─────────────────────────────────────────────────────────────
 
 type Group = { label: string; items: INotification[] };
 
-function groupByDate(notifications: INotification[]): Group[] {
+function groupByDate(notifications: INotification[], labels: [string, string, string, string]): Group[] {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const yesterday = new Date(today);
@@ -23,10 +24,10 @@ function groupByDate(notifications: INotification[]): Group[] {
   weekAgo.setDate(weekAgo.getDate() - 7);
 
   const groups: Group[] = [
-    { label: "Today", items: [] },
-    { label: "Yesterday", items: [] },
-    { label: "This Week", items: [] },
-    { label: "Older", items: [] },
+    { label: labels[0], items: [] },
+    { label: labels[1], items: [] },
+    { label: labels[2], items: [] },
+    { label: labels[3], items: [] },
   ];
 
   for (const n of notifications) {
@@ -45,6 +46,7 @@ function groupByDate(notifications: INotification[]): Group[] {
 
 export default function NotificationsPage() {
   const router = useRouter();
+  const t = useTranslations("clientPages");
   const { user } = useAuthStore();
   const { notifications, unreadCount, hydrated, hydrate, markRead, markAllRead } =
     useNotificationStore();
@@ -63,7 +65,12 @@ export default function NotificationsPage() {
     );
   }
 
-  const groups = groupByDate(notifications);
+  const groups = groupByDate(notifications, [
+    t("clientNotif_groupToday"),
+    t("clientNotif_groupYesterday"),
+    t("clientNotif_groupThisWeek"),
+    t("clientNotif_groupOlder"),
+  ]);
 
   async function handleClick(n: INotification) {
     if (!n.readAt && n._id) {
@@ -89,8 +96,8 @@ export default function NotificationsPage() {
             )}
           </div>
           <div>
-            <h2 className="text-base font-bold text-slate-800 dark:text-white">Notifications</h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400">All your recent activity in one place.</p>
+            <h2 className="text-base font-bold text-slate-800 dark:text-white">{t("clientNotif_heading")}</h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400">{t("clientNotif_subheading")}</p>
           </div>
         </div>
         {unreadCount > 0 && (
@@ -98,7 +105,7 @@ export default function NotificationsPage() {
             onClick={() => markAllRead()}
             className="flex-shrink-0 h-8 px-3 rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
           >
-            Mark all read
+            {t("clientNotif_markAllRead")}
           </button>
         )}
       </div>
@@ -109,9 +116,9 @@ export default function NotificationsPage() {
           <div className="p-4 rounded-2xl bg-slate-100 dark:bg-slate-700 ring-8 ring-slate-100 dark:ring-slate-700 mb-5">
             <Bell className="h-7 w-7 text-slate-400 dark:text-slate-500" />
           </div>
-          <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">No notifications yet</p>
+          <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">{t("clientNotif_emptyTitle")}</p>
           <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 max-w-xs">
-            You&apos;ll see updates about your jobs, quotes, and payments here.
+            {t("clientNotif_emptyDesc")}
           </p>
         </div>
       )}

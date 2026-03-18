@@ -8,45 +8,48 @@ import {
 } from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
 import toast from "react-hot-toast";
-
-const BENEFITS = [
-  {
-    icon: <Users className="h-4.5 w-4.5 text-emerald-400" />,
-    title: "Agency Profile",
-    description: "List your agency on the marketplace with a team roster and branded profile.",
-  },
-  {
-    icon: <Briefcase className="h-4.5 w-4.5 text-emerald-400" />,
-    title: "Team Job Management",
-    description: "Assign jobs to team members and track progress across your crew.",
-  },
-  {
-    icon: <TrendingUp className="h-4.5 w-4.5 text-emerald-400" />,
-    title: "Bulk Quote Submissions",
-    description: "Submit quotes on behalf of your team with a single agency bid.",
-  },
-  {
-    icon: <ShieldCheck className="h-4.5 w-4.5 text-emerald-400" />,
-    title: "Agency Verified Badge",
-    description: "Stand out with a verified Agency badge that builds client trust.",
-  },
-  {
-    icon: <Star className="h-4.5 w-4.5 text-emerald-400" />,
-    title: "Consolidated Ratings",
-    description: "Agency-wide reputation score based on all team member reviews.",
-  },
-  {
-    icon: <Zap className="h-4.5 w-4.5 text-emerald-400" />,
-    title: "Priority Job Access",
-    description: "Get early access to high-value jobs before they open to individual providers.",
-  },
-];
+import { useTranslations } from "next-intl";
 
 export default function UpgradeAgencyClient({ userName }: { userName: string }) {
   const router = useRouter();
   const { fetchMe } = useAuthStore();
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
+
+  const t = useTranslations("upgradeAgency");
+
+  const BENEFITS = [
+    {
+      icon: <Users className="h-4.5 w-4.5 text-emerald-400" />,
+      title: t("benefitAgencyProfileTitle"),
+      description: t("benefitAgencyProfileDesc"),
+    },
+    {
+      icon: <Briefcase className="h-4.5 w-4.5 text-emerald-400" />,
+      title: t("benefitTeamJobsTitle"),
+      description: t("benefitTeamJobsDesc"),
+    },
+    {
+      icon: <TrendingUp className="h-4.5 w-4.5 text-emerald-400" />,
+      title: t("benefitBulkQuoteTitle"),
+      description: t("benefitBulkQuoteDesc"),
+    },
+    {
+      icon: <ShieldCheck className="h-4.5 w-4.5 text-emerald-400" />,
+      title: t("benefitBadgeTitle"),
+      description: t("benefitBadgeDesc"),
+    },
+    {
+      icon: <Star className="h-4.5 w-4.5 text-emerald-400" />,
+      title: t("benefitRatingsTitle"),
+      description: t("benefitRatingsDesc"),
+    },
+    {
+      icon: <Zap className="h-4.5 w-4.5 text-emerald-400" />,
+      title: t("benefitPriorityTitle"),
+      description: t("benefitPriorityDesc"),
+    },
+  ];
 
   async function handleActivate() {
     setLoading(true);
@@ -55,16 +58,16 @@ export default function UpgradeAgencyClient({ userName }: { userName: string }) 
       const data = await res.json();
 
       if (!res.ok) {
-        toast.error(data?.message ?? "Something went wrong. Please try again.");
+        toast.error(data?.message ?? t("toastNetworkError"));
         return;
       }
 
       setDone(true);
-      toast.success("🎉 Agency account activated!");
+      toast.success(t("toastActivated"));
       await fetchMe();
       setTimeout(() => router.push("/provider/dashboard"), 1_800);
     } catch {
-      toast.error("Network error. Please try again.");
+      toast.error(t("toastNetworkError"));
     } finally {
       setLoading(false);
     }
@@ -80,8 +83,8 @@ export default function UpgradeAgencyClient({ userName }: { userName: string }) 
           </div>
         </div>
         <div className="space-y-1.5">
-          <h1 className="text-2xl font-bold text-emerald-100">You&apos;re now an Agency!</h1>
-          <p className="text-slate-400 text-sm">Taking you to your dashboard…</p>
+          <h1 className="text-2xl font-bold text-emerald-100">{t("doneHeading")}</h1>
+          <p className="text-slate-400 text-sm">{t("doneSubheading")}</p>
         </div>
       </div>
     );
@@ -97,23 +100,22 @@ export default function UpgradeAgencyClient({ userName }: { userName: string }) 
         </div>
         <div className="space-y-1.5">
           <h1 className="text-2xl font-extrabold text-emerald-100 tracking-tight leading-tight">
-            Go Agency — It&apos;s Free
+            {t("heroHeading")}
           </h1>
           <p className="text-slate-200 text-sm leading-relaxed max-w-sm mx-auto">
-            Hi <span className="text-emerald-300 font-semibold">{userName}</span>! Scale your
-            services into a full agency. Manage a team, take on bigger jobs, and grow faster.
+            {t("heroBodyPrefix")} <span className="text-emerald-300 font-semibold">{userName}</span>{t("heroBodySuffix")}
           </p>
         </div>
         <div className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/25 px-3 py-1 rounded-full">
           <CheckCircle2 className="h-3 w-3" />
-          Always free — no hidden charges ever
+          {t("freeBadge")}
         </div>
       </div>
 
       {/* Benefits */}
       <div className="space-y-2">
         <p className="text-xs font-bold text-slate-400 uppercase tracking-widest px-0.5">
-          Everything included
+          {t("benefitsHeading")}
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           {BENEFITS.map((b) => (
@@ -149,13 +151,13 @@ export default function UpgradeAgencyClient({ userName }: { userName: string }) 
           ) : (
             <Sparkles className="h-4 w-4" />
           )}
-          <span>{loading ? "Activating…" : "Activate Agency Account for Free"}</span>
+          <span>{loading ? t("ctaActivating") : t("ctaActivate")}</span>
           {!loading && <ArrowRight className="h-4 w-4 ml-auto" />}
         </button>
         <p className="text-xs text-slate-400 text-center">
-          By activating, you agree to LocalPro&apos;s{" "}
-          <a href="/terms" className="underline hover:text-slate-200 transition-colors">Terms of Service</a>.
-          You can downgrade anytime from Settings.
+          {t("termsPrefix")}{" "}
+          <a href="/terms" className="underline hover:text-slate-200 transition-colors">{t("termsLink")}</a>.{" "}
+          {t("termsSuffix")}
         </p>
       </div>
 

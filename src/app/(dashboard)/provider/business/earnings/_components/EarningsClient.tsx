@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import {
   TrendingUp, DollarSign, Wallet, BarChart2, RefreshCw,
@@ -79,6 +80,7 @@ function RevenueTooltip({ active, payload, label }: { active?: boolean; payload?
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function EarningsClient() {
+  const t = useTranslations("providerPages");
   const [data, setData]         = useState<EarningsData | null>(null);
   const [loading, setLoading]   = useState(true);
   const [loadError, setLoadError] = useState(false);
@@ -92,7 +94,7 @@ export default function EarningsClient() {
       setData(res);
     } catch {
       setLoadError(true);
-      toast.error("Failed to load earnings.");
+      toast.error(t("provEarnings_errorLoad"));
     } finally {
       setLoading(false);
     }
@@ -122,10 +124,10 @@ export default function EarningsClient() {
     return (
       <div className="flex flex-col items-center justify-center py-24 gap-3 text-center">
         <AlertCircle className="h-10 w-10 text-red-300" />
-        <p className="font-semibold text-slate-700">Could not load earnings</p>
-        <p className="text-sm text-slate-400">There was a problem fetching your earnings data.</p>
+        <p className="font-semibold text-slate-700">{t("provEarnings_couldNotLoad")}</p>
+        <p className="text-sm text-slate-400">{t("provEarnings_errorDesc")}</p>
         <button onClick={() => load(months)} className="btn-primary mt-2 flex items-center gap-1.5">
-          <RefreshCw className="h-4 w-4" /> Try Again
+          <RefreshCw className="h-4 w-4" /> {t("provEarnings_tryAgain")}
         </button>
       </div>
     );
@@ -164,12 +166,12 @@ export default function EarningsClient() {
   const PIE_COLORS = ["#6366f1", "#10b981", "#f59e0b", "#3b82f6", "#ec4899", "#8b5cf6"];
 
   const KPI_CARDS = [
-    { label: "Gross All Time",      value: formatCurrency(totals?.grossAllTime     ?? 0), icon: TrendingUp, color: "text-emerald-600", bg: "bg-emerald-50", ring: "ring-emerald-100" },
-    { label: "Net All Time",        value: formatCurrency(totals?.netAllTime       ?? 0), icon: DollarSign, color: "text-blue-700",   bg: "bg-blue-50",   ring: "ring-blue-100"   },
-    { label: "This Month Gross",    value: formatCurrency(totals?.thisMonthGross   ?? 0), icon: BarChart2,  color: "text-sky-600",   bg: "bg-sky-50",    ring: "ring-sky-100"    },
-    { label: "This Month Net",      value: formatCurrency(totals?.thisMonthNet     ?? 0), icon: DollarSign, color: "text-blue-600",  bg: "bg-blue-50",   ring: "ring-blue-100"   },
-    { label: `Commission (${effectiveRate}%)`, value: formatCurrency(totals?.commissionPaid ?? 0), icon: BarChart2, color: "text-amber-600", bg: "bg-amber-50", ring: "ring-amber-100" },
-    { label: "Available to Withdraw", value: formatCurrency(totals?.availableBalance ?? 0), icon: Wallet, color: "text-violet-600", bg: "bg-violet-50", ring: "ring-violet-100" },
+    { label: t("provEarnings_kpiGrossAllTime"),                    value: formatCurrency(totals?.grossAllTime     ?? 0), icon: TrendingUp, color: "text-emerald-600", bg: "bg-emerald-50", ring: "ring-emerald-100" },
+    { label: t("provEarnings_kpiNetAllTime"),                      value: formatCurrency(totals?.netAllTime       ?? 0), icon: DollarSign, color: "text-blue-700",   bg: "bg-blue-50",   ring: "ring-blue-100"   },
+    { label: t("provEarnings_kpiThisMonthGross"),                  value: formatCurrency(totals?.thisMonthGross   ?? 0), icon: BarChart2,  color: "text-sky-600",   bg: "bg-sky-50",    ring: "ring-sky-100"    },
+    { label: t("provEarnings_kpiThisMonthNet"),                    value: formatCurrency(totals?.thisMonthNet     ?? 0), icon: DollarSign, color: "text-blue-600",  bg: "bg-blue-50",   ring: "ring-blue-100"   },
+    { label: t("provEarnings_kpiCommission", { rate: effectiveRate }), value: formatCurrency(totals?.commissionPaid ?? 0), icon: BarChart2, color: "text-amber-600", bg: "bg-amber-50", ring: "ring-amber-100" },
+    { label: t("provEarnings_kpiAvailable"),                        value: formatCurrency(totals?.availableBalance ?? 0), icon: Wallet, color: "text-violet-600", bg: "bg-violet-50", ring: "ring-violet-100" },
   ];
 
   return (
@@ -182,9 +184,9 @@ export default function EarningsClient() {
             <Wallet className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
           </div>
           <div>
-            <h1 className="text-base font-bold text-slate-800 dark:text-white">Agency Earnings</h1>
+            <h1 className="text-base font-bold text-slate-800 dark:text-white">{t("provEarnings_heading")}</h1>
             {data?.agencyName && (
-              <p className="text-xs text-slate-500 dark:text-slate-400">Revenue overview for {data.agencyName}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">{t("provEarnings_subheading", { name: data.agencyName })}</p>
             )}
           </div>
         </div>
@@ -194,9 +196,9 @@ export default function EarningsClient() {
             value={months}
             onChange={(e) => handleMonthsChange(Number(e.target.value))}
           >
-            <option value={3}>Last 3 months</option>
-            <option value={6}>Last 6 months</option>
-            <option value={12}>Last 12 months</option>
+            <option value={3}>{t("provEarnings_last3")}</option>
+            <option value={6}>{t("provEarnings_last6")}</option>
+            <option value={12}>{t("provEarnings_last12")}</option>
           </select>
           <button
             onClick={() => load(months)}
@@ -206,7 +208,7 @@ export default function EarningsClient() {
             <RefreshCw className="h-4 w-4" />
           </button>
           <Link href="/provider/payouts" className="btn-primary flex items-center gap-1.5">
-            <Wallet className="h-4 w-4" /> Withdraw
+            <Wallet className="h-4 w-4" /> {t("provEarnings_withdraw")}
           </Link>
         </div>
       </div>
@@ -228,22 +230,22 @@ export default function EarningsClient() {
       <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
         <div className="flex items-center gap-2 px-5 py-4 border-b border-slate-100">
           <TrendingUp className="h-4 w-4 text-slate-400" />
-          <h2 className="font-semibold text-slate-800 text-sm">Monthly Net Revenue</h2>
+          <h2 className="font-semibold text-slate-800 text-sm">{t("provEarnings_monthlyRevenue")}</h2>
           {momChange !== null && (
             <span className={`ml-2 text-xs font-semibold px-2 py-0.5 rounded-full ${
               momChange > 0 ? "bg-emerald-50 text-emerald-700" :
               momChange < 0 ? "bg-red-50 text-red-600" :
               "bg-slate-100 text-slate-500"
             }`}>
-              {momChange > 0 ? `+${momChange}%` : `${momChange}%`} vs last month
+              {momChange > 0 ? `+${momChange}%` : `${momChange}%`} {t("provEarnings_vsLastMonth")}
             </span>
           )}
-          <span className="ml-auto text-xs text-slate-400">After commission</span>
+          <span className="ml-auto text-xs text-slate-400">{t("provEarnings_afterCommission")}</span>
         </div>
         {monthlyData.every((r) => r.revenue === 0) ? (
           <div className="flex flex-col items-center gap-2 py-10 text-center">
             <BarChart2 className="h-7 w-7 text-slate-300" />
-            <p className="text-sm text-slate-400">No revenue data yet for this period</p>
+            <p className="text-sm text-slate-400">{t("provEarnings_noRevenueData")}</p>
           </div>
         ) : (
           <div className="px-4 pt-4 pb-3">
@@ -268,8 +270,8 @@ export default function EarningsClient() {
         <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
           <div className="flex items-center gap-2 px-5 py-4 border-b border-slate-100">
             <Tag className="h-4 w-4 text-slate-400" />
-            <h2 className="font-semibold text-slate-800 text-sm">Revenue by Category</h2>
-            <span className="ml-auto text-xs text-slate-400">Net · last 50 transactions</span>
+            <h2 className="font-semibold text-slate-800 text-sm">{t("provEarnings_revenueByCategory")}</h2>
+            <span className="ml-auto text-xs text-slate-400">{t("provEarnings_netLast50")}</span>
           </div>
           <div className="grid sm:grid-cols-2 gap-0 divide-y sm:divide-y-0 sm:divide-x divide-slate-100">
             {/* Bar list */}
@@ -329,29 +331,29 @@ export default function EarningsClient() {
       <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
           <div>
-            <h2 className="font-semibold text-slate-800">Transactions</h2>
-            <p className="text-xs text-slate-400 mt-0.5">All transactions for this agency (owner + staff) · last 50</p>
+            <h2 className="font-semibold text-slate-800">{t("provEarnings_transactions")}</h2>
+            <p className="text-xs text-slate-400 mt-0.5">{t("provEarnings_txSubheading")}</p>
           </div>
           <Link href="/provider/payouts" className="text-xs text-primary hover:underline flex items-center gap-1">
-            Payouts <ExternalLink className="h-3 w-3" />
+            {t("provEarnings_payouts")} <ExternalLink className="h-3 w-3" />
           </Link>
         </div>
         {txns.length === 0 ? (
           <div className="flex flex-col items-center gap-2 py-12 text-center">
             <DollarSign className="h-7 w-7 text-slate-300" />
-            <p className="text-sm text-slate-400">No transactions yet.</p>
+            <p className="text-sm text-slate-400">{t("provEarnings_noTransactions")}</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm min-w-[580px]">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-100 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-                  <th className="text-left px-5 py-3">Job</th>
-                  <th className="text-left px-5 py-3">Date</th>
-                  <th className="text-left px-5 py-3">Status</th>
-                  <th className="text-right px-5 py-3">Gross</th>
-                  <th className="text-right px-5 py-3">Commission</th>
-                  <th className="text-right px-5 py-3">Net</th>
+                  <th className="text-left px-5 py-3">{t("provEarnings_colJob")}</th>
+                  <th className="text-left px-5 py-3">{t("provEarnings_colDate")}</th>
+                  <th className="text-left px-5 py-3">{t("provEarnings_colStatus")}</th>
+                  <th className="text-right px-5 py-3">{t("provEarnings_colGross")}</th>
+                  <th className="text-right px-5 py-3">{t("provEarnings_colCommission")}</th>
+                  <th className="text-right px-5 py-3">{t("provEarnings_colNet")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">

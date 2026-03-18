@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import Image from "next/image";
 import dynamic from "next/dynamic";
+import { useTranslations } from "next-intl";
 import type { IAddress } from "@/types";
 import Card, { CardBody, CardFooter, CardHeader } from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
@@ -40,6 +41,7 @@ interface Props {
 
 export default function ProfileClient({ initialUser, initialJobCount }: Props) {
   const { user, setUser } = useAuthStore();
+  const t = useTranslations("clientPages");
 
   const [me, setMe] = useState<InitialClientUser>(initialUser);
   const [jobCount] = useState(initialJobCount);
@@ -309,10 +311,10 @@ export default function ProfileClient({ initialUser, initialJobCount }: Props) {
     if (/[A-Z]/.test(newPassword)) score++;
     if (/[0-9]/.test(newPassword)) score++;
     if (/[^A-Za-z0-9]/.test(newPassword)) score++;
-    if (score <= 1) return { label: "Weak", color: "bg-red-400", width: "w-1/4" };
-    if (score <= 2) return { label: "Fair", color: "bg-amber-400", width: "w-2/4" };
-    if (score <= 3) return { label: "Good", color: "bg-yellow-400", width: "w-3/4" };
-    return { label: "Strong", color: "bg-emerald-500", width: "w-full" };
+    if (score <= 1) return { label: t("profile_passStrengthWeak"),   color: "bg-red-400",    width: "w-1/4" };
+    if (score <= 2) return { label: t("profile_passStrengthFair"),   color: "bg-amber-400",  width: "w-2/4" };
+    if (score <= 3) return { label: t("profile_passStrengthGood"),   color: "bg-yellow-400", width: "w-3/4" };
+    return { label: t("profile_passStrengthStrong"), color: "bg-emerald-500", width: "w-full" };
   }, [newPassword]);
 
   const initials = useMemo(
@@ -341,18 +343,18 @@ export default function ProfileClient({ initialUser, initialJobCount }: Props) {
     <div className="space-y-6">
       <TourGuide
         pageKey="client-profile"
-        title="How My Profile works"
+        title={t("profile_tourTitle")}
         steps={[
-          { icon: "👤", title: "Update your info", description: "Keep your name and profile photo up to date so providers know who they're working with." },
-          { icon: "🔑", title: "Change password", description: "Update your password anytime in the Security section. You'll need your current password to confirm." },
-          { icon: "🛡️", title: "Upload KYC docs", description: "Verify your identity by uploading a valid government ID. This builds trust with providers." },
-          { icon: "📅", title: "Account history", description: "See your account creation date and verification status at a glance." },
+          { icon: "👤", title: t("profile_tourStep1Title"), description: t("profile_tourStep1Desc") },
+          { icon: "🔑", title: t("profile_tourStep2Title"), description: t("profile_tourStep2Desc") },
+          { icon: "🛡️", title: t("profile_tourStep3Title"), description: t("profile_tourStep3Desc") },
+          { icon: "📅", title: t("profile_tourStep4Title"), description: t("profile_tourStep4Desc") },
         ]}
       />
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-slate-900">My Profile</h2>
-          <p className="hidden sm:block text-sm text-slate-500 mt-1">Manage your account details, password, and saved addresses.</p>
+          <h2 className="text-xl sm:text-2xl font-bold text-slate-900">{t("profile_heading")}</h2>
+          <p className="hidden sm:block text-sm text-slate-500 mt-1">{t("profile_sub")}</p>
         </div>
         <div className="flex-shrink-0 text-right">
           <div className="flex items-center gap-2 justify-end mb-1">
@@ -392,7 +394,7 @@ export default function ProfileClient({ initialUser, initialJobCount }: Props) {
                 onClick={() => !uploadingAvatar && avatarInputRef.current?.click()}
                 className="relative h-24 w-24 rounded-full group focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                 disabled={uploadingAvatar}
-                title="Change profile picture"
+                title={t("profile_changePicTitle")}
               >
                 {me.avatar ? (
                   <Image
@@ -426,7 +428,7 @@ export default function ProfileClient({ initialUser, initialJobCount }: Props) {
                   </span>
                   {me.isVerified && (
                     <span className="inline-flex items-center gap-1 text-[11px] font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
-                      <ShieldCheck className="h-3 w-3" /> Verified
+                      <ShieldCheck className="h-3 w-3" /> {t("profile_verifiedBadge")}
                     </span>
                   )}
                 </div>
@@ -436,12 +438,12 @@ export default function ProfileClient({ initialUser, initialJobCount }: Props) {
               <div className="w-full grid grid-cols-2 divide-x divide-slate-100 border-t border-slate-100 pt-4">
                 <div className="text-center px-2">
                   <p className="text-2xl font-bold text-slate-900 leading-none">{jobCount}</p>
-                  <p className="text-xs text-slate-500 mt-1">Jobs posted</p>
+                  <p className="text-xs text-slate-500 mt-1">{t("profile_jobsPosted")}</p>
                 </div>
                 <div className="text-center px-2">
                   <CalendarDays className="h-5 w-5 text-slate-400 mx-auto" />
                   <p className="text-xs text-slate-500 mt-1">
-                    {me.createdAt ? `Since ${formatDate(me.createdAt)}` : "—"}
+                    {me.createdAt ? t("profile_since", { date: formatDate(me.createdAt) }) : "—"}
                   </p>
                 </div>
               </div>
@@ -461,12 +463,12 @@ export default function ProfileClient({ initialUser, initialJobCount }: Props) {
           <CardHeader>
             <div className="flex items-center gap-2">
               <User className="h-4 w-4 text-slate-400" />
-              <h3 className="text-sm font-semibold text-slate-700">Account details</h3>
+              <h3 className="text-sm font-semibold text-slate-700">{t("profile_accountSection")}</h3>
             </div>
           </CardHeader>
           <CardBody className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">Full name</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">{t("profile_fullNameLabel")}</label>
               <input
                 type="text"
                 value={name}
@@ -475,28 +477,28 @@ export default function ProfileClient({ initialUser, initialJobCount }: Props) {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">Phone number</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">{t("profile_phoneLabel")}</label>
               <PhoneInput
                 value={phone}
                 onChange={setPhone}
                 className="w-full"
               />
-              <p className="text-xs text-slate-400 mt-1">Used for job notifications and provider contact.</p>
+              <p className="text-xs text-slate-400 mt-1">{t("profile_phoneHint")}</p>
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">Email address</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">{t("profile_emailLabel")}</label>
               <input
                 type="email"
                 value={me.email}
                 disabled
                 className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-400 bg-slate-50 cursor-not-allowed"
               />
-              <p className="text-xs text-slate-400 mt-1">Email cannot be changed.</p>
+              <p className="text-xs text-slate-400 mt-1">{t("profile_emailHint")}</p>
             </div>
           </CardBody>
           <CardFooter className="flex justify-end">
             <Button type="submit" isLoading={savingName} size="md" disabled={!name.trim() || (phone.length > 0 && !isValidPhoneNumber(phone)) || (name === me.name && phone === (me.phone ?? ""))}>
-              Save changes
+              {t("profile_saveButton")}
             </Button>
           </CardFooter>
         </Card>
@@ -508,12 +510,12 @@ export default function ProfileClient({ initialUser, initialJobCount }: Props) {
           <CardHeader>
             <div className="flex items-center gap-2">
               <KeyRound className="h-4 w-4 text-slate-400" />
-              <h3 className="text-sm font-semibold text-slate-700">Change password</h3>
+              <h3 className="text-sm font-semibold text-slate-700">{t("profile_passwordSection")}</h3>
             </div>
           </CardHeader>
           <CardBody className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">Current password</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">{t("profile_currentPassLabel")}</label>
               <input
                 type="password"
                 value={currentPassword}
@@ -523,13 +525,13 @@ export default function ProfileClient({ initialUser, initialJobCount }: Props) {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">New password</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">{t("profile_newPassLabel")}</label>
               <input
                 type="password"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 autoComplete="new-password"
-                placeholder="Min. 8 characters"
+                placeholder={t("profile_passPlaceholder")}
                 className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
               />
               {passwordStrength && (
@@ -546,7 +548,7 @@ export default function ProfileClient({ initialUser, initialJobCount }: Props) {
               )}
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">Confirm new password</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">{t("profile_confirmPassLabel")}</label>
               <input
                 type="password"
                 value={confirmPassword}
@@ -559,7 +561,7 @@ export default function ProfileClient({ initialUser, initialJobCount }: Props) {
                 }`}
               />
               {confirmPassword && confirmPassword !== newPassword && (
-                <p className="text-[11px] text-red-500 mt-1">Passwords do not match</p>
+                <p className="text-[11px] text-red-500 mt-1">{t("profile_passMismatch")}</p>
               )}
             </div>
           </CardBody>
@@ -570,7 +572,7 @@ export default function ProfileClient({ initialUser, initialJobCount }: Props) {
               size="md"
               disabled={!currentPassword || !newPassword || !confirmPassword || confirmPassword !== newPassword}
             >
-              Change password
+              {t("profile_changePassButton")}
             </Button>
           </CardFooter>
         </Card>
@@ -583,18 +585,18 @@ export default function ProfileClient({ initialUser, initialJobCount }: Props) {
             <div className="flex items-center gap-2">
               <MapPin className="h-4 w-4 text-slate-400" />
               <div>
-                <h3 className="text-sm font-semibold text-slate-700">Saved addresses</h3>
-                <p className="text-xs text-slate-400 mt-0.5">Quick-fill your location when posting jobs.</p>
+                <h3 className="text-sm font-semibold text-slate-700">{t("profile_addressSection")}</h3>
+                <p className="text-xs text-slate-400 mt-0.5">{t("profile_addressSub")}</p>
               </div>
             </div>
-            <span className="text-xs text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">{addresses.length}/10</span>
+            <span className="text-xs text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">{t("profile_addressCounter", { n: addresses.length })}</span>
           </div>
         </CardHeader>
         <CardBody className="space-y-3">
 
           {addresses.length === 0 && !addingAddress && (
             <p className="text-sm text-slate-400 text-center py-4">
-              No saved addresses yet. Add one below.
+              {t("profile_addressEmpty")}
             </p>
           )}
           {addresses.map((addr) => (
@@ -612,7 +614,7 @@ export default function ProfileClient({ initialUser, initialJobCount }: Props) {
                   <span className="text-xs font-semibold text-slate-700">{addr.label}</span>
                   {addr.isDefault && (
                     <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
-                      Default
+                      {t("profile_addressDefaultBadge")}
                     </span>
                   )}
                 </div>
@@ -625,9 +627,9 @@ export default function ProfileClient({ initialUser, initialJobCount }: Props) {
                     onClick={() => handleSetDefault(addr._id)}
                     disabled={!!settingDefaultId || !!deletingAddressId}
                     className="text-[11px] font-medium text-slate-500 hover:text-primary disabled:opacity-40 transition-colors px-1.5 py-0.5 rounded"
-                    title="Set as default"
+                    title={t("profile_setDefaultTitle")}
                   >
-                    {settingDefaultId === addr._id ? "Saving…" : "Set default"}
+                    {settingDefaultId === addr._id ? t("profile_saving") : t("profile_setDefault")}
                   </button>
                 )}
                 <button
@@ -635,7 +637,7 @@ export default function ProfileClient({ initialUser, initialJobCount }: Props) {
                   onClick={() => handleDeleteAddress(addr._id)}
                   disabled={!!deletingAddressId || !!settingDefaultId}
                   className="p-1 text-slate-400 hover:text-red-500 disabled:opacity-40 transition-colors rounded"
-                  title="Remove address"
+                  title={t("profile_removeTitle")}
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>
@@ -647,29 +649,29 @@ export default function ProfileClient({ initialUser, initialJobCount }: Props) {
             <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-3 space-y-2.5">
               <div className="grid grid-cols-1 sm:grid-cols-[120px_1fr] gap-2">
                 <div>
-                  <label className="block text-xs font-medium text-slate-600 mb-1">Label</label>
+                  <label className="block text-xs font-medium text-slate-600 mb-1">{t("profile_labelField")}</label>
                   <input
                     value={newLabel}
                     onChange={(e) => setNewLabel(e.target.value)}
-                    placeholder="Home"
+                    placeholder={t("profile_labelPlaceholder")}
                     maxLength={50}
                     className="w-full rounded-md border border-slate-200 px-2.5 py-1.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
                   />
                 </div>
                 <div>
                   <div className="flex items-center justify-between mb-1">
-                    <label className="block text-xs font-medium text-slate-600">Street &amp; postal code</label>
+                    <label className="block text-xs font-medium text-slate-600">{t("profile_addressField")}</label>
                     <button
                       type="button"
                       onClick={detectCurrentLocation}
                       disabled={detectingLocation}
                       className="inline-flex items-center gap-1 text-[11px] font-medium text-primary hover:text-primary/80 disabled:opacity-50 transition-colors"
-                      title="Detect my current location"
+                      title={t("profile_detectButton")}
                     >
                       {detectingLocation
                         ? <Loader2 className="h-3 w-3 animate-spin" />
                         : <LocateFixed className="h-3 w-3" />}
-                      {detectingLocation ? "Detecting…" : "Use my location"}
+                      {detectingLocation ? t("profile_detectingButton") : t("profile_detectButton")}
                     </button>
                   </div>
                   <StructuredAddressInput
@@ -687,7 +689,7 @@ export default function ProfileClient({ initialUser, initialJobCount }: Props) {
                   onClick={() => { setAddingAddress(false); setNewAddressText(""); setNewAddressCoords(null); setNewLabel("Home"); }}
                   className="text-xs text-slate-500 hover:text-slate-700 px-2 py-1 rounded"
                 >
-                  Cancel
+                  {t("profile_cancelButton")}
                 </button>
                 <Button
                   type="button"
@@ -696,7 +698,7 @@ export default function ProfileClient({ initialUser, initialJobCount }: Props) {
                   onClick={handleAddAddress}
                   disabled={!newAddressText.trim()}
                 >
-                  Save address
+                  {t("profile_saveAddress")}
                 </Button>
               </div>
             </div>
@@ -707,7 +709,7 @@ export default function ProfileClient({ initialUser, initialJobCount }: Props) {
               className="w-full flex items-center justify-center gap-2 rounded-lg border border-dashed border-slate-300 py-2.5 text-sm text-slate-500 hover:text-primary hover:border-primary/50 transition-colors"
             >
               <Plus className="h-4 w-4" />
-              Add address
+              {t("profile_addAddress")}
             </button>
           ) : null}
         </CardBody>

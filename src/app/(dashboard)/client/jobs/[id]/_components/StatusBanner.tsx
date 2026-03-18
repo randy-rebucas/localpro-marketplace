@@ -1,5 +1,6 @@
 import { Clock, ShieldCheck, Zap, CheckCircle2, AlertTriangle, Ban, RefreshCcw } from "lucide-react";
 import type { JobStatus, EscrowStatus } from "@/types";
+import { getTranslations } from "next-intl/server";
 
 interface Props {
   status: JobStatus;
@@ -13,64 +14,66 @@ type BannerConfig = {
   className: string;
 };
 
-const BANNERS: Partial<Record<JobStatus, BannerConfig>> = {
-  pending_validation: {
-    icon: <Clock className="h-5 w-5 text-slate-500 flex-shrink-0 mt-0.5" />,
-    title: "Pending review",
-    body: "Your job is being reviewed by our team. It will go live for providers to quote once approved — usually within a few minutes.",
-    className: "bg-slate-50 border-slate-200",
-  },
-  open: {
-    icon: <Zap className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />,
-    title: "Waiting for quotes",
-    body: "Your job is live! Verified providers are reviewing it and will send quotes. Check back soon — quotes usually arrive within the hour.",
-    className: "bg-blue-50 border-blue-200",
-  },
-  assigned: {
-    icon: <ShieldCheck className="h-5 w-5 text-violet-500 flex-shrink-0 mt-0.5" />,
-    title: "Provider assigned — fund escrow to begin",
-    body: "You've accepted a quote. Fund escrow to officially kick off the job. Your payment is held securely and only released when you approve the completed work.",
-    className: "bg-violet-50 border-violet-200",
-  },
-  in_progress: {
-    icon: <Zap className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />,
-    title: "Work is underway",
-    body: "Your provider is actively working on the job. You'll be notified when they mark the job as complete.",
-    className: "bg-amber-50 border-amber-200",
-  },
-  completed: {
-    icon: <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />,
-    title: "Work completed — release payment when satisfied",
-    body: "The provider has marked this job as done. Review the work, then release the escrow payment. If there's an issue, raise a dispute instead.",
-    className: "bg-green-50 border-green-200",
-  },
-  disputed: {
-    icon: <AlertTriangle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />,
-    title: "Dispute in progress",
-    body: "A dispute has been raised. Our team is reviewing the case. Expect a resolution within 1–3 business days.",
-    className: "bg-red-50 border-red-200",
-  },
-  rejected: {
-    icon: <Ban className="h-5 w-5 text-slate-400 flex-shrink-0 mt-0.5" />,
-    title: "Job rejected",
-    body: "This job was rejected after review. Please contact support if you believe this was an error, or post a new job with updated details.",
-    className: "bg-slate-50 border-slate-200",
-  },
-  cancelled: {
-    icon: <Ban className="h-5 w-5 text-slate-400 flex-shrink-0 mt-0.5" />,
-    title: "Job cancelled",
-    body: "You closed this job. Any held escrow has been refunded. You can post a new job at any time.",
-    className: "bg-slate-50 border-slate-200",
-  },
-  refunded: {
-    icon: <RefreshCcw className="h-5 w-5 text-teal-500 flex-shrink-0 mt-0.5" />,
-    title: "Escrow refunded",
-    body: "The escrow funds for this job have been returned to your account. Contact support if you have any questions.",
-    className: "bg-teal-50 border-teal-200",
-  },
-};
+export async function StatusBanner({ status, escrowStatus }: Props) {
+  const t = await getTranslations("clientPages");
 
-export function StatusBanner({ status, escrowStatus }: Props) {
+  const BANNERS: Partial<Record<JobStatus, BannerConfig>> = {
+    pending_validation: {
+      icon: <Clock className="h-5 w-5 text-slate-500 flex-shrink-0 mt-0.5" />,
+      title: t("banner_pendingTitle"),
+      body: t("banner_pendingBody"),
+      className: "bg-slate-50 border-slate-200",
+    },
+    open: {
+      icon: <Zap className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />,
+      title: t("banner_openTitle"),
+      body: t("banner_openBody"),
+      className: "bg-blue-50 border-blue-200",
+    },
+    assigned: {
+      icon: <ShieldCheck className="h-5 w-5 text-violet-500 flex-shrink-0 mt-0.5" />,
+      title: t("banner_assignedTitle"),
+      body: t("banner_assignedBody"),
+      className: "bg-violet-50 border-violet-200",
+    },
+    in_progress: {
+      icon: <Zap className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />,
+      title: t("banner_inProgressTitle"),
+      body: t("banner_inProgressBody"),
+      className: "bg-amber-50 border-amber-200",
+    },
+    completed: {
+      icon: <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />,
+      title: t("banner_completedTitle"),
+      body: t("banner_completedBody"),
+      className: "bg-green-50 border-green-200",
+    },
+    disputed: {
+      icon: <AlertTriangle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />,
+      title: t("banner_disputedTitle"),
+      body: t("banner_disputedBody"),
+      className: "bg-red-50 border-red-200",
+    },
+    rejected: {
+      icon: <Ban className="h-5 w-5 text-slate-400 flex-shrink-0 mt-0.5" />,
+      title: t("banner_rejectedTitle"),
+      body: t("banner_rejectedBody"),
+      className: "bg-slate-50 border-slate-200",
+    },
+    cancelled: {
+      icon: <Ban className="h-5 w-5 text-slate-400 flex-shrink-0 mt-0.5" />,
+      title: t("banner_cancelledTitle"),
+      body: t("banner_cancelledBody"),
+      className: "bg-slate-50 border-slate-200",
+    },
+    refunded: {
+      icon: <RefreshCcw className="h-5 w-5 text-teal-500 flex-shrink-0 mt-0.5" />,
+      title: t("banner_refundedTitle"),
+      body: t("banner_refundedBody"),
+      className: "bg-teal-50 border-teal-200",
+    },
+  };
+
   // Assigned + already funded → override with in_progress-style message
   const key: JobStatus =
     status === "assigned" && escrowStatus === "funded" ? "in_progress" : status;

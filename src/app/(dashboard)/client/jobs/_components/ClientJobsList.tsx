@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import type { IJob, JobStatus } from "@/types";
 import ProviderInfoButton from "@/components/shared/ProviderInfoButtonLazy";
+import { useTranslations } from "next-intl";
 
 type JobWithProvider = IJob & {
   providerId?: { _id: string; name: string; email: string; isVerified: boolean };
@@ -18,50 +19,11 @@ type JobWithProvider = IJob & {
 
 type SortOption = "date_desc" | "date_asc" | "budget_high" | "budget_low";
 
-const SORT_OPTIONS: { label: string; value: SortOption }[] = [
-  { label: "Newest",     value: "date_desc" },
-  { label: "Oldest",     value: "date_asc" },
-  { label: "Budget ↑",  value: "budget_high" },
-  { label: "Budget ↓",  value: "budget_low" },
-];
-
 interface ClientJobsListProps {
   jobs: JobWithProvider[];
   quoteCountMap: Record<string, number>;
   fundedAmounts?: Record<string, number>;
 }
-
-/* ─── Tab definitions ─────────────────────────────────────────── */
-const TABS: { label: string; value: JobStatus | "all" }[] = [
-  { label: "All",          value: "all" },
-  { label: "Pending",      value: "pending_validation" },
-  { label: "Open",         value: "open" },
-  { label: "Assigned",     value: "assigned" },
-  { label: "In Progress",  value: "in_progress" },
-  { label: "Completed",    value: "completed" },
-  { label: "Disputed",     value: "disputed" },
-  { label: "Rejected",     value: "rejected" },
-  { label: "Refunded",     value: "refunded" },
-  { label: "Expired",      value: "expired" },
-  { label: "Cancelled",    value: "cancelled" },
-];
-
-/* ─── Progress lifecycle ──────────────────────────────────────── */
-const LIFECYCLE = ["Posted", "Open", "Assigned", "In Progress", "Done"] as const;
-
-const STATUS_STEP: Record<JobStatus | "all", number> = {
-  all: 0,
-  pending_validation: 1,
-  open: 2,
-  assigned: 3,
-  in_progress: 4,
-  completed: 5,
-  disputed: 4,
-  rejected: 2,
-  refunded: 3,
-  expired: 2,
-  cancelled: 0,
-};
 
 /* ─── Left-border accent per status ──────────────────────────── */
 const STATUS_BORDER: Record<JobStatus, string> = {
@@ -90,26 +52,69 @@ const STATUS_DOT: Record<JobStatus, string> = {
   cancelled:          "bg-slate-300",
 };
 
-/* ─── Friendly empty-tab messages ────────────────────────────── */
-const EMPTY_MESSAGES: Partial<Record<JobStatus | "all", string>> = {
-  open:       "No open jobs — your open jobs waiting for quotes will show up here.",
-  assigned:   "No assigned jobs yet — once you accept a quote, it appears here.",
-  in_progress:"No jobs in progress — funded jobs being worked on will show here.",
-  completed:  "No completed jobs yet — finished jobs build your review history!",
-  disputed:   "No disputes — great news!",
-};
-
 /* ─── Component ───────────────────────────────────────────────── */
 export default function ClientJobsList({
   jobs,
   quoteCountMap,
   fundedAmounts = {},
 }: ClientJobsListProps) {
+  const t = useTranslations("clientPages");
   const [activeTab,   setActiveTab]   = useState<JobStatus | "all">("all");
   const [search,      setSearch]      = useState("");
   const [sortBy,      setSortBy]      = useState<SortOption>("date_desc");
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [listKey,     setListKey]     = useState(0);
+
+  const SORT_OPTIONS: { label: string; value: SortOption }[] = [
+    { label: t("jobsList_sortNewest"),     value: "date_desc" },
+    { label: t("jobsList_sortOldest"),     value: "date_asc" },
+    { label: t("jobsList_sortBudgetHigh"), value: "budget_high" },
+    { label: t("jobsList_sortBudgetLow"),  value: "budget_low" },
+  ];
+
+  const TABS: { label: string; value: JobStatus | "all" }[] = [
+    { label: t("jobsList_tabAll"),        value: "all" },
+    { label: t("jobsList_tabPending"),    value: "pending_validation" },
+    { label: t("jobsList_tabOpen"),       value: "open" },
+    { label: t("jobsList_tabAssigned"),   value: "assigned" },
+    { label: t("jobsList_tabInProgress"), value: "in_progress" },
+    { label: t("jobsList_tabCompleted"),  value: "completed" },
+    { label: t("jobsList_tabDisputed"),   value: "disputed" },
+    { label: t("jobsList_tabRejected"),   value: "rejected" },
+    { label: t("jobsList_tabRefunded"),   value: "refunded" },
+    { label: t("jobsList_tabExpired"),    value: "expired" },
+    { label: t("jobsList_tabCancelled"),  value: "cancelled" },
+  ];
+
+  const LIFECYCLE = [
+    t("jobsList_lifecycle1"),
+    t("jobsList_lifecycle2"),
+    t("jobsList_lifecycle3"),
+    t("jobsList_lifecycle4"),
+    t("jobsList_lifecycle5"),
+  ] as const;
+
+  const STATUS_STEP: Record<JobStatus | "all", number> = {
+    all: 0,
+    pending_validation: 1,
+    open: 2,
+    assigned: 3,
+    in_progress: 4,
+    completed: 5,
+    disputed: 4,
+    rejected: 2,
+    refunded: 3,
+    expired: 2,
+    cancelled: 0,
+  };
+
+  const EMPTY_MESSAGES: Partial<Record<JobStatus | "all", string>> = {
+    open:       t("jobsList_emptyOpen"),
+    assigned:   t("jobsList_emptyAssigned"),
+    in_progress: t("jobsList_emptyInProgress"),
+    completed:  t("jobsList_emptyCompleted"),
+    disputed:   t("jobsList_emptyDisputed"),
+  };
 
   const switchTab = useCallback((tab: JobStatus | "all") => {
     setActiveTab(tab);
@@ -167,7 +172,7 @@ export default function ClientJobsList({
             <Briefcase className="h-4 w-4 text-primary" />
           </div>
           <div className="min-w-0">
-            <p className="text-xs text-slate-400 leading-none truncate">Total</p>
+            <p className="text-xs text-slate-400 leading-none truncate">{t("jobsList_totalLabel")}</p>
             <p className="text-lg sm:text-xl font-bold text-slate-900 leading-tight">{jobs.length}</p>
           </div>
         </div>
@@ -176,7 +181,7 @@ export default function ClientJobsList({
             <Zap className="h-4 w-4 text-amber-500" />
           </div>
           <div className="min-w-0">
-            <p className="text-xs text-slate-400 leading-none truncate">Active</p>
+            <p className="text-xs text-slate-400 leading-none truncate">{t("jobsList_activeLabel")}</p>
             <p className="text-lg sm:text-xl font-bold text-slate-900 leading-tight">{totalActive}</p>
           </div>
         </div>
@@ -185,7 +190,7 @@ export default function ClientJobsList({
             <MessageSquare className="h-4 w-4 text-blue-500" />
           </div>
           <div className="min-w-0">
-            <p className="text-xs text-slate-400 leading-none truncate">Quotes</p>
+            <p className="text-xs text-slate-400 leading-none truncate">{t("jobsList_quotesLabel")}</p>
             <p className="text-lg sm:text-xl font-bold text-slate-900 leading-tight">{totalQuotes}</p>
           </div>
         </div>
@@ -195,7 +200,7 @@ export default function ClientJobsList({
       {totalBudget > 0 && (
         <div className="flex items-center gap-2 rounded-xl bg-slate-50 border border-slate-200 px-4 py-2.5 text-sm text-slate-500">
           <CheckCircle2 className="h-4 w-4 text-slate-400 flex-shrink-0" />
-          Combined budget across active &amp; completed jobs:
+          {t("jobsList_combinedBudget")}
           <span className="font-semibold text-slate-800 ml-1">{formatCurrency(totalBudget)}</span>
         </div>
       )}
@@ -208,7 +213,7 @@ export default function ClientJobsList({
             type="text"
             value={search}
             onChange={(e) => { setSearch(e.target.value); setListKey((k) => k + 1); }}
-            placeholder="Search by title or category…"
+            placeholder={t("jobsList_searchPlaceholder")}
             className="w-full pl-9 pr-8 py-2 text-sm rounded-xl border border-slate-200 bg-white text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition"
           />
           {search && (
@@ -287,14 +292,16 @@ export default function ClientJobsList({
       {filtered.length === 0 ? (
         <div className="bg-white rounded-xl border border-slate-200 p-10 text-center space-y-2">
           <p className="text-slate-500 text-sm font-medium">
-            {EMPTY_MESSAGES[activeTab] ?? `No ${activeTab.replace(/_/g, " ")} jobs.`}
+            {activeTab === "all" && !search
+              ? t("jobsList_noJobsYet")
+              : (EMPTY_MESSAGES[activeTab] ?? t("jobsList_noMatchFilter"))}
           </p>
           {activeTab !== "all" && (
             <button
               onClick={() => switchTab("all")}
               className="text-xs text-primary hover:underline"
             >
-              View all jobs
+              {t("jobsList_viewAllJobs")}
             </button>
           )}
         </div>
@@ -355,7 +362,7 @@ export default function ClientJobsList({
                       {pendingQuotes > 0 && (
                         <span className="relative z-10 inline-flex items-center gap-1 text-xs font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
                           <MessageSquare className="h-3 w-3" />
-                          {pendingQuotes} quote{pendingQuotes !== 1 ? "s" : ""}
+                          {pendingQuotes === 1 ? t("jobsList_quoteLabel", { n: pendingQuotes }) : t("jobsList_quotesPlural", { n: pendingQuotes })}
                         </span>
                       )}
                     </div>
@@ -363,7 +370,7 @@ export default function ClientJobsList({
 
                   <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
                     <div className="text-right">
-                      <p className="text-[10px] text-slate-400">Budget</p>
+                      <p className="text-[10px] text-slate-400">{t("jobsList_budgetLabel")}</p>
                       <p className="text-base sm:text-xl font-bold text-slate-900">{formatCurrency(j.budget)}</p>
                     </div>
                     <JobStatusBadge status={j.status} />
@@ -396,7 +403,7 @@ export default function ClientJobsList({
                       {j.scheduleDate && (
                         <span className="flex items-center gap-1">
                           <Clock className="h-3 w-3 text-slate-400" />
-                          Scheduled: {formatDate(j.scheduleDate)}
+                          {t("jobsList_scheduled")} {formatDate(j.scheduleDate)}
                         </span>
                       )}
                       {j.urgency && j.urgency !== "standard" && (
@@ -404,7 +411,7 @@ export default function ClientJobsList({
                           j.urgency === "rush" ? "text-red-500" : "text-amber-500"
                         }`}>
                           <Zap className="h-3 w-3" />
-                          {j.urgency === "rush" ? "Rush" : "Same-day"} booking
+                          {j.urgency === "rush" ? t("jobsList_rushBooking") : t("jobsList_samedayBooking")}
                         </span>
                       )}
                       {j.specialInstructions && (
@@ -422,14 +429,14 @@ export default function ClientJobsList({
                   <div className="mt-3 flex items-center gap-2 rounded-lg bg-amber-50 border border-amber-100 px-4 py-2.5">
                     <ShieldCheck className="h-4 w-4 text-amber-500 flex-shrink-0" />
                     <span className="text-sm text-slate-600">
-                      Funded:{" "}
+                      {t("jobsList_fundedLabel")}{" "}
                       <span className="font-semibold text-slate-800">
                         {formatCurrency(fundedAmount)}
                       </span>
                     </span>
                     {fundedAmount !== j.budget && (
                       <span className="text-xs text-slate-400 line-through ml-1">
-                        {formatCurrency(j.budget)} budget
+                        {t("jobsList_budgetSuffix", { amount: formatCurrency(j.budget) })}
                       </span>
                     )}
                   </div>
@@ -479,7 +486,7 @@ export default function ClientJobsList({
                   <div className="mt-3 pt-3 border-t border-slate-100 flex items-center gap-1.5">
                     <div className={`h-2 w-2 rounded-full ${dotClass}`} />
                     <span className="text-xs text-slate-400 capitalize">
-                      {j.status.replace(/_/g, " ")} — contact support if you need assistance.
+                      {j.status.replace(/_/g, " ")} — {t("jobsList_contactSupport")}
                     </span>
                   </div>
                 )}

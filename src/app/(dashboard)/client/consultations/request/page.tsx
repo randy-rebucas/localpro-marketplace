@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { getCurrentUser } from "@/lib/auth";
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { RequestConsultationForm } from "../_components/RequestConsultationForm";
 import { loyaltyRepository } from "@/repositories";
@@ -15,6 +16,7 @@ export default async function RequestConsultationPage() {
   const loyaltyAccount = await loyaltyRepository.findByUserId(user.userId);
   const tierInfo = getClientTier(loyaltyAccount?.lifetimePoints ?? 0);
   const hasAIAccess = tierInfo.tier === "gold" || tierInfo.tier === "platinum";
+  const t = await getTranslations("clientPages");
 
   return (
     <div className="space-y-4">
@@ -23,7 +25,7 @@ export default async function RequestConsultationPage() {
           href="/client/consultations"
           className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-blue-600 transition-colors"
         >
-          ← Back to Consultations
+          {t("backToConsultations")}
         </Link>
       </div>
       <RequestConsultationForm userId={user.userId} hasAIAccess={hasAIAccess} />

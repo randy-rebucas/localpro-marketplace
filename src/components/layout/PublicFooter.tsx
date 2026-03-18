@@ -1,36 +1,38 @@
 import Link from "next/link";
 import { MapPin } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 
 const PLATFORM_LINKS = [
-  { href: "/register?role=client",   label: "Post a Job" },
-  { href: "/register?role=provider", label: "Become a Provider" },
-  { href: "/board",                  label: "Job Board" },
-  { href: "/login",                  label: "Log in" },
-  { href: "/register",               label: "Sign up" },
+  { href: "/register?role=client",   label: "postAJob" },
+  { href: "/register?role=provider", label: "becomeAProvider" },
+  { href: "/board",                  label: "jobBoard" },
+  { href: "/login",                  label: "logIn" },
+  { href: "/register",               label: "signUp" },
 ];
 
 const EXPLORE_LINKS = [
-  { href: "/jobs",          label: "Browse Jobs" },
-  { href: "/providers",     label: "Browse Providers" },
-  { href: "/refer",         label: "Refer & Earn" },
-  { href: "/peso-program",  label: "PESO Partnership" },
+  { href: "/jobs",          label: "browseJobs" },
+  { href: "/providers",     label: "browseProviders" },
+  { href: "/refer",         label: "referAndEarn" },
+  { href: "/peso-program",  label: "pesoPartnership" },
 ];
 
 const LEGAL_LINKS = [
-  { href: "/privacy",             label: "Privacy Policy" },
-  { href: "/terms",               label: "Terms of Service" },
-  { href: "/provider-agreement",  label: "Provider Agreement" },
-  { href: "/client-agreement",    label: "Client Agreement" },
-  { href: "/escrow-policy",       label: "Escrow Policy" },
-  { href: "/refund-policy",       label: "Refund Policy" },
-  { href: "/dispute-resolution",  label: "Dispute Resolution" },
+  { href: "/privacy",             label: "privacyPolicy" },
+  { href: "/terms",               label: "termsOfService" },
+  { href: "/provider-agreement",  label: "providerAgreement" },
+  { href: "/client-agreement",    label: "clientAgreement" },
+  { href: "/escrow-policy",       label: "escrowPolicy" },
+  { href: "/refund-policy",       label: "refundPolicy" },
+  { href: "/dispute-resolution",  label: "disputeResolution" },
 ];
 
 /**
  * Shared dark footer used across all public-facing pages.
  * Server Component — no client state needed.
  */
-export default function PublicFooter() {
+export default async function PublicFooter() {
+  const t = await getTranslations("publicFooter");
   return (
     <footer className="bg-slate-950 text-slate-400 py-10 sm:py-12 px-4">
       <div className="max-w-6xl mx-auto">
@@ -44,40 +46,40 @@ export default function PublicFooter() {
               </span>
             </div>
             <p className="text-xs text-slate-500 leading-relaxed">
-              The trusted marketplace connecting Filipino clients with verified local service professionals.
+              {t("tagline")}
             </p>
           </div>
 
           {/* Link columns */}
           <div className="flex flex-wrap gap-x-10 sm:gap-x-16 gap-y-8">
             <div>
-              <p className="text-xs font-semibold text-slate-300 uppercase tracking-wider mb-3">Platform</p>
+              <p className="text-xs font-semibold text-slate-300 uppercase tracking-wider mb-3">{t("columnPlatform")}</p>
               <ul className="space-y-2 text-sm">
                 {PLATFORM_LINKS.map((l) => (
                   <li key={l.href}>
-                    <Link href={l.href} className="hover:text-white transition-colors">{l.label}</Link>
+                    <Link href={l.href} className="hover:text-white transition-colors">{t(l.label)}</Link>
                   </li>
                 ))}
               </ul>
             </div>
 
             <div>
-              <p className="text-xs font-semibold text-slate-300 uppercase tracking-wider mb-3">Explore</p>
+              <p className="text-xs font-semibold text-slate-300 uppercase tracking-wider mb-3">{t("columnExplore")}</p>
               <ul className="space-y-2 text-sm">
                 {EXPLORE_LINKS.map((l) => (
                   <li key={l.href}>
-                    <Link href={l.href} className="hover:text-white transition-colors">{l.label}</Link>
+                    <Link href={l.href} className="hover:text-white transition-colors">{t(l.label)}</Link>
                   </li>
                 ))}
               </ul>
             </div>
 
             <div>
-              <p className="text-xs font-semibold text-slate-300 uppercase tracking-wider mb-3">Legal</p>
+              <p className="text-xs font-semibold text-slate-300 uppercase tracking-wider mb-3">{t("columnLegal")}</p>
               <ul className="space-y-2 text-sm">
                 {LEGAL_LINKS.map((l) => (
                   <li key={l.href}>
-                    <Link href={l.href} className="hover:text-white transition-colors">{l.label}</Link>
+                    <Link href={l.href} className="hover:text-white transition-colors">{t(l.label)}</Link>
                   </li>
                 ))}
               </ul>
@@ -87,8 +89,8 @@ export default function PublicFooter() {
 
         {/* Bottom strip */}
         <div className="border-t border-slate-800 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-600">
-          <p>© {new Date().getFullYear()} LocalPro. All rights reserved.</p>
-          <p>Made with ❤️ in the Philippines</p>
+          <p>{t("allRightsReserved", { year: new Date().getFullYear() })}</p>
+          <p>{t("madeWith")}</p>
         </div>
       </div>
     </footer>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useTranslations } from "next-intl";
 import toast from "react-hot-toast";
 import {
   ShieldCheck, ShieldX, Clock, Upload, ExternalLink,
@@ -9,74 +10,10 @@ import {
 } from "lucide-react";
 import { apiFetch } from "@/lib/fetchClient";
 
-const DOC_TYPES = [
-  {
-    value: "government_id",
-    label: "Government-issued ID",
-    hint: "UMID, Passport, or Driver's License",
-    required: true,
-    badge: { label: "Legit Badge", color: "text-blue-700 bg-blue-50 border-blue-200", icon: BadgeCheck },
-    note: "Unlocks identity verification alongside Selfie with ID",
-  },
-  {
-    value: "selfie_with_id",
-    label: "Selfie with ID",
-    hint: "Hold your government ID next to your face",
-    required: true,
-    badge: { label: "Legit Badge", color: "text-blue-700 bg-blue-50 border-blue-200", icon: BadgeCheck },
-    note: "Both ID + selfie required to earn the Legit badge",
-  },
-  {
-    value: "tesda_certificate",
-    label: "TESDA / NC Certificate",
-    hint: "TESDA Certificate or NC Certificate",
-    required: false,
-    badge: { label: "Verified Provider", color: "text-violet-700 bg-violet-50 border-violet-200", icon: Award },
-    note: "Proves your trade skills to potential clients",
-  },
-  {
-    value: "training_certificate",
-    label: "Training Certification",
-    hint: "Any professional training or skills cert",
-    required: false,
-    badge: { label: "Certified Pro", color: "text-indigo-700 bg-indigo-50 border-indigo-200", icon: GraduationCap },
-    note: "Highlights advanced training beyond standard qualifications",
-  },
-  {
-    value: "business_permit",
-    label: "Business Permit",
-    hint: "DTI Registration or Local Business Permit",
-    required: false,
-    badge: { label: "Business Verified", color: "text-emerald-700 bg-emerald-50 border-emerald-200", icon: Briefcase },
-    note: "Shows clients you run a legitimate registered business",
-  },
-  {
-    value: "bank_verification",
-    label: "Bank / E-Wallet Verification",
-    hint: "Bank statement, GCash, or Maya account screenshot",
-    required: false,
-    badge: { label: "Payment Verified", color: "text-teal-700 bg-teal-50 border-teal-200", icon: Wallet },
-    note: "Enables faster payouts and builds payout trust",
-  },
-  {
-    value: "background_check",
-    label: "Background Check",
-    hint: "NBI Clearance or Police Clearance",
-    required: false,
-    badge: { label: "Trusted Pro", color: "text-rose-700 bg-rose-50 border-rose-200", icon: UserCheck },
-    note: "Strongest trust signal — clients prefer background-checked providers",
-  },
-  {
-    value: "other",
-    label: "Other Document",
-    hint: "Any additional supporting document",
-    required: false,
-    badge: null,
-    note: null,
-  },
-] as const;
-
-type DocType = (typeof DOC_TYPES)[number]["value"];
+type DocType =
+  | "government_id" | "selfie_with_id" | "tesda_certificate"
+  | "training_certificate" | "business_permit" | "bank_verification"
+  | "background_check" | "other";
 
 interface KycDoc { type: string; url: string; uploadedAt: string; }
 interface KycState {
@@ -85,9 +22,82 @@ interface KycState {
   kycRejectionReason?: string | null;
 }
 
+type TFunc = ReturnType<typeof useTranslations>;
+
+function getDocTypes(t: TFunc) {
+  return [
+    {
+      value: "government_id" as DocType,
+      label: t("docTypeGovernmentId"),
+      hint: t("docTypeGovernmentIdHint"),
+      required: true,
+      badge: { label: t("badgeLegit"), color: "text-blue-700 bg-blue-50 border-blue-200", icon: BadgeCheck },
+      note: t("docNoteGovernmentId"),
+    },
+    {
+      value: "selfie_with_id" as DocType,
+      label: t("docTypeSelfie"),
+      hint: t("docTypeSelfieHint"),
+      required: true,
+      badge: { label: t("badgeLegit"), color: "text-blue-700 bg-blue-50 border-blue-200", icon: BadgeCheck },
+      note: t("docNoteSelfie"),
+    },
+    {
+      value: "tesda_certificate" as DocType,
+      label: t("docTypeTesda"),
+      hint: t("docTypeTesdaHint"),
+      required: false,
+      badge: { label: t("badgeVerifiedProvider"), color: "text-violet-700 bg-violet-50 border-violet-200", icon: Award },
+      note: t("docNoteTesda"),
+    },
+    {
+      value: "training_certificate" as DocType,
+      label: t("docTypeTraining"),
+      hint: t("docTypeTrainingHint"),
+      required: false,
+      badge: { label: t("badgeCertifiedPro"), color: "text-indigo-700 bg-indigo-50 border-indigo-200", icon: GraduationCap },
+      note: t("docNoteTraining"),
+    },
+    {
+      value: "business_permit" as DocType,
+      label: t("docTypeBusiness"),
+      hint: t("docTypeBusinessHint"),
+      required: false,
+      badge: { label: t("badgeBusinessVerified"), color: "text-emerald-700 bg-emerald-50 border-emerald-200", icon: Briefcase },
+      note: t("docNoteBusiness"),
+    },
+    {
+      value: "bank_verification" as DocType,
+      label: t("docTypeBank"),
+      hint: t("docTypeBankHint"),
+      required: false,
+      badge: { label: t("badgePaymentVerified"), color: "text-teal-700 bg-teal-50 border-teal-200", icon: Wallet },
+      note: t("docNoteBank"),
+    },
+    {
+      value: "background_check" as DocType,
+      label: t("docTypeBackground"),
+      hint: t("docTypeBackgroundHint"),
+      required: false,
+      badge: { label: t("badgeTrustedPro"), color: "text-rose-700 bg-rose-50 border-rose-200", icon: UserCheck },
+      note: t("docNoteBackground"),
+    },
+    {
+      value: "other" as DocType,
+      label: t("docTypeOther"),
+      hint: t("docTypeOtherHint"),
+      required: false,
+      badge: null,
+      note: null,
+    },
+  ];
+}
+
 const MAX_FILE_BYTES = 10 * 1024 * 1024; // 10 MB
 
 export default function KycUpload() {
+  const t = useTranslations("kycUpload");
+  const tCommon = useTranslations("common");
   const [state, setState] = useState<KycState | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   // Per-type: "idle" | "uploading" | "staged" | "submitting" | "done"
@@ -96,6 +106,8 @@ export default function KycUpload() {
   const [staged, setStaged] = useState<Partial<Record<DocType, string>>>({});
   const stateRef = useRef(state);
   useEffect(() => { stateRef.current = state; }, [state]);
+
+  const DOC_TYPES = getDocTypes(t);
 
   useEffect(() => {
     apiFetch("/api/kyc")
@@ -116,7 +128,7 @@ export default function KycUpload() {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
-    if (file.size > MAX_FILE_BYTES) { toast.error("File exceeds 10 MB limit"); return; }
+    if (file.size > MAX_FILE_BYTES) { toast.error(t("fileTooBig")); return; }
 
     setItem(type, "uploading");
     try {
@@ -128,9 +140,9 @@ export default function KycUpload() {
       if (!res.ok) throw new Error(data.error ?? "Upload failed");
       setStaged((prev) => ({ ...prev, [type]: data.url as string }));
       setItem(type, "staged");
-      toast.success("File ready — click Submit to save");
+      toast.success(t("fileReady"));
     } catch {
-      toast.error("Failed to upload file");
+      toast.error(t("fileUploadFailed"));
       setItem(type, null);
     }
   }
@@ -159,8 +171,8 @@ export default function KycUpload() {
         body: JSON.stringify({ documents: merged }),
       });
       const data = await res.json();
-      if (!res.ok) { toast.error(data.error ?? "Submission failed"); setItem(type, "staged"); return; }
-      toast.success(`${DOC_TYPES.find((d) => d.value === type)?.label} submitted!`);
+      if (!res.ok) { toast.error(data.error ?? t("submissionFailed")); setItem(type, "staged"); return; }
+      toast.success(t("docSubmitted", { label: DOC_TYPES.find((d) => d.value === type)?.label ?? type }));
       setState((prev) => ({
         kycStatus: prev?.kycStatus === "none" || prev?.kycStatus === "rejected" ? "pending" : (prev?.kycStatus ?? "pending"),
         kycDocuments: merged,
@@ -169,7 +181,7 @@ export default function KycUpload() {
       setStaged((prev) => { const n = { ...prev }; delete n[type]; return n; });
       setItem(type, null);
     } catch {
-      toast.error("Something went wrong");
+      toast.error(tCommon("somethingWentWrong"));
       setItem(type, "staged");
     }
   }
@@ -185,22 +197,22 @@ export default function KycUpload() {
       {/* ── Header ── */}
       <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
         <div>
-          <h3 className="text-sm font-semibold text-slate-800">Identity Verification (KYC)</h3>
-          <p className="text-xs text-slate-500 mt-0.5">Upload documents to build client trust and unlock more features</p>
+          <h3 className="text-sm font-semibold text-slate-800">{t("headerTitle")}</h3>
+          <p className="text-xs text-slate-500 mt-0.5">{t("headerSub")}</p>
         </div>
         {status === "approved" && (
           <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-green-700 bg-green-50 border border-green-200 rounded-full px-3 py-1">
-            <ShieldCheck className="h-3.5 w-3.5" /> Verified
+            <ShieldCheck className="h-3.5 w-3.5" /> {t("statusVerified")}
           </span>
         )}
         {status === "pending" && (
           <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-3 py-1">
-            <Clock className="h-3.5 w-3.5" /> Under Review
+            <Clock className="h-3.5 w-3.5" /> {t("statusPending")}
           </span>
         )}
         {status === "rejected" && (
           <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-red-700 bg-red-50 border border-red-200 rounded-full px-3 py-1">
-            <ShieldX className="h-3.5 w-3.5" /> Rejected
+            <ShieldX className="h-3.5 w-3.5" /> {t("statusRejected")}
           </span>
         )}
       </div>
@@ -209,20 +221,19 @@ export default function KycUpload() {
         {/* ── Status banners ── */}
         {status === "approved" && (
           <p className="text-sm text-green-700 bg-green-50 rounded-lg p-3">
-            ✅ Your identity has been verified. The verified badge is now visible on your profile.
+            {t("bannerApproved")}
           </p>
         )}
         {status === "pending" && (
           <p className="text-sm text-amber-700 bg-amber-50 rounded-lg p-3">
-            ⏳ Your documents are under review. This typically takes 1–2 business days.
-            You can still upload additional documents below to strengthen your application.
+            {t("bannerPending")}
           </p>
         )}
         {status === "rejected" && (
           <div className="text-sm text-red-700 bg-red-50 rounded-lg p-3">
-            <p className="font-medium">KYC Rejected</p>
+            <p className="font-medium">{t("bannerRejectedTitle")}</p>
             {state?.kycRejectionReason && <p className="mt-1 text-red-600">{state.kycRejectionReason}</p>}
-            <p className="mt-2 text-xs text-red-500">Re-upload the correct documents below and submit each one.</p>
+            <p className="mt-2 text-xs text-red-500">{t("bannerRejectedHint")}</p>
           </div>
         )}
 
@@ -230,7 +241,7 @@ export default function KycUpload() {
         <div className="flex items-center gap-2">
           <Award className="h-4 w-4 text-violet-500 flex-shrink-0" />
           <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">
-            Upload documents to earn badges and build client trust
+            {t("badgesLabel")}
           </p>
         </div>
 
@@ -282,7 +293,7 @@ export default function KycUpload() {
                     <div className="flex items-center flex-wrap gap-1.5">
                       <span className="text-sm font-medium text-slate-800 dark:text-slate-200">{dt.label}</span>
                       {dt.required && (
-                        <span className="text-[10px] font-semibold text-red-500 bg-red-50 border border-red-100 rounded px-1">Required</span>
+                        <span className="text-[10px] font-semibold text-red-500 bg-red-50 border border-red-100 rounded px-1">{t("docRequired")}</span>
                       )}
                       {dt.badge && (
                         <span className={`inline-flex items-center gap-1 text-[10px] font-semibold border rounded-full px-1.5 py-0.5 ${dt.badge.color}`}>
@@ -319,10 +330,10 @@ export default function KycUpload() {
                         : "border-primary/40 bg-primary/5 text-primary hover:bg-primary/10",
                     ].join(" ")}>
                       {isUploading
-                        ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Uploading…</>
+                        ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> {t("docUploading")}</>
                         : hasFile
-                        ? <><Upload className="h-3.5 w-3.5" /> Replace</>
-                        : <><Upload className="h-3.5 w-3.5" /> Upload</>
+                        ? <><Upload className="h-3.5 w-3.5" /> {t("docReplace")}</>
+                        : <><Upload className="h-3.5 w-3.5" /> {t("docUpload")}</>
                       }
                       <input type="file" className="hidden" accept="image/*,.pdf"
                         disabled={isUploading}
@@ -337,20 +348,20 @@ export default function KycUpload() {
                     <div className="flex items-center gap-2">
                       {/* Replace with different file */}
                       <label className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs font-medium text-slate-600 cursor-pointer hover:bg-slate-50 transition-colors">
-                        <Upload className="h-3.5 w-3.5" /> Replace
+                        <Upload className="h-3.5 w-3.5" /> {t("docReplace")}
                         <input type="file" className="hidden" accept="image/*,.pdf"
                           onChange={(e) => handleFileChange(dt.value, e)} />
                       </label>
                       {/* Discard */}
                       <button onClick={() => discardStaged(dt.value)}
                         className="inline-flex items-center gap-1 rounded-lg border border-red-200 px-2.5 py-1.5 text-xs font-medium text-red-500 hover:bg-red-50 transition-colors">
-                        <X className="h-3.5 w-3.5" /> Discard
+                        <X className="h-3.5 w-3.5" /> {t("docDiscard")}
                       </button>
                     </div>
                     {/* Submit this doc */}
                     <button onClick={() => submitDoc(dt.value)}
                       className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-white hover:bg-primary/90 transition-colors">
-                      <Send className="h-3.5 w-3.5" /> Submit document
+                      <Send className="h-3.5 w-3.5" /> {t("docSubmit")}
                     </button>
                   </div>
                 )}
@@ -358,7 +369,7 @@ export default function KycUpload() {
                 {/* Submitting overlay row */}
                 {isSubmitting && (
                   <div className="flex items-center gap-2 mt-3 pt-3 border-t border-primary/10 text-xs text-primary font-medium">
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" /> Submitting…
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" /> {t("docSubmitting")}
                   </div>
                 )}
               </div>
@@ -368,7 +379,7 @@ export default function KycUpload() {
 
         {canUpload && (
           <p className="text-xs text-slate-400 text-center">
-            Accepted formats: JPG, PNG, PDF · Max 10 MB per file · Each document is submitted individually
+            {t("footerNote")}
           </p>
         )}
       </div>

@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 import BundleAnalyzer from "@next/bundle-analyzer";
 import { withSentryConfig } from "@sentry/nextjs";
+import createNextIntlPlugin from "next-intl/plugin";
+
+const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
 const withBundleAnalyzer = BundleAnalyzer({
   enabled: process.env.ANALYZE === "true",
@@ -88,7 +91,7 @@ const nextConfig: NextConfig = {
   },
 };
 
-const withAnalyzer = withBundleAnalyzer(nextConfig);
+const withAnalyzer = withBundleAnalyzer(withNextIntl(nextConfig));
 
 export default withSentryConfig(withAnalyzer, {
   // Sentry organisation and project (set in CI / Vercel env)

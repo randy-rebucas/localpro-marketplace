@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import toast from "react-hot-toast";
 import Image from "next/image";
 import Link from "next/link";
@@ -49,27 +50,6 @@ interface Props {
   initialProfile: ProfileData;
 }
 
-const AVAILABILITY_CONFIG: Record<
-  AvailabilityStatus,
-  { label: string; dot: string; active: string }
-> = {
-  available: {
-    label: "Available",
-    dot: "bg-green-500",
-    active: "border-green-500 bg-green-50 text-green-700",
-  },
-  busy: {
-    label: "Busy",
-    dot: "bg-yellow-500",
-    active: "border-yellow-500 bg-yellow-50 text-yellow-700",
-  },
-  unavailable: {
-    label: "Unavailable",
-    dot: "bg-slate-400",
-    active: "border-slate-400 bg-slate-100 text-slate-600",
-  },
-};
-
 function StarRating({ value }: { value: number }) {
   return (
     <span className="inline-flex gap-0.5">
@@ -88,6 +68,27 @@ function StarRating({ value }: { value: number }) {
 }
 
 export default function ProfileClient({ initialProfile }: Props) {
+  const t = useTranslations("providerPages");
+  const AVAILABILITY_CONFIG: Record<
+    AvailabilityStatus,
+    { label: string; dot: string; active: string }
+  > = {
+    available: {
+      label: t("provProfile_availAvailable"),
+      dot: "bg-green-500",
+      active: "border-green-500 bg-green-50 text-green-700",
+    },
+    busy: {
+      label: t("provProfile_availBusy"),
+      dot: "bg-yellow-500",
+      active: "border-yellow-500 bg-yellow-50 text-yellow-700",
+    },
+    unavailable: {
+      label: t("provProfile_availUnavailable"),
+      dot: "bg-slate-400",
+      active: "border-slate-400 bg-slate-100 text-slate-600",
+    },
+  };
   const { user, setUser } = useAuthStore();
   const [profile, setProfile] = useState<ProfileData>(initialProfile);
   const [copiedLink, setCopiedLink] = useState(false);
@@ -99,7 +100,7 @@ export default function ProfileClient({ initialProfile }: Props) {
     } else {
       await navigator.clipboard.writeText(url);
       setCopiedLink(true);
-      toast.success("Profile link copied!");
+      toast.success(t("provProfile_toastLinkCopied"));
       setTimeout(() => setCopiedLink(false), 2000);
     }
   }
@@ -149,10 +150,10 @@ export default function ProfileClient({ initialProfile }: Props) {
     e.target.value = "";
     if (!file) return;
     if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
-      toast.error("Only JPEG, PNG and WEBP images are allowed");
+      toast.error(t("provProfile_toastInvalidFileType"));
       return;
     }
-    if (file.size > 8 * 1024 * 1024) { toast.error("Image must be under 8 MB"); return; }
+    if (file.size > 8 * 1024 * 1024) { toast.error(t("provProfile_toastFileTooLarge")); return; }
 
     setUploadingAvatar(true);
     try {
@@ -161,7 +162,7 @@ export default function ProfileClient({ initialProfile }: Props) {
       form.append("folder", "avatars");
       const uploadRes = await apiFetch("/api/upload", { method: "POST", body: form });
       const uploadData = await uploadRes.json();
-      if (!uploadRes.ok) { toast.error(uploadData.error ?? "Upload failed"); return; }
+      if (!uploadRes.ok) { toast.error(uploadData.error ?? t("provProfile_toastUploadFailed")); return; }
 
       const saveRes = await apiFetch("/api/auth/me", {
         method: "PUT",
@@ -169,11 +170,11 @@ export default function ProfileClient({ initialProfile }: Props) {
         body: JSON.stringify({ avatar: uploadData.url }),
       });
       const saveData = await saveRes.json();
-      if (!saveRes.ok) { toast.error(saveData.error ?? "Failed to save avatar"); return; }
+      if (!saveRes.ok) { toast.error(saveData.error ?? t("provProfile_toastAvatarSaveFailed")); return; }
 
       setAvatar(saveData.avatar);
       if (user) setUser({ ...user, avatar: saveData.avatar });
-      toast.success("Profile picture updated!");
+      toast.success(t("provProfile_toastAvatarUpdated"));
     } finally {
       setUploadingAvatar(false);
     }
@@ -181,7 +182,7 @@ export default function ProfileClient({ initialProfile }: Props) {
 
   async function saveProfile() {
     if (phone && !isValidPhoneNumber(phone)) {
-      toast.error("Please enter a valid phone number.");
+      toast.error(t("provProfile_toastInvalidPhone"));
       return;
     }
     setSaving(true);
@@ -208,19 +209,19 @@ export default function ProfileClient({ initialProfile }: Props) {
 
       if (!res.ok) {
         const err = await res.json();
-        toast.error(err.error ?? "Failed to save profile");
+        toast.error(err.error ?? t("provProfile_toastProfileSaveFailed"));
         return;
       }
       if (!phoneRes.ok) {
         const phErr = await phoneRes.json();
-        toast.error(phErr.error ?? "Failed to save phone number");
+        toast.error(phErr.error ?? t("provProfile_toastPhoneSaveFailed"));
         return;
       }
 
       const updated = await res.json();
       setProfile(updated);
       if (user) setUser({ ...user, phone: phone || null });
-      toast.success("Profile saved!");
+      toast.success(t("provProfile_toastProfileSaved"));
     } finally {
       setSaving(false);
     }
@@ -236,9 +237,9 @@ export default function ProfileClient({ initialProfile }: Props) {
     try {
       const res = await apiFetch("/api/providers/profile/generate-bio", { method: "POST" });
       const data = await res.json();
-      if (!res.ok) { toast.error(data.error ?? "Failed to generate bio"); return; }
+      if (!res.ok) { toast.error(data.error ?? t("provProfile_toastBioFailed")); return; }
       setBio(data.bio);
-      toast.success("Bio generated! Review and save when ready.");
+      toast.success(t("provProfile_toastBioGenerated"));
     } finally {
       setGeneratingBio(false);
     }
@@ -254,13 +255,13 @@ export default function ProfileClient({ initialProfile }: Props) {
         body: JSON.stringify({ bio, existingSkills: skills }),
       });
       const data = await res.json();
-      if (!res.ok) { toast.error(data.error ?? "Failed to get skill suggestions"); return; }
+      if (!res.ok) { toast.error(data.error ?? t("provProfile_toastSkillsFailed")); return; }
       const existingSet = new Set(skills.map((x) => x.toLowerCase()));
       const newSuggestions = (data.skills as string[]).filter(
         (s) => !existingSet.has(s.toLowerCase())
       );
       if (newSuggestions.length === 0) {
-        toast("All suggested skills are already added!", { icon: "✅" });
+        toast(t("provProfile_toastSkillsAllAdded"), { icon: "✅" });
       } else {
         setSkillSuggestions(newSuggestions);
       }
@@ -271,7 +272,7 @@ export default function ProfileClient({ initialProfile }: Props) {
 
   async function detectCurrentLocation() {
     if (!("geolocation" in navigator)) {
-      toast.error("Geolocation is not supported by your browser");
+      toast.error(t("provProfile_toastGeoNotSupported"));
       return;
     }
     setDetectingLocation(true);
@@ -316,7 +317,7 @@ export default function ProfileClient({ initialProfile }: Props) {
         }
         setNewAddressText(resolved || `${lat.toFixed(6)}, ${lng.toFixed(6)}`);
         setNewAddressCoords({ lat, lng });
-        toast.success("Location detected!");
+        toast.success(t("provProfile_toastLocationDetected"));
       } else {
         try {
           const r = await fetch("https://ipapi.co/json/");
@@ -328,7 +329,7 @@ export default function ProfileClient({ initialProfile }: Props) {
         } catch { /* ignore */ }
         setNewAddressText(resolved || `${lat.toFixed(4)}, ${lng.toFixed(4)}`);
         setNewAddressCoords(null);
-        toast("Approximate area detected — please refine your exact address.", {
+        toast(t("provProfile_toastLocationApprox"), {
           icon: "⚠️",
           duration: 5000,
         });
@@ -336,9 +337,9 @@ export default function ProfileClient({ initialProfile }: Props) {
     } catch (e: unknown) {
       const err = e as { code?: number };
       if (err.code === 1)
-        toast.error("Location access denied. Enable it in your browser settings.");
+        toast.error(t("provProfile_toastLocationDenied"));
       else
-        toast.error("Could not detect your location. Try typing it manually.");
+        toast.error(t("provProfile_toastLocationFailed"));
     } finally {
       setDetectingLocation(false);
     }
@@ -359,14 +360,14 @@ export default function ProfileClient({ initialProfile }: Props) {
         }),
       });
       const data = await res.json();
-      if (!res.ok) { toast.error(data.error ?? "Failed to add address"); return; }
+      if (!res.ok) { toast.error(data.error ?? t("provProfile_toastAddressFailed")); return; }
       setAddresses(data);
       if (user) setUser({ ...user, addresses: data });
       setNewAddressText("");
       setNewAddressCoords(null);
       setNewLabel("Home");
       setAddingAddress(false);
-      toast.success("Address saved!");
+      toast.success(t("provProfile_toastAddressSaved"));
     } finally {
       setSavingAddress(false);
     }
@@ -378,10 +379,10 @@ export default function ProfileClient({ initialProfile }: Props) {
     try {
       const res = await apiFetch(`/api/auth/me/addresses/${id}`, { method: "DELETE" });
       const data = await res.json();
-      if (!res.ok) { toast.error(data.error ?? "Failed to remove address"); return; }
+      if (!res.ok) { toast.error(data.error ?? t("provProfile_toastAddressRemoveFailed")); return; }
       setAddresses(data);
       if (user) setUser({ ...user, addresses: data });
-      toast.success("Address removed");
+      toast.success(t("provProfile_toastAddressRemoved"));
     } finally {
       setDeletingAddressId(null);
     }
@@ -397,7 +398,7 @@ export default function ProfileClient({ initialProfile }: Props) {
         body: JSON.stringify({ isDefault: true }),
       });
       const data = await res.json();
-      if (!res.ok) { toast.error(data.error ?? "Failed to update"); return; }
+      if (!res.ok) { toast.error(data.error ?? t("provProfile_toastAddressUpdateFailed")); return; }
       setAddresses(data);
       if (user) setUser({ ...user, addresses: data });
     } finally {
@@ -407,7 +408,7 @@ export default function ProfileClient({ initialProfile }: Props) {
 
   async function detectServiceAreaLocation() {
     if (!("geolocation" in navigator)) {
-      toast.error("Geolocation is not supported by your browser");
+      toast.error(t("provProfile_toastGeoNotSupported"));
       return;
     }
     setDetectingArea(true);
@@ -451,7 +452,7 @@ export default function ProfileClient({ initialProfile }: Props) {
         }
         setNewAreaText(resolved || `${lat.toFixed(6)}, ${lng.toFixed(6)}`);
         setNewAreaCoords({ lat, lng });
-        toast.success("Location detected!");
+        toast.success(t("provProfile_toastLocationDetected"));
       } else {
         try {
           const r = await fetch("https://ipapi.co/json/");
@@ -462,12 +463,12 @@ export default function ProfileClient({ initialProfile }: Props) {
         } catch { /* ignore */ }
         setNewAreaText(resolved || `${lat.toFixed(4)}, ${lng.toFixed(4)}`);
         setNewAreaCoords(null);
-        toast("Approximate area detected — please refine if needed.", { icon: "⚠️", duration: 5000 });
+        toast(t("provProfile_toastAreaApprox"), { icon: "⚠️", duration: 5000 });
       }
     } catch (e: unknown) {
       const err = e as { code?: number };
-      if (err.code === 1) toast.error("Location access denied. Enable it in your browser settings.");
-      else toast.error("Could not detect your location. Try typing it manually.");
+      if (err.code === 1) toast.error(t("provProfile_toastLocationDenied"));
+      else toast.error(t("provProfile_toastLocationFailed"));
     } finally {
       setDetectingArea(false);
     }
@@ -488,13 +489,13 @@ export default function ProfileClient({ initialProfile }: Props) {
         }),
       });
       const data = await res.json();
-      if (!res.ok) { toast.error(data.error ?? "Failed to add service area"); return; }
+      if (!res.ok) { toast.error(data.error ?? t("provProfile_toastAreaFailed")); return; }
       setServiceAreas(data);
       setNewAreaText("");
       setNewAreaCoords(null);
       setNewAreaLabel("");
       setAddingArea(false);
-      toast.success("Service area saved!");
+      toast.success(t("provProfile_toastAreaSaved"));
     } finally {
       setSavingArea(false);
     }
@@ -503,9 +504,9 @@ export default function ProfileClient({ initialProfile }: Props) {
   async function handleDeleteServiceArea(id: string) {
     const res = await apiFetch(`/api/providers/profile/service-areas/${id}`, { method: "DELETE" });
     const data = await res.json();
-    if (!res.ok) { toast.error(data.error ?? "Failed to remove service area"); return; }
+    if (!res.ok) { toast.error(data.error ?? t("provProfile_toastAreaRemoveFailed")); return; }
     setServiceAreas(data);
-    toast.success("Service area removed");
+    toast.success(t("provProfile_toastAreaRemoved"));
   }
 
   // ── Memoised derived values ────────────────────────────────────────────────
@@ -542,9 +543,9 @@ export default function ProfileClient({ initialProfile }: Props) {
       {/* Page heading */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-slate-900">My Profile</h2>
+          <h2 className="text-xl sm:text-2xl font-bold text-slate-900">{t("provProfile_pageTitle")}</h2>
           <p className="hidden sm:block text-sm text-slate-500 mt-1">
-            Clients see this when you submit a quote.
+            {t("provProfile_pageSub")}
           </p>
         </div>
         <div className="flex flex-col items-end gap-2 flex-shrink-0">
@@ -557,7 +558,7 @@ export default function ProfileClient({ initialProfile }: Props) {
               title="Open your public profile in a new tab"
             >
               <ExternalLink className="h-3.5 w-3.5" />
-              View public profile
+              {t("provProfile_viewPublic")}
             </Link>
             <button
               type="button"
@@ -566,7 +567,7 @@ export default function ProfileClient({ initialProfile }: Props) {
               title="Share your public profile link"
             >
               {copiedLink ? <Check className="h-3.5 w-3.5 text-green-500" /> : <Share2 className="h-3.5 w-3.5" />}
-              {copiedLink ? "Copied!" : "Share"}
+              {copiedLink ? t("provProfile_shareCopied") : t("provProfile_shareBtn")}
             </button>
           </div>
           <div className="text-right">
@@ -649,7 +650,7 @@ export default function ProfileClient({ initialProfile }: Props) {
               <div className="w-full grid grid-cols-2 divide-x divide-slate-100 border-t border-slate-100 pt-4">
                 <div className="text-center px-2">
                   <p className="text-2xl font-bold text-slate-900 leading-none">{profile.completedJobCount ?? 0}</p>
-                  <p className="text-xs text-slate-500 mt-1">Jobs done</p>
+                  <p className="text-xs text-slate-500 mt-1">{t("provProfile_statJobsDone")}</p>
                 </div>
                 <div className="text-center px-2">
                   {profile.avgRating && profile.avgRating > 0 ? (
@@ -660,7 +661,7 @@ export default function ProfileClient({ initialProfile }: Props) {
                   ) : (
                     <>
                       <p className="text-2xl font-bold text-slate-300 leading-none">—</p>
-                      <p className="text-xs text-slate-400 mt-1">No ratings yet</p>
+                      <p className="text-xs text-slate-400 mt-1">{t("provProfile_statNoRatings")}</p>
                     </>
                   )}
                 </div>
@@ -680,22 +681,22 @@ export default function ProfileClient({ initialProfile }: Props) {
             <Card>
               <CardHeader>
                 <div>
-                  <h3 className="text-sm font-semibold text-slate-700">Profile details</h3>
-                  <p className="text-xs text-slate-400 mt-0.5">A complete profile gets significantly more quotes accepted.</p>
+                  <h3 className="text-sm font-semibold text-slate-700">{t("provProfile_formTitle")}</h3>
+                  <p className="text-xs text-slate-400 mt-0.5">{t("provProfile_formSub")}</p>
                 </div>
               </CardHeader>
               <CardBody className="space-y-5">
                 {/* Phone number */}
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Phone number</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">{t("provProfile_phoneLabel")}</label>
                   <PhoneInput value={phone} onChange={setPhone} className="w-full" />
-                  <p className="text-xs text-slate-400 mt-1">Clients can reach you directly when a job is assigned.</p>
+                  <p className="text-xs text-slate-400 mt-1">{t("provProfile_phoneHint")}</p>
                 </div>
 
                 {/* Bio */}
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
-                    <label className="block text-sm font-medium text-slate-700">Bio</label>
+                    <label className="block text-sm font-medium text-slate-700">{t("provProfile_bioLabel")}</label>
                     <div className="flex items-center gap-2">
                       <button
                         type="button"
@@ -710,10 +711,10 @@ export default function ProfileClient({ initialProfile }: Props) {
                             ? <Sparkles className="h-3 w-3" />
                             : <Lock className="h-3 w-3" />}
                         {generatingBio
-                          ? "Generating…"
+                          ? t("provProfile_bioGenerating")
                           : tier.hasAIAccess
-                            ? "Generate with AI"
-                            : "Generate with AI · 🥇 Gold"}
+                            ? t("provProfile_bioGenerate")
+                            : t("provProfile_bioGenerateLocked")}
                       </button>
                       <span className={`text-xs tabular-nums ${
                         bio.length >= 900 ? "text-red-400" : bio.length >= 50 ? "text-green-500" : "text-slate-400"
@@ -725,21 +726,21 @@ export default function ProfileClient({ initialProfile }: Props) {
                     onChange={(e) => setBio(e.target.value)}
                     rows={4}
                     maxLength={1000}
-                    placeholder="Tell clients about your experience, specialties, and working style…"
+                    placeholder={t("provProfile_bioPlaceholder")}
                     className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary resize-none"
                   />
                   {bio.trim().length < 50 && bio.length > 0 && (
-                    <p className="text-xs text-amber-500 mt-1">Add at least 50 characters for a stronger profile.</p>
+                    <p className="text-xs text-amber-500 mt-1">{t("provProfile_bioHint")}</p>
                   )}
                 </div>
 
                 {/* Skills */}
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
-                    <label className="block text-sm font-medium text-slate-700">Skills</label>
+                    <label className="block text-sm font-medium text-slate-700">{t("provProfile_skillsLabel")}</label>
                     <div className="flex items-center gap-3">
                       {skills.length > 0 && (
-                        <span className="text-xs text-slate-400">{skills.length} skill{skills.length !== 1 ? "s" : ""} added</span>
+                        <span className="text-xs text-slate-400">{skills.length !== 1 ? t("provProfile_skillsCountPlural", { n: skills.length }) : t("provProfile_skillsCount", { n: skills.length })}</span>
                       )}
                       <button
                         type="button"
@@ -754,16 +755,16 @@ export default function ProfileClient({ initialProfile }: Props) {
                             ? <Sparkles className="h-3 w-3" />
                             : <Lock className="h-3 w-3" />}
                         {suggestingSkills
-                          ? "Suggesting…"
+                          ? t("provProfile_skillsSuggesting")
                           : tier.hasAIAccess
-                            ? "Suggest with AI"
-                            : "Suggest with AI · 🥇 Gold"}
+                            ? t("provProfile_skillsSuggest")
+                            : t("provProfile_skillsSuggestLocked")}
                       </button>
                     </div>
                   </div>
                   <SkillsInput value={skills} onChange={setSkills} externalSuggestions={skillSuggestions} />
                   {skills.length === 0 && skillSuggestions.length === 0 && (
-                    <p className="text-xs text-slate-400 mt-1.5">Add skills so clients can find you when filtering by service type.</p>
+                    <p className="text-xs text-slate-400 mt-1.5">{t("provProfile_skillsHint")}</p>
                   )}
                 </div>
 
@@ -771,7 +772,7 @@ export default function ProfileClient({ initialProfile }: Props) {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                      Years of experience
+                      {t("provProfile_yearsLabel")}
                     </label>
                     <input
                       type="number"
@@ -781,12 +782,12 @@ export default function ProfileClient({ initialProfile }: Props) {
                       onChange={(e) => setYearsExperience(Number(e.target.value))}
                       className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
                     />
-                    <p className="text-xs text-slate-400 mt-1">How long you&apos;ve been working professionally.</p>
+                    <p className="text-xs text-slate-400 mt-1">{t("provProfile_yearsHint")}</p>
                   </div>
                   <div>
                     <div className="flex items-center justify-between mb-1.5">
-                      <label className="block text-sm font-medium text-slate-700">Hourly rate (₱)</label>
-                      <span className="text-xs text-slate-400">optional</span>
+                      <label className="block text-sm font-medium text-slate-700">{t("provProfile_rateLabel")}</label>
+                      <span className="text-xs text-slate-400">{t("provProfile_rateOptional")}</span>
                     </div>
                     <div className="relative">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400">₱</span>
@@ -795,18 +796,18 @@ export default function ProfileClient({ initialProfile }: Props) {
                         min={0}
                         value={hourlyRate}
                         onChange={(e) => setHourlyRate(e.target.value)}
-                        placeholder="500"
+                        placeholder={t("provProfile_ratePlaceholder")}
                         className="w-full rounded-lg border border-slate-200 pl-7 pr-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
                       />
                     </div>
-                    <p className="text-xs text-slate-400 mt-1">Shown as a guide to clients on your profile.</p>
+                    <p className="text-xs text-slate-400 mt-1">{t("provProfile_rateHint")}</p>
                   </div>
                 </div>
 
                 {/* Availability */}
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <label className="block text-sm font-medium text-slate-700">Availability status</label>
+                    <label className="block text-sm font-medium text-slate-700">{t("provProfile_availLabel")}</label>
                     <span className={`text-xs font-medium px-2 py-0.5 rounded-full border ${cfg.active}`}>{cfg.label}</span>
                   </div>
                   <div className="flex gap-2">
@@ -830,12 +831,12 @@ export default function ProfileClient({ initialProfile }: Props) {
                       );
                     })}
                   </div>
-                  <p className="text-xs text-slate-400 mt-1.5">Controls whether new clients can see you as available for hire.</p>
+                  <p className="text-xs text-slate-400 mt-1.5">{t("provProfile_availHint")}</p>
                 </div>
               </CardBody>
               <CardFooter className="flex justify-end">
                 <Button type="submit" isLoading={saving} size="md">
-                  Save profile
+                  {t("provProfile_btnSaveProfile")}
                 </Button>
               </CardFooter>
             </Card>
@@ -846,8 +847,8 @@ export default function ProfileClient({ initialProfile }: Props) {
             <CardHeader>
               <div className="flex items-center justify-between w-full">
                 <div>
-                  <h3 className="text-sm font-semibold text-slate-700">Saved addresses</h3>
-                  <p className="text-xs text-slate-400 mt-0.5">Quick-fill your location when posting or quoting jobs.</p>
+                  <h3 className="text-sm font-semibold text-slate-700">{t("provProfile_addressesTitle")}</h3>
+                  <p className="text-xs text-slate-400 mt-0.5">{t("provProfile_addressesSub")}</p>
                 </div>
                 <span className="text-xs text-slate-400">{addresses.length}/10</span>
               </div>
@@ -855,7 +856,7 @@ export default function ProfileClient({ initialProfile }: Props) {
             <CardBody className="space-y-3">
               {addresses.length === 0 && !addingAddress && (
                 <p className="text-sm text-slate-400 text-center py-4">
-                  No saved addresses yet. Add one below.
+                  {t("provProfile_addressesEmpty")}
                 </p>
               )}
               {addresses.map((addr) => (
@@ -873,7 +874,7 @@ export default function ProfileClient({ initialProfile }: Props) {
                       <span className="text-xs font-semibold text-slate-700">{addr.label}</span>
                       {addr.isDefault && (
                         <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
-                          Default
+                          {t("provProfile_addressDefault")}
                         </span>
                       )}
                     </div>
@@ -888,7 +889,7 @@ export default function ProfileClient({ initialProfile }: Props) {
                         className="text-[11px] font-medium text-slate-500 hover:text-primary disabled:opacity-40 transition-colors px-1.5 py-0.5 rounded"
                         title="Set as default"
                       >
-                        {settingDefaultId === addr._id ? "Saving…" : "Set default"}
+                        {settingDefaultId === addr._id ? t("provProfile_addressSetDefaultSaving") : t("provProfile_addressSetDefault")}
                       </button>
                     )}
                     <button
@@ -908,7 +909,7 @@ export default function ProfileClient({ initialProfile }: Props) {
                 <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-3 space-y-2.5">
                   <div className="grid grid-cols-1 sm:grid-cols-[120px_1fr] gap-2">
                     <div>
-                      <label className="block text-xs font-medium text-slate-600 mb-1">Label</label>
+                      <label className="block text-xs font-medium text-slate-600 mb-1">{t("provProfile_addressLabelField")}</label>
                       <input
                         value={newLabel}
                         onChange={(e) => setNewLabel(e.target.value)}
@@ -919,7 +920,7 @@ export default function ProfileClient({ initialProfile }: Props) {
                     </div>
                     <div>
                       <div className="flex items-center justify-between mb-1">
-                        <label className="block text-xs font-medium text-slate-600">Street &amp; postal code</label>
+                        <label className="block text-xs font-medium text-slate-600">{t("provProfile_addressStreetField")}</label>
                         <button
                           type="button"
                           onClick={detectCurrentLocation}
@@ -930,7 +931,7 @@ export default function ProfileClient({ initialProfile }: Props) {
                           {detectingLocation
                             ? <Loader2 className="h-3 w-3 animate-spin" />
                             : <LocateFixed className="h-3 w-3" />}
-                          {detectingLocation ? "Detecting…" : "Use my location"}
+                          {detectingLocation ? t("provProfile_addressDetecting") : t("provProfile_addressUseLocation")}
                         </button>
                       </div>
                       <StructuredAddressInput
@@ -948,7 +949,7 @@ export default function ProfileClient({ initialProfile }: Props) {
                       onClick={() => { setAddingAddress(false); setNewAddressText(""); setNewAddressCoords(null); setNewLabel("Home"); }}
                       className="text-xs text-slate-500 hover:text-slate-700 px-2 py-1 rounded"
                     >
-                      Cancel
+                      {t("provProfile_addressCancel")}
                     </button>
                     <Button
                       type="button"
@@ -957,7 +958,7 @@ export default function ProfileClient({ initialProfile }: Props) {
                       onClick={handleAddAddress}
                       disabled={!newAddressText.trim()}
                     >
-                      Save address
+                      {t("provProfile_addressSaveBtn")}
                     </Button>
                   </div>
                 </div>
@@ -968,7 +969,7 @@ export default function ProfileClient({ initialProfile }: Props) {
                   className="w-full flex items-center justify-center gap-2 rounded-lg border border-dashed border-slate-300 py-2.5 text-sm text-slate-500 hover:text-primary hover:border-primary/50 transition-colors"
                 >
                   <Plus className="h-4 w-4" />
-                  Add address
+                  {t("provProfile_addressAddBtn")}
                 </button>
               ) : null}
             </CardBody>
@@ -979,8 +980,8 @@ export default function ProfileClient({ initialProfile }: Props) {
             <CardHeader>
               <div className="flex items-center justify-between w-full">
                 <div>
-                  <h3 className="text-sm font-semibold text-slate-700">Service areas</h3>
-                  <p className="text-xs text-slate-400 mt-0.5">Areas where you&apos;re available to take on jobs.</p>
+                  <h3 className="text-sm font-semibold text-slate-700">{t("provProfile_serviceAreasTitle")}</h3>
+                  <p className="text-xs text-slate-400 mt-0.5">{t("provProfile_serviceAreasSub")}</p>
                 </div>
                 <span className="text-xs text-slate-400">{serviceAreas.length}/10</span>
               </div>
@@ -988,7 +989,7 @@ export default function ProfileClient({ initialProfile }: Props) {
             <CardBody className="space-y-3">
               {serviceAreas.length === 0 && !addingArea && (
                 <p className="text-sm text-slate-400 text-center py-4">
-                  No service areas yet. Add the locations you cover.
+                  {t("provProfile_serviceAreasEmpty")}
                 </p>
               )}
               {serviceAreas.map((area) => (
@@ -1018,18 +1019,18 @@ export default function ProfileClient({ initialProfile }: Props) {
                 <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-3 space-y-2.5">
                   <div className="grid grid-cols-1 sm:grid-cols-[140px_1fr] gap-2">
                     <div>
-                      <label className="block text-xs font-medium text-slate-600 mb-1">Label</label>
+                      <label className="block text-xs font-medium text-slate-600 mb-1">{t("provProfile_serviceAreaLabelField")}</label>
                       <input
                         value={newAreaLabel}
                         onChange={(e) => setNewAreaLabel(e.target.value)}
-                        placeholder="e.g. Makati CBD"
+                        placeholder={t("provProfile_serviceAreaLabelPlaceholder")}
                         maxLength={80}
                         className="w-full rounded-md border border-slate-200 px-2.5 py-1.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
                       />
                     </div>
                     <div>
                       <div className="flex items-center justify-between mb-1">
-                        <label className="block text-xs font-medium text-slate-600">Area / city</label>
+                        <label className="block text-xs font-medium text-slate-600">{t("provProfile_serviceAreaCityField")}</label>
                         <button
                           type="button"
                           onClick={detectServiceAreaLocation}
@@ -1040,7 +1041,7 @@ export default function ProfileClient({ initialProfile }: Props) {
                           {detectingArea
                             ? <Loader2 className="h-3 w-3 animate-spin" />
                             : <LocateFixed className="h-3 w-3" />}
-                          {detectingArea ? "Detecting…" : "Use my location"}
+                          {detectingArea ? t("provProfile_serviceAreaDetecting") : t("provProfile_serviceAreaUseLocation")}
                         </button>
                       </div>
                       <StructuredAddressInput
@@ -1058,7 +1059,7 @@ export default function ProfileClient({ initialProfile }: Props) {
                       onClick={() => { setAddingArea(false); setNewAreaText(""); setNewAreaCoords(null); setNewAreaLabel(""); }}
                       className="text-xs text-slate-500 hover:text-slate-700 px-2 py-1 rounded"
                     >
-                      Cancel
+                      {t("provProfile_serviceAreaCancel")}
                     </button>
                     <Button
                       type="button"
@@ -1067,7 +1068,7 @@ export default function ProfileClient({ initialProfile }: Props) {
                       onClick={handleAddServiceArea}
                       disabled={!newAreaText.trim()}
                     >
-                      Save area
+                      {t("provProfile_serviceAreaSaveBtn")}
                     </Button>
                   </div>
                 </div>
@@ -1078,7 +1079,7 @@ export default function ProfileClient({ initialProfile }: Props) {
                   className="w-full flex items-center justify-center gap-2 rounded-lg border border-dashed border-slate-300 py-2.5 text-sm text-slate-500 hover:text-primary hover:border-primary/50 transition-colors"
                 >
                   <Plus className="h-4 w-4" />
-                  Add service area
+                  {t("provProfile_serviceAreaAddBtn")}
                 </button>
               ) : null}
             </CardBody>
@@ -1088,8 +1089,8 @@ export default function ProfileClient({ initialProfile }: Props) {
           <Card>
             <CardHeader>
               <div>
-                <h3 className="text-sm font-semibold text-slate-700">Weekly schedule</h3>
-                <p className="text-xs text-slate-400 mt-0.5">Set the days and hours you&apos;re available to take jobs.</p>
+                <h3 className="text-sm font-semibold text-slate-700">{t("provProfile_scheduleTitle")}</h3>
+                <p className="text-xs text-slate-400 mt-0.5">{t("provProfile_scheduleSub")}</p>
               </div>
             </CardHeader>
             <CardBody className="p-0">
@@ -1097,7 +1098,7 @@ export default function ProfileClient({ initialProfile }: Props) {
             </CardBody>
             <CardFooter className="flex justify-end">
               <Button type="button" isLoading={saving} size="md" onClick={saveProfile}>
-                Save schedule
+                {t("provProfile_scheduleSaveBtn")}
               </Button>
             </CardFooter>
           </Card>

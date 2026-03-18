@@ -1,5 +1,6 @@
 import { formatCurrency } from "@/lib/utils";
 import { CheckCircle2, MapPin, CalendarDays, Wallet, FileText, Tag, StickyNote, ImageIcon, AlertTriangle, Pencil } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { ProviderRecommendations } from "../ProviderRecommendations";
 import type { FormData } from "../types";
 
@@ -28,6 +29,7 @@ function SectionCard({
   onEdit: (s: number) => void;
   children: React.ReactNode;
 }) {
+  const t = useTranslations("clientPages");
   return (
     <div className="rounded-xl border border-slate-200 overflow-hidden bg-white shadow-sm">
       <div className="flex items-center justify-between px-4 py-2.5 bg-slate-50 border-b border-slate-200">
@@ -37,7 +39,7 @@ function SectionCard({
           onClick={() => onEdit(step)}
           className="inline-flex items-center gap-1 text-xs text-primary hover:underline font-medium"
         >
-          <Pencil className="h-3 w-3" /> Edit
+          <Pencil className="h-3 w-3" /> {t("postJob_reviewEditButton")}
         </button>
       </div>
       <div className="divide-y divide-slate-100">{children}</div>
@@ -46,40 +48,41 @@ function SectionCard({
 }
 
 export function ReviewSubmit({ form, photoFiles, coords, onEdit }: Props) {
+  const t = useTranslations("clientPages");
   return (
     <div className="space-y-4">
       {/* All-good banner */}
       <div className="flex items-center gap-2.5 rounded-xl bg-green-50 border border-green-200 px-4 py-3">
         <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
         <p className="text-xs text-green-800">
-          <span className="font-semibold">Almost there!</span> Review your job details below. You can edit any section before submitting.
+          <span className="font-semibold">{t("postJob_reviewBanner")}</span> {t("postJob_reviewBannerSub")}
         </p>
       </div>
 
       {/* Section: Job Details */}
-      <SectionCard title="Job Details" step={0} onEdit={onEdit}>
-        <ReviewRow icon={<FileText className="h-4 w-4" />} label="Title"       value={form.title} />
-        <ReviewRow icon={<Tag className="h-4 w-4" />}      label="Category"    value={form.category} />
-        <ReviewRow icon={<StickyNote className="h-4 w-4" />} label="Description" value={form.description} />
+      <SectionCard title={t("postJob_reviewJobDetails")} step={0} onEdit={onEdit}>
+        <ReviewRow icon={<FileText className="h-4 w-4" />} label={t("postJob_reviewRowTitle")}       value={form.title} />
+        <ReviewRow icon={<Tag className="h-4 w-4" />}      label={t("postJob_reviewRowCategory")}    value={form.category} />
+        <ReviewRow icon={<StickyNote className="h-4 w-4" />} label={t("postJob_reviewRowDesc")} value={form.description} />
       </SectionCard>
 
       {/* Section: Budget & Schedule */}
-      <SectionCard title="Budget & Schedule" step={1} onEdit={onEdit}>
-        <ReviewRow icon={<Wallet className="h-4 w-4" />}      label="Budget"   value={formatCurrency(Number(form.budget))} />
-        <ReviewRow icon={<MapPin className="h-4 w-4" />}      label="Location" value={form.location} />
+      <SectionCard title={t("postJob_reviewBudget")} step={1} onEdit={onEdit}>
+        <ReviewRow icon={<Wallet className="h-4 w-4" />}      label={t("postJob_reviewRowBudget")}   value={formatCurrency(Number(form.budget))} />
+        <ReviewRow icon={<MapPin className="h-4 w-4" />}      label={t("postJob_reviewRowLocation")} value={form.location} />
         <ReviewRow
           icon={<CalendarDays className="h-4 w-4" />}
-          label="Date"
+          label={t("postJob_reviewRowDate")}
           value={new Date(form.scheduleDate).toLocaleString("en-PH", { dateStyle: "medium", timeStyle: "short" })}
         />
         {form.specialInstructions && (
-          <ReviewRow icon={<StickyNote className="h-4 w-4" />} label="Notes" value={form.specialInstructions} />
+          <ReviewRow icon={<StickyNote className="h-4 w-4" />} label={t("postJob_reviewRowNotes")} value={form.specialInstructions} />
         )}
       </SectionCard>
 
       {/* Section: Photos */}
       {photoFiles.length > 0 && (
-        <SectionCard title="Photos" step={2} onEdit={onEdit}>
+        <SectionCard title={t("postJob_reviewPhotos")} step={2} onEdit={onEdit}>
           <div className="px-4 py-3 flex items-center gap-3">
             <div className="flex gap-2 flex-1 min-w-0 flex-wrap">
               {photoFiles.map(({ preview }, i) => (
@@ -103,13 +106,13 @@ export function ReviewSubmit({ form, photoFiles, coords, onEdit }: Props) {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={`https://maps.googleapis.com/maps/api/staticmap?center=${coords.lat},${coords.lng}&zoom=16&size=640x180&markers=color:red%7Clabel:P%7C${coords.lat},${coords.lng}&scale=2&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`}
-            alt="Job location map"
+            alt={t("postJob_reviewMapAlt")}
             className="w-full h-[140px] object-cover"
           />
           <div className="flex items-center justify-between bg-slate-50 px-3 py-1.5">
             <span className="text-xs font-medium text-green-700 flex items-center gap-1.5">
               <span className="inline-block h-1.5 w-1.5 rounded-full bg-green-500" />
-              Coordinates captured
+              {t("postJob_reviewCoords")}
             </span>
             <span className="font-mono text-xs text-slate-400">
               {coords.lat.toFixed(5)}, {coords.lng.toFixed(5)}
@@ -122,7 +125,7 @@ export function ReviewSubmit({ form, photoFiles, coords, onEdit }: Props) {
       <div className="flex items-start gap-2.5 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3">
         <AlertTriangle className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
         <p className="text-xs text-amber-800 leading-relaxed">
-          Your job will be <span className="font-semibold">reviewed by our admin team</span> before being published to providers. Most jobs are approved within a few hours.
+          {t("postJob_reviewModerationNote")}
         </p>
       </div>
 

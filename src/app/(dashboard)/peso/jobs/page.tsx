@@ -5,6 +5,7 @@ import Link from "next/link";
 import { PlusCircle, Star, Briefcase, Search, X, MapPin, CalendarDays, Tag, Zap, FileText, StickyNote, Clock, Users, CheckCircle2, XCircle, User, ExternalLink } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { apiFetch } from "@/lib/fetchClient";
+import { useTranslations } from "next-intl";
 
 interface PesoJob {
   _id: string;
@@ -70,6 +71,7 @@ function fmt(dateStr: string) {
 }
 
 export default function PesoJobsPage() {
+  const t = useTranslations("pesoPages");
   const [jobs, setJobs] = useState<PesoJob[]>([]);
   const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);
@@ -137,9 +139,9 @@ export default function PesoJobsPage() {
       {/* Header */}
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold text-slate-800">PESO Job Board</h1>
+          <h1 className="text-xl font-bold text-slate-800">{t("jobBoard")}</h1>
           <p className="text-sm text-slate-500 mt-0.5">
-            {loading ? "Loading…" : `${total} government job${total !== 1 ? "s" : ""} posted`}
+            {loading ? t("jobBoardLoading") : t("jobBoardSub", { count: total })}
           </p>
         </div>
         <Link
@@ -147,7 +149,7 @@ export default function PesoJobsPage() {
           className="flex items-center gap-2 bg-blue-600 text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-blue-700 active:bg-blue-800 transition-colors shrink-0"
         >
           <PlusCircle className="h-4 w-4" />
-          Post a Job
+          {t("postJob")}
         </Link>
       </div>
 

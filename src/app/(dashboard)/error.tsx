@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import Button from "@/components/ui/Button";
 import { AlertTriangle } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 export default function DashboardError({
   error,
@@ -11,6 +12,8 @@ export default function DashboardError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const t = useTranslations("dashboardError");
+
   useEffect(() => {
     console.error("[Dashboard Error]", error);
   }, [error]);
@@ -21,12 +24,12 @@ export default function DashboardError({
         <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
           <AlertTriangle className="w-6 h-6 text-red-600" />
         </div>
-        <h2 className="text-lg font-semibold text-slate-900">Something went wrong</h2>
+        <h2 className="text-lg font-semibold text-slate-900">{t("heading")}</h2>
         <p className="mt-1 text-sm text-slate-500">
-          {error.message ?? "An unexpected error occurred loading this page."}
+          {error.message ?? t("description")}
         </p>
         <Button className="mt-4" onClick={reset}>
-          Try again
+          {t("retry")}
         </Button>
       </div>
     </div>

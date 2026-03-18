@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { getCurrentUser } from "@/lib/auth";
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 import TourGuide from "@/components/shared/TourGuide";
 import { RecurringList } from "./_components/RecurringList";
@@ -11,6 +12,7 @@ export default async function ClientRecurringPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
   if (user.role !== "client") redirect("/dashboard");
+  const t = await getTranslations("clientPages");
 
   return (
     <div className="space-y-6">
@@ -48,16 +50,16 @@ export default async function ClientRecurringPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Recurring Bookings</h1>
+          <h1 className="text-2xl font-bold text-slate-900">{t("recurring")}</h1>
           <p className="text-slate-500 text-sm mt-1">
-            Set up weekly or monthly auto-scheduled jobs for routine services. Pause or cancel anytime.
+            {t("recurringSub")}
           </p>
         </div>
         <Link
           href="/client/recurring/new"
           className="btn-primary sm:shrink-0 w-full sm:w-auto text-center"
         >
-          + New Schedule
+          {t("newSchedule")}
         </Link>
       </div>
 

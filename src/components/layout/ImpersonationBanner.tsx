@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
+import { useTranslations } from "next-intl";
 import { apiFetch } from "@/lib/fetchClient";
 import { UserCheck, LogOut } from "lucide-react";
 
@@ -18,6 +19,8 @@ interface Props {
  */
 export default function ImpersonationBanner({ userName }: Props) {
   const router = useRouter();
+  const t = useTranslations("impersonationBanner");
+  const tCommon = useTranslations("common");
   const [loading, setLoading] = useState(false);
 
   async function handleExit() {
@@ -25,12 +28,12 @@ export default function ImpersonationBanner({ userName }: Props) {
     try {
       const res = await apiFetch("/api/admin/impersonate/exit", { method: "POST" });
       const data = await res.json();
-      if (!res.ok) { toast.error(data.error ?? "Failed to exit impersonation"); return; }
-      toast.success("Returned to admin session.");
+      if (!res.ok) { toast.error(data.error ?? t("exitFailed")); return; }
+      toast.success(t("exitSuccess"));
       router.push(data.redirectTo ?? "/admin/users");
       router.refresh();
     } catch {
-      toast.error("Something went wrong");
+      toast.error(tCommon("somethingWentWrong"));
     } finally {
       setLoading(false);
     }
@@ -40,7 +43,7 @@ export default function ImpersonationBanner({ userName }: Props) {
     <div className="fixed top-0 inset-x-0 z-[9999] flex items-center justify-center gap-3 bg-amber-500 text-white text-sm px-4 py-2.5 shadow-md">
       <UserCheck size={15} className="shrink-0" />
       <span>
-        You are impersonating <strong>{userName}</strong>. All actions will be performed as this user.
+        {t("bannerTextPre")} <strong>{userName}</strong>{t("bannerTextPost")}
       </span>
       <button
         onClick={handleExit}
@@ -48,7 +51,7 @@ export default function ImpersonationBanner({ userName }: Props) {
         className="ml-2 inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-white/20 hover:bg-white/30 text-white font-medium transition-colors disabled:opacity-50 text-xs"
       >
         <LogOut size={12} />
-        {loading ? "Exiting…" : "Exit Impersonation"}
+        {loading ? t("exitingBtn") : t("exitBtn")}
       </button>
     </div>
   );

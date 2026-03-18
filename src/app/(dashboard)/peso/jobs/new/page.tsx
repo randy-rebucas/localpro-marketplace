@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import toast from "react-hot-toast";
@@ -79,6 +80,7 @@ function PreviewSection({
 }
 
 export default function PostPesoJobPage() {
+  const t = useTranslations("pesoPages");
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
@@ -169,15 +171,15 @@ export default function PostPesoJobPage() {
           className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-600 transition-colors mb-2"
         >
           <ArrowLeft className="h-3.5 w-3.5" />
-          Back to Job Board
+          {t("backToJobBoard")}
         </Link>
         <h1 className="text-xl font-bold text-slate-800">
-          Post a {form.jobSource === "lgu" ? "LGU / Government" : "PESO"} Job
+          {form.jobSource === "lgu" ? t("postLguJob") : t("postPesoJob")}
         </h1>
         <p className="text-sm text-slate-500 mt-0.5">
           {form.jobSource === "lgu"
-            ? "Post an LGU or government-funded job to the LocalPro marketplace."
-            : "Post a government job to the LocalPro marketplace."}
+            ? t("postLguJobSub")
+            : t("postPesoJobSub")}
         </p>
       </div>
 
@@ -189,7 +191,7 @@ export default function PostPesoJobPage() {
         >
           {/* Job Source toggle */}
           <div>
-            <label className={LABEL_CLS}>Posting As</label>
+            <label className={LABEL_CLS}>{t("postingAs")}</label>
             <div className="flex gap-3 mt-2">
               {(["peso", "lgu"] as const).map((src) => (
                 <button
@@ -208,7 +210,7 @@ export default function PostPesoJobPage() {
                       : "bg-white text-slate-600 border-slate-300 hover:border-slate-400"
                   }`}
                 >
-                  {src === "peso" ? "🏛️ PESO Office" : "🏛️ LGU / Government"}
+                  {src === "peso" ? t("pesoOfficeSource") : t("lguGovSource")}
                 </button>
               ))}
             </div>
@@ -216,7 +218,7 @@ export default function PostPesoJobPage() {
           {/* Category */}
           <div>
             <label className={LABEL_CLS}>
-              Category <span className="text-red-400 normal-case font-normal">*</span>
+              {t("fieldCategory")} <span className="text-red-400 normal-case font-normal">*</span>
             </label>
             <input
               required
@@ -230,7 +232,7 @@ export default function PostPesoJobPage() {
           {/* Title */}
           <div>
             <label className={LABEL_CLS}>
-              Job Title <span className="text-red-400 normal-case font-normal">*</span>
+              {t("fieldJobTitle")} <span className="text-red-400 normal-case font-normal">*</span>
             </label>
             <input
               required
@@ -245,7 +247,7 @@ export default function PostPesoJobPage() {
           {/* Description */}
           <div>
             <label className={LABEL_CLS}>
-              Description <span className="text-red-400 normal-case font-normal">*</span>
+              {t("fieldDescription")} <span className="text-red-400 normal-case font-normal">*</span>
             </label>
             <MdEditor
               required
@@ -260,7 +262,7 @@ export default function PostPesoJobPage() {
           {/* Qualifications */}
           <div>
             <label className={LABEL_CLS}>
-              Qualifications <span className="text-red-400 normal-case font-normal">*</span>
+              {t("fieldQualifications")} <span className="text-red-400 normal-case font-normal">*</span>
             </label>
             <MdEditor
               required
@@ -275,7 +277,7 @@ export default function PostPesoJobPage() {
           {/* What We Offer */}
           <div>
             <label className={LABEL_CLS}>
-              What We Offer <span className="text-red-400 normal-case font-normal">*</span>
+              {t("fieldWhatWeOffer")} <span className="text-red-400 normal-case font-normal">*</span>
             </label>
             <MdEditor
               required
@@ -290,7 +292,7 @@ export default function PostPesoJobPage() {
           {/* How to Apply */}
           <div>
             <label className={LABEL_CLS}>
-              How to Apply <span className="text-red-400 normal-case font-normal">*</span>
+              {t("fieldHowToApply")} <span className="text-red-400 normal-case font-normal">*</span>
             </label>
             <MdEditor
               required
@@ -306,7 +308,7 @@ export default function PostPesoJobPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className={LABEL_CLS}>
-                Location <span className="text-red-400 normal-case font-normal">*</span>
+                {t("fieldLocation")} <span className="text-red-400 normal-case font-normal">*</span>
               </label>
               <input
                 required
@@ -318,8 +320,8 @@ export default function PostPesoJobPage() {
             </div>
             <div>
               <label className={LABEL_CLS}>
-                Contact Number{" "}
-                <span className="normal-case font-normal text-slate-400">(optional)</span>
+                {t("fieldContactNumber")}{" "}
+                <span className="normal-case font-normal text-slate-400">{t("fieldOptional")}</span>
               </label>
               <input
                 type="tel"
@@ -335,8 +337,8 @@ export default function PostPesoJobPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className={LABEL_CLS}>
-                Budget (₱){" "}
-                <span className="normal-case font-normal text-slate-400">(optional)</span>
+                {t("fieldBudget")}{" "}
+                <span className="normal-case font-normal text-slate-400">{t("fieldOptional")}</span>
               </label>
               <input
                 type="number"
@@ -350,8 +352,8 @@ export default function PostPesoJobPage() {
             </div>
             <div>
               <label className={LABEL_CLS}>
-                Schedule Date{" "}
-                <span className="normal-case font-normal text-slate-400">(optional)</span>
+                {t("fieldScheduleDate")}{" "}
+                <span className="normal-case font-normal text-slate-400">{t("fieldOptional")}</span>
               </label>
               <input
                 type="date"
@@ -364,7 +366,7 @@ export default function PostPesoJobPage() {
 
           {/* Job Tags */}
           <div>
-            <label className={LABEL_CLS}>Job Tags</label>
+            <label className={LABEL_CLS}>{t("fieldJobTags")}</label>
             <div className="flex flex-wrap gap-2 mt-2">
               {JOB_TAGS.map(({ value, label }) => (
                 <button
@@ -399,17 +401,17 @@ export default function PostPesoJobPage() {
             <div>
               <p className="text-sm font-medium text-slate-700 flex items-center gap-1.5">
                 <Star className="h-3.5 w-3.5 text-amber-400 fill-amber-400" />
-                Mark as Priority
+                {t("markAsPriority")}
               </p>
-              <p className="text-xs text-slate-400 mt-0.5">Pinned to the top of the marketplace feed</p>
+              <p className="text-xs text-slate-400 mt-0.5">{t("pinnedToTop")}</p>
             </div>
           </label>
 
           {/* Special Instructions */}
           <div>
             <label className={LABEL_CLS}>
-              Special Instructions{" "}
-              <span className="normal-case font-normal text-slate-400">(optional)</span>
+              {t("fieldSpecialInstructions")}{" "}
+              <span className="normal-case font-normal text-slate-400">{t("fieldOptional")}</span>
             </label>
             <MdEditor
               rows={2}
@@ -427,13 +429,13 @@ export default function PostPesoJobPage() {
               className="flex-1 flex items-center justify-center gap-2 bg-blue-600 text-white font-semibold py-2.5 rounded-lg text-sm hover:bg-blue-700 active:bg-blue-800 disabled:opacity-60 transition-colors"
             >
               {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-              {submitting ? "Posting…" : "Post Job"}
+              {submitting ? t("postJobProcessing") : t("postJobSubmit")}
             </button>
             <Link
               href="/peso/jobs"
               className="px-4 py-2.5 text-sm font-medium text-slate-600 hover:text-slate-800 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
             >
-              Cancel
+              {t("cancelLink")}
             </Link>
           </div>
         </form>
@@ -441,14 +443,14 @@ export default function PostPesoJobPage() {
         {/* ── Right: Sticky live preview ── */}
         <div className="w-[380px] shrink-0 sticky top-6">
           <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-2 pl-1">
-            Live Preview
+            {t("livePreview")}
           </p>
 
           <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
             {!hasPreview ? (
               <div className="flex flex-col items-center justify-center py-16 text-slate-300 gap-2">
                 <Briefcase className="h-8 w-8" />
-                <p className="text-xs">Start filling the form to see a preview</p>
+                <p className="text-xs">{t("previewEmpty")}</p>
               </div>
             ) : (
               <>
@@ -470,7 +472,7 @@ export default function PostPesoJobPage() {
                     {form.isPriority && (
                       <span className="inline-flex items-center gap-1 text-[10px] font-semibold bg-amber-400 text-amber-900 px-2 py-0.5 rounded-full">
                         <Star className="h-2.5 w-2.5 fill-amber-900" />
-                        Priority
+                        {t("priorityBadge")}
                       </span>
                     )}
                   </div>

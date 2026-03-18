@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 import { getCurrentUser } from "@/lib/auth";
 import { redirect, notFound } from "next/navigation";
 import { jobRepository } from "@/repositories/job.repository";
@@ -55,6 +56,7 @@ export default async function JobDetailPage({
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
+  const t = await getTranslations("clientPages");
   const { id } = await params;
   const sp = await searchParams;
   const paymentCancelled = sp.payment === "cancelled";
@@ -88,7 +90,7 @@ export default async function JobDetailPage({
         href="/client/jobs"
         className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800 transition-colors"
       >
-        <ChevronLeft className="h-4 w-4" /> Back to My Jobs
+        <ChevronLeft className="h-4 w-4" /> {t("backToJobs")}
       </Link>
 
       {/* Payment cancelled banner */}
@@ -96,7 +98,7 @@ export default async function JobDetailPage({
         <div className="rounded-xl border border-amber-200 bg-amber-50 px-5 py-4 flex items-center gap-3">
           <AlertCircle className="h-5 w-5 text-amber-500 flex-shrink-0" />
           <p className="text-sm font-medium text-amber-800">
-            Payment was cancelled. You can try funding escrow again when ready.
+            {t("paymentCancelledBanner")}
           </p>
         </div>
       )}
@@ -106,7 +108,7 @@ export default async function JobDetailPage({
         <div className="min-w-0">
           <h1 className="text-2xl font-bold text-slate-900 leading-snug">{job.title}</h1>
           <p className="text-slate-400 text-sm mt-1">
-            Posted {formatDate(job.createdAt)}
+            {t("jobPostedOn")} {formatDate(job.createdAt)}
           </p>
         </div>
         <div className="flex flex-wrap justify-end gap-2 flex-shrink-0 pt-1">
@@ -123,7 +125,7 @@ export default async function JobDetailPage({
             className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 shadow-sm hover:bg-slate-50 transition-colors"
           >
             <Copy className="h-3.5 w-3.5" />
-            Post Similar
+            {t("postSimilar")}
           </Link>
           <JobStatusBadge status={job.status} />
           <EscrowBadge status={job.escrowStatus} />

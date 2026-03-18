@@ -3,8 +3,10 @@ import { userRepository } from "@/repositories/user.repository";
 import { providerProfileRepository } from "@/repositories/providerProfile.repository";
 import Link from "next/link";
 import { CalendarDays, Trophy, Zap } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 
 export async function DashboardHeader({ userId }: { userId: string }) {
+  const t = await getTranslations("providerPages");
   const [ratingSummary, streak, userDoc, profileDoc] = await Promise.all([
     reviewRepository.getProviderRatingSummary(userId),
     reviewRepository.getFiveStarStreak(userId),
@@ -38,28 +40,28 @@ export async function DashboardHeader({ userId }: { userId: string }) {
         </p>
         <div className="flex items-center gap-2.5 flex-wrap">
           <h1 className="text-xl sm:text-2xl font-bold text-slate-900">
-            Welcome back, <span className="text-primary">{firstName}</span>!
+            {t("provDash_welcomeBack", { name: firstName })}
           </h1>
           {isTopPro && (
             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-200">
-              <Trophy className="h-3 w-3" /> Top Pro
+              <Trophy className="h-3 w-3" /> {t("provDash_badgeTopPro")}
             </span>
           )}
           {streak >= 3 && (
             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-orange-100 text-orange-800 border border-orange-200">
-              🔥 {streak}-Star Streak
+              🔥 {t("provDash_badgeStarStreak", { n: streak })}
             </span>
           )}
           {avgResponseTimeHours > 0 && avgResponseTimeHours <= 2 && (
             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 border border-blue-200">
-              <Zap className="h-3 w-3" /> Fast Responder
+              <Zap className="h-3 w-3" /> {t("provDash_badgeFastResponder")}
             </span>
           )}
         </div>
-        <p className="hidden sm:block text-sm text-slate-500 mt-0.5">Here&apos;s your performance overview.</p>
+        <p className="hidden sm:block text-sm text-slate-500 mt-0.5">{t("provDash_perfOverview")}</p>
       </div>
       <Link href="/provider/marketplace" className="btn-primary flex-shrink-0">
-        Browse Jobs
+        {t("provDash_browseJobs")}
       </Link>
     </div>
   );

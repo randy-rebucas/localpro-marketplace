@@ -8,6 +8,7 @@ import { formatCurrency } from "@/lib/utils";
 import { calculateCommission } from "@/lib/commission";
 import ProviderInfoButton from "@/components/shared/ProviderInfoButtonLazy";
 import QuoteAcceptButton from "./QuoteAcceptButton";
+import { getTranslations } from "next-intl/server";
 
 /* ─── Shared provider avatar ─────────────────────────────────── */
 function ProviderAvatar({ name, avatar }: { name: string; avatar?: string }) {
@@ -40,7 +41,10 @@ export async function QuotesSection({
   jobId: string;
   jobStatus: string;
 }) {
-  const quotes = await quoteRepository.findForJobWithProvider(jobId);
+  const [quotes, t] = await Promise.all([
+    quoteRepository.findForJobWithProvider(jobId),
+    getTranslations("clientPages"),
+  ]);
 
   const providerIds = quotes.map((q) => q.providerId._id.toString());
   const profiles =
@@ -58,7 +62,7 @@ export async function QuotesSection({
     return (
       <div className="bg-white rounded-xl border border-slate-200 shadow-card">
         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-          <h3 className="font-semibold text-slate-900">Accepted Quote</h3>
+          <h3 className="font-semibold text-slate-900">{t("quotes_acceptedTitle")}</h3>
           <QuoteStatusBadge status={accepted.status} />
         </div>
         <div className="px-6 py-5 flex flex-col sm:flex-row items-start gap-4">
@@ -68,11 +72,11 @@ export async function QuotesSection({
               <div className="flex flex-wrap items-center gap-2 mb-0.5">
                 <p className="font-semibold text-slate-900 text-sm">{accepted.providerId.name}</p>
                 {accepted.providerId.isVerified && (
-                  <span className="badge bg-blue-100 text-blue-700 text-xs">Verified</span>
+                  <span className="badge bg-blue-100 text-blue-700 text-xs">{t("quotes_verified")}</span>
                 )}
                 {profile?.isLocalProCertified && (
                   <span className="inline-flex items-center gap-1 text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-medium border border-indigo-200">
-                    🎖️ LocalPro Certified
+                    🎖️ {t("quotes_localProCert")}
                   </span>
                 )}
               </div>
@@ -82,7 +86,7 @@ export async function QuotesSection({
                   {(profile.avgRating ?? 0).toFixed(1)} · {profile.completedJobCount} jobs
                 </span>
               )}
-              <p className="text-xs text-slate-500 mt-1">Timeline: {accepted.timeline}</p>
+              <p className="text-xs text-slate-500 mt-1">{t("quotes_timeline", { tl: accepted.timeline })}</p>
               <p className="text-sm text-slate-700 mt-2 leading-relaxed">{accepted.message}</p>
               <div className="mt-2 flex items-center gap-3">
                 <ProviderInfoButton
@@ -94,7 +98,7 @@ export async function QuotesSection({
                   className="inline-flex items-center gap-1.5 text-xs font-medium text-blue-600 hover:text-blue-700 hover:underline"
                 >
                   <MessageSquare className="h-3.5 w-3.5" />
-                  Message Provider
+                  {t("quotes_messageProvider")}
                 </Link>
               </div>
             </div>
@@ -102,7 +106,7 @@ export async function QuotesSection({
           <div className="sm:flex-shrink-0 sm:text-right w-full sm:w-auto border-t sm:border-t-0 pt-3 sm:pt-0 border-slate-100">
             <p className="text-xl font-bold text-slate-900">{formatCurrency(accepted.proposedAmount)}</p>
             <p className="text-[11px] text-slate-400 mt-0.5">
-              Provider gets{" "}
+              {t("quotes_providerGets")}{" "}
               <span className="font-medium text-slate-600">
                 {formatCurrency(calculateCommission(accepted.proposedAmount).netAmount)}
               </span>
@@ -121,7 +125,7 @@ export async function QuotesSection({
       <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
         <h3 className="font-semibold text-slate-900 flex items-center gap-2">
           <MessageSquare className="h-4 w-4 text-slate-400" />
-          Quotes
+          {t("quotes_heading")}
         </h3>
         <span className="text-xs bg-slate-100 text-slate-600 font-semibold px-2 py-0.5 rounded-full">
           {quotes.length}
@@ -134,10 +138,9 @@ export async function QuotesSection({
             <Clock className="h-6 w-6 text-slate-300" />
           </div>
           <div>
-            <p className="text-sm font-semibold text-slate-600">No quotes yet</p>
+            <p className="text-sm font-semibold text-slate-600">{t("quotes_noQuotesTitle")}</p>
             <p className="text-xs text-slate-400 mt-0.5 max-w-xs">
-              Providers are reviewing your job. Quotes usually arrive within the hour once
-              your job is approved.
+              {t("quotes_noQuotesDesc")}
             </p>
           </div>
         </div>
@@ -160,15 +163,15 @@ export async function QuotesSection({
                         <p className="font-semibold text-slate-900 text-sm">{q.providerId.name}</p>
                         <QuoteStatusBadge status={q.status} />
                         {q.providerId.isVerified && (
-                          <span className="badge bg-blue-100 text-blue-700 text-xs">Verified</span>
+                          <span className="badge bg-blue-100 text-blue-700 text-xs">{t("quotes_verified")}</span>
                         )}
                         {profile?.isLocalProCertified && (
                           <span className="inline-flex items-center gap-1 text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-medium border border-indigo-200">
-                            🎖️ LocalPro Certified
+                            🎖️ {t("quotes_localProCert")}
                           </span>
                         )}
                         {isTopRated && (
-                          <span className="badge bg-amber-100 text-amber-700 text-xs">⭐ Top Rated</span>
+                          <span className="badge bg-amber-100 text-amber-700 text-xs">{t("quotes_topRated")}</span>
                         )}
                       </div>
                       {(avgRating > 0 || jobsDone > 0) && (
@@ -181,12 +184,12 @@ export async function QuotesSection({
                           )}
                           {jobsDone > 0 && (
                             <span className="text-xs text-slate-400">
-                              {jobsDone} job{jobsDone !== 1 ? "s" : ""} completed
+                              {t("quotes_jobsDone", { n: jobsDone, s: jobsDone !== 1 ? "s" : "" })}
                             </span>
                           )}
                         </div>
                       )}
-                      <p className="text-xs text-slate-500 mt-1">Timeline: {q.timeline}</p>
+                      <p className="text-xs text-slate-500 mt-1">{t("quotes_timeline", { tl: q.timeline })}</p>
                       <p className="text-sm text-slate-700 mt-2 leading-relaxed">{q.message}</p>
                       <ProviderInfoButton
                         providerId={q.providerId._id.toString()}
@@ -202,7 +205,7 @@ export async function QuotesSection({
                         {formatCurrency(q.proposedAmount)}
                       </p>
                       <p className="text-[11px] text-slate-400 mt-0.5">
-                        Provider gets{" "}
+                        {t("quotes_providerGets")}{" "}
                         <span className="font-medium text-slate-600">
                           {formatCurrency(breakdown.netAmount)}
                         </span>

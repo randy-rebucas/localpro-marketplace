@@ -6,6 +6,7 @@ import {
   ToggleLeft, ToggleRight, Search, Tag, Clock, DollarSign,
   CheckCircle2, XCircle, Copy, Lock, ArrowUpRight, Users,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { fetchClient } from "@/lib/fetchClient";
 import { formatCurrency } from "@/lib/utils";
 import { SERVICE_LIMITS, PLAN_LABELS, PLAN_UPGRADE_NEXT, isAtServiceLimit, getServiceLimit } from "@/lib/businessPlan";
@@ -60,6 +61,8 @@ const SUGGESTED_DURATIONS = [
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function ServicesClient() {
+  const t = useTranslations("providerPages");
+
   const [agency, setAgency]                 = useState<Agency | null>(null);
   const [services, setServices]             = useState<Service[]>([]);
   const [loading, setLoading]               = useState(true);
@@ -85,7 +88,7 @@ export default function ServicesClient() {
       const data = await fetchClient<{ services: Service[] }>("/api/provider/agency/services");
       setServices(data.services);
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : "Failed to load services.";
+      const msg = e instanceof Error ? e.message : t("provServices_errLoadFailed");
       setLoadError(msg);
       toast.error(msg);
     } finally {
@@ -98,7 +101,7 @@ export default function ServicesClient() {
   // ── Form helpers ──────────────────────────────────────────────────────────
   function openNew() {
     if (atLimit) {
-      toast.error(`You've reached the ${planLabel} plan limit of ${serviceLimit} services. Upgrade your plan to add more.`);
+      toast.error(t("provServices_toastAtLimit", { plan: planLabel, count: serviceLimit }));
       return;
     }
     setEditing(null);
@@ -121,12 +124,12 @@ export default function ServicesClient() {
 
   function openDuplicate(svc: Service) {
     if (atLimit) {
-      toast.error(`You've reached the ${planLabel} plan limit of ${serviceLimit} services. Upgrade your plan to add more.`);
+      toast.error(t("provServices_toastAtLimit", { plan: planLabel, count: serviceLimit }));
       return;
     }
     setEditing(null);
     setForm({
-      title: `${svc.title} (copy)`,
+      title: `${svc.title} ${t("provServices_copySuffix")}`,
       description: svc.description,
       category: svc.category,
       minPrice: svc.minPrice,
@@ -147,12 +150,12 @@ export default function ServicesClient() {
   }
 
   function validateForm(): string | null {
-    if (!form.title.trim())           return "Title is required.";
-    if (form.title.trim().length < 2) return "Title must be at least 2 characters.";
-    if (form.minPrice < 0)            return "Min price cannot be negative.";
-    if (form.maxPrice < 0)            return "Max price cannot be negative.";
+    if (!form.title.trim())           return t("provServices_validTitle");
+    if (form.title.trim().length < 2) return t("provServices_validTitleLen");
+    if (form.minPrice < 0)            return t("provServices_validMinNeg");
+    if (form.maxPrice < 0)            return t("provServices_validMaxNeg");
     if (form.maxPrice > 0 && form.minPrice > form.maxPrice)
-      return "Min price cannot exceed max price.";
+      return t("provServices_validMinMax");
     return null;
   }
 
@@ -167,18 +170,18 @@ export default function ServicesClient() {
           method: "PATCH",
           body: JSON.stringify({ ...form, serviceId: editing._id }),
         });
-        toast.success("Service updated.");
+        toast.success(t("provServices_toastUpdated"));
       } else {
         await fetchClient("/api/provider/agency/services", {
           method: "POST",
           body: JSON.stringify(form),
         });
-        toast.success("Service added.");
+        toast.success(t("provServices_toastAdded"));
       }
       closeForm();
       await load(); // Re-sync from DB to confirm persistence
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Failed to save.");
+      toast.error(e instanceof Error ? e.message : t("provServices_errSave"));
     } finally {
       setSaving(false);
     }
@@ -197,7 +200,7 @@ export default function ServicesClient() {
     } catch {
       // Rollback on failure
       setServices((prev) => prev.map((s) => s._id === svc._id ? { ...s, isActive: svc.isActive } : s));
-      toast.error("Failed to update status.");
+      toast.error(t("provServices_errToggle"));
     }
   }
 
@@ -208,11 +211,11 @@ export default function ServicesClient() {
     setServices((prev) => prev.filter((s) => s._id !== id));
     try {
       await fetchClient(`/api/provider/agency/services?serviceId=${id}`, { method: "DELETE" });
-      toast.success("Service removed.");
+      toast.success(t("provServices_toastRemoved"));
       await load(); // Re-sync from DB to confirm removal
     } catch {
       setServices(snapshot);
-      toast.error("Failed to delete.");
+      toast.error(t("provServices_errDelete"));
     }
   }
 
@@ -252,7 +255,7 @@ export default function ServicesClient() {
     });
 
   function priceLabel(svc: Service): string {
-    if (svc.minPrice === 0 && svc.maxPrice === 0) return "Free / custom";
+    if (svc.minPrice === 0 && svc.maxPrice === 0) return t("provServices_freeCustom");
     if (svc.minPrice === svc.maxPrice)             return formatCurrency(svc.minPrice);
     return `${formatCurrency(svc.minPrice)} – ${formatCurrency(svc.maxPrice)}`;
   }
@@ -286,10 +289,10 @@ export default function ServicesClient() {
     return (
       <div className="flex flex-col items-center justify-center py-24 gap-3 text-center">
         <XCircle className="h-10 w-10 text-red-300" />
-        <p className="font-semibold text-slate-700">Could not load services</p>
+        <p className="font-semibold text-slate-700">{t("provServices_errCouldNotLoad")}</p>
         <p className="text-sm text-slate-400">{loadError}</p>
         <button onClick={load} className="btn-primary mt-2 flex items-center gap-1.5">
-          <RefreshCw className="h-4 w-4" /> Try Again
+          <RefreshCw className="h-4 w-4" /> {t("provServices_btnRetry")}
         </button>
       </div>
     );
@@ -306,9 +309,9 @@ export default function ServicesClient() {
             <Layers className="h-5 w-5 text-violet-600 dark:text-violet-400" />
           </div>
           <div>
-            <h1 className="text-base font-bold text-slate-800 dark:text-white">Services</h1>
+            <h1 className="text-base font-bold text-slate-800 dark:text-white">{t("provServices_heading")}</h1>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              {services.length} service{services.length !== 1 ? "s" : ""} · {activeCount} active · {inactiveCount} inactive
+              {services.length} {t(services.length !== 1 ? "provServices_services" : "provServices_service")} &middot; {activeCount} {t("provServices_subActive")} &middot; {inactiveCount} {t("provServices_subInactive")}
             </p>
           </div>
         </div>
@@ -336,7 +339,7 @@ export default function ServicesClient() {
             disabled={atLimit}
             className="btn-primary flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {atLimit ? <Lock className="h-4 w-4" /> : <Plus className="h-4 w-4" />} Add Service
+            {atLimit ? <Lock className="h-4 w-4" /> : <Plus className="h-4 w-4" />} {t("provServices_btnAddService")}
           </button>
         </div>
       </div>
@@ -345,9 +348,9 @@ export default function ServicesClient() {
       {services.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {([
-            { status: "all",      label: "Total",    count: services.length, color: "text-slate-700" },
-            { status: "active",   label: "Active",   count: activeCount,     color: "text-emerald-600" },
-            { status: "inactive", label: "Inactive", count: inactiveCount,   color: "text-slate-400" },
+            { status: "all",      label: t("provServices_kpiTotal"),    count: services.length, color: "text-slate-700" },
+            { status: "active",   label: t("provServices_kpiActive"),   count: activeCount,     color: "text-emerald-600" },
+            { status: "inactive", label: t("provServices_kpiInactive"), count: inactiveCount,   color: "text-slate-400" },
           ] as { status: FilterStatus; label: string; count: number; color: string }[]).map(({ status, label, count, color }) => {
             const isSelected = filterStatus === status;
             return (
@@ -365,7 +368,7 @@ export default function ServicesClient() {
           })}
           <div className="bg-white border border-slate-200 rounded-2xl p-4 text-center">
             <p className="text-2xl font-bold text-slate-900">{services.length > 0 ? formatCurrency(avgPrice) : "—"}</p>
-            <p className="text-xs font-semibold mt-0.5 text-blue-600">Avg Price</p>
+            <p className="text-xs font-semibold mt-0.5 text-blue-600">{t("provServices_kpiAvgPrice")}</p>
           </div>
         </div>
       )}
@@ -376,9 +379,9 @@ export default function ServicesClient() {
           <div className="flex items-center gap-2.5 text-sm text-amber-800">
             <Lock className="h-4 w-4 shrink-0" />
             <span>
-              You&apos;ve reached the <strong>{planLabel}</strong> plan limit of{" "}
-              <strong>{serviceLimit} service{serviceLimit === 1 ? "" : "s"}</strong>.
-              {nextPlan && ` Upgrade to ${PLAN_LABELS[nextPlan]} to add more.`}
+              {t("provServices_planLimitReachedThe")} <strong>{planLabel}</strong> {t("provServices_planLimitOf")}{" "}
+              <strong>{serviceLimit === Infinity ? "\u221e" : serviceLimit} {t(serviceLimit === 1 ? "provServices_service" : "provServices_services")}</strong>.
+              {nextPlan && ` ${t("provServices_planLimitUpgrade", { plan: PLAN_LABELS[nextPlan] })}`}
             </span>
           </div>
           {nextPlan && (
@@ -386,7 +389,7 @@ export default function ServicesClient() {
               href="/provider/business/plan"
               className="shrink-0 inline-flex items-center gap-1 text-xs font-semibold text-amber-700 hover:text-amber-900 underline underline-offset-2"
             >
-              Upgrade <ArrowUpRight className="h-3.5 w-3.5" />
+              {t("provServices_btnUpgrade")} <ArrowUpRight className="h-3.5 w-3.5" />
             </a>
           )}
         </div>
@@ -396,7 +399,7 @@ export default function ServicesClient() {
       {showForm && (
         <div id="svc-form" className="bg-white border border-primary/20 rounded-2xl p-5 space-y-5 shadow-sm">
           <div className="flex items-center justify-between">
-            <h2 className="font-semibold text-slate-800">{editing ? "Edit Service" : "New Service"}</h2>
+            <h2 className="font-semibold text-slate-800">{editing ? t("provServices_formEditTitle") : t("provServices_formNewTitle")}</h2>
             <button onClick={closeForm} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 transition-colors">
               <X className="h-4 w-4" />
             </button>
@@ -411,22 +414,22 @@ export default function ServicesClient() {
 
           <div className="grid sm:grid-cols-2 gap-4">
             <div className="sm:col-span-2">
-              <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Title *</label>
+              <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">{t("provServices_fieldTitle")}</label>
               <input
                 className="input w-full"
-                placeholder="e.g. Deep Cleaning Service"
+                placeholder={t("provServices_placeholderTitle")}
                 value={form.title}
                 onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
               />
             </div>
 
             <div className="sm:col-span-2">
-              <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Description</label>
+              <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">{t("provServices_fieldDesc")}</label>
               <textarea
                 className="input w-full resize-none"
                 rows={3}
                 maxLength={1000}
-                placeholder="Describe what's included in this service…"
+                placeholder={t("provServices_placeholderDesc")}
                 value={form.description}
                 onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
               />
@@ -434,11 +437,11 @@ export default function ServicesClient() {
             </div>
 
             <div>
-              <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Category</label>
+              <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">{t("provServices_fieldCategory")}</label>
               <input
                 className="input w-full"
                 list="svc-category-list"
-                placeholder="e.g. Cleaning, Plumbing…"
+                placeholder={t("provServices_placeholderCategory")}
                 value={form.category}
                 onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
               />
@@ -448,11 +451,11 @@ export default function ServicesClient() {
             </div>
 
             <div>
-              <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Duration</label>
+              <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">{t("provServices_fieldDuration")}</label>
               <input
                 className="input w-full"
                 list="svc-duration-list"
-                placeholder="e.g. 2–3 hours"
+                placeholder={t("provServices_placeholderDuration")}
                 value={form.duration}
                 onChange={(e) => setForm((f) => ({ ...f, duration: e.target.value }))}
               />
@@ -462,7 +465,7 @@ export default function ServicesClient() {
             </div>
 
             <div>
-              <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Min Price (₱)</label>
+              <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">{t("provServices_fieldMinPrice")}</label>
               <input
                 className="input w-full"
                 type="number"
@@ -473,7 +476,7 @@ export default function ServicesClient() {
             </div>
 
             <div>
-              <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Max Price (₱)</label>
+              <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">{t("provServices_fieldMaxPrice")}</label>
               <input
                 className={`input w-full ${form.maxPrice > 0 && form.minPrice > form.maxPrice ? "border-red-300 focus:ring-red-200" : ""}`}
                 type="number"
@@ -482,7 +485,7 @@ export default function ServicesClient() {
                 onChange={(e) => setForm((f) => ({ ...f, maxPrice: Number(e.target.value) }))}
               />
               {form.maxPrice > 0 && form.minPrice > form.maxPrice && (
-                <p className="text-xs text-red-500 mt-1">Max price must be ≥ min price.</p>
+                <p className="text-xs text-red-500 mt-1">{t("provServices_maxPriceError")}</p>
               )}
             </div>
 
@@ -495,7 +498,7 @@ export default function ServicesClient() {
                 {form.isActive
                   ? <ToggleRight className="h-5 w-5 text-primary" />
                   : <ToggleLeft className="h-5 w-5 text-slate-400" />}
-                <span>{form.isActive ? "Active — visible to clients" : "Inactive — hidden from clients"}</span>
+                <span>{form.isActive ? t("provServices_toggleActive") : t("provServices_toggleInactive")}</span>
               </button>
             </div>
           </div>
@@ -503,9 +506,9 @@ export default function ServicesClient() {
           <div className="flex items-center gap-3 pt-1">
             <button onClick={handleSubmit} disabled={saving} className="btn-primary flex items-center gap-2 disabled:opacity-60">
               <Save className="h-4 w-4" />
-              {saving ? "Saving…" : editing ? "Update Service" : "Add Service"}
+              {saving ? t("provServices_btnSaving") : editing ? t("provServices_btnUpdate") : t("provServices_btnAddService")}
             </button>
-            <button onClick={closeForm} className="btn-secondary">Cancel</button>
+            <button onClick={closeForm} className="btn-secondary">{t("provServices_btnCancel")}</button>
           </div>
         </div>
       )}
@@ -519,7 +522,7 @@ export default function ServicesClient() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
               <input
                 className="input w-full pl-8 text-sm"
-                placeholder="Search services…"
+                placeholder={t("provServices_searchPlaceholder")}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
@@ -529,9 +532,9 @@ export default function ServicesClient() {
               value={sortKey}
               onChange={(e) => setSortKey(e.target.value as SortKey)}
             >
-              <option value="title">Sort: A–Z</option>
-              <option value="price">Sort: Price ↑</option>
-              <option value="category">Sort: Category</option>
+              <option value="title">{t("provServices_sortAZ")}</option>
+              <option value="price">{t("provServices_sortPrice")}</option>
+              <option value="category">{t("provServices_sortCategory")}</option>
             </select>
           </div>
 
@@ -553,7 +556,7 @@ export default function ServicesClient() {
               ))}
               {hasActiveFilters && (
                 <button onClick={clearFilters} className="text-xs text-primary hover:underline whitespace-nowrap ml-auto">
-                  Clear filters
+                  {t("provServices_clearFilters")}
                 </button>
               )}
             </div>
@@ -565,20 +568,20 @@ export default function ServicesClient() {
       {services.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 bg-white rounded-2xl border border-slate-200 gap-3 text-center">
           <Layers className="h-9 w-9 text-slate-300" />
-          <p className="font-semibold text-slate-700">No services yet</p>
+          <p className="font-semibold text-slate-700">{t("provServices_emptyTitle")}</p>
           <p className="text-sm text-slate-400 max-w-xs">
-            Add your first service to showcase what your agency offers to clients.
+            {t("provServices_emptyDesc")}
           </p>
           <button onClick={openNew} className="btn-primary mt-1 flex items-center gap-1.5">
-            <Plus className="h-4 w-4" /> Add Service
+            <Plus className="h-4 w-4" /> {t("provServices_btnAddService")}
           </button>
         </div>
       ) : filtered.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 bg-white rounded-2xl border border-slate-200 gap-3 text-center">
           <Search className="h-8 w-8 text-slate-300" />
-          <p className="text-slate-500 text-sm">No services match your filters.</p>
+          <p className="text-slate-500 text-sm">{t("provServices_emptyFiltersMsg")}</p>
           <button onClick={clearFilters} className="text-sm text-primary hover:underline">
-            Clear filters
+            {t("provServices_clearFilters")}
           </button>
         </div>
       ) : (
@@ -597,11 +600,11 @@ export default function ServicesClient() {
                     <p className="font-semibold text-slate-800 leading-tight truncate">{svc.title}</p>
                     {svc.isActive ? (
                       <span className="inline-flex items-center gap-1 text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 px-1.5 py-0.5 rounded-full flex-shrink-0">
-                        <CheckCircle2 className="h-2.5 w-2.5" /> Active
-                      </span>
-                    ) : (
-                      <span className="inline-flex text-[10px] font-semibold bg-slate-100 text-slate-500 border border-slate-200 px-1.5 py-0.5 rounded-full flex-shrink-0">
-                        Inactive
+                          <CheckCircle2 className="h-2.5 w-2.5" /> {t("provServices_badgeActive")}
+                        </span>
+                      ) : (
+                        <span className="inline-flex text-[10px] font-semibold bg-slate-100 text-slate-500 border border-slate-200 px-1.5 py-0.5 rounded-full flex-shrink-0">
+                          {t("provServices_badgeInactive")}
                       </span>
                     )}
                   </div>
@@ -643,7 +646,7 @@ export default function ServicesClient() {
                         onClick={() => handleDelete(svc._id)}
                         className="px-2 py-1 rounded-lg bg-red-500 text-white text-xs font-semibold hover:bg-red-600 transition-colors"
                       >
-                        Delete
+                          {t("provServices_btnDelete")}
                       </button>
                       <button
                         onClick={() => setConfirmDelete(null)}
@@ -672,7 +675,7 @@ export default function ServicesClient() {
               <div className="flex items-center justify-between text-xs pt-2 border-t border-slate-50">
                 <span className="flex items-center gap-1 text-slate-400">
                   <Clock className="h-3 w-3" />
-                  {svc.duration || "Duration not set"}
+                  {svc.duration || t("provServices_durationNotSet")}
                 </span>
                 <span className="flex items-center gap-1 font-semibold text-slate-700 tabular-nums">
                   <DollarSign className="h-3 w-3 text-slate-400" />

@@ -7,6 +7,7 @@ import {
   Star, TrendingUp, Download, RefreshCw, Tag,
 } from "lucide-react";
 import { apiFetch } from "@/lib/fetchClient";
+import { useTranslations } from "next-intl";
 
 interface Stats {
   totalProviders: number;
@@ -110,6 +111,7 @@ function SkeletonCard() {
 }
 
 export default function ReportsPage() {
+  const t = useTranslations("pesoPages");
   const [data, setData]       = useState<ReportData | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -193,14 +195,15 @@ export default function ReportsPage() {
         <div>
           <h1 className="text-xl font-bold text-slate-800 flex items-center gap-2">
             <FileBarChart className="h-5 w-5 text-blue-600" />
-            Reports &amp; Analytics
+            {t("reports")}
           </h1>
           <p className="text-sm text-slate-500 mt-0.5">
             {officeName
-              ? <><span className="font-medium text-slate-600">{officeName}</span> &mdash; {municipality}, {region}</>             : "Employment metrics and workforce data for your PESO office."}
+              ? <><span className="font-medium text-slate-600">{officeName}</span> &mdash; {municipality}, {region}</>
+              : t("reportsSub")}
           </p>
           <p className="text-xs text-blue-600 mt-1 font-medium">
-            Showing data scoped to your PESO office only
+            {t("scopedNote")}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -217,14 +220,14 @@ export default function ReportsPage() {
             className="flex items-center gap-1.5 text-xs font-semibold text-blue-600 border border-blue-200 bg-white hover:bg-blue-50 px-3 py-2 rounded-lg transition-colors"
           >
             <Download className="h-3.5 w-3.5" />
-            Export CSV
+            {t("exportCsv")}
           </button>
         </div>
       </div>
 
       {/* Employment metrics */}
       <div>
-        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Employment Metrics</p>
+        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">{t("employmentMetrics")}</p>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           <StatCard
             label="Total Providers"

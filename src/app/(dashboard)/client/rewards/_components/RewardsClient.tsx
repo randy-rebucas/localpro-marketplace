@@ -6,6 +6,7 @@ import LoyaltyBadge from "@/components/shared/LoyaltyBadge";
 import { getClientTier, pointsToCredits } from "@/lib/loyalty";
 import { formatCurrency, formatRelativeTime } from "@/lib/utils";
 import { Gift, Star, Users, Wallet, Copy, Check, Trophy } from "lucide-react";
+import { useTranslations } from "next-intl";
 import type { ClientTier, ILoyaltyAccount, ILoyaltyTransaction } from "@/types";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -19,15 +20,6 @@ export interface RewardsData {
 }
 
 // ─── Ledger labels ────────────────────────────────────────────────────────────
-
-const TYPE_LABEL: Record<string, string> = {
-  earned_job:       "Job completed",
-  earned_first_job: "First job bonus",
-  earned_referral:  "Referral bonus",
-  earned_review:    "Review bonus",
-  redeemed:         "Redeemed for credit",
-  credit_applied:   "Credit applied",
-};
 
 const TYPE_COLOR: Record<string, string> = {
   earned_job:       "text-green-600",
@@ -49,6 +41,7 @@ function RedeemModal({
   onClose: () => void;
   onSuccess: () => void;
 }) {
+  const t = useTranslations("clientPages");
   const [pts, setPts] = useState(500);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -67,7 +60,7 @@ function RedeemModal({
       });
       if (!res.ok) {
         const data = await res.json();
-        setError(data.error ?? "Redemption failed");
+        setError(data.error ?? t("clientRewards_redeemError"));
         return;
       }
       onSuccess();
@@ -79,12 +72,12 @@ function RedeemModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 space-y-4">
-        <h3 className="text-lg font-bold text-slate-900">Redeem Points</h3>
+        <h3 className="text-lg font-bold text-slate-900">{t("clientRewards_redeemTitle")}</h3>
         <p className="text-sm text-slate-500">
-          Convert your points into cashback credits. 100 pts = ₱10. Minimum: 500 pts.
+          {t("clientRewards_redeemDesc")}
         </p>
         <div>
-          <label className="block text-xs font-medium text-slate-600 mb-1">Points to redeem</label>
+          <label className="block text-xs font-medium text-slate-600 mb-1">{t("clientRewards_redeemLabel")}</label>
           <input
             type="number"
             min={500}
@@ -95,25 +88,25 @@ function RedeemModal({
             className="input w-full"
           />
           <p className="text-xs text-slate-400 mt-1">
-            You have <strong>{maxPoints}</strong> pts available
+            {t("clientRewards_redeemAvailable", { pts: maxPoints })}
           </p>
         </div>
         <div className="bg-green-50 border border-green-100 rounded-lg p-3 text-center">
-          <p className="text-xs text-green-600 font-medium">You will receive</p>
+          <p className="text-xs text-green-600 font-medium">{t("clientRewards_redeemWillReceive")}</p>
           <p className="text-2xl font-bold text-green-700">{formatCurrency(creditPreview)}</p>
-          <p className="text-xs text-green-500">cashback credit</p>
+          <p className="text-xs text-green-500">{t("clientRewards_redeemCashback")}</p>
         </div>
         {error && <p className="text-sm text-red-500">{error}</p>}
         <div className="flex gap-3">
           <button onClick={onClose} className="flex-1 btn-outline" disabled={loading}>
-            Cancel
+            {t("clientRewards_btnCancelRedeem")}
           </button>
           <button
             onClick={handleRedeem}
             className="flex-1 btn-primary"
             disabled={!isValid || loading}
           >
-            {loading ? "Redeeming…" : "Redeem"}
+            {loading ? t("clientRewards_btnRedeeming") : t("clientRewards_btnRedeem")}
           </button>
         </div>
       </div>
@@ -124,12 +117,22 @@ function RedeemModal({
 // ─── Main Client Component ────────────────────────────────────────────────────
 
 export default function RewardsClient({ data }: { data: RewardsData }) {
+  const t = useTranslations("clientPages");
   const router = useRouter();
   const [copied, setCopied] = useState(false);
   const [showRedeem, setShowRedeem] = useState(false);
 
   const { account, ledger, referralCode, referralLink, referredCount } = data;
   const tierInfo = getClientTier(account.lifetimePoints);
+
+  const TYPE_LABEL: Record<string, string> = {
+    earned_job:       t("clientRewards_typeEarnedJob"),
+    earned_first_job: t("clientRewards_typeFirstJob"),
+    earned_referral:  t("clientRewards_typeReferral"),
+    earned_review:    t("clientRewards_typeReview"),
+    redeemed:         t("clientRewards_typeRedeemed"),
+    credit_applied:   t("clientRewards_typeCreditApplied"),
+  };
 
   async function copyLink() {
     await navigator.clipboard.writeText(referralLink);
@@ -152,9 +155,9 @@ export default function RewardsClient({ data }: { data: RewardsData }) {
 
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900">Rewards</h2>
+          <h2 className="text-2xl font-bold text-slate-900">{t("clientRewards_heading")}</h2>
           <p className="text-slate-500 text-sm mt-0.5">
-            Earn points, unlock tiers, and redeem cashback credits.
+            {t("clientRewards_subheading")}
           </p>
         </div>
         <LoyaltyBadge tier={account.tier} size="md" />
@@ -165,10 +168,10 @@ export default function RewardsClient({ data }: { data: RewardsData }) {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Trophy className="h-5 w-5 text-amber-500" />
-            <span className="font-semibold text-slate-800">{tierInfo.label} Member</span>
+            <span className="font-semibold text-slate-800">{t("clientRewards_tierMember", { tier: tierInfo.label })}</span>
           </div>
           <span className="text-xs text-slate-400">
-            {account.lifetimePoints.toLocaleString()} lifetime pts
+            {t("clientRewards_lifetimePoints", { pts: account.lifetimePoints.toLocaleString() })}
           </span>
         </div>
         <div className="w-full bg-slate-100 rounded-full h-2.5">
@@ -179,12 +182,11 @@ export default function RewardsClient({ data }: { data: RewardsData }) {
         </div>
         {tierInfo.next ? (
           <p className="text-xs text-slate-500">
-            <strong>{tierInfo.pointsToNext.toLocaleString()} pts</strong> to reach{" "}
-            <strong>{tierInfo.next}</strong>
+            {t("clientRewards_ptsToNext", { pts: tierInfo.pointsToNext.toLocaleString(), next: tierInfo.next })}
           </p>
         ) : (
           <p className="text-xs text-violet-600 font-medium">
-            You&apos;re at the highest tier! 💎
+            {t("clientRewards_highestTier")}
           </p>
         )}
       </div>
@@ -195,12 +197,12 @@ export default function RewardsClient({ data }: { data: RewardsData }) {
         <div className="bg-white rounded-2xl border border-slate-200 shadow-card p-5">
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-xs text-slate-500">Points Balance</p>
+              <p className="text-xs text-slate-500">{t("clientRewards_pointsBalance")}</p>
               <p className="text-2xl font-bold text-slate-900 mt-1">
                 {account.points.toLocaleString()}
               </p>
               <p className="text-xs text-slate-400 mt-0.5">
-                Worth {formatCurrency(pointsToCredits(account.points))} in credits
+                {t("clientRewards_worthInCredits", { amount: formatCurrency(pointsToCredits(account.points)) })}
               </p>
             </div>
             <div className="p-2.5 bg-primary/10 rounded-xl text-primary">
@@ -213,8 +215,8 @@ export default function RewardsClient({ data }: { data: RewardsData }) {
             disabled={account.points < 500}
           >
             {account.points >= 500
-              ? "Redeem Points"
-              : `Need ${500 - account.points} more pts`}
+              ? t("clientRewards_btnRedeemPoints")
+              : t("clientRewards_needMorePts", { n: 500 - account.points })}
           </button>
         </div>
 
@@ -233,7 +235,7 @@ export default function RewardsClient({ data }: { data: RewardsData }) {
                   account.credits > 0 ? "text-green-600" : "text-slate-500"
                 }`}
               >
-                Cashback Credits
+                {t("clientRewards_cashbackCredits")}
               </p>
               <p
                 className={`text-2xl font-bold mt-1 ${
@@ -247,7 +249,7 @@ export default function RewardsClient({ data }: { data: RewardsData }) {
                   account.credits > 0 ? "text-green-500" : "text-slate-400"
                 }`}
               >
-                Applied automatically at checkout
+                {t("clientRewards_creditsAutoApplied")}
               </p>
             </div>
             <div
@@ -266,9 +268,9 @@ export default function RewardsClient({ data }: { data: RewardsData }) {
         <div className="bg-white rounded-2xl border border-slate-200 shadow-card p-5">
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-xs text-slate-500">Referrals</p>
+              <p className="text-xs text-slate-500">{t("clientRewards_referrals")}</p>
               <p className="text-2xl font-bold text-slate-900 mt-1">{referredCount}</p>
-              <p className="text-xs text-slate-400 mt-0.5">Friends referred</p>
+              <p className="text-xs text-slate-400 mt-0.5">{t("clientRewards_friendsReferred")}</p>
             </div>
             <div className="p-2.5 bg-blue-50 rounded-xl text-blue-500">
               <Users className="h-5 w-5" />
@@ -281,12 +283,10 @@ export default function RewardsClient({ data }: { data: RewardsData }) {
       <div className="bg-white rounded-2xl border border-slate-200 shadow-card p-5 space-y-3">
         <div className="flex items-center gap-2">
           <Gift className="h-5 w-5 text-primary" />
-          <h3 className="font-semibold text-slate-800">Invite Friends &amp; Earn</h3>
+          <h3 className="font-semibold text-slate-800">{t("clientRewards_inviteTitle")}</h3>
         </div>
         <p className="text-sm text-slate-500">
-          Share your link — when a friend signs up and completes their first job, you get{" "}
-          <strong className="text-slate-700">+200 pts</strong> and they get{" "}
-          <strong className="text-slate-700">+100 pts</strong>.
+          {t("clientRewards_inviteDesc")}
         </p>
         <div className="flex items-center gap-2">
           <div className="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm font-mono text-slate-700 truncate">
@@ -301,11 +301,11 @@ export default function RewardsClient({ data }: { data: RewardsData }) {
             ) : (
               <Copy className="h-4 w-4" />
             )}
-            {copied ? "Copied!" : "Copy"}
+            {copied ? t("clientRewards_btnCopied") : t("clientRewards_btnCopy")}
           </button>
         </div>
         <p className="text-xs text-slate-400">
-          Your code:{" "}
+          {t("clientRewards_yourCode")}{" "}
           <strong className="font-mono text-slate-600">{referralCode}</strong>
         </p>
       </div>
@@ -313,13 +313,13 @@ export default function RewardsClient({ data }: { data: RewardsData }) {
       {/* Activity ledger */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-card overflow-hidden">
         <div className="px-5 py-4 border-b border-slate-100">
-          <h3 className="font-semibold text-slate-800">Points Activity</h3>
+          <h3 className="font-semibold text-slate-800">{t("clientRewards_activityTitle")}</h3>
         </div>
         {ledger.length === 0 ? (
           <div className="px-5 py-12 text-center text-slate-400">
             <Star className="h-8 w-8 mx-auto mb-2 text-slate-200" />
             <p className="text-sm">
-              No activity yet. Complete your first job to earn points!
+              {t("clientRewards_emptyActivity")}
             </p>
           </div>
         ) : (

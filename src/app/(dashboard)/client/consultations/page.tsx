@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { getCurrentUser } from "@/lib/auth";
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { Suspense } from "react";
 import RealtimeRefresher from "@/components/shared/RealtimeRefresher";
@@ -13,6 +14,7 @@ export const metadata: Metadata = { title: "Consultations" };
 export default async function ClientConsultationsPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
+  const t = await getTranslations("clientPages");
 
   return (
     <div className="space-y-6">
@@ -31,13 +33,13 @@ export default async function ClientConsultationsPage() {
       {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-900">Consultations</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900">{t("consultations")}</h1>
           <p className="text-slate-500 text-sm mt-1">
-            Request photo-based consultations from providers and get estimates before posting a job.
+            {t("consultationsSub")}
           </p>
         </div>
         <Link href="/client/consultations/request" className="btn-primary self-start sm:flex-shrink-0 sm:mt-1">
-          + Request Consultation
+          {t("requestConsultation")}
         </Link>
       </div>
 

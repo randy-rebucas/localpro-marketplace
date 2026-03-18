@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { getCurrentUser } from "@/lib/auth";
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { Suspense } from "react";
 import RealtimeRefresher from "@/components/shared/RealtimeRefresher";
 import TourGuide from "@/components/shared/TourGuide";
@@ -12,6 +13,7 @@ export const metadata: Metadata = { title: "Consultation Requests" };
 export default async function ProviderConsultationsPage() {
   const user = await getCurrentUser();
   if (!user || user.role !== "provider") redirect("/login");
+  const t = await getTranslations("providerPages");
 
   return (
     <div className="space-y-6">
@@ -29,9 +31,9 @@ export default async function ProviderConsultationsPage() {
 
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Consultation Requests</h1>
+        <h1 className="text-2xl font-bold text-slate-900">{t("consultations")}</h1>
         <p className="text-slate-500 text-sm mt-1">
-          View consultation requests from clients who need your expertise.
+          {t("consultationsSub")}
         </p>
       </div>
 

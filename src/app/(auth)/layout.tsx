@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { MapPin } from "lucide-react";
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 
 function AuthCardSkeleton() {
   return (
@@ -16,11 +17,12 @@ function AuthCardSkeleton() {
   );
 }
 
-export default function AuthLayout({
+export default async function AuthLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const t = await getTranslations("auth");
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-950 via-primary-900 to-primary-800 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
@@ -35,7 +37,7 @@ export default function AuthLayout({
           </h1>
           </Link>
           <p className="text-primary-300 text-sm mt-1">
-            Connecting communities with trusted professionals
+            {t("connecting")}
           </p>
         </div>
 

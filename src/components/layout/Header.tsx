@@ -9,6 +9,7 @@ import { ChevronDown, LogOut, User, Shield, Briefcase, UserCog, Menu, Settings, 
 import { useAuthStore } from "@/stores/authStore";
 import NotificationBell from "@/components/shared/NotificationBell";
 import GlobalSearch from "@/components/shared/GlobalSearch";
+import LocaleSwitcher from "@/components/ui/LocaleSwitcher";
 
 interface HeaderProps {
   title?: string;
@@ -113,6 +114,9 @@ export default function Header({ title, onMenuClick }: HeaderProps) {
       <div className="flex items-center gap-1.5">
         {/* Global search */}
         <GlobalSearch />
+
+        {/* Language switcher */}
+        <LocaleSwitcher />
 
         {/* Messages */}
         {messagesHref && (

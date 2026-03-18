@@ -1,27 +1,10 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { MessageSquare, Star, ShieldCheck, Zap } from "lucide-react";
 import Link from "next/link";
 
 export const metadata: Metadata = { title: "Messages" };
-
-const TIPS = [
-  {
-    icon: <Zap className="h-4 w-4" />,
-    title: "Respond quickly",
-    text: "Fast replies build trust and increase your chances of winning jobs.",
-  },
-  {
-    icon: <ShieldCheck className="h-4 w-4" />,
-    title: "Clarify scope upfront",
-    text: "Agree on timeline, price, and deliverables before starting work.",
-  },
-  {
-    icon: <Star className="h-4 w-4" />,
-    title: "Quality gets reviewed",
-    text: "Great communication leads to 5-star reviews and repeat clients.",
-  },
-];
 
 export default async function ProviderMessagesPage({
   searchParams,
@@ -32,6 +15,13 @@ export default async function ProviderMessagesPage({
   if (params?.jobId) {
     redirect(`/provider/messages/${params.jobId}`);
   }
+
+  const t = await getTranslations("providerPages");
+  const TIPS = [
+    { icon: <Zap className="h-4 w-4" />, title: t("msgTip1Title"), text: t("msgTip1Text") },
+    { icon: <ShieldCheck className="h-4 w-4" />, title: t("msgTip2Title"), text: t("msgTip2Text") },
+    { icon: <Star className="h-4 w-4" />, title: t("msgTip3Title"), text: t("msgTip3Text") },
+  ];
 
   return (
     <div className="flex-1 flex flex-col items-center justify-center gap-8 px-10 py-16 text-center select-none">
@@ -48,9 +38,9 @@ export default async function ProviderMessagesPage({
 
       {/* Heading */}
       <div className="space-y-1.5">
-        <p className="text-base font-semibold text-slate-700">No conversation open</p>
+        <p className="text-base font-semibold text-slate-700">{t("msgNoConvo")}</p>
         <p className="text-sm text-slate-400 max-w-[260px]">
-          Select a job thread from the sidebar to message your client.
+          {t("msgSidebarHint")}
         </p>
       </div>
 
@@ -75,7 +65,7 @@ export default async function ProviderMessagesPage({
         className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary/8 text-primary text-xs font-medium hover:bg-primary/14 transition-colors"
       >
         <MessageSquare className="h-3.5 w-3.5" />
-        Browse Active Jobs
+        {t("msgBrowseJobs")}
       </Link>
     </div>
   );

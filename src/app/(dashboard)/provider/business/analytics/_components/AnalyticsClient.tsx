@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -96,6 +97,7 @@ function RevenueTooltip({ active, payload, label }: {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function AnalyticsClient() {
+  const t = useTranslations("providerPages");
   const [agency, setAgency]       = useState<AgencyProfile | null>(null);
   const [data, setData]           = useState<AnalyticsData | null>(null);
   const [loading, setLoading]     = useState(true);
@@ -119,7 +121,7 @@ export default function AnalyticsClient() {
       setData(res);
     } catch {
       setLoadError(true);
-      toast.error("Failed to load analytics.");
+      toast.error(t("provAnalytics_errorLoad"));
     } finally {
       setLoading(false);
     }
@@ -137,8 +139,8 @@ export default function AnalyticsClient() {
     return (
       <div className="flex flex-col items-center justify-center py-24 gap-4 text-center">
         <AlertCircle className="h-10 w-10 text-red-400" />
-        <p className="text-slate-600 font-medium">Failed to load analytics</p>
-        <button onClick={() => load()} className="btn-secondary text-sm px-4 py-2">Try Again</button>
+        <p className="text-slate-600 font-medium">{t("provAnalytics_errorLoad")}</p>
+        <button onClick={() => load()} className="btn-secondary text-sm px-4 py-2">{t("provAnalytics_tryAgain")}</button>
       </div>
     );
   }
@@ -168,11 +170,9 @@ export default function AnalyticsClient() {
           <Lock className="h-7 w-7 text-amber-500" />
         </div>
         <div className="space-y-2 max-w-md">
-          <h2 className="text-lg font-bold text-slate-800">Analytics &amp; Insights</h2>
+          <h2 className="text-lg font-bold text-slate-800">{t("provAnalytics_planGateTitle")}</h2>
           <p className="text-sm text-slate-500 leading-relaxed">
-            Performance metrics, revenue trends, and staff analytics are available on the{" "}
-            <strong>Growth, Pro,</strong> and <strong>Enterprise</strong> plans.
-            Your current plan is <strong>{PLAN_LABELS[agency.plan]}</strong>.
+            {t("provAnalytics_planGateDesc", { plan: PLAN_LABELS[agency.plan] })}
           </p>
         </div>
         <div className="flex flex-col sm:flex-row gap-3">
@@ -181,7 +181,7 @@ export default function AnalyticsClient() {
               href="/provider/business/plan"
               className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary-700 transition-colors shadow-sm"
             >
-              Upgrade to {PLAN_LABELS[nextPlan]}
+              {t("provAnalytics_upgradeTo", { plan: PLAN_LABELS[nextPlan] })}
               <ArrowUpRight className="h-4 w-4" />
             </a>
           )}
@@ -189,15 +189,15 @@ export default function AnalyticsClient() {
             href="/provider/business"
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50 transition-colors"
           >
-            Back to Dashboard
+            {t("provAnalytics_backToDash")}
           </a>
         </div>
         {/* Preview of what they'll unlock */}
         <div className="grid sm:grid-cols-3 gap-4 mt-4 w-full max-w-xl opacity-40 pointer-events-none select-none">
           {[
-            { icon: TrendingUp, label: "Revenue Trends" },
-            { icon: BarChart2, label: "Category Breakdown" },
-            { icon: Users, label: "Staff Performance" },
+            { icon: TrendingUp, label: t("provAnalytics_revenueTrends") },
+            { icon: BarChart2, label: t("provAnalytics_categoryBreakdown") },
+            { icon: Users, label: t("provAnalytics_staffPerformance") },
           ].map(({ icon: Icon, label }) => (
             <div key={label} className="flex flex-col items-center gap-2 p-4 bg-white rounded-xl border border-slate-200">
               <Icon className="h-6 w-6 text-slate-400" />
@@ -214,8 +214,8 @@ export default function AnalyticsClient() {
       <div className="flex flex-col items-center justify-center py-24 gap-3 text-center">
         <BarChart2 className="h-10 w-10 text-slate-300" />
         <p className="text-slate-500">
-          No agency profile found.{" "}
-          <Link href="/provider/business" className="text-primary underline">Create one first.</Link>
+          {t("provAnalytics_noAgency")}{" "}
+          <Link href="/provider/business" className="text-primary underline">{t("provAnalytics_createFirst")}</Link>
         </p>
       </div>
     );
@@ -225,7 +225,7 @@ export default function AnalyticsClient() {
     return (
       <div className="flex flex-col items-center justify-center py-24 gap-3 text-center">
         <BarChart2 className="h-10 w-10 text-slate-300" />
-        <p className="text-slate-500">No analytics data available.</p>
+        <p className="text-slate-500">{t("provAnalytics_noData")}</p>
       </div>
     );
   }
@@ -234,8 +234,8 @@ export default function AnalyticsClient() {
   const catEntries = Object.entries(categoryBreakdown).sort((a, b) => b[1] - a[1]).slice(0, 8);
   const catMax     = catEntries[0]?.[1] ?? 1;
   const ROLE_LABELS: Record<string, string> = {
-    worker: "Worker", dispatcher: "Dispatcher",
-    supervisor: "Supervisor", finance: "Finance",
+    worker: t("provAnalytics_roleWorker"), dispatcher: t("provAnalytics_roleDispatcher"),
+    supervisor: t("provAnalytics_roleSupervisor"), finance: t("provAnalytics_roleFinance"),
   };
   const score = clientRetentionRate ?? 0;
 
@@ -254,8 +254,8 @@ export default function AnalyticsClient() {
             <PieChart className="h-5 w-5 text-amber-600 dark:text-amber-400" />
           </div>
           <div>
-            <h1 className="text-base font-bold text-slate-800 dark:text-white">Analytics</h1>
-            <p className="text-xs text-slate-500 dark:text-slate-400">Performance overview for {data.agencyName}</p>
+            <h1 className="text-base font-bold text-slate-800 dark:text-white">{t("provAnalytics_heading")}</h1>
+            <p className="text-xs text-slate-500 dark:text-slate-400">{t("provAnalytics_subheading", { name: data.agencyName })}</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -264,9 +264,9 @@ export default function AnalyticsClient() {
             value={months}
             onChange={(e) => handleMonthsChange(Number(e.target.value))}
           >
-            <option value={3}>Last 3 months</option>
-            <option value={6}>Last 6 months</option>
-            <option value={12}>Last 12 months</option>
+            <option value={3}>{t("provAnalytics_last3")}</option>
+            <option value={6}>{t("provAnalytics_last6")}</option>
+            <option value={12}>{t("provAnalytics_last12")}</option>
           </select>
           <button
             onClick={() => load(months)}
@@ -283,16 +283,16 @@ export default function AnalyticsClient() {
         <KpiCard
           icon={<Briefcase className="h-5 w-5 text-primary" />}
           bg="bg-primary/10"
-          label="Jobs Completed"
+          label={t("provAnalytics_kpiJobs")}
           value={String(kpi.totalJobs)}
-          sub={`last ${months} month${months !== 1 ? "s" : ""}`}
+          sub={t("provAnalytics_lastNMonths", { n: months })}
         />
         <KpiCard
           icon={<DollarSign className="h-5 w-5 text-emerald-600" />}
           bg="bg-emerald-50"
-          label="Revenue Earned"
+          label={t("provAnalytics_kpiRevenue")}
           value={formatCurrency(kpi.totalRevenue)}
-          sub={`last ${months} month${months !== 1 ? "s" : ""}`}
+          sub={t("provAnalytics_lastNMonths", { n: months })}
           badge={momRev != null ? (
             <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
               momRev >= 0 ? "bg-emerald-50 text-emerald-600" : "bg-red-50 text-red-600"
@@ -304,16 +304,16 @@ export default function AnalyticsClient() {
         <KpiCard
           icon={<Star className="h-5 w-5 text-amber-500" />}
           bg="bg-amber-50"
-          label="Avg Rating"
+          label={t("provAnalytics_kpiRating")}
           value={kpi.avgRating != null ? `${kpi.avgRating} ★` : "—"}
-          sub={kpi.totalReviews > 0 ? `${kpi.totalReviews} reviews` : "no reviews yet"}
+          sub={kpi.totalReviews > 0 ? t("provAnalytics_nReviews", { n: kpi.totalReviews }) : t("provAnalytics_noReviews")}
         />
         <KpiCard
           icon={<Repeat className="h-5 w-5 text-violet-600" />}
           bg="bg-violet-50"
-          label="Retention Rate"
+          label={t("provAnalytics_kpiRetention")}
           value={clientRetentionRate != null ? `${clientRetentionRate}%` : "—"}
-          sub="repeat clients"
+          sub={t("provAnalytics_repeatClients")}
         />
       </div>
 
@@ -321,12 +321,12 @@ export default function AnalyticsClient() {
       <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
         <div className="flex items-center gap-2 px-5 py-4 border-b border-slate-100">
           <TrendingUp className="h-4 w-4 text-slate-400" />
-          <h2 className="font-semibold text-slate-800 text-sm">Revenue Trend</h2>
+          <h2 className="font-semibold text-slate-800 text-sm">{t("provAnalytics_revenueTrend")}</h2>
         </div>
         {revenueTrend.every((r) => r.revenue === 0) ? (
           <div className="flex flex-col items-center gap-2 py-10 text-center">
             <BarChart2 className="h-7 w-7 text-slate-300" />
-            <p className="text-sm text-slate-400">No revenue data for this period.</p>
+            <p className="text-sm text-slate-400">{t("provAnalytics_noRevenuePeriod")}</p>
           </div>
         ) : (
           <div className="px-4 pt-4 pb-3">
@@ -362,10 +362,10 @@ export default function AnalyticsClient() {
         <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
           <div className="flex items-center gap-2 px-5 py-4 border-b border-slate-100">
             <PieChart className="h-4 w-4 text-slate-400" />
-            <h2 className="font-semibold text-slate-800 text-sm">Jobs by Category</h2>
+            <h2 className="font-semibold text-slate-800 text-sm">{t("provAnalytics_jobsByCategory")}</h2>
           </div>
           {catEntries.length === 0 ? (
-            <EmptyState icon={<PieChart className="h-7 w-7 text-slate-300" />} message="No category data yet." />
+            <EmptyState icon={<PieChart className="h-7 w-7 text-slate-300" />} message={t("provAnalytics_noCategoryData")} />
           ) : (
             <div className="px-5 py-4 space-y-2.5">
               {catEntries.map(([cat, count], i) => (
@@ -375,7 +375,7 @@ export default function AnalyticsClient() {
                       <span className="w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{ background: CAT_COLORS[i % CAT_COLORS.length] }} />
                       <span className="font-medium text-slate-700 truncate max-w-[140px]">{cat}</span>
                     </div>
-                    <span className="font-semibold text-slate-900 tabular-nums">{count} jobs</span>
+                    <span className="font-semibold text-slate-900 tabular-nums">{count} {t("provAnalytics_jobs")}</span>
                   </div>
                   <PctBar value={count} max={catMax} color={CAT_COLORS[i % CAT_COLORS.length]} />
                 </div>
@@ -388,10 +388,10 @@ export default function AnalyticsClient() {
         <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
           <div className="flex items-center gap-2 px-5 py-4 border-b border-slate-100">
             <Users className="h-4 w-4 text-slate-400" />
-            <h2 className="font-semibold text-slate-800 text-sm">Staff Performance</h2>
+            <h2 className="font-semibold text-slate-800 text-sm">{t("provAnalytics_staffPerf")}</h2>
           </div>
           {staffPerformance.length === 0 ? (
-            <EmptyState icon={<Users className="h-7 w-7 text-slate-300" />} message="No staff registered to this agency yet." />
+            <EmptyState icon={<Users className="h-7 w-7 text-slate-300" />} message={t("provAnalytics_noStaff")} />
           ) : (
             <div className="divide-y divide-slate-50">
               {staffPerformance.map((s) => (
@@ -407,7 +407,7 @@ export default function AnalyticsClient() {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-slate-800 truncate">{s.name}</p>
                     <div className="flex items-center gap-2 mt-0.5">
-                      <span className="text-[10px] text-slate-400">{s.completedJobs} jobs</span>
+                      <span className="text-[10px] text-slate-400">{s.completedJobs} {t("provAnalytics_jobs")}</span>
                       {s.avgRating != null && (
                         <span className="text-[10px] text-amber-500">★ {s.avgRating}</span>
                       )}
@@ -419,8 +419,8 @@ export default function AnalyticsClient() {
                 </div>
               ))}
               <p className="px-5 py-3 text-[11px] text-slate-400">
-                Manage staff roles in the{" "}
-                <Link href="/provider/business/staff" className="text-primary hover:underline">Staff</Link> tab.
+                {t("provAnalytics_staffMgmtHint")}{" "}
+                  <Link href="/provider/business/staff" className="text-primary hover:underline">{t("provAnalytics_staffTab")}</Link> {t("provAnalytics_staffMgmtHint2")}
               </p>
             </div>
           )}
@@ -430,7 +430,7 @@ export default function AnalyticsClient() {
         <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
           <div className="flex items-center gap-2 px-5 py-4 border-b border-slate-100">
             <Repeat className="h-4 w-4 text-slate-400" />
-            <h2 className="font-semibold text-slate-800 text-sm">Client Retention</h2>
+            <h2 className="font-semibold text-slate-800 text-sm">{t("provAnalytics_clientRetention")}</h2>
           </div>
           <div className="px-5 py-6 flex items-center gap-6">
             <div className="flex-shrink-0">
@@ -451,18 +451,18 @@ export default function AnalyticsClient() {
               </div>
             </div>
             <div>
-              <p className="text-sm font-semibold text-slate-700">Repeat Clients</p>
+              <p className="text-sm font-semibold text-slate-700">{t("provAnalytics_repeatClients")}</p>
               <p className="text-xs text-slate-400 mt-1 leading-relaxed">
-                Clients who booked your agency more than once in the selected period.
+                {t("provAnalytics_retentionDesc")}
               </p>
               {clientRetentionRate == null ? (
-                <p className="text-xs text-slate-400 mt-2">No data yet for this period.</p>
+                <p className="text-xs text-slate-400 mt-2">{t("provAnalytics_noRetentionData")}</p>
               ) : score >= 60 ? (
-                <p className="text-xs text-emerald-600 font-semibold mt-2">Excellent retention</p>
+                <p className="text-xs text-emerald-600 font-semibold mt-2">{t("provAnalytics_excellentRetention")}</p>
               ) : score >= 30 ? (
-                <p className="text-xs text-amber-600 font-semibold mt-2">Average retention</p>
+                <p className="text-xs text-amber-600 font-semibold mt-2">{t("provAnalytics_avgRetention")}</p>
               ) : (
-                <p className="text-xs text-slate-400 mt-2">Build client relationships to improve</p>
+                <p className="text-xs text-slate-400 mt-2">{t("provAnalytics_buildRelationships")}</p>
               )}
             </div>
           </div>
@@ -472,10 +472,10 @@ export default function AnalyticsClient() {
         <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
           <div className="flex items-center gap-2 px-5 py-4 border-b border-slate-100">
             <Clock className="h-4 w-4 text-slate-400" />
-            <h2 className="font-semibold text-slate-800 text-sm">Peak Service Hours</h2>
+            <h2 className="font-semibold text-slate-800 text-sm">{t("provAnalytics_peakHours")}</h2>
           </div>
           {peakHours.every((p) => p.count === 0) ? (
-            <EmptyState icon={<Clock className="h-7 w-7 text-slate-300" />} message="Not enough job data yet." />
+            <EmptyState icon={<Clock className="h-7 w-7 text-slate-300" />} message={t("provAnalytics_notEnoughData")} />
           ) : (
             <div className="px-5 py-5 space-y-3">
               {peakHours.map((slot, i) => (
@@ -484,7 +484,7 @@ export default function AnalyticsClient() {
                     <span className="text-slate-600 font-medium">{slot.label}</span>
                     <span className="font-semibold text-slate-700 tabular-nums">
                       {slot.percent}%
-                      <span className="text-slate-400 font-normal ml-1">({slot.count} jobs)</span>
+                      <span className="text-slate-400 font-normal ml-1">({slot.count} {t("provAnalytics_jobs")})</span>
                     </span>
                   </div>
                   <div className="h-2 w-full rounded-full bg-slate-100 overflow-hidden">
@@ -496,7 +496,7 @@ export default function AnalyticsClient() {
                 </div>
               ))}
               <p className="text-[11px] text-slate-400 pt-1">
-                Based on job creation times — updates as more jobs are recorded.
+                {t("provAnalytics_peakNote")}
               </p>
             </div>
           )}

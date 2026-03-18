@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
+import { useTranslations } from "next-intl";
 import { Wallet, X } from "lucide-react";
 import Button from "@/components/ui/Button";
 import { formatCurrency } from "@/lib/utils";
@@ -35,6 +36,8 @@ const BANKS = [
 
 export default function RequestPayoutModal({ availableBalance }: Props) {
   const router = useRouter();
+  const t = useTranslations("requestPayoutModal");
+  const tCommon = useTranslations("common");
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
@@ -53,15 +56,15 @@ export default function RequestPayoutModal({ availableBalance }: Props) {
   async function submit() {
     const amount = parseFloat(form.amount);
     if (!amount || amount <= 0) {
-      toast.error("Please enter a valid amount.");
+      toast.error(t("invalidAmount"));
       return;
     }
     if (amount > availableBalance) {
-      toast.error(`Amount exceeds your available balance of ${formatCurrency(availableBalance)}.`);
+      toast.error(t("exceedsBalance", { balance: formatCurrency(availableBalance) }));
       return;
     }
     if (!form.bankName.trim() || !form.accountNumber.trim() || !form.accountName.trim()) {
-      toast.error("Please fill in all bank account details.");
+      toast.error(t("missingDetails"));
       return;
     }
 
@@ -79,14 +82,14 @@ export default function RequestPayoutModal({ availableBalance }: Props) {
       });
       const data = await res.json();
       if (!res.ok) {
-        toast.error(data.error ?? "Failed to submit payout request.");
+        toast.error(data.error ?? t("submitFailed"));
         return;
       }
-      toast.success("Payout request submitted! Admin will process it shortly.");
+      toast.success(t("submitSuccess"));
       setOpen(false);
       router.refresh();
     } catch {
-      toast.error("Something went wrong. Please try again.");
+      toast.error(tCommon("somethingWentWrong"));
     } finally {
       setLoading(false);
     }
@@ -101,7 +104,7 @@ export default function RequestPayoutModal({ availableBalance }: Props) {
         className="flex items-center gap-2"
       >
         <Wallet className="h-4 w-4" />
-        Request Payout
+        {t("triggerBtn")}
       </Button>
 
       {open && (
@@ -110,7 +113,7 @@ export default function RequestPayoutModal({ availableBalance }: Props) {
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
               <div>
-                <h3 className="text-lg font-semibold text-slate-900">Request Payout</h3>
+                <h3 className="text-lg font-semibold text-slate-900">{t("modalTitle")}</h3>
                 <p className="text-xs text-slate-500 mt-0.5">
                   Available:{" "}
                   <span className="font-semibold text-green-600">
@@ -131,7 +134,7 @@ export default function RequestPayoutModal({ availableBalance }: Props) {
               {/* Amount */}
               <div>
                 <label className="block text-xs font-medium text-slate-600 mb-1.5">
-                  Amount (PHP)
+                  {t("amountLabel")}
                 </label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-medium">
@@ -154,7 +157,7 @@ export default function RequestPayoutModal({ availableBalance }: Props) {
               {/* Bank */}
               <div>
                 <label className="block text-xs font-medium text-slate-600 mb-1.5">
-                  Bank / Payment Channel
+                  {t("bankLabel")}
                 </label>
                 <select
                   name="bankName"
@@ -162,7 +165,7 @@ export default function RequestPayoutModal({ availableBalance }: Props) {
                   onChange={handleChange}
                   className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary bg-white"
                 >
-                  <option value="">Select bank...</option>
+                  <option value="">{t("bankPlaceholder")}</option>
                   {BANKS.map((b) => (
                     <option key={b} value={b}>
                       {b}
@@ -174,14 +177,14 @@ export default function RequestPayoutModal({ availableBalance }: Props) {
               {/* Account Number */}
               <div>
                 <label className="block text-xs font-medium text-slate-600 mb-1.5">
-                  Account Number
+                  {t("accountNumberLabel")}
                 </label>
                 <input
                   type="text"
                   name="accountNumber"
                   value={form.accountNumber}
                   onChange={handleChange}
-                  placeholder="e.g. 1234-5678-9012"
+                  placeholder={t("accountNumberPlaceholder")}
                   className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
                 />
               </div>
@@ -189,14 +192,14 @@ export default function RequestPayoutModal({ availableBalance }: Props) {
               {/* Account Name */}
               <div>
                 <label className="block text-xs font-medium text-slate-600 mb-1.5">
-                  Account Name
+                  {t("accountNameLabel")}
                 </label>
                 <input
                   type="text"
                   name="accountName"
                   value={form.accountName}
                   onChange={handleChange}
-                  placeholder="Full name as registered with your bank"
+                  placeholder={t("accountNamePlaceholder")}
                   className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
                 />
               </div>
@@ -213,20 +216,20 @@ export default function RequestPayoutModal({ availableBalance }: Props) {
                 );
                 return (
                   <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 space-y-1.5 text-sm">
-                    <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide">Payout breakdown</p>
+                    <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide">{t("payoutBreakdownHeading")}</p>
                     <div className="flex items-center justify-between text-slate-700">
-                      <span>Requested amount</span>
+                      <span>{t("requestedAmountLabel")}</span>
                       <span className="font-medium">{formatCurrency(parsedAmount)}</span>
                     </div>
                     <div className="flex items-center justify-between text-slate-500">
                       <span>
-                        Withdrawal fee
-                        <span className="ml-1 text-xs text-amber-600 font-medium">(non-refundable)</span>
+                        {t("withdrawalFeeLabel")}
+                        <span className="ml-1 text-xs text-amber-600 font-medium">{t("nonRefundable")}</span>
                       </span>
                       <span className="text-red-500 font-medium">−{formatCurrency(withdrawalFee)}</span>
                     </div>
                     <div className="flex items-center justify-between border-t border-amber-200 pt-1.5 font-semibold text-slate-900">
-                      <span>You will receive</span>
+                      <span>{t("youWillReceiveLabel")}</span>
                       <span className="text-green-700">{formatCurrency(netAmount)}</span>
                     </div>
                   </div>
@@ -234,8 +237,7 @@ export default function RequestPayoutModal({ availableBalance }: Props) {
               })()}
 
               <p className="text-xs text-slate-400">
-                Payouts are typically processed within 1–3 business days. An admin will
-                review your request before releasing funds.
+                {t("processingNote")}
               </p>
             </div>
 
@@ -245,10 +247,10 @@ export default function RequestPayoutModal({ availableBalance }: Props) {
                 onClick={() => setOpen(false)}
                 className="flex-1 rounded-lg border border-slate-200 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors"
               >
-                Cancel
+                {tCommon("cancel")}
               </button>
               <Button isLoading={loading} onClick={submit} className="flex-1">
-                Submit Request
+                {t("submitBtn")}
               </Button>
             </div>
           </div>

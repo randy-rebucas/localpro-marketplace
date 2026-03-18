@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
+import { useTranslations } from "next-intl";
 import { Search, ShieldCheck, Star, Users, X } from "lucide-react";
 import { apiFetch } from "@/lib/fetchClient";
 
@@ -34,6 +35,7 @@ const INPUT_CLS =
   "text-sm border border-slate-200 rounded-lg px-3 py-1.5 text-slate-700 outline-none focus:ring-1 focus:ring-blue-400 placeholder:text-slate-400";
 
 export default function WorkforceRegistryPage() {
+  const t = useTranslations("pesoPages");
   const [registry, setRegistry] = useState<Registry | null>(null);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({ barangay: "", skill: "", verificationTag: "", page: 1 });
@@ -71,9 +73,9 @@ export default function WorkforceRegistryPage() {
     <div className="space-y-5">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold text-slate-800">Workforce Registry</h1>
+          <h1 className="text-xl font-bold text-slate-800">{t("workforceRegistry")}</h1>
           <p className="text-sm text-slate-500 mt-0.5">
-            Live digital registry of skilled workers registered on LocalPro.
+            {t("workforcePageSub")}
           </p>
         </div>
         {registry && (
@@ -108,7 +110,7 @@ export default function WorkforceRegistryPage() {
           onChange={(e) => setFilters((f) => ({ ...f, verificationTag: e.target.value, page: 1 }))}
           className={INPUT_CLS}
         >
-          <option value="">All Verification Tags</option>
+          <option value="">{t("allVerificationTags")}</option>
           <option value="peso_registered">PESO Registered</option>
           <option value="lgu_resident">LGU Resident Verified</option>
           <option value="peso_recommended">PESO Recommended</option>
@@ -118,7 +120,7 @@ export default function WorkforceRegistryPage() {
             onClick={clearFilters}
             className="flex items-center gap-1 text-sm text-slate-500 hover:text-slate-800 transition-colors"
           >
-            <X className="h-3.5 w-3.5" /> Clear
+            <X className="h-3.5 w-3.5" /> {t("clearFiltersX")}
           </button>
         )}
       </div>
@@ -141,10 +143,10 @@ export default function WorkforceRegistryPage() {
         ) : !registry?.data.length ? (
           <div className="py-16 flex flex-col items-center gap-2 text-slate-400">
             <Users className="h-8 w-8 opacity-40" />
-            <p className="text-sm">No workers found{hasActiveFilters ? " matching your filters" : ""}.</p>
+            <p className="text-sm">{hasActiveFilters ? t("noWorkersFoundFiltered") : t("noWorkersFound")}</p>
             {hasActiveFilters && (
               <button onClick={clearFilters} className="text-xs text-blue-500 hover:underline">
-                Clear filters
+                {t("clearFiltersBtn")}
               </button>
             )}
           </div>
@@ -153,12 +155,12 @@ export default function WorkforceRegistryPage() {
             <table className="w-full text-sm">
               <thead className="bg-slate-50 border-b border-slate-200">
                 <tr>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">Provider</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">Barangay</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">Skills</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">Verification</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">Rating</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">Jobs Done</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">{t("colProvider")}</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">{t("colBarangay")}</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">{t("colSkills")}</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">{t("colVerification")}</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">{t("colRating")}</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">{t("colJobsDone")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -169,7 +171,7 @@ export default function WorkforceRegistryPage() {
                       <div className="text-xs text-slate-400">{w.email}</div>
                       {w.isLocalProCertified && (
                         <span className="inline-flex items-center gap-1 text-xs bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded mt-1 font-medium">
-                          <ShieldCheck className="h-3 w-3" /> Certified
+                          <ShieldCheck className="h-3 w-3" /> {t("certifiedBadge")}
                         </span>
                       )}
                     </td>
@@ -224,17 +226,17 @@ export default function WorkforceRegistryPage() {
             onClick={() => setFilters((f) => ({ ...f, page: f.page - 1 }))}
             className="px-3 py-1.5 text-sm border border-slate-200 rounded-lg disabled:opacity-40 hover:bg-slate-50 transition-colors"
           >
-            ← Previous
+            {t("prevPage")}
           </button>
           <span className="px-3 py-1.5 text-sm text-slate-500 tabular-nums">
-            Page {registry.page} of {registry.totalPages}
+            {t("pageOf", { page: registry.page, total: registry.totalPages })}
           </span>
           <button
             disabled={filters.page >= registry.totalPages}
             onClick={() => setFilters((f) => ({ ...f, page: f.page + 1 }))}
             className="px-3 py-1.5 text-sm border border-slate-200 rounded-lg disabled:opacity-40 hover:bg-slate-50 transition-colors"
           >
-            Next →
+            {t("nextPage")}
           </button>
         </div>
       )}

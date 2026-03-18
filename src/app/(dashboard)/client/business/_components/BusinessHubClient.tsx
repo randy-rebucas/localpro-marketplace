@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
@@ -70,6 +71,7 @@ function SpendTooltip({ active, payload, label }: { active?: boolean; payload?: 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function BusinessHubClient() {
+  const t = useTranslations("clientPages");
   const [org, setOrg]                 = useState<IBusinessOrganization | null>(null);
   const [loading, setLoading]         = useState(true);
   const [creating, setCreating]       = useState(false);
@@ -109,7 +111,7 @@ export default function BusinessHubClient() {
   useEffect(() => { loadOrg(); }, [loadOrg]);
 
   async function handleCreate() {
-    if (!form.name.trim()) return setError("Organization name is required.");
+    if (!form.name.trim()) return setError(t("biz_orgNameRequired"));
     setCreating(true); setError(null);
     try {
       const data = await fetchClient<{ org: IBusinessOrganization }>("/api/business/org", {
@@ -137,7 +139,7 @@ export default function BusinessHubClient() {
           <p className="text-sm text-slate-500 mt-1">{loadError}</p>
         </div>
         <button onClick={loadOrg} className="btn-primary flex items-center gap-2">
-          <RefreshCw className="h-4 w-4" /> Try again
+          <RefreshCw className="h-4 w-4" /> {t("biz_tryAgain")}
         </button>
       </div>
     );
@@ -172,14 +174,13 @@ export default function BusinessHubClient() {
           <Building2 className="h-10 w-10 text-primary" />
         </div>
         <div>
-          <h2 className="text-xl font-bold text-slate-800">No Business Profile Yet</h2>
+          <h2 className="text-xl font-bold text-slate-800">{t("biz_noOrgHeading")}</h2>
           <p className="text-slate-500 mt-1.5 max-w-sm text-sm leading-relaxed">
-            Set up your business organization to manage multiple locations, team members,
-            budgets, and provider analytics — all in one place.
+            {t("biz_noOrgBody")}
           </p>
         </div>
         <button onClick={() => setShowCreate(true)} className="btn-primary flex items-center gap-2">
-          <Plus className="h-4 w-4" /> Create Business Profile
+          <Plus className="h-4 w-4" /> {t("biz_createProfile")}
         </button>
       </div>
     );
@@ -190,8 +191,8 @@ export default function BusinessHubClient() {
     return (
       <div className="max-w-md mx-auto py-16 space-y-6">
         <div>
-          <h2 className="text-xl font-bold text-slate-900">Create Business Profile</h2>
-          <p className="text-sm text-slate-400 mt-0.5">Fill in your organization details below.</p>
+          <h2 className="text-xl font-bold text-slate-900">{t("biz_createFormTitle")}</h2>
+          <p className="text-sm text-slate-400 mt-0.5">{t("biz_createFormSub")}</p>
         </div>
         {error && (
           <p className="text-sm text-red-500 bg-red-50 border border-red-200 rounded-xl px-4 py-2.5">{error}</p>
@@ -199,7 +200,7 @@ export default function BusinessHubClient() {
         <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-4">
           <div>
             <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
-              Organization Name *
+              {t("biz_orgNameLabel")}
             </label>
             <input
               className="input w-full"
@@ -210,24 +211,24 @@ export default function BusinessHubClient() {
           </div>
           <div>
             <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
-              Type
+              {t("biz_typeLabel")}
             </label>
             <select
               className="input w-full"
               value={form.type}
               onChange={(e) => setForm((f) => ({ ...f, type: e.target.value as typeof form.type }))}
             >
-              <option value="company">Company</option>
-              <option value="hotel">Hotel</option>
-              <option value="other">Other</option>
+              <option value="company">{t("biz_typeCompany")}</option>
+              <option value="hotel">{t("biz_typeHotel")}</option>
+              <option value="other">{t("biz_typeOther")}</option>
             </select>
           </div>
         </div>
         <div className="flex gap-3">
           <button onClick={handleCreate} disabled={creating} className="btn-primary flex-1">
-            {creating ? "Creating…" : "Create Organization"}
+            {creating ? t("biz_creating") : t("biz_createOrg")}
           </button>
-          <button onClick={() => setShowCreate(false)} className="btn-secondary flex-1">Cancel</button>
+          <button onClick={() => setShowCreate(false)} className="btn-secondary flex-1">{t("biz_cancel")}</button>
         </div>
       </div>
     );
@@ -249,39 +250,39 @@ export default function BusinessHubClient() {
   const provMax   = Math.max(...(snap?.topProviders.map((p) => p.totalJobs) ?? [1]), 1);
 
   const KPI_CARDS = [
-    { label: "Active Jobs",       value: kpi?.activeJobs ?? 0,                       icon: Briefcase,    color: "text-blue-600",    bg: "bg-blue-50",    ring: "ring-blue-100",    sub: "open + assigned + in progress" },
-    { label: "In Progress",       value: kpi?.inProgress ?? 0,                       icon: Clock,        color: "text-violet-600",  bg: "bg-violet-50",  ring: "ring-violet-100",  sub: "currently being worked" },
-    { label: "Escrow Balance",    value: formatCurrency(kpi?.escrowBalance ?? 0),    icon: ShieldAlert,  color: "text-amber-600",   bg: "bg-amber-50",   ring: "ring-amber-100",   sub: "funds held in escrow" },
-    { label: "Monthly Spend",     value: formatCurrency(kpi?.monthlySpend ?? 0),     icon: TrendingUp,   color: "text-emerald-600", bg: "bg-emerald-50", ring: "ring-emerald-100", sub: "this month" },
+    { label: t("biz_kpiActiveJobs"),       value: kpi?.activeJobs ?? 0,                       icon: Briefcase,    color: "text-blue-600",    bg: "bg-blue-50",    ring: "ring-blue-100",    sub: t("biz_kpiActiveSub") },
+    { label: t("biz_kpiInProgress"),       value: kpi?.inProgress ?? 0,                       icon: Clock,        color: "text-violet-600",  bg: "bg-violet-50",  ring: "ring-violet-100",  sub: t("biz_kpiInProgressSub") },
+    { label: t("biz_kpiEscrow"),           value: formatCurrency(kpi?.escrowBalance ?? 0),    icon: ShieldAlert,  color: "text-amber-600",   bg: "bg-amber-50",   ring: "ring-amber-100",   sub: t("biz_kpiEscrowSub") },
+    { label: t("biz_kpiMonthlySpend"),     value: formatCurrency(kpi?.monthlySpend ?? 0),     icon: TrendingUp,   color: "text-emerald-600", bg: "bg-emerald-50", ring: "ring-emerald-100", sub: t("biz_kpiMonthlySub") },
     {
-      label: "Budget Remaining",
+      label: t("biz_kpiBudgetRemaining"),
       value: formatCurrency(kpi?.budgetRemaining ?? 0),
       icon: Wallet,
       color: budgetPct >= 90 ? "text-red-600" : budgetPct >= 70 ? "text-amber-600" : "text-slate-600",
       bg: budgetPct >= 90 ? "bg-red-50" : budgetPct >= 70 ? "bg-amber-50" : "bg-slate-50",
       ring: budgetPct >= 90 ? "ring-red-100" : budgetPct >= 70 ? "ring-amber-100" : "ring-slate-100",
-      sub: `${budgetPct}% of budget used`,
+      sub: t("biz_kpiBudgetSub", { n: budgetPct }),
     },
     {
-      label: "Disputes Open",
+      label: t("biz_kpiDisputesOpen"),
       value: kpi?.disputesOpen ?? 0,
       icon: AlertTriangle,
       color: (kpi?.disputesOpen ?? 0) > 0 ? "text-red-600" : "text-slate-400",
       bg: (kpi?.disputesOpen ?? 0) > 0 ? "bg-red-50" : "bg-slate-50",
       ring: (kpi?.disputesOpen ?? 0) > 0 ? "ring-red-100" : "ring-slate-100",
-      sub: "requiring attention",
+      sub: t("biz_kpiDisputesSub"),
     },
   ];
 
   const NAV_CARDS = [
-    { label: "Locations",    value: String(activeLocations), sub: "active branches",    icon: MapPin,      href: "/client/business/locations",  color: "text-blue-600",    bg: "bg-blue-50",    ring: "ring-blue-100" },
-    { label: "Team Members", value: "Manage",                sub: "role-based access",  icon: Users,       href: "/client/business/members",    color: "text-violet-600",  bg: "bg-violet-50",  ring: "ring-violet-100" },
-    { label: "Budget",       value: formatCurrency(totalBudget), sub: "total / mo",     icon: Wallet,      href: "/client/business/budget",     color: "text-emerald-600", bg: "bg-emerald-50", ring: "ring-emerald-100" },
-    { label: "Analytics",    value: "View",                  sub: "spend & performance", icon: PieChart,   href: "/client/business/analytics",  color: "text-amber-600",   bg: "bg-amber-50",   ring: "ring-amber-100" },
-    { label: "Jobs",         value: String(kpi?.activeJobs ?? 0), sub: "active this month", icon: Briefcase, href: "/client/business/jobs",       color: "text-sky-600",     bg: "bg-sky-50",     ring: "ring-sky-100" },
-    { label: "Escrow",       value: "Manage",                sub: "funded & released",  icon: CreditCard,  href: "/client/business/escrow",     color: "text-teal-600",    bg: "bg-teal-50",    ring: "ring-teal-100" },
-    { label: "Disputes",     value: String(kpi?.disputesOpen ?? 0), sub: "open cases",  icon: Shield,      href: "/client/business/disputes",   color: "text-orange-600",  bg: "bg-orange-50",  ring: "ring-orange-100" },
-    { label: "Billing",      value: "Manage",                sub: "plan & commission",   icon: ReceiptText, href: "/client/business/billing",    color: "text-rose-600",    bg: "bg-rose-50",    ring: "ring-rose-100" },
+    { label: t("biz_navLocations"),    value: String(activeLocations),                sub: t("biz_navLocationsSub"),    icon: MapPin,      href: "/client/business/locations",  color: "text-blue-600",    bg: "bg-blue-50",    ring: "ring-blue-100" },
+    { label: t("biz_navMembers"),      value: t("biz_manage"),                        sub: t("biz_navMembersSub"),       icon: Users,       href: "/client/business/members",    color: "text-violet-600",  bg: "bg-violet-50",  ring: "ring-violet-100" },
+    { label: t("biz_navBudget"),       value: formatCurrency(totalBudget),            sub: t("biz_navBudgetSub"),        icon: Wallet,      href: "/client/business/budget",     color: "text-emerald-600", bg: "bg-emerald-50", ring: "ring-emerald-100" },
+    { label: t("biz_navAnalytics"),    value: t("biz_manage"),                        sub: t("biz_navAnalyticsSub"),     icon: PieChart,    href: "/client/business/analytics",  color: "text-amber-600",   bg: "bg-amber-50",   ring: "ring-amber-100" },
+    { label: t("biz_navJobs"),         value: String(kpi?.activeJobs ?? 0),           sub: t("biz_navJobsSub"),          icon: Briefcase,   href: "/client/business/jobs",       color: "text-sky-600",     bg: "bg-sky-50",     ring: "ring-sky-100" },
+    { label: t("biz_navEscrow"),       value: t("biz_manage"),                        sub: t("biz_navEscrowSub"),        icon: CreditCard,  href: "/client/business/escrow",     color: "text-teal-600",    bg: "bg-teal-50",    ring: "ring-teal-100" },
+    { label: t("biz_navDisputes"),     value: String(kpi?.disputesOpen ?? 0),         sub: t("biz_navDisputesSub"),      icon: Shield,      href: "/client/business/disputes",   color: "text-orange-600",  bg: "bg-orange-50",  ring: "ring-orange-100" },
+    { label: t("biz_navBilling"),      value: t("biz_manage"),                        sub: t("biz_navBillingSub"),       icon: ReceiptText, href: "/client/business/billing",    color: "text-rose-600",    bg: "bg-rose-50",    ring: "ring-rose-100" },
   ];
 
   return (
@@ -299,7 +300,7 @@ export default function BusinessHubClient() {
         <div className="flex-1 min-w-0">
           <h1 className="text-xl font-bold text-slate-900 truncate">{org!.name}</h1>
           <p className="text-sm text-slate-500 capitalize mt-0.5">
-            {org!.type} account · {activeLocations} active branch{activeLocations !== 1 ? "es" : ""}
+            {t("biz_orgSub", { type: org!.type, n: activeLocations, es: activeLocations !== 1 ? "es" : "" })}
           </p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
@@ -307,7 +308,7 @@ export default function BusinessHubClient() {
             onClick={loadOrg}
             className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-primary border border-slate-200 rounded-lg px-3 py-1.5 transition-colors"
           >
-            <RefreshCw className="h-3.5 w-3.5" /> Refresh
+            <RefreshCw className="h-3.5 w-3.5" /> {t("biz_refresh")}
           </button>
         </div>
       </div>
@@ -339,7 +340,7 @@ export default function BusinessHubClient() {
         <div className="bg-white rounded-2xl border border-slate-200 px-5 py-4 flex items-center gap-4">
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between mb-1.5">
-              <p className="text-xs font-semibold text-slate-700">Monthly Budget Utilization</p>
+              <p className="text-xs font-semibold text-slate-700">{t("biz_budgetBar")}</p>
               <p className={`text-xs font-bold tabular-nums ${budgetPct >= 90 ? "text-red-600" : budgetPct >= 70 ? "text-amber-600" : "text-emerald-600"}`}>
                 {budgetPct}%
               </p>
@@ -358,7 +359,7 @@ export default function BusinessHubClient() {
           {budgetPct >= 80 && (
             <div className="flex-shrink-0 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 text-xs text-amber-700 font-medium flex items-center gap-1.5">
               <AlertTriangle className="h-3.5 w-3.5" />
-              {budgetPct >= 90 ? "Budget critical" : "Budget warning"}
+              {budgetPct >= 90 ? t("biz_budgetCritical") : t("biz_budgetWarning")}
             </div>
           )}
         </div>
@@ -377,12 +378,12 @@ export default function BusinessHubClient() {
           <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
             <div className="flex items-center gap-2 px-5 py-4 border-b border-slate-100">
               <TrendingUp className="h-4 w-4 text-slate-400" />
-              <h2 className="font-semibold text-slate-800 text-sm">Monthly Spend Trend</h2>
+              <h2 className="font-semibold text-slate-800 text-sm">{t("biz_spendTrend")}</h2>
             </div>
             {(snap?.spendTrend?.length ?? 0) === 0 || snap?.spendTrend.every((r) => r.spend === 0) ? (
               <div className="flex flex-col items-center gap-2 py-10 text-center">
                 <BarChart2 className="h-7 w-7 text-slate-300" />
-                <p className="text-sm text-slate-400">No spend data yet</p>
+                <p className="text-sm text-slate-400">{t("biz_noSpendData")}</p>
               </div>
             ) : (
               <div className="px-4 pt-4 pb-3">
@@ -406,12 +407,12 @@ export default function BusinessHubClient() {
           <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
             <div className="flex items-center gap-2 px-5 py-4 border-b border-slate-100">
               <PieChart className="h-4 w-4 text-slate-400" />
-              <h2 className="font-semibold text-slate-800 text-sm">Spending by Category <span className="text-slate-400 font-normal">(this month)</span></h2>
+              <h2 className="font-semibold text-slate-800 text-sm">{t("biz_categorySpend")} <span className="text-slate-400 font-normal">{t("biz_thisMonth")}</span></h2>
             </div>
             {catEntries.length === 0 ? (
               <div className="flex flex-col items-center gap-2 py-10 text-center">
                 <PieChart className="h-7 w-7 text-slate-300" />
-                <p className="text-sm text-slate-400">No category data yet</p>
+                <p className="text-sm text-slate-400">{t("biz_noCategoryData")}</p>
               </div>
             ) : (
               <div className="px-5 py-4 space-y-2.5">
@@ -436,16 +437,16 @@ export default function BusinessHubClient() {
             <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
               <div className="flex items-center gap-2">
                 <Users className="h-4 w-4 text-slate-400" />
-                <h2 className="font-semibold text-slate-800 text-sm">Top Providers by Volume</h2>
+                <h2 className="font-semibold text-slate-800 text-sm">{t("biz_topProviders")}</h2>
               </div>
               <Link href="/client/business/analytics" className="text-xs text-primary hover:underline flex items-center gap-1">
-                Full report <ChevronRight className="h-3 w-3" />
+                {t("biz_fullReport")} <ChevronRight className="h-3 w-3" />
               </Link>
             </div>
             {(snap?.topProviders.length ?? 0) === 0 ? (
               <div className="flex flex-col items-center gap-2 py-10 text-center">
                 <Users className="h-7 w-7 text-slate-300" />
-                <p className="text-sm text-slate-400">No provider data yet</p>
+                <p className="text-sm text-slate-400">{t("biz_noProviderData")}</p>
               </div>
             ) : (
               <div className="px-5 py-4 space-y-3">
@@ -478,16 +479,16 @@ export default function BusinessHubClient() {
             <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
               <div className="flex items-center gap-2">
                 <MapPin className="h-4 w-4 text-slate-400" />
-                <h2 className="font-semibold text-slate-800 text-sm">Budget per Branch</h2>
+                <h2 className="font-semibold text-slate-800 text-sm">{t("biz_budgetPerBranch")}</h2>
               </div>
               <Link href="/client/business/budget" className="text-xs text-primary hover:underline flex items-center gap-1">
-                Manage <ChevronRight className="h-3 w-3" />
+                {t("biz_manage")} <ChevronRight className="h-3 w-3" />
               </Link>
             </div>
             {(snap?.branchBudget.length ?? 0) === 0 ? (
               <div className="flex flex-col items-center gap-2 py-10 text-center">
                 <MapPin className="h-7 w-7 text-slate-300" />
-                <p className="text-sm text-slate-400">No branch budget set</p>
+                <p className="text-sm text-slate-400">{t("biz_noBranchBudget")}</p>
               </div>
             ) : (
               <div className="px-5 py-4 space-y-2.5">

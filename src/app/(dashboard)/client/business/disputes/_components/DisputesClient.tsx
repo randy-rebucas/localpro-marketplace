@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useEffect, useState, useCallback } from "react";
 import Image from "next/image";
 import {
@@ -38,21 +39,21 @@ interface DisputesData {
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 type StatusFilter = "all" | "open" | "under_review" | "resolved" | "closed";
 
-const STATUS_FILTERS: { label: string; value: StatusFilter }[] = [
-  { label: "All",          value: "all"          },
-  { label: "Open",         value: "open"          },
-  { label: "Under Review", value: "under_review"  },
-  { label: "Resolved",     value: "resolved"      },
-  { label: "Closed",       value: "closed"        },
+const BUILD_STATUS_FILTERS = (t: any): { label: string; value: StatusFilter }[] => [
+  { label: t("bizDisputes_filterAll"),          value: "all"          },
+  { label: t("bizDisputes_filterOpen"),         value: "open"         },
+  { label: t("bizDisputes_filterUnderReview"), value: "under_review"  },
+  { label: t("bizDisputes_filterResolved"),     value: "resolved"     },
+  { label: t("bizDisputes_filterClosed"),       value: "closed"       },
 ];
 
-const STATUS_BADGE: Record<string, { dot: string; label: string; bg: string; text: string }> = {
-  open:         { dot: "bg-red-500",    label: "Open",         bg: "bg-red-50",    text: "text-red-700"   },
-  under_review: { dot: "bg-amber-500",  label: "Under Review", bg: "bg-amber-50",  text: "text-amber-700" },
-  pending:      { dot: "bg-amber-400",  label: "Pending",      bg: "bg-amber-50",  text: "text-amber-700" },
-  resolved:     { dot: "bg-emerald-500",label: "Resolved",     bg: "bg-emerald-50",text: "text-emerald-700"},
-  closed:       { dot: "bg-slate-400",  label: "Closed",       bg: "bg-slate-100", text: "text-slate-600" },
-};
+const BUILD_STATUS_BADGE = (t: any): Record<string, { dot: string; label: string; bg: string; text: string }> => ({
+  open:         { dot: "bg-red-500",    label: t("bizDisputes_filterOpen"),         bg: "bg-red-50",    text: "text-red-700"   },
+  under_review: { dot: "bg-amber-500",  label: t("bizDisputes_filterUnderReview"), bg: "bg-amber-50",  text: "text-amber-700" },
+  pending:      { dot: "bg-amber-400",  label: t("bizDisputes_filterUnderReview"), bg: "bg-amber-50",  text: "text-amber-700" },
+  resolved:     { dot: "bg-emerald-500",label: t("bizDisputes_filterResolved"),     bg: "bg-emerald-50",text: "text-emerald-700"},
+  closed:       { dot: "bg-slate-400",  label: t("bizDisputes_filterClosed"),       bg: "bg-slate-100", text: "text-slate-600" },
+});
 
 const ESCROW_BADGE: Record<string, string> = {
   funded:    "bg-amber-50 text-amber-700 border-amber-200",
@@ -75,6 +76,7 @@ function Avatar({ name, avatar, size = "sm" }: { name?: string; avatar?: string 
 }
 
 export default function DisputesClient() {
+  const t = useTranslations("clientPages");
   const [org, setOrg]                         = useState<IBusinessOrganization | null>(null);
   const [orgId, setOrgId]                     = useState("");
   const [data, setData]                       = useState<DisputesData | null>(null);
@@ -83,6 +85,10 @@ export default function DisputesClient() {
   const [page, setPage]                       = useState(1);
   const [loading, setLoading]                 = useState(true);
   const [expanded, setExpanded]               = useState<string | null>(null);
+
+  // Build translatable constants
+  const STATUS_FILTERS = BUILD_STATUS_FILTERS(t);
+  const STATUS_BADGE = BUILD_STATUS_BADGE(t);
 
   const load = useCallback(async (p = 1, sf: StatusFilter = "all") => {
     setLoading(true);
@@ -139,8 +145,8 @@ export default function DisputesClient() {
       <div className="flex flex-col items-center justify-center py-24 gap-3 text-center">
         <Shield className="h-10 w-10 text-slate-300" />
         <p className="text-slate-500">
-          No business profile found.{" "}
-          <a href="/client/business" className="text-primary underline">Create one first.</a>
+          {t("bizDisputes_noOrg")}{" "}
+          <a href="/client/business" className="text-primary underline">{t("bizAnalytics_createFirst")}</a>
         </p>
       </div>
     );
@@ -158,7 +164,7 @@ export default function DisputesClient() {
             <Shield className="h-5 w-5 text-orange-600 dark:text-orange-400" />
           </div>
           <div>
-            <h1 className="text-base font-bold text-slate-800 dark:text-white">Dispute Resolution Center</h1>
+            <h1 className="text-base font-bold text-slate-800 dark:text-white">{t("bizDisputes_heading")}</h1>
             <p className="text-xs text-slate-500 dark:text-slate-400">{org.name}</p>
           </div>
         </div>
@@ -176,7 +182,7 @@ export default function DisputesClient() {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[
           {
-            label: "Open Cases",
+            label: t("bizDisputes_kpiOpen"),
             value: data.openCount,
             icon:  AlertCircle,
             color: data.openCount > 0 ? "text-red-600"      : "text-slate-400",
@@ -184,13 +190,13 @@ export default function DisputesClient() {
             ring:  data.openCount > 0 ? "ring-red-100"      : "ring-slate-100",
           },
           {
-            label: "Resolved Cases",
+            label: t("bizDisputes_kpiResolved"),
             value: data.resolvedCount,
             icon:  CheckCircle,
             color: "text-emerald-600", bg: "bg-emerald-50", ring: "ring-emerald-100",
           },
           {
-            label: "Total Disputes",
+            label: t("bizDisputes_kpiTotal"),
             value: data.total,
             icon:  Shield,
             color: "text-slate-600",   bg: "bg-slate-50",   ring: "ring-slate-100",
@@ -235,7 +241,7 @@ export default function DisputesClient() {
               onChange={(e) => setBranchFilter(e.target.value)}
               className="text-xs border border-slate-200 rounded-lg px-3 py-1.5 text-slate-600 bg-white focus:outline-none focus:ring-2 focus:ring-primary/20"
             >
-              <option value="all">All Branches</option>
+              <option value="all">{t("bizDisputes_branchPlaceholder")}</option>
               {branches.map((b) => (
                 <option key={String(b._id)} value={b.label}>
                   {b.label}
@@ -337,7 +343,7 @@ export default function DisputesClient() {
                       {/* Raised by */}
                       {d.raisedBy && (
                         <div className="space-y-2">
-                          <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Raised By</p>
+                          <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">{t("bizDisputes_raisedBy")}</p>
                           <div className="flex items-center gap-2.5">
                             <Avatar name={d.raisedBy.name} avatar={d.raisedBy.avatar} size="md" />
                             <div>
@@ -351,7 +357,7 @@ export default function DisputesClient() {
                       {/* Provider */}
                       {d.provider && (
                         <div className="space-y-2">
-                          <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Provider</p>
+                          <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">{t("bizDisputes_provider")}</p>
                           <div className="flex items-center gap-2.5">
                             <Avatar name={d.provider.name} avatar={d.provider.avatar} size="md" />
                             <div>
@@ -365,7 +371,7 @@ export default function DisputesClient() {
 
                     {/* Reason */}
                     <div className="space-y-1.5">
-                      <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Reason</p>
+                      <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">{t("bizDisputes_reason")}</p>
                       <p className="text-sm text-slate-700 leading-relaxed bg-white rounded-xl border border-slate-200 px-4 py-3">
                         {d.reason}
                       </p>
@@ -375,7 +381,7 @@ export default function DisputesClient() {
                     {d.evidence.length > 0 && (
                       <div className="space-y-2">
                         <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">
-                          Evidence ({d.evidence.length})
+                          {t("bizDisputes_evidence", { n: d.evidence.length })}
                         </p>
                         <div className="flex flex-wrap gap-2">
                           {d.evidence.map((url, i) => (
@@ -386,7 +392,7 @@ export default function DisputesClient() {
                               rel="noopener noreferrer"
                               className="flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-700 bg-blue-50 border border-blue-100 px-3 py-1.5 rounded-lg transition-colors"
                             >
-                              <FileText className="h-3 w-3" /> File {i + 1}
+                              <FileText className="h-3 w-3" /> {t("bizDisputes_fileLink", { n: i + 1 })}
                             </a>
                           ))}
                         </div>
@@ -396,7 +402,7 @@ export default function DisputesClient() {
                     {/* Resolution notes */}
                     {d.resolutionNotes && (
                       <div className="space-y-1.5">
-                        <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Resolution Notes</p>
+                        <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">{t("bizDisputes_resolutionNotes")}</p>
                         <div className="bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3">
                           <p className="text-sm text-emerald-800 leading-relaxed">{d.resolutionNotes}</p>
                         </div>
@@ -405,10 +411,10 @@ export default function DisputesClient() {
 
                     {/* Resolution timeline */}
                     <div className="space-y-2">
-                      <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Timeline</p>
+                      <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">{t("bizDisputes_timeline")}</p>
                       <div className="relative ml-2 border-l-2 border-slate-200 pl-4 space-y-3">
                         <div>
-                          <p className="text-xs font-semibold text-slate-700">Dispute Opened</p>
+                          <p className="text-xs font-semibold text-slate-700">{t("bizDisputes_disputeOpened")}</p>
                           <p className="text-[11px] text-slate-400">
                             {new Date(d.createdAt).toLocaleString("en-PH", { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" })}
                           </p>
@@ -429,7 +435,7 @@ export default function DisputesClient() {
                       <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-start gap-2.5">
                         <Lock className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
                         <div>
-                          <p className="text-xs font-semibold text-amber-800">Escrow On Hold</p>
+                          <p className="text-xs font-semibold text-amber-800">{t("bizDisputes_escrowOnHold")}</p>
                           <p className="text-[11px] text-amber-700 leading-relaxed">
                             Funds are currently held in escrow during dispute review. They will be released or refunded once resolved.
                           </p>

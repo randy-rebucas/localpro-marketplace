@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useEffect, useState, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import {
@@ -159,6 +160,7 @@ const PLAN_STATUS_BADGE: Record<PlanStatus, string> = {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 export default function BillingClient() {
+  const t = useTranslations("clientPages");
   const searchParams  = useSearchParams();
   const [org,     setOrg]     = useState<IBusinessOrganization | null>(null);
   const [orgId,   setOrgId]   = useState("");
@@ -297,8 +299,8 @@ export default function BillingClient() {
     return (
       <div className="p-10 text-center text-slate-500">
         <Building2 className="mx-auto mb-3 h-10 w-10 text-slate-300" />
-        <p className="font-medium">No organisation found.</p>
-        <p className="text-sm mt-1">Set up your business profile first.</p>
+        <p className="font-medium">{t("bizBilling_noOrg")}</p>
+        <p className="text-sm mt-1">{t("bizBilling_noOrgSub")}</p>
       </div>
     );
   }
@@ -319,20 +321,20 @@ export default function BillingClient() {
           <div>
             <p className="text-sm font-semibold text-slate-800">
               {planStatus === "past_due"
-                ? "Your subscription payment is past due."
-                : "Your subscription has been cancelled."}
+                ? t("bizBilling_pastDueTitle")
+                : t("bizBilling_cancelledTitle")}
             </p>
             <p className="text-xs text-slate-500 mt-0.5">
               {planStatus === "past_due"
-                ? "Please renew to avoid losing access to premium features."
-                : "You are currently on a limited Starter plan."}
+                ? t("bizBilling_pastDueSub")
+                : t("bizBilling_cancelledSub")}
             </p>
           </div>
           <button
             onClick={() => document.getElementById("plans")?.scrollIntoView({ behavior: "smooth" })}
             className="ml-auto text-xs font-semibold text-violet-600 hover:underline shrink-0"
           >
-            Renew plan →
+            {t("bizBilling_renewLink")}
           </button>
         </div>
       )}
@@ -344,7 +346,7 @@ export default function BillingClient() {
             <ReceiptText className="h-5 w-5 text-violet-600 dark:text-violet-400" />
           </div>
           <div>
-            <h1 className="text-base font-bold text-slate-800 dark:text-white">Subscription &amp; Billing</h1>
+            <h1 className="text-base font-bold text-slate-800 dark:text-white">{t("bizBilling_heading")}</h1>
             <p className="text-xs text-slate-500 dark:text-slate-400">{org.name}</p>
           </div>
         </div>
@@ -363,11 +365,11 @@ export default function BillingClient() {
 
         {/* Current plan card */}
         <div className={`rounded-xl p-5 ${currentPlan.color} border border-slate-200 col-span-1`}>
-          <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Current Plan</p>
+          <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">{t("bizBilling_currentPlan")}</p>
           <div className="flex items-center gap-2 flex-wrap">
             <p className={`text-2xl font-extrabold ${currentPlan.textColor}`}>{currentPlan.label}</p>
             <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${PLAN_STATUS_BADGE[planStatus]}`}>
-              {planStatus === "active" ? "Active" : planStatus === "past_due" ? "Past Due" : "Cancelled"}
+              {planStatus === "active" ? t("bizBilling_statusActive") : planStatus === "past_due" ? t("bizBilling_statusPastDue") : t("bizBilling_statusCancelled")}
             </span>
           </div>
           <p className="text-sm font-medium text-slate-600 mt-0.5">{currentPlan.priceLabel}</p>
@@ -379,12 +381,12 @@ export default function BillingClient() {
           </ul>
           {data?.planExpiresAt && currentPlanKey !== "starter" && (
             <p className="mt-2 text-xs text-slate-500">
-              Renews {new Date(data.planExpiresAt).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" })}
+              {t("bizBilling_renews", { date: new Date(data.planExpiresAt).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" }) })}
             </p>
           )}
           {data?.pendingPlan && data.pendingPlan !== currentPlanKey && (
             <p className="mt-2 text-xs text-amber-600 font-medium">
-              ⏳ Activating {data.pendingPlan} plan…
+              {t("bizBilling_activating", { plan: data.pendingPlan })}
             </p>
           )}
           {currentPlanKey !== "enterprise" && (
@@ -392,7 +394,7 @@ export default function BillingClient() {
               onClick={() => document.getElementById("plans")?.scrollIntoView({ behavior: "smooth" })}
               className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-violet-700 hover:underline"
             >
-              Upgrade plan <ArrowUpRight className="h-3 w-3" />
+              {t("bizBilling_upgradePlan")} <ArrowUpRight className="h-3 w-3" />
             </button>
           )}
         </div>
@@ -400,21 +402,21 @@ export default function BillingClient() {
         {/* KPI cards */}
         {[
           {
-            label: "This Month Spend",
+            label: t("bizBilling_thisMonthSpend"),
             value: formatCurrency(data?.thisMonthGross ?? 0),
             sub:   `${rate}% commission = ${formatCurrency(data?.thisMonthCommission ?? 0)}`,
             icon: <TrendingUp className="h-5 w-5 text-blue-500" />,
             bg:   "bg-blue-50",
           },
           {
-            label: "Total Gross Spend",
+            label: t("bizBilling_grossSpend"),
             value: formatCurrency(data?.totalGrossSpend ?? 0),
             sub:   `${data?.totalJobsCompleted ?? 0} jobs completed`,
             icon: <ShieldCheck className="h-5 w-5 text-emerald-500" />,
             bg:   "bg-emerald-50",
           },
           {
-            label: "Total Commission Paid",
+            label: t("bizBilling_commissionPaid"),
             value: formatCurrency(data?.totalCommissionPaid ?? 0),
             sub:   `Platform fee at ${rate}%`,
             icon: <Sparkles className="h-5 w-5 text-amber-500" />,
@@ -435,13 +437,13 @@ export default function BillingClient() {
       {/* ── Commission History table ─────────────────────────────────────────── */}
       <section>
         <h2 className="text-base font-semibold text-slate-800 mb-3">
-          Commission Breakdown <span className="text-slate-400 font-normal text-sm">(last 12 months)</span>
+          {t("bizBilling_commissionHistory")} <span className="text-slate-400 font-normal text-sm">{t("bizBilling_commissionSub")}</span>
         </h2>
         <div className="rounded-xl border border-slate-200 overflow-hidden">
           <table className="w-full text-sm">
             <thead className="bg-slate-50 border-b border-slate-200">
               <tr>
-                {["Month", "Jobs", "Gross Spend", `Commission (${rate}%)`, "Net to Providers"].map((h) => (
+                {[t("bizBilling_colMonth"), t("bizBilling_colJobs"), t("bizBilling_colGross"), t("bizBilling_colCommission", { rate }), t("bizBilling_colNet")].map((h) => (
                   <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
                     {h}
                   </th>
@@ -452,7 +454,7 @@ export default function BillingClient() {
               {(data?.commissionHistory ?? []).length === 0 ? (
                 <tr>
                   <td colSpan={5} className="px-4 py-8 text-center text-slate-400 text-sm">
-                    No transaction history yet.
+                    {t("bizBilling_noHistory")}
                   </td>
                 </tr>
               ) : [...(data?.commissionHistory ?? [])].reverse().map((row) => (
@@ -473,7 +475,7 @@ export default function BillingClient() {
 
       {/* ── Plan Comparison ──────────────────────────────────────────────────── */}
       <section id="plans">
-        <h2 className="text-base font-semibold text-slate-800 mb-3">Compare Plans</h2>
+        <h2 className="text-base font-semibold text-slate-800 mb-3">{t("bizBilling_comparePlans")}</h2>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {PLANS.map((plan) => {
             const isCurrent    = plan.key === currentPlanKey;
@@ -496,7 +498,7 @@ export default function BillingClient() {
                   </span>
                   {isCurrent && (
                     <span className="ml-2 text-xs font-semibold text-violet-600 bg-violet-50 px-2 py-0.5 rounded-full">
-                      Current
+                      {t("bizBilling_currentBadge")}
                     </span>
                   )}
                 </div>
@@ -514,10 +516,10 @@ export default function BillingClient() {
                         ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
                         : <XCircle      className="h-3.5 w-3.5 text-slate-300 shrink-0" />}
                       <span className={plan[feat] ? "text-slate-700" : "text-slate-400"}>
-                        {feat === "analytics"  && "AI Analytics"}
-                        {feat === "bulkUpload" && "Bulk CSV Upload"}
-                        {feat === "recurring"  && "Recurring Scheduler"}
-                        {feat === "priority"   && "Priority Listings"}
+                        {feat === "analytics"  && t("bizBilling_featAnalytics")}
+                        {feat === "bulkUpload" && t("bizBilling_featBulk")}
+                        {feat === "recurring"  && t("bizBilling_featRecurring")}
+                        {feat === "priority"   && t("bizBilling_featPriority")}
                       </span>
                     </li>
                   ))}
@@ -536,12 +538,12 @@ export default function BillingClient() {
                   >
                     {isProcessing && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
                     {isDowngrade
-                      ? "Lower tier"
+                      ? t("bizBilling_lowerTier")
                       : isFree
-                        ? "Free (default)"
+                        ? t("bizBilling_freePlan")
                         : isProcessing
-                          ? "Redirecting…"
-                          : `Upgrade to ${plan.label}`}
+                          ? t("bizBilling_redirecting")
+                          : t("bizBilling_upgradeTo", { plan: plan.label })}
                   </button>
                 )}
               </div>
@@ -549,13 +551,13 @@ export default function BillingClient() {
           })}
         </div>
         <p className="mt-3 text-xs text-slate-400 text-center">
-          Payments processed securely via PayPal. Debit and credit cards accepted.
+          {t("bizBilling_paymentsFooter")}
         </p>
       </section>
 
       {/* ── Add-ons ──────────────────────────────────────────────────────────── */}
       <section>
-        <h2 className="text-base font-semibold text-slate-800 mb-3">Add-ons &amp; Features</h2>
+        <h2 className="text-base font-semibold text-slate-800 mb-3">{t("bizBilling_addOns")}</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {ADD_ONS.map((addon) => {
             const enabled = addon.includedIn.includes(currentPlanKey);
@@ -574,11 +576,11 @@ export default function BillingClient() {
                     <p className="text-sm font-semibold text-slate-800">{addon.label}</p>
                     {enabled ? (
                       <span className="text-xs font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded-full">
-                        Enabled
+                        {t("bizBilling_enabledBadge")}
                       </span>
                     ) : (
                       <span className="text-xs font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-full">
-                        Not included
+                        {t("bizBilling_notIncluded")}
                       </span>
                     )}
                   </div>
@@ -588,7 +590,7 @@ export default function BillingClient() {
                       onClick={() => document.getElementById("plans")?.scrollIntoView({ behavior: "smooth" })}
                       className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-violet-600 hover:underline"
                     >
-                      Upgrade to unlock <ArrowUpRight className="h-3 w-3" />
+                      {t("bizBilling_upgradeToUnlock")} <ArrowUpRight className="h-3 w-3" />
                     </button>
                   )}
                 </div>

@@ -14,19 +14,21 @@ import { Suspense } from "react";
 import { formatRelativeTime, formatPHP } from "@/lib/utils";
 import PublicHeader from "@/components/layout/PublicHeader";
 import PublicFooter from "@/components/layout/PublicFooter";
+import { getTranslations } from "next-intl/server";
 
 // ── Async data sections (deferred behind Suspense) ────────────────────────────
 
 async function CategoriesSection() {
   await connectDB();
+  const t = await getTranslations("home");
   const cats = await Category.find().sort({ order: 1 }).limit(12).lean();
   if (!cats.length) return null;
 
   return (
     <section className="max-w-6xl mx-auto px-4 py-12 sm:py-20">
       <div className="text-center mb-8 sm:mb-12">
-        <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-3">Browse by Service</h2>
-        <p className="text-slate-500 text-sm max-w-md mx-auto">Whatever you need done, we&apos;ve got a pro for it.</p>
+        <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-3">{t("browseByService")}</h2>
+        <p className="text-slate-500 text-sm max-w-md mx-auto">{t("browseByServiceSub")}</p>
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
         {cats.map((cat) => {
@@ -49,6 +51,7 @@ async function CategoriesSection() {
 
 async function TopProvidersSection() {
   await connectDB();
+  const t = await getTranslations("home");
   const [topProviders, availableCount, lastJob] = await Promise.all([
     ProviderProfile.find({ availabilityStatus: "available" })
       .sort({ avgRating: -1, completedJobCount: -1 })
@@ -81,11 +84,11 @@ async function TopProvidersSection() {
     <section className="max-w-6xl mx-auto px-4 py-12 sm:py-20">
       <div className="flex items-end justify-between mb-8 sm:mb-10">
         <div>
-          <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-2">Top-Rated Providers</h2>
-          <p className="text-slate-500 text-sm">Ready to take on your next job.</p>
+        <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-2">{t("topRatedProviders")}</h2>
+          <p className="text-slate-500 text-sm">{t("topRatedSub")}</p>
         </div>
         <Link href="/providers" className="text-sm font-medium text-primary hover:underline hidden sm:block shrink-0">
-          Browse all providers →
+          {t("browseAllProviders")}
         </Link>
       </div>
 
@@ -93,7 +96,7 @@ async function TopProvidersSection() {
       <div className="flex flex-wrap items-center gap-x-5 gap-y-2 mb-8 px-4 py-3 rounded-xl bg-emerald-50 border border-emerald-100">
         <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700">
           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-          <strong>{availableCount}</strong> providers available now
+          {t("availableNow", { count: availableCount })}
         </span>
         {lastJob && (
           <span className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500">
@@ -171,17 +174,17 @@ async function TopProvidersSection() {
                 <div className="flex flex-wrap gap-1.5">
                   {profile.isLocalProCertified && (
                     <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
-                      🎖️ LocalPro Certified
+                      {t("localproCertifiedBadge")}
                     </span>
                   )}
                   {isTopRated && (
                     <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
-                      ⭐ Top Rated
+                      {t("topRatedBadge")}
                     </span>
                   )}
                   {isFastResponder && (
                     <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
-                      ⚡ Fast Responder
+                      {t("fastResponderBadge")}
                     </span>
                   )}
                 </div>
@@ -199,7 +202,7 @@ async function TopProvidersSection() {
                 )}
                 {profile.hourlyRate != null && (
                   <p className="text-xs text-slate-400 shrink-0 ml-auto">
-                    from <span className="font-semibold text-slate-700">₱{profile.hourlyRate.toLocaleString()}/hr</span>
+                    {t("fromRate", { rate: `₱${profile.hourlyRate!.toLocaleString()}` })}
                   </p>
                 )}
               </div>
@@ -244,6 +247,7 @@ function TopProvidersSkeleton() {
 
 async function HomepageHighlightStrip() {
   await connectDB();
+  const t = await getTranslations("home");
 
   const activeListings = await FeaturedListing.find({
     type: "homepage_highlight",
@@ -272,11 +276,11 @@ async function HomepageHighlightStrip() {
       <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-2">
           <Zap className="h-5 w-5 text-amber-500" />
-          <h2 className="text-lg font-bold text-slate-900">Highlighted Providers</h2>
-          <span className="text-[10px] font-semibold bg-amber-100 text-amber-700 border border-amber-200 px-1.5 py-0.5 rounded-full">Sponsored</span>
+          <h2 className="text-lg font-bold text-slate-900">{t("highlightedProviders")}</h2>
+          <span className="text-[10px] font-semibold bg-amber-100 text-amber-700 border border-amber-200 px-1.5 py-0.5 rounded-full">{t("sponsored")}</span>
         </div>
         <Link href="/register?role=client" className="text-sm font-medium text-primary hover:underline hidden sm:block">
-          Browse all →
+          {t("browseAll")}
         </Link>
       </div>
       <div className="flex gap-4 overflow-x-auto pb-2 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
@@ -339,7 +343,7 @@ async function HomepageHighlightStrip() {
                 </div>
               )}
               <span className="inline-flex items-center gap-1 self-start text-[10px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-full">
-                ✨ Featured
+                {t("featuredBadge")}
               </span>
             </Link>
           );
@@ -351,6 +355,7 @@ async function HomepageHighlightStrip() {
 
 async function LatestJobsSection() {
   await connectDB();
+  const t = await getTranslations("home");
   const jobs = await Job.find({ status: "open" })
     .sort({ createdAt: -1 })
     .limit(6)
@@ -363,11 +368,11 @@ async function LatestJobsSection() {
     <section className="max-w-6xl mx-auto px-4 py-12 sm:py-20">
       <div className="flex items-end justify-between mb-8 sm:mb-10">
         <div>
-          <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-2">Latest Open Jobs</h2>
-          <p className="text-slate-500 text-sm">Real jobs posted by clients — apply now before they&apos;re filled.</p>
+          <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-2">{t("latestOpenJobs")}</h2>
+          <p className="text-slate-500 text-sm">{t("latestJobsSub")}</p>
         </div>
         <Link href="/jobs" className="text-sm font-medium text-primary hover:underline hidden sm:block shrink-0">
-          Browse all jobs →
+          {t("browseAllJobs")}
         </Link>
       </div>
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -386,20 +391,20 @@ async function LatestJobsSection() {
                 </div>
                 <span className="inline-flex items-center gap-1 bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold px-2 py-0.5 rounded-full shrink-0">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  Open
+                  {t("openBadge")}
                 </span>
               </div>
               <div className="flex flex-col gap-1.5 text-xs text-slate-500">
                 <span className="flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5 text-slate-400 shrink-0" />{job.location}</span>
                 <span className="flex items-center gap-1.5"><Briefcase className="h-3.5 w-3.5 text-slate-400 shrink-0" /><span className="font-medium text-slate-700">{formatPHP(job.budget)}</span></span>
               </div>
-              <p className="text-[10px] text-slate-400 mt-auto">Posted {formatRelativeTime(job.createdAt)}</p>
+              <p className="text-[10px] text-slate-400 mt-auto">{t("postedTime", { time: formatRelativeTime(job.createdAt) })}</p>
             </Link>
           );
         })}
       </div>
       <div className="mt-6 text-center sm:hidden">
-        <Link href="/jobs" className="text-sm font-medium text-primary hover:underline">Browse all jobs →</Link>
+        <Link href="/jobs" className="text-sm font-medium text-primary hover:underline">{t("browseAllJobs")}</Link>
       </div>
     </section>
   );
@@ -425,6 +430,7 @@ function LatestJobsSkeleton() {
 
 async function StatsStrip() {
   await connectDB();
+  const t = await getTranslations("home");
   const completedCount = await Job.countDocuments({ status: "completed" });
   const displayCount =
     completedCount >= 10000
@@ -439,9 +445,9 @@ async function StatsStrip() {
     <section className="border-y border-slate-100 bg-slate-50/70 py-8 px-4">
       <div className="max-w-3xl mx-auto grid grid-cols-3 gap-4 sm:gap-6 text-center">
         {[
-          { icon: <TrendingUp className="h-5 w-5 text-primary mx-auto mb-1" />, value: displayCount, label: "Jobs completed" },
-          { icon: <Users      className="h-5 w-5 text-brand mx-auto mb-1" />,   value: "500+",       label: "Verified providers" },
-          { icon: <Star       className="h-5 w-5 text-amber-400 fill-amber-400 mx-auto mb-1" />, value: "4.8", label: "Average rating" },
+          { icon: <TrendingUp className="h-5 w-5 text-primary mx-auto mb-1" />, value: displayCount, label: t("statsJobsCompleted") },
+          { icon: <Users      className="h-5 w-5 text-brand mx-auto mb-1" />,   value: "500+",       label: t("statsVerified") },
+          { icon: <Star       className="h-5 w-5 text-amber-400 fill-amber-400 mx-auto mb-1" />, value: "4.8", label: t("statsAvgRating") },
         ].map((s) => (
           <div key={s.label}>
             {s.icon}
@@ -458,6 +464,7 @@ async function StatsStrip() {
 
 export default async function RootPage() {
   const user = await getCurrentUser();
+  const t = await getTranslations("home");
 
   if (user) {
     const routes: Record<string, string> = {
@@ -579,34 +586,34 @@ export default async function RootPage() {
         <div className="relative max-w-4xl mx-auto text-center">
           <div className="inline-flex items-center gap-2 text-xs font-semibold text-primary bg-primary/8 border border-primary/20 rounded-full px-4 py-1.5 mb-6 sm:mb-8">
             <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-            Trusted by Filipinos across the country
+            {t("trustedBy")}
           </div>
           <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold text-slate-900 leading-[1.1] tracking-tight mb-5 sm:mb-6">
-            Hire Trusted Local<br className="hidden sm:block" />
-            {" "}<span className="text-primary">Service </span><span className="text-brand">Professionals</span>
+            {t("heroTitle")}<br className="hidden sm:block" />
+            {" "}<span className="text-primary">{t("heroService")}</span><span className="text-brand">{t("heroProfessionals")}</span>
           </h1>
           <p className="text-base sm:text-lg text-slate-500 mb-8 sm:mb-10 max-w-xl mx-auto leading-relaxed">
-            Post a job, receive quotes from verified providers, and pay with full escrow protection. Plumbing, electrical, cleaning, and more.
+            {t("heroSubtitle")}
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center mb-10 sm:mb-12">
             <Link
               href="/register?role=client"
               className="btn-primary text-sm sm:text-base px-6 sm:px-8 py-3 rounded-xl shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all"
             >
-              Post a Job — It&apos;s Free
+              {t("postJobFree")}
             </Link>
             <Link
               href="/register?role=provider"
               className="btn-secondary text-sm sm:text-base px-6 sm:px-8 py-3 rounded-xl hover:-translate-y-0.5 transition-all"
             >
-              Become a Provider <ArrowRight className="inline h-4 w-4 ml-1" />
+              {t("becomeProvider")} <ArrowRight className="inline h-4 w-4 ml-1" />
             </Link>
           </div>
           <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs sm:text-sm text-slate-500">
             {[
-              { icon: <CheckCircle className="h-4 w-4 text-brand" />, text: "Free to post a job" },
-              { icon: <Lock        className="h-4 w-4 text-primary" />, text: "Escrow payment protection" },
-              { icon: <Users       className="h-4 w-4 text-brand"  />, text: "500+ verified providers" },
+              { icon: <CheckCircle className="h-4 w-4 text-brand" />, text: t("freeToPost") },
+              { icon: <Lock        className="h-4 w-4 text-primary" />, text: t("escrowProtection") },
+              { icon: <Users       className="h-4 w-4 text-brand"  />, text: t("verifiedProvidersCount") },
             ].map((i) => (
               <span key={i.text} className="flex items-center gap-1.5">
                 {i.icon} {i.text}
@@ -640,15 +647,15 @@ export default async function RootPage() {
       <section className="bg-slate-50 py-12 sm:py-20 px-4">
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-10 sm:mb-14">
-            <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-3">How It Works</h2>
-            <p className="text-slate-500 text-sm">Three simple steps to get the job done.</p>
+            <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-3">{t("howItWorks")}</h2>
+            <p className="text-slate-500 text-sm">{t("howItWorksSub")}</p>
           </div>
           <div className="grid sm:grid-cols-3 gap-6 relative">
             <div className="hidden sm:block absolute top-10 left-[calc(16.66%+1rem)] right-[calc(16.66%+1rem)] h-px bg-gradient-to-r from-primary/20 via-primary/40 to-primary/20" />
             {[
-              { icon: <Briefcase className="h-6 w-6 text-primary" />, title: "Post a Job", desc: "Describe what you need, set your budget, and pick a schedule. Takes under 2 minutes." },
-              { icon: <Star      className="h-6 w-6 text-primary" />, title: "Get Quotes",  desc: "Receive competitive quotes from verified local providers — usually within hours." },
-              { icon: <Shield    className="h-6 w-6 text-primary" />, title: "Pay Safely",  desc: "Funds are held securely in escrow and only released after you approve the work." },
+              { icon: <Briefcase className="h-6 w-6 text-primary" />, title: t("step1Title"), desc: t("step1Desc") },
+              { icon: <Star      className="h-6 w-6 text-primary" />, title: t("step2Title"), desc: t("step2Desc") },
+              { icon: <Shield    className="h-6 w-6 text-primary" />, title: t("step3Title"), desc: t("step3Desc") },
             ].map((step, i) => (
               <div key={step.title} className="relative bg-white rounded-2xl border border-slate-200 shadow-card p-6 flex flex-col items-center text-center gap-3 hover:shadow-card-hover transition-shadow">
                 <div className="w-14 h-14 rounded-2xl bg-primary/8 border border-primary/15 flex items-center justify-center">
@@ -672,15 +679,15 @@ export default async function RootPage() {
       <section className="bg-slate-50 py-12 sm:py-20 px-4">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-10 sm:mb-14">
-            <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-3">Why choose LocalPro?</h2>
-            <p className="text-slate-500 text-sm max-w-md mx-auto">Built for the Filipino market, with the protections you deserve.</p>
+            <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-3">{t("whyLocalpro")}</h2>
+            <p className="text-slate-500 text-sm max-w-md mx-auto">{t("whySubtitle")}</p>
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
             {[
-              { icon: <Shield      className="h-6 w-6 text-primary" />, title: "Escrow Protection",  desc: "Your payment is only released when you're 100% satisfied with the work." },
-              { icon: <CheckCircle className="h-6 w-6 text-brand"   />, title: "Verified Providers", desc: "Every provider goes through identity and background verification (KYC)." },
-              { icon: <MapPin      className="h-6 w-6 text-primary" />, title: "Local, Not Global",  desc: "We focus on Filipino neighborhoods and local service providers — no overseas middlemen." },
-              { icon: <TrendingUp  className="h-6 w-6 text-brand"   />, title: "Rated & Reviewed",   desc: "Transparent reviews from real clients keep quality high and providers accountable." },
+              { icon: <Shield      className="h-6 w-6 text-primary" />, title: t("feature1Title"), desc: t("feature1Desc") },
+              { icon: <CheckCircle className="h-6 w-6 text-brand"   />, title: t("feature2Title"), desc: t("feature2Desc") },
+              { icon: <MapPin      className="h-6 w-6 text-primary" />, title: t("feature3Title"), desc: t("feature3Desc") },
+              { icon: <TrendingUp  className="h-6 w-6 text-brand"   />, title: t("feature4Title"), desc: t("feature4Desc") },
             ].map((f) => (
               <div key={f.title} className="bg-white rounded-2xl border border-slate-200 shadow-card p-6 flex flex-col gap-3">
                 <div className="w-11 h-11 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-center">
@@ -699,10 +706,10 @@ export default async function RootPage() {
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-4">
             <span className="inline-flex items-center gap-2 text-xs font-semibold text-primary bg-primary/8 border border-primary/20 rounded-full px-4 py-1.5 mb-5">
-              🏆 Provider Reward Tiers
+              {t("providerTiersLabel")}
             </span>
-            <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-3">Grow your business with LocalPro</h2>
-            <p className="text-slate-500 text-sm max-w-md mx-auto">The more jobs you complete, the more perks you unlock — lower fees, higher visibility, and exclusive opportunities.</p>
+            <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-3">{t("growBusiness")}</h2>
+            <p className="text-slate-500 text-sm max-w-md mx-auto">{t("growBusinessSub")}</p>
           </div>
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-8 sm:mt-12">
@@ -711,17 +718,17 @@ export default async function RootPage() {
               <div className="flex items-center gap-2">
                 <span className="text-2xl">🥉</span>
                 <div>
-                  <p className="text-xs font-semibold text-orange-600 uppercase tracking-wide">Bronze</p>
-                  <p className="text-sm font-bold text-slate-800">Starter</p>
+                  <p className="text-xs font-semibold text-orange-600 uppercase tracking-wide">{t("bronze")}</p>
+                  <p className="text-sm font-bold text-slate-800">{t("bronzeSub")}</p>
                 </div>
               </div>
               <ul className="space-y-1.5 text-xs text-slate-600 flex-1">
-                <li className="flex items-start gap-1.5"><CheckCircle className="h-3.5 w-3.5 text-orange-400 mt-0.5 shrink-0" />Listed in search results</li>
-                <li className="flex items-start gap-1.5"><CheckCircle className="h-3.5 w-3.5 text-orange-400 mt-0.5 shrink-0" />Quote on any job</li>
-                <li className="flex items-start gap-1.5"><CheckCircle className="h-3.5 w-3.5 text-orange-400 mt-0.5 shrink-0" />Earnings dashboard</li>
-                <li className="flex items-start gap-1.5"><CheckCircle className="h-3.5 w-3.5 text-orange-400 mt-0.5 shrink-0" />Standard support</li>
+                <li className="flex items-start gap-1.5"><CheckCircle className="h-3.5 w-3.5 text-orange-400 mt-0.5 shrink-0" />{t("bronze1")}</li>
+                <li className="flex items-start gap-1.5"><CheckCircle className="h-3.5 w-3.5 text-orange-400 mt-0.5 shrink-0" />{t("bronze2")}</li>
+                <li className="flex items-start gap-1.5"><CheckCircle className="h-3.5 w-3.5 text-orange-400 mt-0.5 shrink-0" />{t("bronze3")}</li>
+                <li className="flex items-start gap-1.5"><CheckCircle className="h-3.5 w-3.5 text-orange-400 mt-0.5 shrink-0" />{t("bronze4")}</li>
               </ul>
-              <p className="text-[10px] text-slate-400 mt-auto pt-2 border-t border-orange-100">Starting tier</p>
+              <p className="text-[10px] text-slate-400 mt-auto pt-2 border-t border-orange-100">{t("bronzeReq")}</p>
             </div>
 
             {/* Silver */}
@@ -729,67 +736,67 @@ export default async function RootPage() {
               <div className="flex items-center gap-2">
                 <span className="text-2xl">🥈</span>
                 <div>
-                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Silver</p>
-                  <p className="text-sm font-bold text-slate-800">Verified</p>
+                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{t("silver")}</p>
+                  <p className="text-sm font-bold text-slate-800">{t("silverSub")}</p>
                 </div>
               </div>
               <ul className="space-y-1.5 text-xs text-slate-600 flex-1">
-                <li className="flex items-start gap-1.5"><CheckCircle className="h-3.5 w-3.5 text-slate-400 mt-0.5 shrink-0" />&ldquo;Verified Provider&rdquo; badge</li>
-                <li className="flex items-start gap-1.5"><CheckCircle className="h-3.5 w-3.5 text-slate-400 mt-0.5 shrink-0" />Priority listing in search</li>
-                <li className="flex items-start gap-1.5"><CheckCircle className="h-3.5 w-3.5 text-slate-400 mt-0.5 shrink-0" />Early job alerts</li>
-                <li className="flex items-start gap-1.5"><CheckCircle className="h-3.5 w-3.5 text-slate-400 mt-0.5 shrink-0" />Faster payouts (2 days)</li>
+                <li className="flex items-start gap-1.5"><CheckCircle className="h-3.5 w-3.5 text-slate-400 mt-0.5 shrink-0" />{t("silver1")}</li>
+                <li className="flex items-start gap-1.5"><CheckCircle className="h-3.5 w-3.5 text-slate-400 mt-0.5 shrink-0" />{t("silver2")}</li>
+                <li className="flex items-start gap-1.5"><CheckCircle className="h-3.5 w-3.5 text-slate-400 mt-0.5 shrink-0" />{t("silver3")}</li>
+                <li className="flex items-start gap-1.5"><CheckCircle className="h-3.5 w-3.5 text-slate-400 mt-0.5 shrink-0" />{t("silver4")}</li>
               </ul>
-              <p className="text-[10px] text-slate-400 mt-auto pt-2 border-t border-slate-200">10+ jobs · 4.0 ★</p>
+              <p className="text-[10px] text-slate-400 mt-auto pt-2 border-t border-slate-200">{t("silverReq")}</p>
             </div>
 
             {/* Gold */}
             <div className="relative rounded-2xl border border-amber-300 bg-amber-50 p-5 flex flex-col gap-3 shadow-[0_0_0_3px_rgba(251,191,36,0.15)]">
               <div className="absolute -top-3 right-4">
-                <span className="inline-block text-[10px] font-bold bg-amber-400 text-white px-2.5 py-0.5 rounded-full uppercase tracking-wide shadow-sm">Popular</span>
+                <span className="inline-block text-[10px] font-bold bg-amber-400 text-white px-2.5 py-0.5 rounded-full uppercase tracking-wide shadow-sm">{t("goldPopular")}</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-2xl">🥇</span>
                 <div>
-                  <p className="text-xs font-semibold text-amber-600 uppercase tracking-wide">Gold</p>
-                  <p className="text-sm font-bold text-slate-800">Top Rated</p>
+                  <p className="text-xs font-semibold text-amber-600 uppercase tracking-wide">{t("gold")}</p>
+                  <p className="text-sm font-bold text-slate-800">{t("goldSub")}</p>
                 </div>
               </div>
               <ul className="space-y-1.5 text-xs text-slate-600 flex-1">
-                <li className="flex items-start gap-1.5"><CheckCircle className="h-3.5 w-3.5 text-amber-500 mt-0.5 shrink-0" />&ldquo;Top Rated&rdquo; badge + boosted ranking</li>
-                <li className="flex items-start gap-1.5"><CheckCircle className="h-3.5 w-3.5 text-amber-500 mt-0.5 shrink-0" />Featured on homepage &amp; categories</li>
+                <li className="flex items-start gap-1.5"><CheckCircle className="h-3.5 w-3.5 text-amber-500 mt-0.5 shrink-0" />{t("gold1")}</li>
+                <li className="flex items-start gap-1.5"><CheckCircle className="h-3.5 w-3.5 text-amber-500 mt-0.5 shrink-0" />{t("gold2")}</li>
                 <li className="flex items-start gap-1.5"><CheckCircle className="h-3.5 w-3.5 text-amber-500 mt-0.5 shrink-0" />Reduced commission <span className="line-through text-slate-400">15%</span> → <strong className="text-amber-700">11%</strong></li>
-                <li className="flex items-start gap-1.5"><CheckCircle className="h-3.5 w-3.5 text-amber-500 mt-0.5 shrink-0" />AI-powered tools unlocked</li>
-                <li className="flex items-start gap-1.5"><CheckCircle className="h-3.5 w-3.5 text-amber-500 mt-0.5 shrink-0" />B2B &amp; bulk job access</li>
+                <li className="flex items-start gap-1.5"><CheckCircle className="h-3.5 w-3.5 text-amber-500 mt-0.5 shrink-0" />{t("gold4")}</li>
+                <li className="flex items-start gap-1.5"><CheckCircle className="h-3.5 w-3.5 text-amber-500 mt-0.5 shrink-0" />{t("gold5")}</li>
               </ul>
-              <p className="text-[10px] text-slate-400 mt-auto pt-2 border-t border-amber-200">30+ jobs · 4.5 ★ · 85% completion</p>
+              <p className="text-[10px] text-slate-400 mt-auto pt-2 border-t border-amber-200">{t("goldReq")}</p>
             </div>
 
             {/* Elite */}
             <div className="relative rounded-2xl border border-violet-300 bg-gradient-to-b from-violet-50 to-white p-5 flex flex-col gap-3 shadow-[0_0_0_3px_rgba(139,92,246,0.12)]">
               <div className="absolute -top-3 right-4">
-                <span className="inline-block text-[10px] font-bold bg-violet-500 text-white px-2.5 py-0.5 rounded-full uppercase tracking-wide shadow-sm">Elite</span>
+                <span className="inline-block text-[10px] font-bold bg-violet-500 text-white px-2.5 py-0.5 rounded-full uppercase tracking-wide shadow-sm">{t("eliteLabel")}</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-2xl">💎</span>
                 <div>
-                  <p className="text-xs font-semibold text-violet-600 uppercase tracking-wide">Elite Pro</p>
-                  <p className="text-sm font-bold text-slate-800">Premium</p>
+                  <p className="text-xs font-semibold text-violet-600 uppercase tracking-wide">{t("elite")}</p>
+                  <p className="text-sm font-bold text-slate-800">{t("eliteSub")}</p>
                 </div>
               </div>
               <ul className="space-y-1.5 text-xs text-slate-600 flex-1">
-                <li className="flex items-start gap-1.5"><CheckCircle className="h-3.5 w-3.5 text-violet-500 mt-0.5 shrink-0" />&ldquo;Elite Pro&rdquo; profile highlight card</li>
-                <li className="flex items-start gap-1.5"><CheckCircle className="h-3.5 w-3.5 text-violet-500 mt-0.5 shrink-0" />Lowest commission at <strong className="text-violet-700">6%</strong></li>
-                <li className="flex items-start gap-1.5"><CheckCircle className="h-3.5 w-3.5 text-violet-500 mt-0.5 shrink-0" />Instant payout option</li>
-                <li className="flex items-start gap-1.5"><CheckCircle className="h-3.5 w-3.5 text-violet-500 mt-0.5 shrink-0" />Premium client access (hotels, firms)</li>
-                <li className="flex items-start gap-1.5"><CheckCircle className="h-3.5 w-3.5 text-violet-500 mt-0.5 shrink-0" />Advanced analytics dashboard</li>
+                <li className="flex items-start gap-1.5"><CheckCircle className="h-3.5 w-3.5 text-violet-500 mt-0.5 shrink-0" />{t("elite1")}</li>
+                <li className="flex items-start gap-1.5"><CheckCircle className="h-3.5 w-3.5 text-violet-500 mt-0.5 shrink-0" />{t("elite2")}</li>
+                <li className="flex items-start gap-1.5"><CheckCircle className="h-3.5 w-3.5 text-violet-500 mt-0.5 shrink-0" />{t("elite3")}</li>
+                <li className="flex items-start gap-1.5"><CheckCircle className="h-3.5 w-3.5 text-violet-500 mt-0.5 shrink-0" />{t("elite4")}</li>
+                <li className="flex items-start gap-1.5"><CheckCircle className="h-3.5 w-3.5 text-violet-500 mt-0.5 shrink-0" />{t("elite5")}</li>
               </ul>
-              <p className="text-[10px] text-slate-400 mt-auto pt-2 border-t border-violet-100">75+ jobs · 4.8 ★ · verified track record</p>
+              <p className="text-[10px] text-slate-400 mt-auto pt-2 border-t border-violet-100">{t("eliteReq")}</p>
             </div>
           </div>
 
           <div className="mt-8 text-center">
             <Link href="/register?role=provider" className="inline-flex items-center gap-2 btn-primary text-sm px-6 py-2.5 rounded-xl shadow-sm">
-              Start as a provider — it&apos;s free <ArrowRight className="h-4 w-4" />
+              {t("startAsProvider")} <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
         </div>
@@ -798,7 +805,7 @@ export default async function RootPage() {
       {/* ── Partners ── */}
       <section className="border-y border-slate-100 bg-white py-10 sm:py-14 px-4">
         <div className="max-w-4xl mx-auto text-center">
-          <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-6 sm:mb-8">Trusted Partners</p>
+          <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-6 sm:mb-8">{t("trustedPartners")}</p>
           <div className="flex flex-wrap items-center justify-center gap-8">
             <div className="flex flex-col items-center gap-3 group">
               <div className="w-20 h-20 rounded-2xl border border-slate-200 shadow-sm bg-white flex items-center justify-center overflow-hidden group-hover:border-primary/40 group-hover:shadow-card-hover transition-all p-2">
@@ -812,8 +819,8 @@ export default async function RootPage() {
                 />
               </div>
               <div>
-                <p className="text-sm font-semibold text-slate-800 leading-tight">Ormoc City LGU</p>
-                <p className="text-xs text-slate-400 mt-0.5">Official Government Partner</p>
+                <p className="text-sm font-semibold text-slate-800 leading-tight">{t("lguPartner")}</p>
+                <p className="text-xs text-slate-400 mt-0.5">{t("lguPartnerSub")}</p>
               </div>
             </div>
           </div>
@@ -827,22 +834,22 @@ export default async function RootPage() {
           <div className="absolute -bottom-20 -left-20 w-64 h-64 rounded-full bg-white/5 blur-2xl" />
         </div>
         <div className="relative max-w-2xl mx-auto text-center text-white">
-          <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold mb-4 leading-tight">Ready to get started?</h2>
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold mb-4 leading-tight">{t("ctaTitle")}</h2>
           <p className="text-white/75 mb-8 sm:mb-10 text-sm leading-relaxed max-w-lg mx-auto">
-            Join thousands of clients and providers on LocalPro. It&apos;s completely free to sign up and post your first job.
+            {t("ctaSubtitle")}
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Link
               href="/register?role=client"
               className="bg-white text-primary font-semibold text-sm px-6 sm:px-8 py-3 rounded-xl hover:bg-slate-50 hover:-translate-y-0.5 transition-all shadow-md"
             >
-              I need a service
+              {t("iNeedService")}
             </Link>
             <Link
               href="/register?role=provider"
               className="bg-white/10 border border-white/30 text-white font-semibold text-sm px-6 sm:px-8 py-3 rounded-xl hover:bg-white/20 hover:-translate-y-0.5 transition-all"
             >
-              I offer services
+              {t("iOfferServices")}
             </Link>
           </div>
         </div>

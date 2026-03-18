@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import Image from "next/image";
 import { UsersRound, RefreshCw, Search, Briefcase, TrendingUp, CalendarDays, ChevronDown, Star } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { fetchClient } from "@/lib/fetchClient";
 import { formatCurrency } from "@/lib/utils";
 import toast from "react-hot-toast";
@@ -57,6 +58,7 @@ function formatDate(iso: string) {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function ClientsClient() {
+  const t = useTranslations("providerPages");
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery]     = useState("");
@@ -68,7 +70,7 @@ export default function ClientsClient() {
       const data = await fetchClient<{ clients: Client[] }>("/api/provider/agency/clients");
       setClients(data.clients);
     } catch {
-      toast.error("Failed to load clients.");
+      toast.error(t("provClients_toastFailLoad"));
     } finally {
       setLoading(false);
     }
@@ -117,8 +119,8 @@ export default function ClientsClient() {
             <UsersRound className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
           </div>
           <div>
-            <h1 className="text-base font-bold text-slate-800 dark:text-white">Clients</h1>
-            <p className="text-xs text-slate-500 dark:text-slate-400">{clients.length} unique client{clients.length !== 1 ? "s" : ""}</p>
+            <h1 className="text-base font-bold text-slate-800 dark:text-white">{t("provClients_heading")}</h1>
+            <p className="text-xs text-slate-500 dark:text-slate-400">{clients.length !== 1 ? t("provClients_subCountPlural", { count: clients.length }) : t("provClients_subCount", { count: clients.length })}</p>
           </div>
         </div>
         <button
@@ -133,10 +135,10 @@ export default function ClientsClient() {
       {/* ── KPI Row ── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
-          { label: "Total Clients",  value: clients.length.toString(),    icon: UsersRound, color: "text-violet-600", bg: "bg-violet-50", ring: "ring-violet-100" },
-          { label: "Total Jobs",     value: totalJobs.toString(),          icon: Briefcase,  color: "text-blue-600",  bg: "bg-blue-50",  ring: "ring-blue-100" },
-          { label: "Total Revenue",  value: formatCurrency(totalRevenue),  icon: TrendingUp, color: "text-emerald-600", bg: "bg-emerald-50", ring: "ring-emerald-100" },
-          { label: "Repeat Clients", value: repeatClients.toString(),      icon: Star,       color: "text-amber-600",  bg: "bg-amber-50",  ring: "ring-amber-100" },
+          { label: t("provClients_kpiTotalClients"),  value: clients.length.toString(),    icon: UsersRound, color: "text-violet-600", bg: "bg-violet-50", ring: "ring-violet-100" },
+          { label: t("provClients_kpiTotalJobs"),     value: totalJobs.toString(),          icon: Briefcase,  color: "text-blue-600",  bg: "bg-blue-50",  ring: "ring-blue-100" },
+          { label: t("provClients_kpiRevenue"),       value: formatCurrency(totalRevenue),  icon: TrendingUp, color: "text-emerald-600", bg: "bg-emerald-50", ring: "ring-emerald-100" },
+          { label: t("provClients_kpiRepeat"),        value: repeatClients.toString(),      icon: Star,       color: "text-amber-600",  bg: "bg-amber-50",  ring: "ring-amber-100" },
         ].map((c) => (
           <div key={c.label} className="bg-white rounded-2xl border border-slate-200 p-4 space-y-2">
             <div className={`${c.bg} ring-4 ${c.ring} p-2 rounded-xl w-fit`}>
@@ -154,7 +156,7 @@ export default function ClientsClient() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
           <input
             className="input w-full pl-9"
-            placeholder="Search by name or email…"
+            placeholder={t("provClients_searchPlaceholder")}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
@@ -165,9 +167,9 @@ export default function ClientsClient() {
             value={sort}
             onChange={(e) => setSort(e.target.value as SortKey)}
           >
-            <option value="recent">Most Recent</option>
-            <option value="jobs">Most Jobs</option>
-            <option value="revenue">Most Revenue</option>
+            <option value="recent">{t("provClients_sortRecent")}</option>
+            <option value="jobs">{t("provClients_sortJobs")}</option>
+            <option value="revenue">{t("provClients_sortRevenue")}</option>
           </select>
           <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
         </div>
@@ -178,7 +180,7 @@ export default function ClientsClient() {
         <div className="flex flex-col items-center justify-center py-20 bg-white rounded-2xl border border-slate-200 gap-3 text-center">
           <UsersRound className="h-9 w-9 text-slate-300" />
           <p className="text-slate-500 text-sm">
-            {query ? "No clients match your search." : "No clients yet. Complete jobs to see clients here."}
+            {query ? t("provClients_emptySearch") : t("provClients_emptyDefault")}
           </p>
         </div>
       ) : (
@@ -196,7 +198,7 @@ export default function ClientsClient() {
                     <div className="flex items-center gap-2 flex-shrink-0">
                       {client.jobCount > 1 && (
                         <span className="text-[10px] bg-violet-50 text-violet-700 border border-violet-200 px-2 py-0.5 rounded-full font-semibold">
-                          ★ Repeat client
+                          {t("provClients_repeatBadge")}
                         </span>
                       )}
                       <div className="hidden sm:flex flex-col items-end gap-0.5">
@@ -225,7 +227,7 @@ export default function ClientsClient() {
 
                   <div className="mt-1.5 flex items-center gap-1 text-[11px] text-slate-400">
                     <CalendarDays className="h-3 w-3 flex-shrink-0" />
-                    <span>Last job <span className="text-slate-600 font-medium">{formatDate(client.lastJobDate)}</span></span>
+                    <span>{t("provClients_lastJob")} <span className="text-slate-600 font-medium">{formatDate(client.lastJobDate)}</span></span>
                     <span className="text-slate-300 mx-1">·</span>
                     <span className="truncate text-slate-500" title={client.lastJobTitle}>{client.lastJobTitle}</span>
                   </div>

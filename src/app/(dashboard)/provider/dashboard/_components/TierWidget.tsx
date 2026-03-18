@@ -3,8 +3,10 @@ import { reviewRepository } from "@/repositories/review.repository";
 import { getProviderTier } from "@/lib/tier";
 import Link from "next/link";
 import { TrendingUp, Flame } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 
 export async function TierWidget({ userId }: { userId: string }) {
+  const t = await getTranslations("providerPages");
   const [profile, ratingSummary, streak] = await Promise.all([
     providerProfileRepository.findByUserId(userId),
     reviewRepository.getProviderRatingSummary(userId),
@@ -34,7 +36,7 @@ export async function TierWidget({ userId }: { userId: string }) {
             {streak >= 3 && (
               <span className="inline-flex items-center gap-0.5 rounded-full bg-orange-100 text-orange-700 text-xs font-medium px-2 py-0.5">
                 <Flame className="h-3 w-3" />
-                {streak}★ streak
+                {t("provDash_tierStreak", { n: streak })}
               </span>
             )}
           </div>
@@ -48,17 +50,17 @@ export async function TierWidget({ userId }: { userId: string }) {
             {tierInfo.next ? (
               <span className="text-xs text-slate-400">→ {tierInfo.next}</span>
             ) : (
-              <span className="text-xs text-violet-500 font-medium">Top tier!</span>
+              <span className="text-xs text-violet-500 font-medium">{t("provDash_tierTopTier")}</span>
             )}
           </div>
         </div>
       </div>
       <div className="text-right flex-shrink-0">
         <p className="text-xs text-slate-500">
-          {completedJobCount} job{completedJobCount !== 1 ? "s" : ""}
+          {completedJobCount !== 1 ? t("provDash_tierJobCountPlural", { n: completedJobCount }) : t("provDash_tierJobCount", { n: completedJobCount })}
         </p>
         <p className="text-xs text-primary/70 group-hover:text-primary transition-colors">
-          View Profile →
+          {t("provDash_tierViewProfile")}
         </p>
       </div>
     </Link>

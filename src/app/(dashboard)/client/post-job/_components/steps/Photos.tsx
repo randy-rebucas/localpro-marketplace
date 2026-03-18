@@ -1,4 +1,5 @@
 import { ImagePlus, X, Camera } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 interface PhotoFile { file: File; preview: string; }
 
@@ -10,6 +11,7 @@ interface Props {
 }
 
 export function Photos({ photoFiles, isUploadingPhotos, onAddFiles, onRemove }: Props) {
+  const t = useTranslations("clientPages");
   const remaining = 5 - photoFiles.length;
 
   return (
@@ -18,7 +20,7 @@ export function Photos({ photoFiles, isUploadingPhotos, onAddFiles, onRemove }: 
       <div className="flex items-start gap-2.5 rounded-xl bg-emerald-50 border border-emerald-100 px-4 py-3">
         <Camera className="h-4 w-4 text-emerald-600 flex-shrink-0 mt-0.5" />
         <p className="text-xs text-emerald-800 leading-relaxed">
-          <span className="font-semibold">Photos = faster quotes.</span> Jobs with photos receive quotes <span className="font-semibold">2× faster</span>. Show the problem area, any existing damage, or the space.
+          <span className="font-semibold">{t("postJob_photosTipPrefix")}</span> {t("postJob_photosTip")}
         </p>
       </div>
 
@@ -32,8 +34,8 @@ export function Photos({ photoFiles, isUploadingPhotos, onAddFiles, onRemove }: 
             <ImagePlus className="h-6 w-6 text-slate-400 group-hover:text-primary transition-colors" />
           </div>
           <div className="text-center">
-            <p className="text-sm font-semibold text-slate-600 group-hover:text-primary transition-colors">Click to add photos</p>
-            <p className="text-xs text-slate-400 mt-0.5">or drag and drop · PNG, JPG, WEBP · up to 5 photos</p>
+            <p className="text-sm font-semibold text-slate-600 group-hover:text-primary transition-colors">{t("postJob_uploadZone")}</p>
+            <p className="text-xs text-slate-400 mt-0.5">{t("postJob_uploadZoneSub")}</p>
           </div>
           <input
             id="photo-upload"
@@ -72,11 +74,11 @@ export function Photos({ photoFiles, isUploadingPhotos, onAddFiles, onRemove }: 
       {/* Count + status */}
       <div className="flex items-center justify-between text-xs">
         <span className="text-slate-500">
-          {photoFiles.length} / 5 photo{photoFiles.length !== 1 ? "s" : ""} selected
+          {t("postJob_photoCounter", { n: photoFiles.length })}
         </span>
         {remaining > 0 && photoFiles.length > 0 ? (
           <label htmlFor="photo-upload" className="text-primary font-medium hover:underline cursor-pointer">
-            + Add {remaining} more
+            {t("postJob_addMore", { n: remaining })}
           </label>
         ) : null}
       </div>
@@ -84,7 +86,7 @@ export function Photos({ photoFiles, isUploadingPhotos, onAddFiles, onRemove }: 
       {isUploadingPhotos && (
         <div className="flex items-center gap-2 text-xs text-primary animate-pulse">
           <span className="inline-block h-1.5 w-1.5 rounded-full bg-primary" />
-          Uploading photos…
+          {t("postJob_uploading")}
         </div>
       )}
     </div>

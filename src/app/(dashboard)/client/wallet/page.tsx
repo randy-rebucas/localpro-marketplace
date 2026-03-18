@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
+import { getTranslations } from "next-intl/server";
 import { walletService } from "@/services/wallet.service";
 import { formatCurrency } from "@/lib/utils";
 import {
@@ -26,6 +27,7 @@ export default async function WalletPage({
 }) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
+  const t = await getTranslations("clientPages");
 
   const { topup: topupStatus } = await searchParams;
 
@@ -43,9 +45,9 @@ export default async function WalletPage({
 
       {/* ── Page header ──────────────────────────────────────────────────────────────── */}
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Wallet</h1>
+        <h1 className="text-2xl font-bold text-slate-900">{t("wallet")}</h1>
         <p className="text-slate-500 text-sm mt-1">
-          Refunds from cancelled or disputed jobs land here. Top up, use your balance to fund escrow, or withdraw to your bank.
+          {t("walletSub")}
         </p>
       </div>
 
@@ -54,15 +56,15 @@ export default async function WalletPage({
         <div className="flex items-center gap-3 rounded-xl bg-emerald-50 border border-emerald-200 px-5 py-4 text-emerald-800">
           <CheckCircle className="h-5 w-5 text-emerald-500 flex-shrink-0" />
           <div>
-            <p className="font-semibold text-sm">Top-up successful!</p>
-            <p className="text-xs text-emerald-600">Your wallet is being credited. Your updated balance will appear momentarily.</p>
+            <p className="font-semibold text-sm">{t("topupSuccess")}</p>
+            <p className="text-xs text-emerald-600">{t("topupSuccessSub")}</p>
           </div>
         </div>
       )}
       {topupStatus === "cancelled" && (
         <div className="flex items-center gap-3 rounded-xl bg-amber-50 border border-amber-200 px-5 py-4 text-amber-800">
           <XCircle className="h-5 w-5 text-amber-500 flex-shrink-0" />
-          <p className="text-sm">Top-up was cancelled. No charge was made.</p>
+          <p className="text-sm">{t("topupCancelled")}</p>
         </div>
       )}
 
@@ -73,7 +75,7 @@ export default async function WalletPage({
             <Wallet className="h-5 w-5 text-violet-600" />
           </div>
           <div>
-            <p className="text-xs text-slate-500 font-medium uppercase tracking-wide">Total Balance</p>
+            <p className="text-xs text-slate-500 font-medium uppercase tracking-wide">{t("totalBalance")}</p>
             <p className="text-2xl font-bold text-slate-900">{formatCurrency(balance)}</p>
           </div>
         </div>
@@ -83,7 +85,7 @@ export default async function WalletPage({
             <CheckCircle className="h-5 w-5 text-emerald-600" />
           </div>
           <div>
-            <p className="text-xs text-slate-500 font-medium uppercase tracking-wide">Available</p>
+            <p className="text-xs text-slate-500 font-medium uppercase tracking-wide">{t("available")}</p>
             <p className="text-2xl font-bold text-slate-900">{formatCurrency(availableBalance)}</p>
           </div>
         </div>
@@ -93,7 +95,7 @@ export default async function WalletPage({
             <Clock className="h-5 w-5 text-amber-600" />
           </div>
           <div>
-            <p className="text-xs text-slate-500 font-medium uppercase tracking-wide">Pending Withdrawals</p>
+            <p className="text-xs text-slate-500 font-medium uppercase tracking-wide">{t("pendingWithdrawals")}</p>
             <p className="text-2xl font-bold text-slate-900">{formatCurrency(pendingWithdrawals)}</p>
           </div>
         </div>
@@ -106,7 +108,7 @@ export default async function WalletPage({
           <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
             <div className="px-6 py-4 border-b border-slate-100 flex items-center gap-2">
               <BookOpen className="h-4 w-4 text-slate-500" />
-              <h2 className="text-base font-semibold text-slate-800">Transaction Ledger</h2>
+              <h2 className="text-base font-semibold text-slate-800">{t("transactionLedger")}</h2>
             </div>
             <WalletLedgerTable />
           </div>
@@ -114,16 +116,16 @@ export default async function WalletPage({
             {serialisedWithdrawals.length > 0 && (
               <>
                 <div className="mt-4 px-6 py-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between gap-3">
-                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Requests</p>
+                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">{t("requests")}</p>
                   {unaccountedWithdrawals > 0 ? (
                     <span className="inline-flex items-center gap-1.5 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2.5 py-1 font-medium">
                       <AlertTriangle className="h-3 w-3" />
-                      {unaccountedWithdrawals} missing ledger
+                      {t("missingLedger", { count: unaccountedWithdrawals })}
                     </span>
                   ) : (
                     <span className="inline-flex items-center gap-1.5 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2.5 py-1 font-medium">
                       <BadgeCheck className="h-3 w-3" />
-                      All accounted
+                      {t("allAccounted")}
                     </span>
                   )}
                 </div>
@@ -142,8 +144,8 @@ export default async function WalletPage({
                 <PlusCircle className="h-4 w-4 text-violet-600" />
               </div>
               <div>
-                <h2 className="text-base font-semibold text-slate-800">Top Up Wallet</h2>
-                <p className="text-xs text-slate-500">Add funds via GCash, Maya, or card.</p>
+                <h2 className="text-base font-semibold text-slate-800">{t("topUpWallet")}</h2>
+                <p className="text-xs text-slate-500">{t("topUpSub")}</p>
               </div>
             </div>
             <WalletTopUpForm currentBalance={balance} />
@@ -153,8 +155,8 @@ export default async function WalletPage({
           <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
             <div className="p-6 space-y-4">
               <div>
-                <h2 className="text-base font-semibold text-slate-800">Withdraw to Bank</h2>
-                <p className="text-sm text-slate-500 mt-1">Minimum ₱100. Processing takes 1–3 business days.</p>
+                <h2 className="text-base font-semibold text-slate-800">{t("withdrawToBank")}</h2>
+                <p className="text-sm text-slate-500 mt-1">{t("withdrawSub")}</p>
               </div>
               <WalletWithdrawForm available={availableBalance} />
             </div>

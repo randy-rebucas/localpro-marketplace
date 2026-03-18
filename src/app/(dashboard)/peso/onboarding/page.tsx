@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import toast from "react-hot-toast";
 import { Upload, CheckCircle2, XCircle, Loader2, FileText, X } from "lucide-react";
 import { apiFetch } from "@/lib/fetchClient";
@@ -34,6 +35,7 @@ function parseCSV(text: string): Record<string, string>[] {
 }
 
 export default function BulkOnboardingPage() {
+  const t = useTranslations("pesoPages");
   const [csvText, setCsvText] = useState("");
   const [fileName, setFileName] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -100,16 +102,16 @@ export default function BulkOnboardingPage() {
     <div className="max-w-3xl mx-auto space-y-5">
       {/* Header */}
       <div>
-        <h1 className="text-xl font-bold text-slate-800">Bulk Provider Onboarding</h1>
+        <h1 className="text-xl font-bold text-slate-800">{t("onboardTitle")}</h1>
         <p className="text-sm text-slate-500 mt-0.5">
-          Upload a CSV to register multiple workers at once. Each will receive an activation email.
+          {t("onboardSub")}
         </p>
       </div>
 
       {/* CSV format reference */}
       <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
         <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
-          Expected Format <span className="normal-case font-normal text-slate-400">(headers required)</span>
+          {t("onboardExpectedFormat")} <span className="normal-case font-normal text-slate-400">{t("onboardHeadersNote")}</span>
         </p>
         <pre className="text-xs text-slate-600 whitespace-pre-wrap font-mono leading-relaxed">{SAMPLE_CSV}</pre>
       </div>
@@ -118,7 +120,7 @@ export default function BulkOnboardingPage() {
       <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-4">
         {/* File upload */}
         <div>
-          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Upload CSV File</p>
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">{t("onboardUploadSection")}</p>
           {fileName ? (
             <div className="flex items-center gap-3 border border-emerald-200 bg-emerald-50 rounded-lg px-4 py-3">
               <FileText className="h-4 w-4 text-emerald-600 shrink-0" />
@@ -134,7 +136,7 @@ export default function BulkOnboardingPage() {
           ) : (
             <label className="flex items-center gap-3 border border-dashed border-slate-300 rounded-lg px-4 py-3 cursor-pointer hover:bg-slate-50 hover:border-slate-400 transition-colors">
               <Upload className="h-4 w-4 text-slate-400 shrink-0" />
-              <span className="text-sm text-slate-500">Choose a .csv file or paste below</span>
+              <span className="text-sm text-slate-500">{t("onboardChooseFile")}</span>
               <input
                 ref={fileInputRef}
                 type="file"
@@ -149,7 +151,7 @@ export default function BulkOnboardingPage() {
         {/* Paste area */}
         <div>
           <div className="flex items-center justify-between mb-1">
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Or Paste CSV Data</p>
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{t("onboardPasteSection")}</p>
             {csvText.trim() && (
               <span className="text-xs text-slate-400 tabular-nums">
                 {parsedRows.length} row{parsedRows.length !== 1 ? "s" : ""} detected
@@ -175,7 +177,7 @@ export default function BulkOnboardingPage() {
           ) : (
             <Upload className="h-4 w-4" />
           )}
-          {submitting ? "Processing…" : `Upload & Onboard${parsedRows.length > 0 ? ` (${parsedRows.length})` : ""}`}
+          {submitting ? t("onboardProcessing") : `${t("onboardSubmit")}${parsedRows.length > 0 ? ` (${parsedRows.length})` : ""}`}
         </button>
       </form>
 
@@ -184,15 +186,15 @@ export default function BulkOnboardingPage() {
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
           {/* Summary bar */}
           <div className="flex items-center gap-4 px-5 py-3.5 border-b border-slate-100 bg-slate-50">
-            <span className="text-sm font-semibold text-slate-700">Results</span>
+            <span className="text-sm font-semibold text-slate-700">{t("onboardResults")}</span>
             <span className="flex items-center gap-1.5 text-sm text-emerald-600 font-medium">
               <CheckCircle2 className="h-4 w-4" />
-              {createdCount} created
+              {createdCount} {t("onboardCreated")}
             </span>
             {skippedCount > 0 && (
               <span className="flex items-center gap-1.5 text-sm text-red-500 font-medium">
                 <XCircle className="h-4 w-4" />
-                {skippedCount} skipped
+                {skippedCount} {t("onboardSkipped")}
               </span>
             )}
           </div>

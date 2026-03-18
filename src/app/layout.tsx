@@ -8,6 +8,8 @@ import CookieConsent from "@/components/shared/CookieConsent";
 import JsonLd from "@/components/shared/JsonLd";
 import PwaSetup from "@/components/pwa/PwaSetup";
 import MetaPixelNoscript from "@/components/analytics/MetaPixel";
+import { NextIntlClientProvider } from "next-intl";
+import { getLocale, getMessages } from "next-intl/server";
 import "./globals.css";
 
 const inter = Inter({
@@ -121,36 +123,41 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const locale = await getLocale();
+  const messages = await getMessages();
   return (
-    <html lang="en-PH" className={`${inter.variable} h-full`}>
+    <html lang={locale} className={`${inter.variable} h-full`}>
       <head>
         <JsonLd />
       </head>
       <body className="font-sans h-full">
-        {process.env.NEXT_PUBLIC_GTM_ID && (
-          <noscript>
-            <iframe
-              src={`https://www.googletagmanager.com/ns.html?id=${process.env.NEXT_PUBLIC_GTM_ID}`}
-              height="0" width="0"
-              style={{ display: "none", visibility: "hidden" }}
-              title="Google Tag Manager"
+        <NextIntlClientProvider locale={locale} messages={messages}>
+          {process.env.NEXT_PUBLIC_GTM_ID && (
+            <noscript>
+              <iframe
+                src={`https://www.googletagmanager.com/ns.html?id=${process.env.NEXT_PUBLIC_GTM_ID}`}
+                height="0" width="0"
+                style={{ display: "none", visibility: "hidden" }}
+                title="Google Tag Manager"
+              />
+            </noscript>
+          )}
+          <MetaPixelNoscript />
+          {process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY && (
+            <Script
+              id="google-maps"
+              src={`https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=places&loading=async`}
+              strategy="afterInteractive"
             />
-          </noscript>
-        )}
-        <MetaPixelNoscript />
-        {process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY && (
-          <Script
-            id="google-maps"
-            src={`https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=places&loading=async`}
-            strategy="afterInteractive"
-          />
-        )}
-        {children}
+          )}
+          {children}
+          {/* NextIntlClientProvider makes translations available to client components */}
+        </NextIntlClientProvider>
         <PwaSetup />
         <CookieConsent />
         <Analytics />

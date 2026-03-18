@@ -5,6 +5,7 @@ import { ShieldCheck } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { calculateClientFees, DEFAULT_ESCROW_FEE_RATE_PERCENT, DEFAULT_PROCESSING_FEE_RATE_PERCENT } from "@/lib/commission";
 import type { JobStatus, EscrowStatus } from "@/types";
+import { useTranslations } from "next-intl";
 
 const JobActionButtons = dynamic(() => import("./JobActionButtons"), { ssr: false });
 
@@ -25,6 +26,7 @@ interface Props {
  * Only renders when there is an actionable CTA for the client.
  */
 export default function StickyJobCTA({ jobId, status, escrowStatus, budget, acceptedAmount, fundedAmount, category, urgencyFee, urgency }: Props) {
+  const t = useTranslations("clientPages");
   const needsFunding = status === "assigned" && escrowStatus === "not_funded";
   const needsRelease = status === "completed" && escrowStatus === "funded";
 
@@ -46,22 +48,22 @@ export default function StickyJobCTA({ jobId, status, escrowStatus, budget, acce
           <div className="min-w-0">
             {needsFunding && (
               <>
-                <p className="text-sm font-semibold text-slate-900">Ready to start?</p>
+                <p className="text-sm font-semibold text-slate-900">{t("cta_readyToStart")}</p>
                 <p className="text-xs text-slate-500 truncate">
                   {formatCurrency(serviceAmount)} + {formatCurrency(escrowFee)} escrow + {formatCurrency(processingFee)} processing
                   {(urgencyFee ?? 0) > 0 && (
                     <> + {formatCurrency(urgencyFee ?? 0)} {urgency === "rush" ? "rush" : "same-day"}</>
                   )}{" "}
                   = <span className="font-semibold text-slate-700">{formatCurrency(totalCharge)} total</span>
-                  {" "}— released only when you approve the work
+                  {" "}{t("cta_releasedOnApproval")}
                 </p>
               </>
             )}
             {needsRelease && (
               <>
-                <p className="text-sm font-semibold text-slate-900">Job completed</p>
+                <p className="text-sm font-semibold text-slate-900">{t("cta_jobCompleted")}</p>
                 <p className="text-xs text-slate-500 truncate">
-                  Release {formatCurrency(fundedAmount ?? budget)} to the provider when satisfied
+                  {t("cta_releaseDesc", { amount: formatCurrency(fundedAmount ?? budget) })}
                 </p>
               </>
             )}

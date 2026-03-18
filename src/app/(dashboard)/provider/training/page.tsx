@@ -16,6 +16,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import toast from "react-hot-toast";
+import { useTranslations } from "next-intl";
 
 type CourseCategory = "basic" | "advanced" | "safety" | "custom" | "certification";
 
@@ -42,14 +43,6 @@ interface Course {
   completedLessonsCount: number;
 }
 
-const CATEGORY_LABELS: Record<CourseCategory, string> = {
-  basic:         "Basic",
-  advanced:      "Advanced",
-  safety:        "Safety",
-  custom:        "Specialty",
-  certification: "Certification",
-};
-
 const CATEGORY_COLORS: Record<CourseCategory, string> = {
   basic:         "bg-blue-100 text-blue-700",
   advanced:      "bg-purple-100 text-purple-700",
@@ -59,6 +52,9 @@ const CATEGORY_COLORS: Record<CourseCategory, string> = {
 };
 
 export default function ProviderTrainingPage() {
+  const t = useTranslations("training");
+  const tc = useTranslations("common");
+  const getCategoryLabel = (cat: CourseCategory) => t(`categories.${cat}` as Parameters<typeof t>[0]);
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [enrolling, setEnrolling] = useState<string | null>(null);
@@ -71,7 +67,7 @@ export default function ProviderTrainingPage() {
       const data = await res.json() as { courses: Course[] };
       setCourses(data.courses ?? []);
     } catch {
-      toast.error("Failed to load courses.");
+      toast.error(t("loadFailedList"));
     } finally {
       setLoading(false);
     }
@@ -80,7 +76,7 @@ export default function ProviderTrainingPage() {
   useEffect(() => { void fetchCourses(); }, [fetchCourses]);
 
   async function handleEnroll(courseId: string, price: number) {
-    if (price > 0 && !confirm(`Enroll for ₱${price.toLocaleString()} from your wallet?`)) return;
+    if (price > 0 && !confirm(t("confirmWalletEnroll", { price: price.toLocaleString() }))) return;
     setEnrolling(courseId);
     try {
       const res = await fetch(`/api/provider/training/${courseId}/enroll`, { method: "POST" });
@@ -88,18 +84,18 @@ export default function ProviderTrainingPage() {
       if (!res.ok) {
         // Insufficient wallet balance → fall through to PayMongo
         if (data.error?.startsWith("Insufficient wallet balance")) {
-          toast("Not enough wallet balance. Redirecting to online payment…", { icon: "💳" });
+          toast(t("insufficientBalance"), { icon: "💳" });
           setEnrolling(null);
           await handlePayMongo(courseId);
           return;
         }
-        toast.error(data.error ?? "Enrollment failed.");
+        toast.error(data.error ?? t("enrollmentFailed"));
         return;
       }
-      toast.success("Enrolled successfully!");
+      toast.success(t("enrollSuccess"));
       void fetchCourses();
     } catch {
-      toast.error("Something went wrong.");
+      toast.error(t("enrollmentFailed"));
     } finally {
       setEnrolling(null);
     }
@@ -110,7 +106,7 @@ export default function ProviderTrainingPage() {
     try {
       const res = await fetch(`/api/provider/training/${courseId}/checkout`, { method: "POST" });
       const data = await res.json() as { checkoutUrl?: string; checkoutSessionId?: string; activated?: boolean; error?: string };
-      if (!res.ok) { toast.error(data.error ?? "Could not initiate checkout."); return; }
+      if (!res.ok) { toast.error(data.error ?? t("checkoutFailed")); return; }
       if (data.checkoutUrl) {
         // Save session ID so the player page can activate enrollment immediately on return
         if (data.checkoutSessionId) {
@@ -121,11 +117,11 @@ export default function ProviderTrainingPage() {
         window.location.href = data.checkoutUrl;
         return; // skip the finally block clearing the spinner
       } else if (data.activated) {
-        toast.success("Enrolled successfully!");
+        toast.success(t("enrollSuccess"));
         void fetchCourses();
       }
     } catch {
-      toast.error("Something went wrong.");
+      toast.error(t("enrollmentFailed"));
     } finally {
       setEnrolling(null);
     }
@@ -153,9 +149,9 @@ export default function ProviderTrainingPage() {
       {/* Header */}
       <div className="flex items-center gap-3">
         <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-slate-900">Training &amp; Upskilling</h2>
+          <h2 className="text-xl sm:text-2xl font-bold text-slate-900">{t("title")}</h2>
           <p className="text-slate-500 text-sm mt-0.5">
-            Earn recognised badges by completing professional training courses.
+            {t("subtitle")}
           </p>
         </div>
       </div>
@@ -165,11 +161,11 @@ export default function ProviderTrainingPage() {
         <div className="flex gap-4 text-sm">
           <div className="flex items-center gap-1.5 text-slate-600">
             <BookOpen className="h-4 w-4 text-indigo-400" />
-            <span><strong>{enrolledCount}</strong> enrolled</span>
+            <span>{t("enrolledCount", { count: enrolledCount })}</span>
           </div>
           <div className="flex items-center gap-1.5 text-slate-600">
             <Award className="h-4 w-4 text-emerald-400" />
-            <span><strong>{completedCount}</strong> completed</span>
+            <span>{t("completedCount", { count: completedCount })}</span>
           </div>
         </div>
       )}
@@ -178,7 +174,7 @@ export default function ProviderTrainingPage() {
       {myCertifications.length > 0 && (
         <div className="space-y-3">
           <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-            <Award className="h-4 w-4 text-yellow-500" /> My Certificates
+            <Award className="h-4 w-4 text-yellow-500" /> {t("myCertificates")}
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {myCertifications.map((cert) => (
@@ -217,7 +213,7 @@ export default function ProviderTrainingPage() {
                         : "bg-emerald-200 text-emerald-900 hover:bg-emerald-300"
                     }`}
                   >
-                    <Award className="h-3 w-3" /> Get Certificate
+                    <Award className="h-3 w-3" /> {t("viewCertificate")}
                   </Link>
                 </div>
               </div>
@@ -231,7 +227,7 @@ export default function ProviderTrainingPage() {
       {myCourses.length > 0 && (
         <div className="space-y-3">
           <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-            <PlayCircle className="h-4 w-4 text-indigo-500" /> My Courses
+            <PlayCircle className="h-4 w-4 text-indigo-500" /> {t("myCourses")}
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {myCourses.map((course) => {
@@ -261,9 +257,9 @@ export default function ProviderTrainingPage() {
                     </p>
                     <p className={`text-xs mt-0.5 flex items-center gap-1 ${isCompleted ? "text-emerald-600" : "text-indigo-500"}`}>
                       {isCompleted ? (
-                        <><CheckCircle2 className="h-3 w-3" /> Completed</>
+                        <><CheckCircle2 className="h-3 w-3" /> {t("completed")}</>
                       ) : (
-                        <><BookOpen className="h-3 w-3" /> {course.completedLessonsCount}/{course.lessons.length} lessons</>
+                        <><BookOpen className="h-3 w-3" /> {t("progress", { done: course.completedLessonsCount, total: course.lessons.length })}</>
                       )}
                     </p>
                     {!isCompleted && course.lessons.length > 0 && (
@@ -296,7 +292,7 @@ export default function ProviderTrainingPage() {
                 : "bg-slate-100 text-slate-600 hover:bg-slate-200"
             }`}
           >
-            {cat === "all" ? "All" : CATEGORY_LABELS[cat]}
+            {cat === "all" ? t("categories.all") : getCategoryLabel(cat)}
           </button>
         ))}
       </div>
@@ -305,7 +301,7 @@ export default function ProviderTrainingPage() {
       {filtered.length === 0 ? (
         <div className="text-center py-12 text-slate-400">
           <BookOpen className="h-10 w-10 mx-auto mb-3 opacity-40" />
-          <p>{myCourses.length > 0 || myCertifications.length > 0 ? "You're enrolled in all available courses!" : "No courses available yet."}</p>
+          <p>{myCourses.length > 0 || myCertifications.length > 0 ? t("allEnrolled") : t("noCoursesYet")}</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -320,7 +316,7 @@ export default function ProviderTrainingPage() {
             >
               {/* Category badge */}
               <span className={`self-start text-xs font-semibold px-2 py-0.5 rounded-full ${CATEGORY_COLORS[course.category]}`}>
-                {CATEGORY_LABELS[course.category]}
+                {getCategoryLabel(course.category)}
               </span>
 
               <h3 className="font-semibold text-slate-800 leading-snug">{course.title}</h3>
@@ -329,29 +325,29 @@ export default function ProviderTrainingPage() {
               <div className="flex items-center gap-4 text-xs text-slate-400">
                 <span className="flex items-center gap-1">
                   <BookOpen className="h-3.5 w-3.5" />
-                  {course.lessons.length} lesson{course.lessons.length !== 1 ? "s" : ""}
+                  {t("lessons", { count: course.lessons.length })}
                 </span>
                 <span className="flex items-center gap-1">
                   <Clock className="h-3.5 w-3.5" />
-                  {course.durationMinutes} min
+                  {t("minutes", { count: course.durationMinutes })}
                 </span>
               </div>
 
               <div className="mt-auto pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
                 <span className="font-bold text-slate-900">
-                  {course.price === 0 ? "Free" : `₱${course.price.toLocaleString()}`}
+                  {course.price === 0 ? tc("free") : `₱${course.price.toLocaleString()}`}
                 </span>
 
                 {course.enrollmentStatus === "completed" ? (
                   <span className="flex items-center gap-1 text-emerald-600 font-medium text-xs">
-                    <CheckCircle2 className="h-4 w-4" /> Completed
+                    <CheckCircle2 className="h-4 w-4" /> {t("completed")}
                   </span>
                 ) : course.enrolled ? (
                   <Link
                     href={`/provider/training/${course._id}`}
                     className="flex items-center gap-1 bg-indigo-600 text-white text-xs font-semibold px-3 py-1.5 rounded-lg hover:bg-indigo-700 transition-colors"
                   >
-                    <PlayCircle className="h-3.5 w-3.5" /> Start Course
+                    <PlayCircle className="h-3.5 w-3.5" /> {t("startCourse")}
                   </Link>
                 ) : course.price === 0 ? (
                   <button
@@ -361,8 +357,8 @@ export default function ProviderTrainingPage() {
                   >
                     {enrolling === course._id
                       ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      : <CheckCircle2 className="h-3.5 w-3.5" />}
-                    Enroll Free
+                      : <><CheckCircle2 className="h-3.5 w-3.5" /></>}
+                    {t("enrollFreeShort")}
                   </button>
                 ) : (
                   <div className="flex gap-2">
@@ -373,15 +369,15 @@ export default function ProviderTrainingPage() {
                     >
                       {enrolling === course._id
                         ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        : <Wallet className="h-3.5 w-3.5" />}
-                      Wallet
+                        : <><Wallet className="h-3.5 w-3.5" /></>}
+                      {t("walletBtn")}
                     </button>
                     <button
                       disabled={enrolling === course._id}
                       onClick={() => void handlePayMongo(course._id)}
                       className="flex items-center gap-1.5 bg-slate-100 text-slate-700 text-xs font-semibold px-3 py-1.5 rounded-lg hover:bg-slate-200 transition-colors disabled:opacity-50"
                     >
-                      <CreditCard className="h-3.5 w-3.5" /> Card
+                      <CreditCard className="h-3.5 w-3.5" /> {t("payByCard")}
                     </button>
                   </div>
                 )}

@@ -2,6 +2,7 @@ import { Banknote, CalendarDays, User2, MapPin, Tag } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import ProviderInfoButton from "@/components/shared/ProviderInfoButtonLazy";
 import type { IJob } from "@/types";
+import { getTranslations } from "next-intl/server";
 
 type JobWithProvider = IJob & {
   providerId?: { _id: unknown; name: string; isVerified: boolean; avatar?: string };
@@ -31,13 +32,14 @@ function MetaChip({
   );
 }
 
-export function JobDetailCard({ job }: Props) {
+export async function JobDetailCard({ job }: Props) {
+  const t = await getTranslations("clientPages");
   return (
     <div className="bg-white rounded-xl border border-slate-200 shadow-card p-6 space-y-5">
       {/* Description */}
       <div>
         <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2">
-          Description
+          {t("jobCard_description")}
         </p>
         <p className="text-slate-800 whitespace-pre-wrap text-sm leading-relaxed">
           {job.description}
@@ -51,23 +53,23 @@ export function JobDetailCard({ job }: Props) {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <MetaChip
           icon={<Banknote className="h-3 w-3" />}
-          label="Budget"
+          label={t("jobCard_budget")}
           value={formatCurrency(job.budget)}
         />
         <MetaChip
           icon={<CalendarDays className="h-3 w-3" />}
-          label="Scheduled"
+          label={t("jobCard_scheduled")}
           value={formatDate(job.scheduleDate)}
         />
         <MetaChip
           icon={<Tag className="h-3 w-3" />}
-          label="Category"
+          label={t("jobCard_category")}
           value={job.category}
         />
         {job.location && (
           <MetaChip
             icon={<MapPin className="h-3 w-3" />}
-            label="Location"
+            label={t("jobCard_location")}
             value={job.location}
           />
         )}
@@ -80,11 +82,11 @@ export function JobDetailCard({ job }: Props) {
             <User2 className="h-4 w-4 text-primary" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-xs text-slate-400">Assigned Provider</p>
+            <p className="text-xs text-slate-400">{t("jobCard_assignedProvider")}</p>
             <div className="flex items-center gap-2 flex-wrap">
               <p className="text-sm font-semibold text-slate-900">{job.providerId.name}</p>
               {job.providerId.isVerified && (
-                <span className="badge bg-blue-100 text-blue-700 text-xs">Verified</span>
+                <span className="badge bg-blue-100 text-blue-700 text-xs">{t("jobCard_verified")}</span>
               )}
             </div>
           </div>

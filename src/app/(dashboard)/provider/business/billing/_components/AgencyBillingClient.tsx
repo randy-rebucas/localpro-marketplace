@@ -8,6 +8,7 @@ import {
   Users, Wrench, ShieldCheck, ArrowUpRight,
   Loader2, AlertTriangle, Building2, Star,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { fetchClient } from "@/lib/fetchClient";
 import { formatCurrency } from "@/lib/utils";
 import toast from "react-hot-toast";
@@ -166,6 +167,24 @@ const PLAN_STATUS_BADGE: Record<PlanStatus, string> = {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 export default function AgencyBillingClient() {
+  const t = useTranslations("providerPages");
+
+  const PLAN_TAGLINES: Record<PlanKey, string> = {
+    starter:    t("provBilling_taglineStarter"),
+    growth:     t("provBilling_taglineGrowth"),
+    pro:        t("provBilling_taglinePro"),
+    enterprise: t("provBilling_taglineEnterprise"),
+  };
+
+  const ADDON_TRANSLATIONS: Record<string, { label: string; description: string }> = {
+    analytics:    { label: t("provBilling_addonAnalyticsLabel"),  description: t("provBilling_addonAnalyticsDesc") },
+    priorityList: { label: t("provBilling_addonPriorityLabel"),   description: t("provBilling_addonPriorityDesc") },
+    bulkOnboard:  { label: t("provBilling_addonBulkLabel"),       description: t("provBilling_addonBulkDesc") },
+    equipment:    { label: t("provBilling_addonEquipmentLabel"),   description: t("provBilling_addonEquipmentDesc") },
+    scheduler:    { label: t("provBilling_addonSchedulerLabel"),  description: t("provBilling_addonSchedulerDesc") },
+    support:      { label: t("provBilling_addonSupportLabel"),    description: t("provBilling_addonSupportDesc") },
+  };
+
   const searchParams = useSearchParams();
   const [data,    setData]    = useState<BillingData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -179,7 +198,7 @@ export default function AgencyBillingClient() {
       const res = await fetchClient<BillingData>("/api/provider/agency/billing", { cache: "no-store" });
       setData(res);
     } catch {
-      toast.error("Failed to load billing data.");
+      toast.error(t("provBilling_errLoad"));
     } finally {
       if (!silent) setLoading(false);
     }
@@ -229,12 +248,12 @@ export default function AgencyBillingClient() {
                 : prev
             );
           }
-          toast.success("🎉 Plan activated! Your subscription is now live.");
+          toast.success(t("provBilling_toastActivated"));
         } else {
-          toast("Payment received — plan activation in progress.", { icon: "⏳" });
+          toast(t("provBilling_toastPending"), { icon: "⏳" });
         }
       } catch {
-        toast("Payment received — plan activation in progress.", { icon: "⏳" });
+        toast(t("provBilling_toastPending"), { icon: "⏳" });
       } finally {
         load(true);
       }
@@ -262,7 +281,7 @@ export default function AgencyBillingClient() {
 
       // Dev mode — plan activated immediately in DB, reload silently to reflect it
       if (res.simulated) {
-        toast.success(`🎉 Upgraded to ${res.plan ?? plan} (dev mode — no payment required).`);
+        toast.success(t("provBilling_toastDevUpgrade", { plan: res.plan ?? plan }));
         setPaying(null);
         await load(true);
         return;
@@ -273,7 +292,7 @@ export default function AgencyBillingClient() {
         window.location.href = res.checkoutUrl;
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not start checkout.");
+      toast.error(err instanceof Error ? err.message : t("provBilling_errCheckout"));
       setPaying(null);
     }
   }
@@ -301,8 +320,8 @@ export default function AgencyBillingClient() {
     return (
       <div className="p-10 text-center text-slate-500">
         <Building2 className="mx-auto mb-3 h-10 w-10 text-slate-300" />
-        <p className="font-medium">No agency profile found.</p>
-        <p className="text-sm mt-1">Set up your agency profile first.</p>
+        <p className="font-medium">{t("provBilling_noAgencyHeading")}</p>
+        <p className="text-sm mt-1">{t("provBilling_noAgencyDesc")}</p>
       </div>
     );
   }
@@ -321,20 +340,20 @@ export default function AgencyBillingClient() {
           <div>
             <p className="text-sm font-semibold text-slate-800">
               {planStatus === "past_due"
-                ? "Your subscription payment is past due."
-                : "Your subscription has been cancelled."}
+                ? t("provBilling_bannerPastDue")
+                : t("provBilling_bannerCancelled")}
             </p>
             <p className="text-xs text-slate-500 mt-0.5">
               {planStatus === "past_due"
-                ? "Please renew to avoid losing access to premium features."
-                : "You are currently on the limited free Starter plan."}
+                ? t("provBilling_bannerPastDueDesc")
+                : t("provBilling_bannerCancelledDesc")}
             </p>
           </div>
           <button
             onClick={() => document.getElementById("plans")?.scrollIntoView({ behavior: "smooth" })}
             className="ml-auto text-xs font-semibold text-violet-600 hover:underline shrink-0"
           >
-            Renew plan →
+            {t("provBilling_btnRenewPlan")}
           </button>
         </div>
       )}
@@ -346,7 +365,7 @@ export default function AgencyBillingClient() {
             <ReceiptText className="h-5 w-5 text-violet-600 dark:text-violet-400" />
           </div>
           <div>
-            <h1 className="text-base font-bold text-slate-800 dark:text-white">Subscription &amp; Billing</h1>
+            <h1 className="text-base font-bold text-slate-800 dark:text-white">{t("provBilling_heading")}</h1>
             <p className="text-xs text-slate-500 dark:text-slate-400">{data.agencyName}</p>
           </div>
         </div>
@@ -364,28 +383,28 @@ export default function AgencyBillingClient() {
 
         {/* Current plan card */}
         <div className={`rounded-2xl p-5 ${currentPlan.color} border ${currentPlan.borderColor} col-span-1`}>
-          <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Current Plan</p>
+          <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">{t("provBilling_currentPlanLabel")}</p>
           <div className="flex items-center gap-2 flex-wrap">
             <p className={`text-2xl font-extrabold ${currentPlan.textColor}`}>{currentPlan.label}</p>
             <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${PLAN_STATUS_BADGE[planStatus]}`}>
-              {planStatus === "active" ? "Active" : planStatus === "past_due" ? "Past Due" : "Cancelled"}
+              {planStatus === "active" ? t("provBilling_statusActive") : planStatus === "past_due" ? t("provBilling_statusPastDue") : t("provBilling_statusCancelled")}
             </span>
           </div>
           <p className="text-sm font-semibold text-slate-700 mt-0.5">{currentPlan.priceLabel}</p>
-          <p className="text-xs text-slate-400 mt-0.5">{currentPlan.tagline}</p>
+          <p className="text-xs text-slate-400 mt-0.5">{PLAN_TAGLINES[currentPlanKey]}</p>
           <ul className="mt-3 text-xs text-slate-600 space-y-1">
-            <li>👥 Up to {currentPlan.staff} staff</li>
-            <li>🔧 {currentPlan.services} services</li>
-            <li>🏗️ {currentPlan.equipment} equipment slots</li>
+            <li>👥 {t("provBilling_limitStaff", { n: currentPlan.staff })}</li>
+            <li>🔧 {t("provBilling_limitServices", { n: currentPlan.services })}</li>
+            <li>🏗️ {t("provBilling_limitEquipment", { n: currentPlan.equipment })}</li>
           </ul>
           {data.planExpiresAt && currentPlanKey !== "starter" && (
             <p className="mt-2 text-xs text-slate-400">
-              Renews {new Date(data.planExpiresAt).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" })}
+              {t("provBilling_renewsOn", { date: new Date(data.planExpiresAt).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" }) })}
             </p>
           )}
           {data.pendingPlan && data.pendingPlan !== currentPlanKey && (
             <p className="mt-2 text-xs text-amber-600 font-medium">
-              ⏳ Activating {data.pendingPlan} plan…
+              {t("provBilling_activating", { plan: data.pendingPlan })}
             </p>
           )}
           {currentPlanKey !== "enterprise" && (
@@ -393,7 +412,7 @@ export default function AgencyBillingClient() {
               onClick={() => document.getElementById("plans")?.scrollIntoView({ behavior: "smooth" })}
               className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-violet-700 hover:underline"
             >
-              Upgrade plan <ArrowUpRight className="h-3 w-3" />
+              {t("provBilling_btnUpgradePlan")} <ArrowUpRight className="h-3 w-3" />
             </button>
           )}
         </div>
@@ -401,23 +420,23 @@ export default function AgencyBillingClient() {
         {/* KPI cards */}
         {[
           {
-            label: "This Month Earnings",
+            label: t("provBilling_kpiMonthEarnings"),
             value: formatCurrency(data.thisMonthGross),
-            sub:   `After commission: ${formatCurrency(data.thisMonthGross - data.thisMonthCommission)}`,
+            sub:   t("provBilling_kpiMonthSub", { net: formatCurrency(data.thisMonthGross - data.thisMonthCommission) }),
             icon:  <TrendingUp className="h-5 w-5 text-blue-500" />,
             bg:    "bg-blue-50",
           },
           {
-            label: "Total Net Earned",
+            label: t("provBilling_kpiNetEarned"),
             value: formatCurrency(data.totalNetEarned),
-            sub:   `Across ${data.totalJobsCompleted} completed job${data.totalJobsCompleted !== 1 ? "s" : ""}`,
+            sub:   t("provBilling_kpiNetSub", { count: data.totalJobsCompleted, jobWord: t(data.totalJobsCompleted !== 1 ? "provBilling_kpiJobs" : "provBilling_kpiJob") }),
             icon:  <ShieldCheck className="h-5 w-5 text-emerald-500" />,
             bg:    "bg-emerald-50",
           },
           {
-            label: "Total Commission Paid",
+            label: t("provBilling_kpiCommission"),
             value: formatCurrency(data.totalCommissionPaid),
-            sub:   `Platform fee at ${rate}% of gross`,
+            sub:   t("provBilling_kpiCommissionSub", { rate }),
             icon:  <Sparkles className="h-5 w-5 text-amber-500" />,
             bg:    "bg-amber-50",
           },
@@ -436,14 +455,14 @@ export default function AgencyBillingClient() {
       {/* ── Commission History table ─────────────────────────────────────── */}
       <section>
         <h2 className="text-base font-semibold text-slate-800 mb-3">
-          Commission Breakdown
-          <span className="text-slate-400 font-normal text-sm ml-1">(last 12 months)</span>
+          {t("provBilling_commissionTitle")}
+          <span className="text-slate-400 font-normal text-sm ml-1">{t("provBilling_commissionSub")}</span>
         </h2>
         <div className="rounded-2xl border border-slate-200 overflow-hidden">
           <table className="w-full text-sm">
             <thead className="bg-slate-50 border-b border-slate-200">
               <tr>
-                {["Month", "Gross Earned", `Commission (${rate}%)`, "Net Earned"].map((h) => (
+                {[t("provBilling_colMonth"), t("provBilling_colGross"), t("provBilling_colCommission", { rate }), t("provBilling_colNet")].map((h) => (
                   <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
                     {h}
                   </th>
@@ -454,7 +473,7 @@ export default function AgencyBillingClient() {
               {data.commissionHistory.filter((r) => r.gross > 0).length === 0 ? (
                 <tr>
                   <td colSpan={4} className="px-4 py-8 text-center text-slate-400 text-sm">
-                    No earnings history yet.
+                    {t("provBilling_noHistory")}
                   </td>
                 </tr>
               ) : [...data.commissionHistory].reverse().filter((r) => r.gross > 0).map((row) => (
@@ -473,8 +492,8 @@ export default function AgencyBillingClient() {
       {/* ── Plan Comparison ──────────────────────────────────────────────── */}
       <section id="plans">
         <div className="mb-4">
-          <h2 className="text-base font-semibold text-slate-800">Compare Plans</h2>
-          <p className="text-xs text-slate-400 mt-0.5">All plans include marketplace access. Upgrade anytime, cancel monthly.</p>
+          <h2 className="text-base font-semibold text-slate-800">{t("provBilling_plansTitle")}</h2>
+          <p className="text-xs text-slate-400 mt-0.5">{t("provBilling_plansDesc")}</p>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {PLANS.map((plan) => {
@@ -500,7 +519,7 @@ export default function AgencyBillingClient() {
                 {plan.popular && !isCurrent && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2">
                     <span className="inline-flex items-center gap-1 bg-violet-600 text-white text-xs font-bold px-3 py-0.5 rounded-full shadow">
-                      <Star className="h-3 w-3 fill-white" /> Most Popular
+                      <Star className="h-3 w-3 fill-white" /> {t("provBilling_mostPopular")}
                     </span>
                   </div>
                 )}
@@ -512,17 +531,17 @@ export default function AgencyBillingClient() {
                     </span>
                     {isCurrent && (
                       <span className="text-xs font-semibold text-violet-600 bg-violet-50 px-2 py-0.5 rounded-full">
-                        Current
+                        {t("provBilling_currentTag")}
                       </span>
                     )}
                   </div>
-                  <p className="text-xs text-slate-400 mt-1">{plan.tagline}</p>
+                  <p className="text-xs text-slate-400 mt-1">{PLAN_TAGLINES[plan.key]}</p>
                 </div>
 
                 <div>
                   <p className="text-2xl font-extrabold text-slate-800">{plan.priceLabel}</p>
                   {plan.price !== null && plan.price > 0 && (
-                    <p className="text-xs text-slate-400">billed monthly</p>
+                    <p className="text-xs text-slate-400">{t("provBilling_billedMonthly")}</p>
                   )}
                 </div>
 
@@ -530,19 +549,19 @@ export default function AgencyBillingClient() {
                 <ul className="text-xs text-slate-600 space-y-1 border-t border-slate-100 pt-3">
                   <li className="flex items-center gap-1.5">
                     <CheckCircle2 className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-                    <span>Up to <strong>{plan.staff}</strong> staff</span>
+                    <span>{t("provBilling_limitStaff", { n: plan.staff })}</span>
                   </li>
                   <li className="flex items-center gap-1.5">
                     <CheckCircle2 className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-                    <span><strong>{plan.services}</strong> services</span>
+                    <span>{t("provBilling_limitServices", { n: plan.services })}</span>
                   </li>
                   <li className="flex items-center gap-1.5">
                     <CheckCircle2 className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-                    <span><strong>{plan.equipment}</strong> equipment slots</span>
+                    <span>{t("provBilling_limitEquipment", { n: plan.equipment })}</span>
                   </li>
                   <li className="flex items-center gap-1.5">
                     <CheckCircle2 className="h-3.5 w-3.5 text-amber-500 shrink-0" />
-                    <span><strong>{plan.commission}</strong> commission rate</span>
+                    <span>{t("provBilling_limitCommission", { n: plan.commission })}</span>
                   </li>
                 </ul>
 
@@ -554,11 +573,11 @@ export default function AgencyBillingClient() {
                         ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
                         : <XCircle      className="h-3.5 w-3.5 text-slate-200 shrink-0" />}
                       <span className={plan[feat] ? "text-slate-700" : "text-slate-300"}>
-                        {feat === "analytics"    && "AI Analytics"}
-                        {feat === "priorityList" && "Priority Listings"}
-                        {feat === "bulkOnboard"  && "Bulk Onboarding"}
-                        {feat === "scheduler"    && "Recurring Scheduler"}
-                        {feat === "support"      && "Priority Support"}
+                        {feat === "analytics"    && t("provBilling_featAnalytics")}
+                        {feat === "priorityList" && t("provBilling_featPriority")}
+                        {feat === "bulkOnboard"  && t("provBilling_featBulk")}
+                        {feat === "scheduler"    && t("provBilling_featScheduler")}
+                        {feat === "support"      && t("provBilling_featSupport")}
                       </span>
                     </li>
                   ))}
@@ -567,7 +586,7 @@ export default function AgencyBillingClient() {
                 {/* CTA */}
                 {isCurrent ? (
                   <div className="mt-1 w-full text-xs font-semibold rounded-xl py-2 text-center bg-violet-50 text-violet-600 border border-violet-200">
-                    Current Plan
+                    {t("provBilling_planCurrent")}
                   </div>
                 ) : (
                   <button
@@ -585,12 +604,12 @@ export default function AgencyBillingClient() {
                   >
                     {isProcessing && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
                     {isDowngrade
-                      ? "Lower tier"
+                      ? t("provBilling_btnLowerTier")
                       : isFree
-                        ? "Free (default)"
+                        ? t("provBilling_btnFreeDefault")
                         : isProcessing
-                          ? "Redirecting…"
-                          : `Upgrade to ${plan.label}`}
+                          ? t("provBilling_btnRedirecting")
+                          : t("provBilling_btnUpgradeTo", { plan: plan.label })}
                   </button>
                 )}
               </div>
@@ -598,15 +617,15 @@ export default function AgencyBillingClient() {
           })}
         </div>
         <p className="mt-3 text-xs text-slate-400 text-center">
-          Payments processed securely via PayPal. Debit and credit cards accepted. Cancel anytime.
+          {t("provBilling_paymentsNote")}
         </p>
       </section>
 
       {/* ── Add-ons & Features ────────────────────────────────────────────── */}
       <section>
         <div className="mb-4">
-          <h2 className="text-base font-semibold text-slate-800">Add-ons &amp; Features</h2>
-          <p className="text-xs text-slate-400 mt-0.5">Features included in your current plan are shown as enabled.</p>
+          <h2 className="text-base font-semibold text-slate-800">{t("provBilling_addonsTitle")}</h2>
+          <p className="text-xs text-slate-400 mt-0.5">{t("provBilling_addonsDesc")}</p>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {ADD_ONS.map((addon) => {
@@ -626,24 +645,24 @@ export default function AgencyBillingClient() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1 flex-wrap">
-                    <p className="text-sm font-semibold text-slate-800">{addon.label}</p>
+                    <p className="text-sm font-semibold text-slate-800">{ADDON_TRANSLATIONS[addon.key]?.label ?? addon.label}</p>
                     {enabled ? (
                       <span className="text-xs font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded-full">
-                        Included
+                        {t("provBilling_badgeIncluded")}
                       </span>
                     ) : firstPlan ? (
                       <span className="text-xs font-medium text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-full">
-                        From {firstPlan.label}
+                        {t("provBilling_badgeFrom", { plan: firstPlan.label })}
                       </span>
                     ) : null}
                   </div>
-                  <p className="text-xs text-slate-500 leading-relaxed">{addon.description}</p>
+                  <p className="text-xs text-slate-500 leading-relaxed">{ADDON_TRANSLATIONS[addon.key]?.description ?? addon.description}</p>
                   {!enabled && (
                     <button
                       onClick={() => document.getElementById("plans")?.scrollIntoView({ behavior: "smooth" })}
                       className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-violet-600 hover:underline"
                     >
-                      Upgrade to unlock <ArrowUpRight className="h-3 w-3" />
+                      {t("provBilling_btnUnlock")} <ArrowUpRight className="h-3 w-3" />
                     </button>
                   )}
                 </div>

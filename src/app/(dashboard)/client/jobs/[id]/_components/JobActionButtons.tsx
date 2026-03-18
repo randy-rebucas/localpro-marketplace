@@ -10,6 +10,7 @@ import { calculateCommission, getCommissionRate, calculateClientFees, DEFAULT_ES
 import { formatCurrency } from "@/lib/utils";
 import { ShieldCheck, AlertTriangle, Wallet } from "lucide-react";
 import type { JobStatus, EscrowStatus } from "@/types";
+import { useTranslations } from "next-intl";
 
 interface Props {
   jobId: string;
@@ -25,6 +26,7 @@ interface Props {
 
 export default function JobActionButtons({ jobId, status, escrowStatus, budget, acceptedAmount, fundedAmount, category, urgencyFee, urgency }: Props) {
   const router = useRouter();
+  const t = useTranslations("clientPages");
   const [loading, setLoading] = useState<string | null>(null);
   const [walletBalance, setWalletBalance] = useState<number | null>(null);
   const [showFundModal, setShowFundModal] = useState(false);
@@ -177,7 +179,7 @@ export default function JobActionButtons({ jobId, status, escrowStatus, budget, 
               isLoading={loading === "fund"}
               onClick={openFundModal}
             >
-              Fund Escrow
+              {t("jobAction_fundEscrow")}
             </Button>
             {walletBalance !== null && walletBalance >= (acceptedAmount ?? budget) && (
               <Button
@@ -198,7 +200,7 @@ export default function JobActionButtons({ jobId, status, escrowStatus, budget, 
             isLoading={loading === "complete"}
             onClick={openReleaseModal}
           >
-            Approve &amp; Release Payment
+            {t("jobAction_releasePayment")}
           </Button>
         )}
 
@@ -299,7 +301,7 @@ export default function JobActionButtons({ jobId, status, escrowStatus, budget, 
               isLoading={loading === "wallet"}
               onClick={fundFromWallet}
             >
-              Confirm
+              {t("jobAction_confirm")}
             </Button>
           </div>
         </div>
@@ -326,9 +328,9 @@ export default function JobActionButtons({ jobId, status, escrowStatus, budget, 
           <div className="space-y-2.5">
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Confirm before releasing</p>
             {([
-              { id: "check-completed",    state: checkWorkCompleted,  setter: setCheckWorkCompleted,  label: "Work was completed as described in the job post" },
-              { id: "check-issues",       state: checkIssuesResolved, setter: setCheckIssuesResolved, label: "All issues or concerns have been addressed" },
-              { id: "check-ready",        state: checkReadyToRelease, setter: setCheckReadyToRelease, label: "I am satisfied and ready to release payment" },
+              { id: "check-completed",    state: checkWorkCompleted,  setter: setCheckWorkCompleted,  label: t("jobAction_checkWorkCompleted") },
+              { id: "check-issues",       state: checkIssuesResolved, setter: setCheckIssuesResolved, label: t("jobAction_checkIssuesResolved") },
+              { id: "check-ready",        state: checkReadyToRelease, setter: setCheckReadyToRelease, label: t("jobAction_checkReadyRelease") },
             ] as const).map(({ id, state, setter, label }) => (
               <label key={id} className="flex cursor-pointer items-start gap-3">
                 <input
@@ -357,7 +359,7 @@ export default function JobActionButtons({ jobId, status, escrowStatus, budget, 
               disabled={!allChecked}
               onClick={() => { setShowReleaseModal(false); releaseEscrow(); }}
             >
-              Confirm Release
+              {t("jobAction_confirmRelease")}
             </Button>
           </div>
         </div>
@@ -446,11 +448,11 @@ export default function JobActionButtons({ jobId, status, escrowStatus, budget, 
               <span className="text-slate-700">−{formatCurrency(breakdown.commission)}</span>
             </div>
             <div className="flex justify-between px-4 py-2.5 border-t border-slate-100 bg-slate-50">
-              <span className="font-medium text-slate-700">Provider receives</span>
+              <span className="font-medium text-slate-700">{t("jobAction_providerEarns")}</span>
               <span className="font-bold text-slate-900">{formatCurrency(breakdown.netAmount)}</span>
             </div>
             <div className="flex justify-between px-4 py-3 border-t-2 border-primary/20 bg-primary/5">
-              <span className="font-semibold text-slate-800">Total charged to you</span>
+              <span className="font-semibold text-slate-800">{t("jobAction_totalCharge")}</span>
               <span className="text-lg font-bold text-primary">{formatCurrency(clientFees.totalCharge)}</span>
             </div>
           </div>
@@ -470,7 +472,7 @@ export default function JobActionButtons({ jobId, status, escrowStatus, budget, 
               onClick={fundEscrow}
               disabled={parsedAmount <= 0}
             >
-              Confirm &amp; Fund
+              {t("jobAction_confirm")} &amp; Fund
             </Button>
           </div>
         </div>

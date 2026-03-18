@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { getCurrentUser } from "@/lib/auth";
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { Suspense } from "react";
 import RealtimeRefresher from "@/components/shared/RealtimeRefresher";
@@ -13,6 +14,7 @@ export const metadata: Metadata = { title: "My Jobs" };
 export default async function ClientJobsPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
+  const t = await getTranslations("clientPages");
 
   return (
     <div className="space-y-6">
@@ -31,13 +33,13 @@ export default async function ClientJobsPage() {
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">My Jobs</h1>
+          <h1 className="text-2xl font-bold text-slate-900">{t("jobs")}</h1>
           <p className="text-slate-500 text-sm mt-1">
-            Manage and track your posted jobs. Click any job to view quotes and take action.
+            {t("jobsSub")}
           </p>
         </div>
         <Link href="/client/post-job" className="btn-primary flex-shrink-0 mt-1">
-          + Post a Job
+          {t("postJob")}
         </Link>
       </div>
 

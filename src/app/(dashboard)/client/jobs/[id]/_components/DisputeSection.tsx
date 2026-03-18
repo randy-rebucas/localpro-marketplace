@@ -1,25 +1,29 @@
 import { CheckCircle2, Search, ShieldCheck, AlertCircle } from "lucide-react";
 import { formatRelativeTime } from "@/lib/utils";
 import { disputeRepository } from "@/repositories/dispute.repository";
+import { getTranslations } from "next-intl/server";
 
 export async function DisputeSection({ jobId }: { jobId: string }) {
-  const disputeDoc = await disputeRepository.findLatestByJobId(jobId);
+  const [disputeDoc, t] = await Promise.all([
+    disputeRepository.findLatestByJobId(jobId),
+    getTranslations("clientPages"),
+  ]);
   if (!disputeDoc) return null;
 
   const steps = [
     {
-      label: "Submitted",
-      description: `Raised ${formatRelativeTime(disputeDoc.createdAt)}`,
+      label: t("disputeSec_stepSubmitted"),
+      description: t("disputeSec_raisedAt", { time: formatRelativeTime(disputeDoc.createdAt) }),
       icon: <CheckCircle2 className="h-4 w-4" />,
     },
     {
-      label: "Under Review",
-      description: "An admin is investigating the issue",
+      label: t("disputeSec_stepUnderReview"),
+      description: t("disputeSec_underReviewDesc"),
       icon: <Search className="h-4 w-4" />,
     },
     {
-      label: "Resolved",
-      description: disputeDoc.resolutionNotes ?? "Dispute has been resolved",
+      label: t("disputeSec_stepResolved"),
+      description: disputeDoc.resolutionNotes ?? t("disputeSec_resolvedFallback"),
       icon: <ShieldCheck className="h-4 w-4" />,
     },
   ];
@@ -34,7 +38,7 @@ export async function DisputeSection({ jobId }: { jobId: string }) {
     <div className="bg-white rounded-xl border border-red-200 shadow-card p-6">
       <h3 className="font-semibold text-slate-900 mb-5 flex items-center gap-2">
         <AlertCircle className="h-4 w-4 text-red-500" />
-        Dispute Status
+        {t("disputeSec_disputeStatus")}
       </h3>
 
       <div className="flex flex-col gap-0">
@@ -80,7 +84,7 @@ export async function DisputeSection({ jobId }: { jobId: string }) {
                 )}
                 {current && disputeDoc.status === "open" && (
                   <p className="text-xs text-slate-500 mt-0.5">
-                    Your dispute is queued for admin review.
+                    {t("disputeSec_queuedNote")}
                   </p>
                 )}
               </div>
@@ -91,12 +95,12 @@ export async function DisputeSection({ jobId }: { jobId: string }) {
 
       <div className="border-t border-slate-100 pt-3 mt-1 flex flex-wrap gap-4 text-xs text-slate-400">
         <span>
-          Reason:{" "}
+          {t("disputeSec_reason")}{" "}
           <span className="text-slate-600 font-medium">{disputeDoc.reason}</span>
         </span>
         {disputeDoc.resolutionNotes && activeIdx === 2 && (
           <span>
-            Resolution:{" "}
+            {t("disputeSec_resolution")}{" "}
             <span className="text-slate-600 font-medium">{disputeDoc.resolutionNotes}</span>
           </span>
         )}

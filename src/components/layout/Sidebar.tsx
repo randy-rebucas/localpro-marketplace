@@ -53,6 +53,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/authStore";
 import toast from "react-hot-toast";
+import { useTranslations } from "next-intl";
 import type { UserRole } from "@/types";
 
 interface NavItem {
@@ -72,186 +73,186 @@ const navGroups: Partial<Record<UserRole, NavGroup[]>> = {
   client: [
     {
       items: [
-        { label: "Dashboard", href: "/client/dashboard", icon: <LayoutDashboard className="h-4.5 w-4.5" /> },
+        { label: "dashboard", href: "/client/dashboard", icon: <LayoutDashboard className="h-4.5 w-4.5" /> },
       ],
     },
     {
-      heading: "Jobs",
+      heading: "headingJobs",
       items: [
-        { label: "Post a Job", href: "/client/post-job", icon: <PlusCircle className="h-4.5 w-4.5" /> },
-        { label: "My Jobs", href: "/client/jobs", icon: <ClipboardList className="h-4.5 w-4.5" /> },
-        { label: "Consultations", href: "/client/consultations", icon: <Eye className="h-4.5 w-4.5" /> },
-        { label: "Recurring Bookings", href: "/client/recurring", icon: <Repeat2 className="h-4.5 w-4.5" /> },
-        { label: "Escrow", href: "/client/escrow", icon: <Lock className="h-4.5 w-4.5" /> },
-        { label: "Wallet", href: "/client/wallet", icon: <Wallet className="h-4.5 w-4.5" /> },
-        { label: "Favorites", href: "/client/favorites", icon: <Heart className="h-4.5 w-4.5" /> },
-        { label: "Reviews", href: "/client/reviews", icon: <Star className="h-4.5 w-4.5" /> },
+        { label: "postAJob", href: "/client/post-job", icon: <PlusCircle className="h-4.5 w-4.5" /> },
+        { label: "myJobs", href: "/client/jobs", icon: <ClipboardList className="h-4.5 w-4.5" /> },
+        { label: "consultations", href: "/client/consultations", icon: <Eye className="h-4.5 w-4.5" /> },
+        { label: "recurringBookings", href: "/client/recurring", icon: <Repeat2 className="h-4.5 w-4.5" /> },
+        { label: "escrow", href: "/client/escrow", icon: <Lock className="h-4.5 w-4.5" /> },
+        { label: "wallet", href: "/client/wallet", icon: <Wallet className="h-4.5 w-4.5" /> },
+        { label: "favorites", href: "/client/favorites", icon: <Heart className="h-4.5 w-4.5" /> },
+        { label: "reviews", href: "/client/reviews", icon: <Star className="h-4.5 w-4.5" /> },
       ],
     },
     {
-      heading: "Business",
+      heading: "headingBusiness",
       items: [
-        { label: "Business Hub", href: "/client/business", icon: <Building2 className="h-4.5 w-4.5" /> },
+        { label: "businessHub", href: "/client/business", icon: <Building2 className="h-4.5 w-4.5" /> },
       ],
     },
     {
-      heading: "Support",
+      heading: "headingSupport",
       items: [
-        { label: "Help Center", href: "/client/knowledge", icon: <BookOpen className="h-4.5 w-4.5" /> },
-        { label: "Live Chat & Tickets", href: "/client/support", icon: <Headphones className="h-4.5 w-4.5" /> },
+        { label: "helpCenter", href: "/client/knowledge", icon: <BookOpen className="h-4.5 w-4.5" /> },
+        { label: "liveChatTickets", href: "/client/support", icon: <Headphones className="h-4.5 w-4.5" /> },
       ],
     },
   ],
   provider: [
     {
       items: [
-        { label: "Dashboard", href: "/provider/dashboard", icon: <LayoutDashboard className="h-4.5 w-4.5" /> },
+        { label: "dashboard", href: "/provider/dashboard", icon: <LayoutDashboard className="h-4.5 w-4.5" /> },
       ],
     },
     {
-      heading: "Work",
+      heading: "headingWork",
       items: [
-        { label: "Marketplace", href: "/provider/marketplace", icon: <Store className="h-4.5 w-4.5" /> },
-        { label: "Active Jobs", href: "/provider/jobs", icon: <Briefcase className="h-4.5 w-4.5" /> },
-        { label: "Consultations", href: "/provider/consultations", icon: <Eye className="h-4.5 w-4.5" /> },
-        { label: "Calendar", href: "/provider/calendar", icon: <CalendarDays className="h-4.5 w-4.5" /> },
+        { label: "marketplace", href: "/provider/marketplace", icon: <Store className="h-4.5 w-4.5" /> },
+        { label: "activeJobs", href: "/provider/jobs", icon: <Briefcase className="h-4.5 w-4.5" /> },
+        { label: "consultations", href: "/provider/consultations", icon: <Eye className="h-4.5 w-4.5" /> },
+        { label: "calendar", href: "/provider/calendar", icon: <CalendarDays className="h-4.5 w-4.5" /> },
       ],
     },
     {
-      heading: "Finance",
+      heading: "headingFinance",
       items: [
-        { label: "Earnings", href: "/provider/earnings", icon: <CircleDollarSign className="h-4.5 w-4.5" /> },
-        { label: "Payouts", href: "/provider/payouts", icon: <Banknote className="h-4.5 w-4.5" /> },
-        { label: "Boost", href: "/provider/boost", icon: <Zap className="h-4.5 w-4.5" /> },
+        { label: "earnings", href: "/provider/earnings", icon: <CircleDollarSign className="h-4.5 w-4.5" /> },
+        { label: "payouts", href: "/provider/payouts", icon: <Banknote className="h-4.5 w-4.5" /> },
+        { label: "boost", href: "/provider/boost", icon: <Zap className="h-4.5 w-4.5" /> },
       ],
     },
     {
-      heading: "Business",
+      heading: "headingBusiness",
       items: [
-        { label: "Agency Hub", href: "/provider/business", icon: <Building2 className="h-4.5 w-4.5" /> },
+        { label: "agencyHub", href: "/provider/business", icon: <Building2 className="h-4.5 w-4.5" /> },
       ],
     },
     {
-      heading: "Growth",
+      heading: "headingGrowth",
       items: [
-        { label: "Training", href: "/provider/training", icon: <GraduationCap className="h-4.5 w-4.5" /> },
+        { label: "training", href: "/provider/training", icon: <GraduationCap className="h-4.5 w-4.5" /> },
       ],
     },
     {
-      heading: "Support",
+      heading: "headingSupport",
       items: [
-        { label: "Help Center", href: "/provider/knowledge", icon: <BookOpen className="h-4.5 w-4.5" /> },
-        { label: "Live Chat & Tickets", href: "/provider/support", icon: <Headphones className="h-4.5 w-4.5" /> },
+        { label: "helpCenter", href: "/provider/knowledge", icon: <BookOpen className="h-4.5 w-4.5" /> },
+        { label: "liveChatTickets", href: "/provider/support", icon: <Headphones className="h-4.5 w-4.5" /> },
       ],
     },
   ],
   admin: [
     {
       items: [
-        { label: "Dashboard", href: "/admin/dashboard", icon: <LayoutDashboard className="h-4.5 w-4.5" />, capability: null },
+        { label: "dashboard", href: "/admin/dashboard", icon: <LayoutDashboard className="h-4.5 w-4.5" />, capability: null },
       ],
     },
     {
-      heading: "Marketplace",
+      heading: "headingMarketplace",
       items: [
-        { label: "All Jobs",      href: "/admin/all-jobs",   icon: <Briefcase     className="h-4.5 w-4.5" />, capability: "manage_jobs" },
-        { label: "Validate Jobs", href: "/admin/jobs",       icon: <CheckCircle   className="h-4.5 w-4.5" />, capability: "manage_jobs" },
-        { label: "Categories",    href: "/admin/categories", icon: <Tag           className="h-4.5 w-4.5" />, capability: "manage_categories" },
-        { label: "Courses",       href: "/admin/courses",    icon: <GraduationCap className="h-4.5 w-4.5" />, capability: "manage_courses" },
+        { label: "allJobs",      href: "/admin/all-jobs",   icon: <Briefcase     className="h-4.5 w-4.5" />, capability: "manage_jobs" },
+        { label: "validateJobs", href: "/admin/jobs",       icon: <CheckCircle   className="h-4.5 w-4.5" />, capability: "manage_jobs" },
+        { label: "categories",   href: "/admin/categories", icon: <Tag           className="h-4.5 w-4.5" />, capability: "manage_categories" },
+        { label: "courses",      href: "/admin/courses",    icon: <GraduationCap className="h-4.5 w-4.5" />, capability: "manage_courses" },
       ],
     },
     {
-      heading: "Users",
+      heading: "headingUsers",
       items: [
-        { label: "All Users",   href: "/admin/users",      icon: <Users      className="h-4.5 w-4.5" />, capability: "manage_users" },
-        { label: "Agencies",    href: "/admin/agencies",   icon: <UsersRound className="h-4.5 w-4.5" />, capability: "manage_agencies" },
-        { label: "Businesses",  href: "/admin/businesses", icon: <Building2  className="h-4.5 w-4.5" />, capability: "manage_businesses" },
-        { label: "Staff",       href: "/admin/staff",      icon: <UserCog    className="h-4.5 w-4.5" />, capability: "__admin_only__" },
+        { label: "allUsers",   href: "/admin/users",      icon: <Users      className="h-4.5 w-4.5" />, capability: "manage_users" },
+        { label: "agencies",   href: "/admin/agencies",   icon: <UsersRound className="h-4.5 w-4.5" />, capability: "manage_agencies" },
+        { label: "businesses", href: "/admin/businesses", icon: <Building2  className="h-4.5 w-4.5" />, capability: "manage_businesses" },
+        { label: "staff",      href: "/admin/staff",      icon: <UserCog    className="h-4.5 w-4.5" />, capability: "__admin_only__" },
       ],
     },
     {
-      heading: "Moderation",
+      heading: "headingModeration",
       items: [
-        { label: "Disputes",       href: "/admin/disputes", icon: <AlertTriangle className="h-4.5 w-4.5" />, capability: "manage_disputes" },
-        { label: "Fraud Monitor",  href: "/admin/fraud",    icon: <ShieldAlert   className="h-4.5 w-4.5" />, capability: "manage_jobs" },
-        { label: "KYC Review",     href: "/admin/kyc",      icon: <ShieldCheck   className="h-4.5 w-4.5" />, capability: "manage_kyc" },
-        { label: "Activity Logs",  href: "/admin/logs",     icon: <ScrollText    className="h-4.5 w-4.5" />, capability: "__admin_only__" },
+        { label: "disputes",      href: "/admin/disputes", icon: <AlertTriangle className="h-4.5 w-4.5" />, capability: "manage_disputes" },
+        { label: "fraudMonitor",  href: "/admin/fraud",    icon: <ShieldAlert   className="h-4.5 w-4.5" />, capability: "manage_jobs" },
+        { label: "kycReview",     href: "/admin/kyc",      icon: <ShieldCheck   className="h-4.5 w-4.5" />, capability: "manage_kyc" },
+        { label: "activityLogs",  href: "/admin/logs",     icon: <ScrollText    className="h-4.5 w-4.5" />, capability: "__admin_only__" },
       ],
     },
     {
-      heading: "Finance",
+      heading: "headingFinance",
       items: [
-        { label: "Revenue",            href: "/admin/revenue",    icon: <TrendingUp className="h-4.5 w-4.5" />, capability: "view_revenue" },
-        { label: "Accounting",         href: "/admin/accounting", icon: <Scale      className="h-4.5 w-4.5" />, capability: "view_revenue" },
-        { label: "Payouts",            href: "/admin/payouts",    icon: <Banknote   className="h-4.5 w-4.5" />, capability: "manage_payouts" },
-        { label: "Wallet Withdrawals", href: "/admin/wallet",     icon: <Wallet     className="h-4.5 w-4.5" />, capability: "manage_payouts" },
+        { label: "revenue",           href: "/admin/revenue",    icon: <TrendingUp className="h-4.5 w-4.5" />, capability: "view_revenue" },
+        { label: "accounting",        href: "/admin/accounting", icon: <Scale      className="h-4.5 w-4.5" />, capability: "view_revenue" },
+        { label: "payouts",           href: "/admin/payouts",    icon: <Banknote   className="h-4.5 w-4.5" />, capability: "manage_payouts" },
+        { label: "walletWithdrawals", href: "/admin/wallet",     icon: <Wallet     className="h-4.5 w-4.5" />, capability: "manage_payouts" },
       ],
     },
     {
-      heading: "Communication",
+      heading: "headingCommunication",
       items: [
-        { label: "Support Inbox",  href: "/admin/support",         icon: <Headphones className="h-4.5 w-4.5" />, capability: "manage_support" },
-        { label: "Ticket Queue",   href: "/admin/support/tickets", icon: <Ticket     className="h-4.5 w-4.5" />, capability: "manage_support" },
-        { label: "Announcements",  href: "/admin/announcements",   icon: <Megaphone  className="h-4.5 w-4.5" />, capability: "__admin_only__" },
-        { label: "Knowledge Base", href: "/admin/knowledge",       icon: <BookOpen   className="h-4.5 w-4.5" />, capability: "__admin_only__" },
-        { label: "Notifications",  href: "/admin/notifications",   icon: <Bell       className="h-4.5 w-4.5" />, capability: null },
+        { label: "supportInbox",  href: "/admin/support",         icon: <Headphones className="h-4.5 w-4.5" />, capability: "manage_support" },
+        { label: "ticketQueue",   href: "/admin/support/tickets", icon: <Ticket     className="h-4.5 w-4.5" />, capability: "manage_support" },
+        { label: "announcements", href: "/admin/announcements",   icon: <Megaphone  className="h-4.5 w-4.5" />, capability: "__admin_only__" },
+        { label: "knowledgeBase", href: "/admin/knowledge",       icon: <BookOpen   className="h-4.5 w-4.5" />, capability: "__admin_only__" },
+        { label: "notifications", href: "/admin/notifications",   icon: <Bell       className="h-4.5 w-4.5" />, capability: null },
       ],
     },
     {
-      heading: "Partners",
+      heading: "headingPartners",
       items: [
-        { label: "PESO Partners", href: "/admin/partners", icon: <Handshake className="h-4.5 w-4.5" />, capability: "manage_users" },
+        { label: "pesoPartners", href: "/admin/partners", icon: <Handshake className="h-4.5 w-4.5" />, capability: "manage_users" },
       ],
     },
     {
-      heading: "Platform",
+      heading: "headingPlatform",
       items: [
-        { label: "App Settings", href: "/admin/settings", icon: <Settings  className="h-4.5 w-4.5" />, capability: "__admin_only__" },
-        { label: "Database",     href: "/admin/database", icon: <Database  className="h-4.5 w-4.5" />, capability: "__admin_only__" },
+        { label: "appSettings", href: "/admin/settings", icon: <Settings  className="h-4.5 w-4.5" />, capability: "__admin_only__" },
+        { label: "database",    href: "/admin/database", icon: <Database  className="h-4.5 w-4.5" />, capability: "__admin_only__" },
       ],
     },
   ],
   peso: [
     {
       items: [
-        { label: "Dashboard", href: "/peso/dashboard", icon: <LayoutDashboard className="h-4.5 w-4.5" /> },
+        { label: "dashboard", href: "/peso/dashboard", icon: <LayoutDashboard className="h-4.5 w-4.5" /> },
       ],
     },
     {
-      heading: "Workforce",
+      heading: "headingWorkforce",
       items: [
-        { label: "Workforce Registry", href: "/peso/workforce", icon: <Users className="h-4.5 w-4.5" /> },
-        { label: "Provider Verification", href: "/peso/verification", icon: <ShieldCheck className="h-4.5 w-4.5" /> },
-        { label: "Referrals", href: "/peso/referrals", icon: <UserCog className="h-4.5 w-4.5" /> },
-        { label: "Bulk Onboarding", href: "/peso/onboarding", icon: <ScrollText className="h-4.5 w-4.5" /> },
-        { label: "My Office", href: "/peso/officers", icon: <Building2 className="h-4.5 w-4.5" /> },
+        { label: "workforceRegistry", href: "/peso/workforce", icon: <Users className="h-4.5 w-4.5" /> },
+        { label: "providerVerification", href: "/peso/verification", icon: <ShieldCheck className="h-4.5 w-4.5" /> },
+        { label: "referrals", href: "/peso/referrals", icon: <UserCog className="h-4.5 w-4.5" /> },
+        { label: "bulkOnboarding", href: "/peso/onboarding", icon: <ScrollText className="h-4.5 w-4.5" /> },
+        { label: "myOffice", href: "/peso/officers", icon: <Building2 className="h-4.5 w-4.5" /> },
       ],
     },
     {
-      heading: "Programs",
+      heading: "headingPrograms",
       items: [
-        { label: "Training & Certs", href: "/peso/training", icon: <GraduationCap className="h-4.5 w-4.5" /> },
-        { label: "Livelihood Groups", href: "/peso/groups", icon: <UsersRound className="h-4.5 w-4.5" /> },
-        { label: "Emergency", href: "/peso/emergency", icon: <Zap className="h-4.5 w-4.5" /> },
+        { label: "trainingAndCerts", href: "/peso/training", icon: <GraduationCap className="h-4.5 w-4.5" /> },
+        { label: "livelihoodGroups", href: "/peso/groups", icon: <UsersRound className="h-4.5 w-4.5" /> },
+        { label: "emergency", href: "/peso/emergency", icon: <Zap className="h-4.5 w-4.5" /> },
       ],
     },
     {
-      heading: "Job Board",
+      heading: "headingJobBoard",
       items: [
-        { label: "PESO Jobs", href: "/peso/jobs", icon: <Briefcase className="h-4.5 w-4.5" /> },
-        { label: "Post a Job", href: "/peso/jobs/new", icon: <PlusCircle className="h-4.5 w-4.5" /> },
+        { label: "pesoJobs", href: "/peso/jobs", icon: <Briefcase className="h-4.5 w-4.5" /> },
+        { label: "postAJob", href: "/peso/jobs/new", icon: <PlusCircle className="h-4.5 w-4.5" /> },
       ],
     },
     {
-      heading: "Reports",
+      heading: "headingReports",
       items: [
-        { label: "Analytics", href: "/peso/reports", icon: <FileBarChart className="h-4.5 w-4.5" /> },
+        { label: "analytics", href: "/peso/reports", icon: <FileBarChart className="h-4.5 w-4.5" /> },
       ],
     },
     {
-      heading: "Admin",
+      heading: "headingAdmin",
       items: [
-        { label: "Settings", href: "/peso/settings", icon: <Settings className="h-4.5 w-4.5" /> },
+        { label: "settings", href: "/peso/settings", icon: <Settings className="h-4.5 w-4.5" /> },
       ],
     },
   ],
@@ -307,6 +308,7 @@ export default function Sidebar({ role, capabilities, isOpen, onClose }: Sidebar
   const pathname = usePathname();
   const router = useRouter();
   const { logout, user } = useAuthStore();
+  const t = useTranslations("sidebar");
 
   // ── Collapsed state (desktop) — persisted in localStorage ──────────────────
   const STORAGE_KEY = "sidebar_collapsed";
@@ -338,12 +340,12 @@ export default function Sidebar({ role, capabilities, isOpen, onClose }: Sidebar
   const groups =
     (role === "client" && user?.accountType !== "business") ||
     (role === "provider" && user?.accountType !== "business" && !user?.agencyId)
-      ? baseGroups.filter((g) => g.heading !== "Business")
+      ? baseGroups.filter((g) => g.heading !== "headingBusiness")
       : baseGroups;
 
   async function handleLogout() {
     await logout();
-    toast.success("You have been signed out");
+    toast.success(t("signedOut"));
     router.push("/login");
   }
 
@@ -381,7 +383,7 @@ export default function Sidebar({ role, capabilities, isOpen, onClose }: Sidebar
           {isCollapsed ? (
             <button
               onClick={toggleCollapsed}
-              title="Expand sidebar"
+              title={t("expandSidebar")}
               className="hidden md:flex flex-shrink-0 w-8 h-8 bg-primary rounded-lg items-center justify-center shadow-sm hover:bg-primary/80 transition-colors"
             >
               <MapPin className="w-4 h-4 text-white" />
@@ -400,9 +402,9 @@ export default function Sidebar({ role, capabilities, isOpen, onClose }: Sidebar
                 {/* Collapse toggle — desktop only */}
                 <button
                   onClick={toggleCollapsed}
-                  title="Collapse sidebar"
+                  title={t("collapseSidebar")}
                   className="hidden md:flex p-1.5 rounded-md text-primary-400 hover:text-white hover:bg-white/10 transition-colors"
-                  aria-label="Collapse sidebar"
+                  aria-label={t("collapseSidebar")}
                 >
                   <PanelLeftClose className="h-4 w-4" />
                 </button>
@@ -410,7 +412,7 @@ export default function Sidebar({ role, capabilities, isOpen, onClose }: Sidebar
                 <button
                   onClick={onClose}
                   className="md:hidden p-1.5 rounded-md text-primary-400 hover:text-white hover:bg-white/10 transition-colors"
-                  aria-label="Close menu"
+                  aria-label={t("closeMenu")}
                 >
                   <X className="h-4 w-4" />
                 </button>
@@ -425,7 +427,7 @@ export default function Sidebar({ role, capabilities, isOpen, onClose }: Sidebar
             <Link
               href={`/${sourceRole}/profile`}
               onClick={onClose}
-              title={user?.name ?? "Profile"}
+              title={user?.name ?? t("profileTitle")}
               className="flex items-center justify-center w-full"
             >
               <div className="w-9 h-9 rounded-lg overflow-hidden flex-shrink-0 ring-2 ring-white/10">
@@ -461,7 +463,7 @@ export default function Sidebar({ role, capabilities, isOpen, onClose }: Sidebar
                 href={`/${sourceRole}/profile`}
                 onClick={onClose}
                 className="flex-shrink-0 p-1 rounded-md text-primary-400 hover:text-white hover:bg-white/10 transition-colors"
-                aria-label="Go to profile"
+                aria-label={t("goToProfile")}
               >
                 <ChevronRight className="h-3.5 w-3.5" />
               </Link>
@@ -479,7 +481,7 @@ export default function Sidebar({ role, capabilities, isOpen, onClose }: Sidebar
               {/* Group heading — only in expanded mode */}
               {!isCollapsed && group.heading && (
                 <p className="px-3 mb-1 text-[10px] font-semibold uppercase tracking-widest text-primary-500/80 select-none">
-                  {group.heading}
+                  {t(group.heading)}
                 </p>
               )}
               {/* Divider between groups in collapsed mode */}
@@ -494,7 +496,7 @@ export default function Sidebar({ role, capabilities, isOpen, onClose }: Sidebar
                       key={item.href}
                       href={item.href}
                       onClick={onClose}
-                      title={isCollapsed ? item.label : undefined}
+                      title={isCollapsed ? t(item.label) : undefined}
                       className={cn(
                         "group flex items-center rounded-lg text-sm font-medium transition-all duration-150 relative",
                         isCollapsed
@@ -520,7 +522,7 @@ export default function Sidebar({ role, capabilities, isOpen, onClose }: Sidebar
                       )}>
                         {item.icon}
                       </span>
-                      {!isCollapsed && <span className="truncate">{item.label}</span>}
+                      {!isCollapsed && <span className="truncate">{t(item.label)}</span>}
                     </Link>
                   );
                 })}
@@ -536,7 +538,7 @@ export default function Sidebar({ role, capabilities, isOpen, onClose }: Sidebar
             <Link
               href="/client/upgrade"
               onClick={onClose}
-              title="Upgrade to Business"
+              title={t("upgradeToBusinessTitle")}
               className="flex justify-center w-full px-0 py-2.5 rounded-lg bg-gradient-to-b from-amber-500/20 to-orange-500/10 border border-amber-500/40 hover:border-amber-400/70 transition-all duration-150"
             >
               <Sparkles className="h-4 w-4 text-amber-400" />
@@ -550,13 +552,13 @@ export default function Sidebar({ role, capabilities, isOpen, onClose }: Sidebar
               <div className="bg-gradient-to-br from-amber-500/20 via-orange-500/10 to-yellow-500/5 px-3 py-2.5">
                 <div className="flex items-center gap-2 mb-1">
                   <Sparkles className="h-3.5 w-3.5 text-amber-400 flex-shrink-0" />
-                  <span className="text-xs font-bold text-amber-300 uppercase tracking-widest">Go Business</span>
+                  <span className="text-xs font-bold text-amber-300 uppercase tracking-widest">{t("goBusiness")}</span>
                 </div>
                 <p className="text-[11px] text-amber-200/80 leading-snug">
-                  Post unlimited jobs, manage a team &amp; unlock priority support.
+                  {t("goBusinessDesc")}
                 </p>
                 <div className="mt-2 flex items-center gap-1 text-[11px] font-semibold text-amber-300 group-hover:text-amber-200 transition-colors">
-                  Upgrade now
+                  {t("upgradeNow")}
                   <ChevronRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
                 </div>
               </div>
@@ -569,7 +571,7 @@ export default function Sidebar({ role, capabilities, isOpen, onClose }: Sidebar
             <Link
               href="/provider/upgrade"
               onClick={onClose}
-              title="Upgrade to Agency"
+              title={t("upgradeToAgencyTitle")}
               className="flex justify-center w-full px-0 py-2.5 rounded-lg bg-emerald-900/60 border border-emerald-700/60 hover:border-emerald-600 transition-all duration-150"
             >
               <Building2 className="h-4 w-4 text-emerald-400" />
@@ -583,13 +585,13 @@ export default function Sidebar({ role, capabilities, isOpen, onClose }: Sidebar
               <div className="px-3 py-2.5">
                 <div className="flex items-center gap-2 mb-1">
                   <Building2 className="h-3.5 w-3.5 text-emerald-400 flex-shrink-0" />
-                  <span className="text-xs font-bold text-emerald-300 uppercase tracking-widest">Go Agency</span>
+                  <span className="text-xs font-bold text-emerald-300 uppercase tracking-widest">{t("goAgency")}</span>
                 </div>
                 <p className="text-xs text-slate-300 leading-snug">
-                  Manage a team, take bigger jobs &amp; unlock agency tools.
+                  {t("goAgencyDesc")}
                 </p>
                 <div className="mt-2 flex items-center gap-1 text-xs font-semibold text-emerald-400 group-hover:text-emerald-300 transition-colors">
-                  Upgrade now
+                  {t("upgradeNow")}
                   <ChevronRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
                 </div>
               </div>
@@ -603,14 +605,14 @@ export default function Sidebar({ role, capabilities, isOpen, onClose }: Sidebar
           {/* Sign out */}
           <button
             onClick={handleLogout}
-            title={isCollapsed ? "Sign out" : undefined}
+            title={isCollapsed ? t("signOut") : undefined}
             className={cn(
               "group w-full rounded-lg text-sm font-medium text-primary-300/80 hover:bg-red-500/10 hover:text-red-300 transition-all duration-150",
               isCollapsed ? "flex justify-center px-0 py-2.5" : "flex items-center gap-3 pl-3 pr-2 py-2"
             )}
           >
             <LogOut className="h-4 w-4 flex-shrink-0 transition-colors group-hover:text-red-400" />
-            {!isCollapsed && <span>Sign out</span>}
+            {!isCollapsed && <span>{t("signOut")}</span>}
           </button>
         </div>
       </aside>

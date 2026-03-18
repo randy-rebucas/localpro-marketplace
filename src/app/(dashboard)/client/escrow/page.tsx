@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
+import { getTranslations } from "next-intl/server";
 import { Suspense } from "react";
 import TourGuide from "@/components/shared/TourGuide";
 import { EscrowContent } from "./_components/EscrowContent";
@@ -15,6 +16,7 @@ interface EscrowPageProps {
 export default async function EscrowPage({ searchParams }: EscrowPageProps) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
+  const t = await getTranslations("clientPages");
 
   return (
     <div className="space-y-6">
@@ -32,9 +34,9 @@ export default async function EscrowPage({ searchParams }: EscrowPageProps) {
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Escrow</h1>
+          <h1 className="text-2xl font-bold text-slate-900">{t("escrow")}</h1>
           <p className="text-slate-500 text-sm mt-1">
-            Manage escrow payments for your jobs. Funds are held securely until you approve completed work.
+            {t("escrowSub")}
           </p>
         </div>
       </div>

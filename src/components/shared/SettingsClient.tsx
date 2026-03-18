@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import toast from "react-hot-toast";
+import { useTranslations } from "next-intl";
 import {
   Bell,
   Lock,
@@ -116,41 +117,49 @@ function SectionHeader({ label }: { label: string }) {
   );
 }
 
-const AVAILABILITY_OPTIONS: {
+type TFunc = ReturnType<typeof useTranslations>;
+
+function getAvailabilityOptions(t: TFunc): {
   value: AvailabilityStatus;
   label: string;
   description: string;
   icon: React.ReactNode;
   color: string;
   ring: string;
-}[] = [
-  {
-    value: "available",
-    label: "Available",
-    description: "Actively accepting new jobs",
-    icon: <CircleDot className="h-4 w-4" />,
-    color: "text-emerald-600 bg-emerald-50 border-emerald-200",
-    ring: "ring-2 ring-emerald-400",
-  },
-  {
-    value: "busy",
-    label: "Busy",
-    description: "Working — limited availability",
-    icon: <Clock className="h-4 w-4" />,
-    color: "text-amber-600 bg-amber-50 border-amber-200",
-    ring: "ring-2 ring-amber-400",
-  },
-  {
-    value: "unavailable",
-    label: "Unavailable",
-    description: "Not accepting new jobs",
-    icon: <WifiOff className="h-4 w-4" />,
-    color: "text-slate-500 bg-slate-50 border-slate-200",
-    ring: "ring-2 ring-slate-400",
-  },
-];
+}[] {
+  return [
+    {
+      value: "available",
+      label: t("availStatusAvailable"),
+      description: t("availDescAvailable"),
+      icon: <CircleDot className="h-4 w-4" />,
+      color: "text-emerald-600 bg-emerald-50 border-emerald-200",
+      ring: "ring-2 ring-emerald-400",
+    },
+    {
+      value: "busy",
+      label: t("availStatusBusy"),
+      description: t("availDescBusy"),
+      icon: <Clock className="h-4 w-4" />,
+      color: "text-amber-600 bg-amber-50 border-amber-200",
+      ring: "ring-2 ring-amber-400",
+    },
+    {
+      value: "unavailable",
+      label: t("availStatusUnavailable"),
+      description: t("availDescUnavailable"),
+      icon: <WifiOff className="h-4 w-4" />,
+      color: "text-slate-500 bg-slate-50 border-slate-200",
+      ring: "ring-2 ring-slate-400",
+    },
+  ];
+}
 
 export default function SettingsClient({ initialPreferences, role, initialAvailability = "available" }: Props) {
+  const t       = useTranslations("settingsClient");
+  const tCommon = useTranslations("common");
+  const AVAILABILITY_OPTIONS = getAvailabilityOptions(t);
+
   const [tab, setTab] = useState<Tab>(role === "provider" ? "work" : "notifications");
   const [prefs, setPrefs] = useState<IUserPreferences>({ ...DEFAULT_PREFS, ...initialPreferences });
   const [saving, setSaving] = useState(false);
@@ -175,11 +184,11 @@ export default function SettingsClient({ initialPreferences, role, initialAvaila
       });
       if (!res.ok) {
         const err = await res.json();
-        toast.error(err.error ?? "Failed to save");
+        toast.error(err.error ?? t("saveFailed"));
         setPrefs(prev);
       }
     } catch {
-      toast.error("Could not save preference");
+      toast.error(t("saveError"));
       setPrefs(prev);
     } finally {
       setSaving(false);
@@ -198,13 +207,13 @@ export default function SettingsClient({ initialPreferences, role, initialAvaila
       });
       if (!res.ok) {
         const err = await res.json();
-        toast.error(err.error ?? "Failed to update availability");
+        toast.error(err.error ?? t("availUpdateFailed"));
         setAvailability(prev);
       } else {
-        toast.success("Availability updated");
+        toast.success(t("availUpdateSuccess"));
       }
     } catch {
-      toast.error("Could not update availability");
+      toast.error(t("availUpdateError"));
       setAvailability(prev);
     } finally {
       setSavingAvailability(false);
@@ -212,9 +221,9 @@ export default function SettingsClient({ initialPreferences, role, initialAvaila
   }
 
   async function changePassword() {
-    if (!currentPassword) { toast.error("Enter your current password"); return; }
-    if (newPassword.length < 8) { toast.error("New password must be at least 8 characters"); return; }
-    if (newPassword !== confirmPassword) { toast.error("Passwords do not match"); return; }
+    if (!currentPassword) { toast.error(t("enterCurrentPassword")); return; }
+    if (newPassword.length < 8) { toast.error(t("newPasswordTooShort")); return; }
+    if (newPassword !== confirmPassword) { toast.error(t("passwordMismatch")); return; }
     setSavingPassword(true);
     try {
       const res = await apiFetch("/api/auth/me", {
@@ -223,13 +232,13 @@ export default function SettingsClient({ initialPreferences, role, initialAvaila
         body: JSON.stringify({ currentPassword, newPassword }),
       });
       const data = await res.json();
-      if (!res.ok) { toast.error(data.error ?? "Failed to change password"); return; }
-      toast.success("Password updated");
+      if (!res.ok) { toast.error(data.error ?? t("changePasswordFailed")); return; }
+      toast.success(t("passwordUpdated"));
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
     } catch {
-      toast.error("Something went wrong");
+      toast.error(tCommon("somethingWentWrong"));
     } finally {
       setSavingPassword(false);
     }
@@ -237,11 +246,11 @@ export default function SettingsClient({ initialPreferences, role, initialAvaila
 
   const tabs: { key: Tab; label: string; icon: React.ReactNode }[] = [
     ...(role === "provider"
-      ? [{ key: "work" as Tab, label: "Work", icon: <Briefcase className="h-4 w-4" /> }]
+      ? [{ key: "work" as Tab, label: t("tabWork"), icon: <Briefcase className="h-4 w-4" /> }]
       : []),
-    { key: "notifications", label: "Notifications", icon: <Bell className="h-4 w-4" /> },
-    { key: "privacy",       label: "Privacy",       icon: <Eye  className="h-4 w-4" /> },
-    { key: "security",      label: "Security",      icon: <Lock className="h-4 w-4" /> },
+    { key: "notifications", label: t("tabNotifications"), icon: <Bell className="h-4 w-4" /> },
+    { key: "privacy",       label: t("tabPrivacy"),       icon: <Eye  className="h-4 w-4" /> },
+    { key: "security",      label: t("tabSecurity"),      icon: <Lock className="h-4 w-4" /> },
   ];
 
   return (
@@ -269,7 +278,7 @@ export default function SettingsClient({ initialPreferences, role, initialAvaila
         <div className="space-y-4">
           {/* Availability status */}
           <div className="bg-white rounded-xl border border-slate-200 shadow-card overflow-hidden">
-            <SectionHeader label="Availability Status" />
+            <SectionHeader label={t("sectionAvailability")} />
             <div className="p-4 grid grid-cols-3 gap-3">
               {AVAILABILITY_OPTIONS.map((opt) => (
                 <button
@@ -292,27 +301,27 @@ export default function SettingsClient({ initialPreferences, role, initialAvaila
             </div>
             <div className="px-4 pb-4">
               <p className="text-xs text-slate-400">
-                Your availability is shown on your public profile and affects how clients find you.
+                {t("availabilityHint")}
               </p>
             </div>
           </div>
 
           {/* Job preferences */}
           <div className="bg-white rounded-xl border border-slate-200 shadow-card overflow-hidden">
-            <SectionHeader label="Job Preferences" />
+            <SectionHeader label={t("sectionJobPrefs")} />
             <div className="divide-y divide-slate-100 px-5">
               <SettingRow
                 icon={<Zap className="h-4 w-4" />}
-                label="Instant booking"
-                description="Let clients book you directly without waiting for your manual quote acceptance"
+                label={t("instantBookingLabel")}
+                description={t("instantBookingDesc")}
                 checked={prefs.instantBooking}
                 onChange={(v) => updatePref("instantBooking", v)}
                 saving={saving}
               />
               <SettingRow
                 icon={<FileText className="h-4 w-4" />}
-                label="Auto read receipt"
-                description="Automatically notify clients when you open and read their job post"
+                label={t("autoReadReceiptLabel")}
+                description={t("autoReadReceiptDesc")}
                 checked={prefs.autoReadReceipt}
                 onChange={(v) => updatePref("autoReadReceipt", v)}
                 saving={saving}
@@ -322,36 +331,36 @@ export default function SettingsClient({ initialPreferences, role, initialAvaila
 
           {/* Provider notifications */}
           <div className="bg-white rounded-xl border border-slate-200 shadow-card overflow-hidden">
-            <SectionHeader label="Provider Alerts" />
+            <SectionHeader label={t("sectionProviderAlerts")} />
             <div className="divide-y divide-slate-100 px-5">
               <SettingRow
                 icon={<Briefcase className="h-4 w-4" />}
-                label="New job alerts"
-                description="Get notified when jobs matching your skills and service areas are posted"
+                label={t("newJobAlertsLabel")}
+                description={t("newJobAlertsDesc")}
                 checked={prefs.newJobAlerts}
                 onChange={(v) => updatePref("newJobAlerts", v)}
                 saving={saving}
               />
               <SettingRow
                 icon={<UserCheck className="h-4 w-4" />}
-                label="Job invite alerts"
-                description="Notify me when a client directly invites me to quote on their job"
+                label={t("jobInviteAlertsLabel")}
+                description={t("jobInviteAlertsDesc")}
                 checked={prefs.jobInviteAlerts}
                 onChange={(v) => updatePref("jobInviteAlerts", v)}
                 saving={saving}
               />
               <SettingRow
                 icon={<Clock className="h-4 w-4" />}
-                label="Quote expiry reminders"
-                description="Remind me before my submitted quotes are about to expire"
+                label={t("quoteExpiryLabel")}
+                description={t("quoteExpiryDesc")}
                 checked={prefs.quoteExpiryReminders}
                 onChange={(v) => updatePref("quoteExpiryReminders", v)}
                 saving={saving}
               />
               <SettingRow
                 icon={<Star className="h-4 w-4" />}
-                label="Review alerts"
-                description="Notify me when a client leaves a review on a completed job"
+                label={t("reviewAlertsLabel")}
+                description={t("reviewAlertsDesc")}
                 checked={prefs.reviewAlerts}
                 onChange={(v) => updatePref("reviewAlerts", v)}
                 saving={saving}
@@ -361,12 +370,12 @@ export default function SettingsClient({ initialPreferences, role, initialAvaila
 
           {/* Quick profile link */}
           <div className="bg-white rounded-xl border border-slate-200 shadow-card overflow-hidden">
-            <SectionHeader label="Profile & Visibility" />
+            <SectionHeader label={t("sectionProfileVisibility")} />
             <div className="divide-y divide-slate-100 px-5">
               <SettingRow
                 icon={<Eye className="h-4 w-4" />}
-                label="Visible in search"
-                description="Allow clients to find and view your provider profile in marketplace results"
+                label={t("visibleInSearchLabel")}
+                description={t("visibleInSearchDesc")}
                 checked={prefs.profileVisible}
                 onChange={(v) => updatePref("profileVisible", v)}
                 saving={saving}
@@ -377,7 +386,7 @@ export default function SettingsClient({ initialPreferences, role, initialAvaila
                 href="/provider/profile"
                 className="text-xs text-primary hover:underline font-medium"
               >
-                Edit full profile →
+                {t("editFullProfile")}
               </a>
             </div>
           </div>
@@ -389,40 +398,40 @@ export default function SettingsClient({ initialPreferences, role, initialAvaila
         <div className="bg-white rounded-xl border border-slate-200 shadow-card divide-y divide-slate-100 px-5">
           <SettingRow
             icon={<Mail className="h-4 w-4" />}
-            label="Email notifications"
-            description="Receive email updates for job status, quotes, and account activity"
+            label={t("emailNotifLabel")}
+            description={t("emailNotifDesc")}
             checked={prefs.emailNotifications}
             onChange={(v) => updatePref("emailNotifications", v)}
             saving={saving}
           />
           <SettingRow
             icon={<Bell className="h-4 w-4" />}
-            label="Push notifications"
-            description="Real-time browser alerts for new activity"
+            label={t("pushNotifLabel")}
+            description={t("pushNotifDesc")}
             checked={prefs.pushNotifications}
             onChange={(v) => updatePref("pushNotifications", v)}
             saving={saving}
           />
           <SettingRow
             icon={<Smartphone className="h-4 w-4" />}
-            label="SMS notifications"
-            description="Text message alerts for urgent updates (carrier rates may apply)"
+            label={t("smsNotifLabel")}
+            description={t("smsNotifDesc")}
             checked={prefs.smsNotifications}
             onChange={(v) => updatePref("smsNotifications", v)}
             saving={saving}
           />
           <SettingRow
             icon={<MessageSquare className="h-4 w-4" />}
-            label="Message notifications"
-            description="Get notified when someone sends you a new message"
+            label={t("messageNotifLabel")}
+            description={t("messageNotifDesc")}
             checked={prefs.messageNotifications}
             onChange={(v) => updatePref("messageNotifications", v)}
             saving={saving}
           />
           <SettingRow
             icon={<Megaphone className="h-4 w-4" />}
-            label="Marketing emails"
-            description="Promotions, tips, and platform updates from LocalPro"
+            label={t("marketingEmailsLabel")}
+            description={t("marketingEmailsDesc")}
             checked={prefs.marketingEmails}
             onChange={(v) => updatePref("marketingEmails", v)}
             saving={saving}
@@ -439,11 +448,8 @@ export default function SettingsClient({ initialPreferences, role, initialAvaila
                 <div className="flex items-start gap-3">
                   <ShieldCheck className="h-4 w-4 text-slate-400 mt-0.5 flex-shrink-0" />
                   <div>
-                    <p className="text-sm font-medium text-slate-800">Privacy overview</p>
-                    <p className="text-xs text-slate-500 mt-0.5">
-                      Your name and contact details are only shared with providers you hire.
-                      Job posts show only your first name and general location.
-                    </p>
+                    <p className="text-sm font-medium text-slate-800">{t("privacyOverviewTitle")}</p>
+                    <p className="text-xs text-slate-500 mt-0.5">{t("privacyOverviewDesc")}</p>
                   </div>
                 </div>
               </div>
@@ -451,8 +457,8 @@ export default function SettingsClient({ initialPreferences, role, initialAvaila
             {role === "provider" && (
               <SettingRow
                 icon={<Eye className="h-4 w-4" />}
-                label="Profile visible in search"
-                description="Allow clients to find and view your provider profile"
+                label={t("profileVisibleLabel")}
+                description={t("profileVisibleDesc")}
                 checked={prefs.profileVisible}
                 onChange={(v) => updatePref("profileVisible", v)}
                 saving={saving}
@@ -463,7 +469,7 @@ export default function SettingsClient({ initialPreferences, role, initialAvaila
           {/* Data & Account */}
           <div className="bg-white rounded-xl border border-slate-200 shadow-card overflow-hidden">
             <div className="px-5 py-3 border-b border-slate-100">
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Data &amp; Account</p>
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{t("sectionDataAccount")}</p>
             </div>
             <a
               href="/privacy"
@@ -474,8 +480,8 @@ export default function SettingsClient({ initialPreferences, role, initialAvaila
               <div className="flex items-center gap-3">
                 <ShieldCheck className="h-4 w-4 text-slate-400" />
                 <div>
-                  <p className="text-sm font-medium text-slate-800">Privacy Policy</p>
-                  <p className="text-xs text-slate-500">How we handle your data</p>
+                  <p className="text-sm font-medium text-slate-800">{t("privacyPolicy")}</p>
+                  <p className="text-xs text-slate-500">{t("privacyPolicyDesc")}</p>
                 </div>
               </div>
               <ChevronRight className="h-4 w-4 text-slate-400" />
@@ -489,8 +495,8 @@ export default function SettingsClient({ initialPreferences, role, initialAvaila
               <div className="flex items-center gap-3">
                 <ShieldCheck className="h-4 w-4 text-slate-400" />
                 <div>
-                  <p className="text-sm font-medium text-slate-800">Terms of Service</p>
-                  <p className="text-xs text-slate-500">Platform rules and agreements</p>
+                  <p className="text-sm font-medium text-slate-800">{t("termsOfService")}</p>
+                  <p className="text-xs text-slate-500">{t("termsOfServiceDesc")}</p>
                 </div>
               </div>
               <ChevronRight className="h-4 w-4 text-slate-400" />
@@ -504,37 +510,37 @@ export default function SettingsClient({ initialPreferences, role, initialAvaila
         <div className="space-y-4">
           <div className="bg-white rounded-xl border border-slate-200 shadow-card p-5">
             <h3 className="text-sm font-semibold text-slate-700 mb-4 flex items-center gap-2">
-              <Lock className="h-4 w-4" /> Change Password
+              <Lock className="h-4 w-4" /> {t("changePasswordTitle")}
             </h3>
             <div className="space-y-3">
               <div>
-                <label className="label block mb-1 text-xs">Current Password</label>
+                <label className="label block mb-1 text-xs">{t("currentPasswordLabel")}</label>
                 <input
                   type="password"
                   className="input w-full text-sm"
-                  placeholder="Enter current password"
+                  placeholder={t("currentPasswordPlaceholder")}
                   value={currentPassword}
                   onChange={(e) => setCurrentPassword(e.target.value)}
                   autoComplete="current-password"
                 />
               </div>
               <div>
-                <label className="label block mb-1 text-xs">New Password</label>
+                <label className="label block mb-1 text-xs">{t("newPasswordLabel")}</label>
                 <input
                   type="password"
                   className="input w-full text-sm"
-                  placeholder="At least 8 characters"
+                  placeholder={t("newPasswordPlaceholder")}
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   autoComplete="new-password"
                 />
               </div>
               <div>
-                <label className="label block mb-1 text-xs">Confirm New Password</label>
+                <label className="label block mb-1 text-xs">{t("confirmPasswordLabel")}</label>
                 <input
                   type="password"
                   className="input w-full text-sm"
-                  placeholder="Repeat new password"
+                  placeholder={t("confirmPasswordPlaceholder")}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   autoComplete="new-password"
@@ -547,7 +553,7 @@ export default function SettingsClient({ initialPreferences, role, initialAvaila
                   onClick={changePassword}
                   disabled={!currentPassword || !newPassword || !confirmPassword}
                 >
-                  Update Password
+                  {t("updatePasswordBtn")}
                 </Button>
               </div>
             </div>
@@ -556,11 +562,8 @@ export default function SettingsClient({ initialPreferences, role, initialAvaila
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex gap-3">
             <ShieldCheck className="h-4 w-4 text-amber-500 mt-0.5 flex-shrink-0" />
             <div>
-              <p className="text-sm font-medium text-amber-800">Keep your account secure</p>
-              <p className="text-xs text-amber-700 mt-0.5">
-                Use a strong, unique password. Never share your credentials.
-                If you suspect unauthorized access, change your password immediately and contact support.
-              </p>
+              <p className="text-sm font-medium text-amber-800">{t("securityTipTitle")}</p>
+              <p className="text-xs text-amber-700 mt-0.5">{t("securityTipDesc")}</p>
             </div>
           </div>
         </div>

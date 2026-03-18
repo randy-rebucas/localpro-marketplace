@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { getCurrentUser } from "@/lib/auth";
+import { getTranslations } from "next-intl/server";
 import { MarketplaceContent } from "./_components/MarketplaceContent";
 import { MarketplaceSkeleton } from "./_components/skeletons";
 
@@ -15,13 +16,14 @@ export default async function MarketplacePage({
   if (!user) return null;
 
   const { ref } = await searchParams;
+  const t = await getTranslations("providerPages");
 
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900">Marketplace</h2>
-          <p className="text-slate-500 text-sm mt-1">Browse open jobs and submit competitive quotes.</p>
+          <h2 className="text-2xl font-bold text-slate-900">{t("marketplace")}</h2>
+          <p className="text-slate-500 text-sm mt-1">{t("marketplaceSub")}</p>
         </div>
       </div>
 

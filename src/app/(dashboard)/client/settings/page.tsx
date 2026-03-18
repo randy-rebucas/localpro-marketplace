@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
+import { getTranslations } from "next-intl/server";
 import { userRepository } from "@/repositories";
 import SettingsClient from "@/components/shared/SettingsClient";
 import type { IUserPreferences } from "@/types";
@@ -33,12 +34,13 @@ export default async function ClientSettingsPage() {
     ...DEFAULT_PREFS,
     ...((user as unknown as { preferences?: Partial<IUserPreferences> }).preferences ?? {}),
   };
+  const t = await getTranslations("clientPages");
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-bold text-slate-800">Settings</h1>
-        <p className="text-sm text-slate-500 mt-1">Manage your notification, privacy, and security preferences.</p>
+        <h1 className="text-xl font-bold text-slate-800">{t("settings")}</h1>
+        <p className="text-sm text-slate-500 mt-1">{t("settingsSub")}</p>
       </div>
       <SettingsClient initialPreferences={prefs} role="client" />
     </div>

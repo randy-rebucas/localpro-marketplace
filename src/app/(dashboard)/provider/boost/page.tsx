@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { getCurrentUser } from "@/lib/auth";
+import { getTranslations } from "next-intl/server";
 import { connectDB } from "@/lib/db";
 import { featuredListingService } from "@/services/featured-listing.service";
 import { walletRepository } from "@/repositories/wallet.repository";
@@ -27,13 +28,13 @@ export default async function BoostPage() {
     homepage_highlight: settings["payments.featuredListingHomepage"] as number,
   };
 
+  const t = await getTranslations("providerPages");
+
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl sm:text-2xl font-bold text-slate-900">Boost &amp; Featured Listings</h2>
-        <p className="text-slate-500 text-sm mt-1">
-          Pay to increase your visibility and attract more clients — instant activation, 7 days duration.
-        </p>
+        <h2 className="text-xl sm:text-2xl font-bold text-slate-900">{t("boost")}</h2>
+        <p className="text-slate-500 text-sm mt-1">{t("boostSub")}</p>
       </div>
       <BoostClient
         activeBoosts={JSON.parse(JSON.stringify(activeBoosts))}

@@ -1,8 +1,10 @@
 import { jobRepository } from "@/repositories/job.repository";
 import Link from "next/link";
 import { CalendarDays, MapPin, Clock } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 
 export async function TodaySchedule({ userId }: { userId: string }) {
+  const t = await getTranslations("providerPages");
   const todayJobs = await jobRepository.findTodayForProvider(userId);
 
   return (
@@ -10,18 +12,18 @@ export async function TodaySchedule({ userId }: { userId: string }) {
       <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <CalendarDays className="h-4 w-4 text-primary" />
-          <h3 className="font-semibold text-slate-900 text-sm">Today&apos;s Schedule</h3>
+          <h3 className="font-semibold text-slate-900 text-sm">{t("provDash_scheduleTitle")}</h3>
         </div>
         <Link href="/provider/calendar" className="text-xs text-primary hover:underline">
-          Full calendar
+          {t("provDash_scheduleFullCalendar")}
         </Link>
       </div>
 
       {todayJobs.length === 0 ? (
         <div className="px-5 py-6 text-center">
-          <p className="text-slate-400 text-sm">No jobs scheduled for today.</p>
+          <p className="text-slate-400 text-sm">{t("provDash_scheduleEmpty")}</p>
           <Link href="/provider/marketplace" className="mt-2 inline-block text-xs text-primary hover:underline">
-            Browse available jobs →
+            {t("provDash_scheduleBrowse")}
           </Link>
         </div>
       ) : (
@@ -64,7 +66,7 @@ export async function TodaySchedule({ userId }: { userId: string }) {
                         : "bg-blue-100 text-blue-700"
                     }`}
                   >
-                    {isInProgress ? "In Progress" : "Assigned"}
+                    {isInProgress ? t("provDash_scheduleInProgress") : t("provDash_scheduleAssigned")}
                   </span>
                 </Link>
               </li>

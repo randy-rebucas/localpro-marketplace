@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { injectMetaPixel } from "@/components/analytics/MetaPixel";
 
 const STORAGE_KEY = "lp_cookie_consent";
@@ -31,6 +32,7 @@ function storeConsent(decision: "accepted" | "declined"): void {
  * Mount once in the root layout: <CookieConsent />
  */
 export default function CookieConsent() {
+  const t = useTranslations("cookieConsent");
   const [decision, setDecision] = useState<ConsentDecision | "pending">("pending");
 
   useEffect(() => {
@@ -73,9 +75,9 @@ export default function CookieConsent() {
       <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-start sm:items-center gap-4">
         <div className="flex-1 text-sm text-slate-300">
           <p>
-            We use cookies and analytics to improve your experience.{" "}
+            {t("body")}{" "}
             <Link href="/privacy" className="underline text-indigo-400 hover:text-indigo-300">
-              Privacy Policy
+              {t("privacyLink")}
             </Link>
           </p>
         </div>
@@ -84,13 +86,13 @@ export default function CookieConsent() {
             onClick={decline}
             className="px-4 py-2 text-sm rounded-lg border border-slate-600 text-slate-300 hover:bg-slate-800 transition-colors"
           >
-            Decline
+            {t("decline")}
           </button>
           <button
             onClick={accept}
             className="px-4 py-2 text-sm rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition-colors font-medium"
           >
-            Accept All
+            {t("acceptAll")}
           </button>
         </div>
       </div>

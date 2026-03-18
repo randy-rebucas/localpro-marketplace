@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import toast from "react-hot-toast";
+import { useTranslations } from "next-intl";
 import { Loader2, CreditCard, Shield } from "lucide-react";
 import { trackPurchase } from "@/lib/analytics";
 
@@ -49,8 +50,11 @@ export default function PayMongoButton({
   totalCharge,
   onSimulated,
   className = "",
-  label = "Fund Escrow",
+  label,
 }: PayMongoButtonProps) {
+  const t = useTranslations("payMongoButton");
+  const tCommon = useTranslations("common");
+  const resolvedLabel = label ?? t("defaultLabel");
   const [loading, setLoading] = useState(false);
 
   const showBreakdown =
@@ -69,12 +73,12 @@ export default function PayMongoButton({
       const data = await res.json();
 
       if (!res.ok) {
-        toast.error(data.error ?? "Failed to initiate payment");
+        toast.error(data.error ?? t("paymentFailed"));
         return;
       }
 
       if (data.simulated) {
-        toast.success("Escrow funded (dev simulation)");
+        toast.success(t("escrowFunded"));
         trackPurchase({ value: totalCharge ?? amountPHP, jobId });
         onSimulated?.();
         return;
@@ -86,7 +90,7 @@ export default function PayMongoButton({
         window.location.href = data.checkoutUrl;
       }
     } catch {
-      toast.error("Something went wrong. Please try again.");
+      toast.error(tCommon("somethingWentWrong"));
     } finally {
       setLoading(false);
     }
@@ -98,25 +102,25 @@ export default function PayMongoButton({
         <div className="rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm">
           <div className="flex items-center gap-1.5 mb-2 text-muted-foreground font-medium">
             <Shield className="h-3.5 w-3.5 text-primary" />
-            Payment breakdown
+            {t("breakdownHeading")}
           </div>
           <div className="space-y-1">
             <div className="flex justify-between text-muted-foreground">
-              <span>Service price</span>
+              <span>{t("servicePriceLabel")}</span>
               <span>₱{amountPHP.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
             </div>
             <div className="flex justify-between text-muted-foreground">
               <span className="flex items-center gap-1">
-                Escrow protection fee
-                <span className="text-xs text-muted-foreground/70">(non-refundable)</span>
+                  {t("escrowFeeLabel")}
+                  <span className="text-xs text-muted-foreground/70">{t("nonRefundable")}</span>
               </span>
               <span>₱{escrowFee!.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
             </div>
             {processingFee !== undefined && processingFee > 0 && (
               <div className="flex justify-between text-muted-foreground">
                 <span className="flex items-center gap-1">
-                  Processing fee
-                  <span className="text-xs text-muted-foreground/70">(non-refundable)</span>
+                  {t("processingFeeLabel")}
+                  <span className="text-xs text-muted-foreground/70">{t("nonRefundable")}</span>
                 </span>
                 <span>₱{processingFee.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
               </div>
@@ -124,8 +128,8 @@ export default function PayMongoButton({
             {urgencyFee !== undefined && urgencyFee > 0 && (
               <div className="flex justify-between text-muted-foreground">
                 <span className="flex items-center gap-1">
-                  Urgent booking fee
-                  <span className="text-xs text-muted-foreground/70">(non-refundable)</span>
+                  {t("urgencyFeeLabel")}
+                  <span className="text-xs text-muted-foreground/70">{t("nonRefundable")}</span>
                 </span>
                 <span>₱{urgencyFee.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
               </div>
@@ -133,14 +137,14 @@ export default function PayMongoButton({
             {platformServiceFee !== undefined && platformServiceFee > 0 && (
               <div className="flex justify-between text-muted-foreground">
                 <span className="flex items-center gap-1">
-                  Platform service fee
-                  <span className="text-xs text-muted-foreground/70">(non-refundable)</span>
+                  {t("platformServiceFeeLabel")}
+                  <span className="text-xs text-muted-foreground/70">{t("nonRefundable")}</span>
                 </span>
                 <span>₱{platformServiceFee.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
               </div>
             )}
             <div className="flex justify-between font-semibold text-foreground border-t border-border pt-1 mt-1">
-              <span>Total</span>
+              <span>{t("totalLabel")}</span>
               <span>₱{totalCharge!.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
             </div>
           </div>
@@ -155,12 +159,12 @@ export default function PayMongoButton({
         {loading ? (
           <>
             <Loader2 className="h-4 w-4 animate-spin" />
-            Processing…
+            {t("processing")}
           </>
         ) : (
           <>
             <CreditCard className="h-4 w-4" />
-            {label}
+            {resolvedLabel}
             <span className="text-primary-200 font-normal text-xs">
               ₱{(totalCharge ?? amountPHP).toLocaleString()}
             </span>

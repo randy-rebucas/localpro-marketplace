@@ -91,6 +91,8 @@ export interface IUser {
   savedPaymentMethodId?: string | null;
   savedPaymentMethodLast4?: string | null;
   savedPaymentMethodBrand?: string | null;
+  /** Preferred display language: "en" (English) or "tl" (Filipino/Tagalog) */
+  preferredLocale?: "en" | "tl";
   preferences?: IUserPreferences;
   /** Last time the user made an authenticated request — used for online indicator. */
   lastSeenAt?: Date | string | null;

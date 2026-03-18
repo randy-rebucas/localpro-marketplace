@@ -17,6 +17,7 @@ import {
   Lock,
 } from "lucide-react";
 import toast from "react-hot-toast";
+import { useTranslations } from "next-intl";
 
 interface Lesson {
   _id: string;
@@ -53,11 +54,12 @@ function renderMarkdown(src: string): string {
 }
 
 function ProgressBar({ done, total }: { done: number; total: number }) {
+  const t = useTranslations("training");
   const pct = total === 0 ? 0 : Math.round((done / total) * 100);
   return (
     <div className="space-y-1">
       <div className="flex justify-between text-xs text-slate-500">
-        <span>{done} / {total} lessons completed</span>
+        <span>{t("progress", { done, total })}</span>
         <span className="font-semibold">{pct}%</span>
       </div>
       <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
@@ -73,6 +75,7 @@ function ProgressBar({ done, total }: { done: number; total: number }) {
 export default function TrainingCoursePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const searchParams = useSearchParams();
+  const t = useTranslations("training");
 
   const [course, setCourse] = useState<Course | null>(null);
   const [loading, setLoading] = useState(true);
@@ -86,7 +89,7 @@ export default function TrainingCoursePage({ params }: { params: Promise<{ id: s
     setLoading(true);
     try {
       const res = await fetch(`/api/provider/training/${id}`);
-      if (!res.ok) { toast.error("Course not found."); return; }
+      if (!res.ok) { toast.error(t("courseNotFound")); return; }
       const data = await res.json() as { course: Course };
       const c = data.course;
       setCourse(c);
@@ -97,7 +100,7 @@ export default function TrainingCoursePage({ params }: { params: Promise<{ id: s
       setActiveLesson(firstIncomplete ?? sorted[0] ?? null);
       return c;
     } catch {
-      toast.error("Failed to load course.");
+      toast.error(t("loadFailed"));
       return null;
     } finally {
       setLoading(false);
@@ -116,12 +119,12 @@ export default function TrainingCoursePage({ params }: { params: Promise<{ id: s
     window.history.replaceState({}, "", cleanUrl);
 
     if (payment === "cancelled") {
-      toast.error("Payment was cancelled. You can try again from the course catalog.");
+      toast.error(t("paymentCancelled"));
       return;
     }
 
     if (payment === "success") {
-      toast.success("Payment received! Setting up your enrollment…");
+      toast.success(t("paymentReceived"));
       setAwaitingActivation(true);
 
       const storedSessionId = sessionStorage.getItem(`training_session_${id}`);
@@ -141,7 +144,7 @@ export default function TrainingCoursePage({ params }: { params: Promise<{ id: s
               const courseData = await fetchCourse();
               setAwaitingActivation(false);
               if (courseData?.enrollment) {
-                toast.success("Enrollment activated! You can now start learning.");
+                toast.success(t("enrollmentActivated"));
               }
               return;
             }
@@ -164,7 +167,7 @@ export default function TrainingCoursePage({ params }: { params: Promise<{ id: s
               setCourse(data.course);
               const sorted = [...(data.course.lessons ?? [])].sort((a, b) => a.order - b.order);
               setActiveLesson(sorted[0] ?? null);
-              toast.success("Enrollment activated! You can now start learning.");
+              toast.success(t("enrollmentActivated"));
               return;
             }
           } catch { /* ignore polling errors */ }
@@ -172,7 +175,7 @@ export default function TrainingCoursePage({ params }: { params: Promise<{ id: s
             clearInterval(pollRef.current!);
             pollRef.current = null;
             setAwaitingActivation(false);
-            toast("Enrollment is being processed. Please refresh in a moment.", { icon: "⏳" });
+            toast(t("completionProcessing"), { icon: "⏳" });
           }
         }, 3000);
       })();
@@ -193,21 +196,21 @@ export default function TrainingCoursePage({ params }: { params: Promise<{ id: s
         { method: "POST" }
       );
       const data = await res.json() as { enrollment?: { completedLessons: string[] }; error?: string };
-      if (!res.ok) { toast.error(data.error ?? "Failed to mark complete."); return; }
+      if (!res.ok) { toast.error(data.error ?? t("markCompleteFailed")); return; }
       const freshIds = data.enrollment?.completedLessons ?? [];
       setCourse((prev) =>
         prev
           ? { ...prev, enrollment: prev.enrollment ? { ...prev.enrollment, completedLessons: freshIds } : prev.enrollment }
           : prev
       );
-      toast.success("Lesson completed!");
+      toast.success(t("lessonCompleted"));
       // Advance to next incomplete lesson
       const updatedDone = new Set(freshIds);
       const sorted = [...(course.lessons ?? [])].sort((a, b) => a.order - b.order);
       const next = sorted.find((l) => l.order > activeLesson.order && !updatedDone.has(l._id));
       if (next) setActiveLesson(next);
     } catch {
-      toast.error("Something went wrong.");
+      toast.error(t("enrollmentFailed"));
     } finally {
       setMarking(false);
     }
@@ -222,11 +225,11 @@ export default function TrainingCoursePage({ params }: { params: Promise<{ id: s
         { method: "POST" }
       );
       const data = await res.json() as { error?: string };
-      if (!res.ok) { toast.error(data.error ?? "Could not complete course."); return; }
-      toast.success("🎓 Course completed! Badge awarded.");
+      if (!res.ok) { toast.error(data.error ?? t("completeCourseError")); return; }
+      toast.success(t("courseCompleted"));
       void fetchCourse();
     } catch {
-      toast.error("Something went wrong.");
+      toast.error(t("enrollmentFailed"));
     } finally {
       setCompleting(false);
     }
@@ -244,9 +247,9 @@ export default function TrainingCoursePage({ params }: { params: Promise<{ id: s
     return (
       <div className="text-center py-20 text-slate-400">
         <BookOpen className="h-10 w-10 mx-auto mb-3 opacity-40" />
-        <p>Course not found.</p>
+        <p>{t("courseNotFound")}</p>
         <Link href="/provider/training" className="text-indigo-600 text-sm mt-2 inline-block hover:underline">
-          ← Back to courses
+          ← {t("backToCourses")}
         </Link>
       </div>
     );
@@ -269,7 +272,7 @@ export default function TrainingCoursePage({ params }: { params: Promise<{ id: s
           href="/provider/training"
           className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 mb-3 transition-colors"
         >
-          <ArrowLeft className="h-4 w-4" /> Back to Courses
+          <ArrowLeft className="h-4 w-4" /> {t("backToCourses")}
         </Link>
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-start gap-3 min-w-0">
@@ -279,14 +282,14 @@ export default function TrainingCoursePage({ params }: { params: Promise<{ id: s
             <div className="min-w-0">
               <h2 className="text-xl font-bold text-slate-900 leading-snug">{course.title}</h2>
               <div className="flex flex-wrap items-center gap-3 mt-1 text-xs text-slate-500">
-                <span className="flex items-center gap-1"><BookOpen className="h-3.5 w-3.5" /> {sortedLessons.length} lessons</span>
-                <span className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> {course.durationMinutes} min</span>
+                <span className="flex items-center gap-1"><BookOpen className="h-3.5 w-3.5" /> {t("lessons", { count: sortedLessons.length })}</span>
+                <span className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> {t("minutes", { count: course.durationMinutes })}</span>
               </div>
             </div>
           </div>
           {courseComplete && (
             <span className="flex items-center gap-1.5 text-emerald-700 font-semibold text-xs bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-full whitespace-nowrap flex-shrink-0">
-              <Award className="h-4 w-4" /> Badge earned
+              <Award className="h-4 w-4" /> {t("badgeEarnedBanner")}
             </span>
           )}
         </div>
@@ -304,7 +307,7 @@ export default function TrainingCoursePage({ params }: { params: Promise<{ id: s
         <div className="bg-indigo-50 border border-indigo-200 rounded-xl px-4 py-3 flex items-center gap-3">
           <Loader2 className="h-5 w-5 text-indigo-500 flex-shrink-0 animate-spin" />
           <p className="text-sm text-indigo-800 font-medium">
-            Activating your enrollment… This usually takes a few seconds.
+            {t("activating")}
           </p>
         </div>
       )}
@@ -314,9 +317,9 @@ export default function TrainingCoursePage({ params }: { params: Promise<{ id: s
         <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-center gap-3">
           <Lock className="h-5 w-5 text-amber-500 flex-shrink-0" />
           <p className="text-sm text-amber-800">
-            You are not enrolled.{" "}
-            <Link href="/provider/training" className="underline font-medium hover:text-amber-900">Enroll first</Link>
-            {" "}to unlock lesson content.
+            {t("notEnrolled")}{" "}
+            <Link href="/provider/training" className="underline font-medium hover:text-amber-900">{t("enrollFirst")}</Link>
+            {" "}{t("toUnlockContent")}
           </p>
         </div>
       )}
@@ -327,7 +330,7 @@ export default function TrainingCoursePage({ params }: { params: Promise<{ id: s
         {/* Lesson sidebar */}
         <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
           <div className="px-4 py-3 border-b border-slate-100">
-            <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Lessons</h3>
+            <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">{t("lessonsNav")}</h3>
           </div>
           <ul className="divide-y divide-slate-100">
             {sortedLessons.map((lesson, idx) => {
@@ -370,7 +373,7 @@ export default function TrainingCoursePage({ params }: { params: Promise<{ id: s
                 className="w-full flex items-center justify-center gap-2 bg-emerald-600 text-white text-sm font-semibold px-4 py-2.5 rounded-lg hover:bg-emerald-700 disabled:opacity-50 transition-colors"
               >
                 {completing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Award className="h-4 w-4" />}
-                Claim Badge &amp; Complete
+                {t("claimBadge")}
               </button>
             </div>
           )}
@@ -378,13 +381,13 @@ export default function TrainingCoursePage({ params }: { params: Promise<{ id: s
           {courseComplete && (
             <div className="px-4 py-3 border-t border-slate-100 flex flex-col gap-2">
               <div className="flex items-center gap-2 text-emerald-700 text-sm font-semibold">
-                <Award className="h-4 w-4" /> Badge awarded!
+                <Award className="h-4 w-4" /> {t("badgeEarned")}
               </div>
               <Link
                 href={`/provider/training/${id}/certificate`}
                 className="flex items-center justify-center gap-1.5 bg-amber-500 text-white text-xs font-semibold px-3 py-1.5 rounded-lg hover:bg-amber-600 transition-colors"
               >
-                <Award className="h-3.5 w-3.5" /> Download Certificate
+                <Award className="h-3.5 w-3.5" /> {t("downloadCertBtn")}
               </Link>
             </div>
           )}
@@ -404,7 +407,7 @@ export default function TrainingCoursePage({ params }: { params: Promise<{ id: s
                 </div>
                 {activeLessonDone && (
                   <span className="flex items-center gap-1 text-emerald-600 text-xs font-semibold flex-shrink-0">
-                    <CheckCircle2 className="h-4 w-4" /> Completed
+                    <CheckCircle2 className="h-4 w-4" /> {t("completed")}
                   </span>
                 )}
               </div>
@@ -465,7 +468,7 @@ export default function TrainingCoursePage({ params }: { params: Promise<{ id: s
                 ) : (
                   <div className="flex flex-col items-center gap-2 py-12 text-slate-400">
                     <Lock className="h-6 w-6" />
-                    <p className="text-sm">Enroll to unlock lesson content.</p>
+                    <p className="text-sm">{t("lockMessage")}</p>
                   </div>
                 )}
               </div>
@@ -481,7 +484,7 @@ export default function TrainingCoursePage({ params }: { params: Promise<{ id: s
                       className="flex items-center gap-2 bg-indigo-600 text-white text-sm font-semibold px-5 py-2.5 rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors"
                     >
                       {marking ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-                      Mark Lesson Complete
+                      {t("markComplete")}
                     </button>
                   ) : activeLessonDone && (() => {
                     const next = sortedLessons.find((l) => l.order > activeLesson.order);
@@ -490,7 +493,7 @@ export default function TrainingCoursePage({ params }: { params: Promise<{ id: s
                         onClick={() => setActiveLesson(next)}
                         className="flex items-center gap-1.5 text-indigo-600 text-sm font-semibold hover:underline"
                       >
-                        Next: {next.title} <ChevronRight className="h-4 w-4" />
+                        {t("nextLesson", { title: next.title })} <ChevronRight className="h-4 w-4" />
                       </button>
                     ) : null;
                   })()}

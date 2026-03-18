@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { CheckCircle, Clock, PlusCircle, ChevronDown, ChevronUp } from "lucide-react";
 import { apiFetch } from "@/lib/fetchClient";
 import type { IMilestone } from "@/types";
@@ -41,6 +42,7 @@ export function MilestonePanel({
   const [releasing, setReleasing]     = useState<string | null>(null);
   const [removing, setRemoving]       = useState<string | null>(null);
   const [error, setError]             = useState("");
+  const t = useTranslations("milestonePanel");
 
   // New milestone form
   const [form, setForm] = useState({ title: "", amount: "", description: "" });
@@ -56,9 +58,9 @@ export function MilestonePanel({
   async function handleAdd() {
     setError("");
     const amount = Number(form.amount);
-    if (!form.title.trim()) return setError("Title is required.");
-    if (!amount || amount <= 0) return setError("Amount must be positive.");
-    if (amount > remaining) return setError(`Amount exceeds remaining budget (₱${remaining.toLocaleString()}).`);
+    if (!form.title.trim()) return setError(t("titleRequired"));
+    if (!amount || amount <= 0) return setError(t("amountPositive"));
+    if (amount > remaining) return setError(t("amountExceeds", { remaining: remaining.toLocaleString() }));
 
     try {
       setAdding(true);
@@ -68,11 +70,11 @@ export function MilestonePanel({
         body: JSON.stringify({ title: form.title, amount, description: form.description }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error((data as { error?: string }).error ?? "Failed to add milestone.");
+      if (!res.ok) throw new Error((data as { error?: string }).error ?? t("addFailed"));
       setMilestones((prev) => [...prev, (data as { milestone: IMilestone }).milestone]);
       setForm({ title: "", amount: "", description: "" });
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Failed to add milestone.");
+      setError(e instanceof Error ? e.message : t("addFailed"));
     } finally {
       setAdding(false);
     }
@@ -85,7 +87,7 @@ export function MilestonePanel({
       setReleasing(mId);
       const res = await apiFetch(`/api/jobs/${jobId}/milestones/${mId}/release`, { method: "POST" });
       const data = await res.json() as { allReleased?: boolean; error?: string };
-      if (!res.ok) throw new Error(data.error ?? "Failed to release milestone.");
+      if (!res.ok) throw new Error(data.error ?? t("releaseFailed"));
       setMilestones((prev) =>
         prev.map((m) =>
           m._id?.toString() === mId ? { ...m, status: "released", releasedAt: new Date() } : m
@@ -93,7 +95,7 @@ export function MilestonePanel({
       );
       if (data.allReleased) onReleased?.();
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Failed to release milestone.");
+      setError(e instanceof Error ? e.message : t("releaseFailed"));
     } finally {
       setReleasing(null);
     }
@@ -116,7 +118,7 @@ export function MilestonePanel({
         className="flex w-full items-center justify-between px-5 py-4"
       >
         <div className="flex items-center gap-2">
-          <span className="font-semibold text-slate-800">Milestone Payments</span>
+          <span className="font-semibold text-slate-800">{t("heading")}</span>
           {milestones.length > 0 && (
             <span className="rounded-full bg-violet-100 px-2 py-0.5 text-xs font-medium text-violet-700">
               {milestones.length}
@@ -125,7 +127,7 @@ export function MilestonePanel({
         </div>
         <div className="flex items-center gap-3 text-sm text-slate-500">
           <span>
-            ₱{releasedTotal.toLocaleString()} / ₱{totalCommitted.toLocaleString()} released
+            {t("releasedSummary", { released: releasedTotal.toLocaleString(), total: totalCommitted.toLocaleString() })}
           </span>
           {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
         </div>
@@ -137,8 +139,8 @@ export function MilestonePanel({
           {totalCommitted > 0 && (
             <div>
               <div className="mb-1 flex justify-between text-xs text-slate-500">
-                <span>Budget committed to milestones</span>
-                <span>{pct(totalCommitted, budget)}% (₱{totalCommitted.toLocaleString()} / ₱{budget.toLocaleString()})</span>
+                <span>{ t("budgetCommitted") }</span>
+                <span>{t("budgetPctLabel", { pct: pct(totalCommitted, budget), committed: totalCommitted.toLocaleString(), total: budget.toLocaleString() })}</span>
               </div>
               <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
                 <div
@@ -148,7 +150,7 @@ export function MilestonePanel({
               </div>
               {remaining > 0 && (
                 <p className="mt-1 text-xs text-slate-400">
-                  ₱{remaining.toLocaleString()} of budget not yet allocated to a milestone
+                  {t("budgetRemaining", { n: remaining.toLocaleString() })}
                 </p>
               )}
             </div>
@@ -160,8 +162,8 @@ export function MilestonePanel({
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100">
                 <CheckCircle size={18} className="text-slate-400" />
               </div>
-              <p className="text-sm font-medium text-slate-600">No milestones yet</p>
-              <p className="text-xs text-slate-400">Break the job into smaller payments for better control.</p>
+              <p className="text-sm font-medium text-slate-600">{t("emptyTitle")}</p>
+              <p className="text-xs text-slate-400">{t("emptyDesc")}</p>
             </div>
           ) : (
             <ul className="divide-y divide-slate-100">
@@ -174,7 +176,7 @@ export function MilestonePanel({
                     )}
                     {m.status === "released" && m.releasedAt && (
                       <p className="mt-0.5 text-xs text-emerald-600">
-                        Released {new Date(m.releasedAt).toLocaleDateString()}
+                        {t("releasedOn", { date: new Date(m.releasedAt).toLocaleDateString() })}
                       </p>
                     )}
                   </div>
@@ -217,19 +219,19 @@ export function MilestonePanel({
           {canEdit && (
             <div className="rounded-lg border border-dashed border-violet-200 bg-violet-50/50 p-4 space-y-3">
               <p className="text-xs font-semibold uppercase tracking-wide text-violet-600">
-                Add Milestone
+                {t("addHeading")}
               </p>
               <div className="grid gap-3 sm:grid-cols-2">
                 <input
                   type="text"
-                  placeholder="Title (e.g. Foundation laid)"
+                  placeholder={t("titlePlaceholder")}
                   value={form.title}
                   onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
                   className="col-span-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-violet-400"
                 />
                 <input
                   type="number"
-                  placeholder="Amount (₱)"
+                  placeholder={t("amountPlaceholder")}
                   min={1}
                   max={remaining}
                   value={form.amount}
@@ -238,7 +240,7 @@ export function MilestonePanel({
                 />
                 <input
                   type="text"
-                  placeholder="Description (optional)"
+                  placeholder={t("descPlaceholder")}
                   value={form.description}
                   onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
                   className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-violet-400"

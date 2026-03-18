@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 import { ArrowLeft } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth";
 import { ProfileSkeleton } from "./_components/skeletons";
@@ -21,6 +22,8 @@ export default async function ProviderPublicProfilePage({
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
+  const t = await getTranslations("clientPages");
+
   return (
     <div className="space-y-5">
       {/* Back nav */}
@@ -29,7 +32,7 @@ export default async function ProviderPublicProfilePage({
         className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-slate-800 transition-colors"
       >
         <ArrowLeft className="h-4 w-4" />
-        Back to Favorites
+        {t("backToFavorites")}
       </Link>
 
       <Suspense fallback={<ProfileSkeleton />}>

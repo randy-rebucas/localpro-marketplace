@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { CheckCircle, XCircle, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
+import { useTranslations } from "next-intl";
 
 function VerifyEmailContent() {
   const searchParams = useSearchParams();
@@ -12,11 +13,13 @@ function VerifyEmailContent() {
   const token = searchParams.get("token");
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
   const [message, setMessage] = useState("");
+  const t = useTranslations("auth");
+  const tc = useTranslations("common");
 
   useEffect(() => {
     if (!token) {
       setStatus("error");
-      setMessage("No verification token found. Please check your email link.");
+      setMessage(t("noVerificationToken"));
       return;
     }
 
@@ -29,16 +32,16 @@ function VerifyEmailContent() {
       .then(({ ok, data }) => {
         if (ok) {
           setStatus("success");
-          setMessage("Your email has been verified! Redirecting to login…");
+          setMessage(t("verifiedRedirecting"));
           setTimeout(() => router.push("/login"), 2500);
         } else {
           setStatus("error");
-          setMessage(data.error ?? "Verification failed. The link may have expired.");
+          setMessage(data.error ?? t("verificationFailedDefault"));
         }
       })
       .catch(() => {
         setStatus("error");
-        setMessage("Something went wrong. Please try again.");
+        setMessage(tc("somethingWentWrong"));
       });
   }, [token, router]);
 
@@ -47,14 +50,14 @@ function VerifyEmailContent() {
       {status === "loading" && (
         <>
           <Loader2 className="h-12 w-12 text-primary mx-auto animate-spin" />
-          <h2 className="text-xl font-semibold text-slate-900">Verifying your email…</h2>
+          <h2 className="text-xl font-semibold text-slate-900">{t("verifyingEmail")}</h2>
         </>
       )}
 
       {status === "success" && (
         <>
           <CheckCircle className="h-12 w-12 text-green-500 mx-auto" />
-          <h2 className="text-xl font-semibold text-slate-900">Email Verified!</h2>
+          <h2 className="text-xl font-semibold text-slate-900">{t("emailVerifiedTitle")}</h2>
           <p className="text-slate-500 text-sm">{message}</p>
         </>
       )}
@@ -62,13 +65,13 @@ function VerifyEmailContent() {
       {status === "error" && (
         <>
           <XCircle className="h-12 w-12 text-red-500 mx-auto" />
-          <h2 className="text-xl font-semibold text-slate-900">Verification Failed</h2>
+          <h2 className="text-xl font-semibold text-slate-900">{t("verificationFailedTitle")}</h2>
           <p className="text-slate-500 text-sm">{message}</p>
           <Link
             href="/login"
             className="inline-block mt-2 text-sm font-medium text-primary hover:text-primary-700 transition-colors"
           >
-            Back to login
+            {t("backToLogin")}
           </Link>
         </>
       )}

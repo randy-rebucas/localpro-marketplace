@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { getCurrentUser } from "@/lib/auth";
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { getArticlesForFolder } from "@/lib/knowledge";
 import KnowledgeBase from "@/components/shared/KnowledgeBase";
 import TourGuide from "@/components/shared/TourGuide";
@@ -11,6 +12,7 @@ export const metadata: Metadata = { title: "Knowledge Base" };
 export default async function ClientKnowledgePage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
+  const t = await getTranslations("clientPages");
 
   const articles = getArticlesForFolder("client").map((a) => ({
     _id:     a.slug,
@@ -36,9 +38,9 @@ export default async function ClientKnowledgePage() {
           <BookOpen className="h-6 w-6 text-primary" />
         </div>
         <div>
-          <h2 className="text-2xl font-bold text-slate-900">Knowledge Base</h2>
+          <h2 className="text-2xl font-bold text-slate-900">{t("knowledgeBase")}</h2>
           <p className="text-slate-500 text-sm mt-0.5">
-            Guides and answers for clients · {articles.length} articles
+            {t("knowledgeSub", { count: articles.length })}
           </p>
         </div>
       </div>

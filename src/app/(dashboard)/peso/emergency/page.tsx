@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { apiFetch } from "@/lib/fetchClient";
 import { formatCurrency } from "@/lib/utils";
+import { useTranslations } from "next-intl";
 
 const JOB_TYPES = [
   "Electrician", "Plumber", "Carpenter", "Construction Worker",
@@ -89,6 +90,7 @@ function timeAgo(dateStr: string) {
 }
 
 export default function EmergencyPage() {
+  const t = useTranslations("pesoPages");
   const [form, setForm] = useState(EMPTY_FORM);
   const [submitting, setSubmitting] = useState(false);
   const [broadcast, setBroadcast] = useState<{ _id: string; title: string } | null>(null);
@@ -159,13 +161,13 @@ export default function EmergencyPage() {
           </div>
         </div>
         <div>
-          <h2 className="text-lg font-bold text-slate-800">Emergency Broadcast Sent</h2>
+          <h2 className="text-lg font-bold text-slate-800">{t("emergencyBroadcastSent")}</h2>
           <p className="text-sm text-slate-500 mt-1">
-            The emergency job has been posted as a priority listing and will appear at the top of the provider marketplace.
+            {t("emergencyBroadcastDesc")}
           </p>
         </div>
         <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-left space-y-1">
-          <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Posted as</p>
+          <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">{t("postedAs")}</p>
           <p className="text-sm font-semibold text-slate-700">{broadcast.title}</p>
           <p className="text-[11px] text-slate-400 font-mono">{broadcast._id}</p>
         </div>
@@ -174,7 +176,7 @@ export default function EmergencyPage() {
           className="inline-flex items-center gap-1.5 text-sm font-semibold text-blue-600 hover:text-blue-800 transition-colors"
         >
           <RotateCcw className="h-3.5 w-3.5" />
-          Send another broadcast
+          {t("sendAnother")}
         </button>
       </div>
     );
@@ -192,9 +194,9 @@ export default function EmergencyPage() {
           </div>
         </div>
         <div>
-          <h1 className="text-xl font-bold text-slate-800">Emergency Workforce Activation</h1>
+          <h1 className="text-xl font-bold text-slate-800">{t("emergencyActivation")}</h1>
           <p className="text-sm text-slate-500 mt-0.5">
-            Post an urgent broadcast job that appears as a priority listing to all nearby providers.
+            {t("emergencyActivationSub")}
           </p>
         </div>
       </div>

@@ -7,6 +7,7 @@ import {
   CheckCircle, AlertCircle, Mail, X, CalendarDays, BarChart2,
   Wrench, Navigation, Star, ArrowRight, TrendingUp, Lock, ArrowUpRight,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { fetchClient } from "@/lib/fetchClient";
 import { MEMBER_LIMITS, PLAN_LABELS, PLAN_UPGRADE_NEXT, isAtMemberLimit, getMemberLimit } from "@/lib/businessPlan";
 import toast from "react-hot-toast";
@@ -53,10 +54,6 @@ interface StaffStat {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const ROLE_LABELS: Record<StaffRole, string> = {
-  worker: "Worker", dispatcher: "Dispatcher", supervisor: "Supervisor", finance: "Finance",
-};
-
 const ROLE_COLORS: Record<StaffRole, string> = {
   worker: "bg-slate-100 text-slate-700",
   dispatcher: "bg-blue-100 text-blue-700",
@@ -75,12 +72,7 @@ const ROLE_ICONS: Record<StaffRole, ElementType> = {
   worker: Wrench, dispatcher: Navigation, supervisor: Eye, finance: Coins,
 };
 
-const ROLE_DESCS: Record<StaffRole, string> = {
-  worker: "Field service worker. Receives and completes job assignments from dispatchers.",
-  dispatcher: "Assigns and manages job dispatch. Coordinates field workers and schedules.",
-  supervisor: "Read-only oversight of all staff activity and job progress.",
-  finance: "Views earnings and payment summaries. Cannot manage staff or dispatch jobs.",
-};
+
 
 // ─── Avatar helper ────────────────────────────────────────────────────────────
 
@@ -97,14 +89,30 @@ function Avatar({ name, avatar, size = "sm" }: { name?: string; avatar?: string 
   );
 }
 
-function staffUser(m: StaffMember) {
+function staffUser(m: StaffMember, unknownText = "Unknown") {
   if (typeof m.userId === "object" && m.userId !== null) return m.userId as { _id: string; name: string; email: string; avatar?: string | null };
-  return { _id: String(m.userId), name: "Unknown", email: "", avatar: null };
+  return { _id: String(m.userId), name: unknownText, email: "", avatar: null };
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function StaffClient() {
+  const t = useTranslations("providerPages");
+
+  const ROLE_LABELS: Record<StaffRole, string> = {
+    worker: t("provStaff_roleWorker"),
+    dispatcher: t("provStaff_roleDispatcher"),
+    supervisor: t("provStaff_roleSupervisor"),
+    finance: t("provStaff_roleFinance"),
+  };
+
+  const ROLE_DESCS: Record<StaffRole, string> = {
+    worker: t("provStaff_descWorker"),
+    dispatcher: t("provStaff_descDispatcher"),
+    supervisor: t("provStaff_descSupervisor"),
+    finance: t("provStaff_descFinance"),
+  };
+
   const [agency, setAgency]               = useState<AgencyProfile | null>(null);
   const [staff, setStaff]                 = useState<StaffMember[]>([]);
   const [tab, setTab]                     = useState<Tab>("team");
@@ -129,7 +137,7 @@ export default function StaffClient() {
       setAgency(agencyData.agency);
       const sData = await fetchClient<{ staff: StaffMember[] }>("/api/provider/agency/staff");
       setStaff(sData.staff);
-    } catch { toast.error("Failed to load staff."); }
+    } catch { toast.error(t("provStaff_errLoadStaff")); }
     finally { setLoading(false); }
   }, []);
 
@@ -141,7 +149,7 @@ export default function StaffClient() {
     setPerfLoading(true);
     fetchClient<{ stats: StaffStat[] }>("/api/provider/agency/staff/performance")
       .then((d) => setPerfStats(d.stats))
-      .catch(() => toast.error("Failed to load performance data."))
+      .catch(() => toast.error(t("provStaff_errLoadPerf")))
       .finally(() => setPerfLoading(false));
   }, [tab, perfStats.length]);
 
@@ -154,7 +162,7 @@ export default function StaffClient() {
         `/api/provider/agency/staff?searchEmail=${encodeURIComponent(searchEmail.trim())}`
       );
       setSearchResult(res.user ?? "notfound");
-    } catch { toast.error("Search failed."); setSearchResult("notfound"); }
+    } catch { toast.error(t("provStaff_errSearch")); setSearchResult("notfound"); }
     finally { setSearchLoading(false); }
   }
 
@@ -166,12 +174,12 @@ export default function StaffClient() {
         method: "POST",
         body: JSON.stringify({ agencyId: agency._id, userId: searchResult._id, role: inviteRole }),
       });
-      toast.success(`${searchResult.name} added as ${ROLE_LABELS[inviteRole]}.`);
+      toast.success(t("provStaff_successAdded", { name: searchResult.name, role: ROLE_LABELS[inviteRole] }));
       setShowInvite(false);
       setSearchEmail(""); setSearchResult(null); setInviteRole("worker");
       await load();
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Failed to add staff.");
+      toast.error(e instanceof Error ? e.message : t("provStaff_errAddStaff"));
     } finally { setSaving(false); }
   }
 
@@ -183,8 +191,8 @@ export default function StaffClient() {
         body: JSON.stringify({ agencyId: agency._id, staffId, role }),
       });
       await load(); setEditingRole(null); setPerfStats([]);
-      toast.success("Role updated.");
-    } catch { toast.error("Update failed."); }
+      toast.success(t("provStaff_successRoleUpdated"));
+    } catch { toast.error(t("provStaff_errUpdateRole")); }
   }
 
   async function handleRemove(staffId: string) {
@@ -193,14 +201,14 @@ export default function StaffClient() {
     try {
       await fetchClient(`/api/provider/agency/staff?agencyId=${agency._id}&staffId=${staffId}`, { method: "DELETE" });
       await load(); setPerfStats([]);
-      toast.success("Staff member removed.");
-    } catch { toast.error("Remove failed."); }
+      toast.success(t("provStaff_successRemoved"));
+    } catch { toast.error(t("provStaff_errRemove")); }
   }
 
   const roleCounts = staff.reduce((acc, m) => { acc[m.role] = (acc[m.role] ?? 0) + 1; return acc; }, {} as Record<StaffRole, number>);
   const filteredStaff = teamSearch.trim()
     ? staff.filter((m) => {
-        const u = staffUser(m);
+        const u = staffUser(m, t("provStaff_unknown"));
         const q = teamSearch.toLowerCase();
         return u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q);
       })
@@ -224,7 +232,7 @@ export default function StaffClient() {
   if (!agency) return (
     <div className="flex flex-col items-center justify-center py-24 gap-3 text-center">
       <Users className="h-10 w-10 text-slate-300" />
-      <p className="text-slate-500">No agency profile found. <a href="/provider/business" className="text-primary underline">Create one first.</a></p>
+      <p className="text-slate-500">{t("provStaff_noAgency")} <a href="/provider/business" className="text-primary underline">{t("provStaff_noAgencyLink")}</a></p>
     </div>
   );
 
@@ -238,8 +246,8 @@ export default function StaffClient() {
             <Users className="h-5 w-5 text-blue-600 dark:text-blue-400" />
           </div>
           <div>
-            <h1 className="text-base font-bold text-slate-800 dark:text-white">Staff Management</h1>
-            <p className="text-xs text-slate-500 dark:text-slate-400">{agency.name} · {staff.length} staff member{staff.length !== 1 ? "s" : ""}</p>
+            <h1 className="text-base font-bold text-slate-800 dark:text-white">{t("provStaff_heading")}</h1>
+            <p className="text-xs text-slate-500 dark:text-slate-400">{agency.name} &middot; {staff.length} {t(staff.length !== 1 ? "provStaff_staffMembers" : "provStaff_staffMember")}</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -268,7 +276,7 @@ export default function StaffClient() {
               className="btn-primary flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {showInvite ? <X className="h-4 w-4" /> : atLimit ? <Lock className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
-              {showInvite ? "Cancel" : "Add Staff"}
+              {showInvite ? t("provStaff_btnCancel") : t("provStaff_btnAddStaff")}
             </button>
           )}
         </div>
@@ -277,9 +285,9 @@ export default function StaffClient() {
       {/* ── Tabs ── */}
       <div className="flex items-center gap-1 bg-slate-100 rounded-xl p-1 w-fit">
         {([
-          { id: "team",        icon: Users,       label: "Team"        },
-          { id: "schedule",    icon: CalendarDays, label: "Schedule"   },
-          { id: "performance", icon: BarChart2,    label: "Performance" },
+          { id: "team",        icon: Users,       label: t("provStaff_tabTeam")        },
+          { id: "schedule",    icon: CalendarDays, label: t("provStaff_tabSchedule")   },
+          { id: "performance", icon: BarChart2,    label: t("provStaff_tabPerformance") },
         ] as { id: Tab; icon: ElementType; label: string }[]).map(({ id, icon: Icon, label }) => (
           <button
             key={id}
@@ -321,18 +329,18 @@ export default function StaffClient() {
             <div className="flex items-center justify-between gap-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
               <div className="flex items-center gap-2.5 text-sm text-amber-800">
                 <Lock className="h-4 w-4 shrink-0" />
-                <span>
-                  You&apos;ve reached the <strong>{planLabel}</strong> plan limit of{" "}
-                  <strong>{staffLimit} staff member{staffLimit === 1 ? "" : "s"}</strong>.
-                  {nextPlan && ` Upgrade to ${PLAN_LABELS[nextPlan]} to add more.`}
-                </span>
+              <span>
+                {t("provStaff_planLimitReachedThe")} <strong>{planLabel}</strong> {t("provStaff_planLimitOf")}{" "}
+                <strong>{staffLimit === Infinity ? "\u221e" : staffLimit} {t(staffLimit === 1 ? "provStaff_staffMember" : "provStaff_staffMembers")}</strong>.
+                {nextPlan && ` ${t("provStaff_planLimitUpgrade", { plan: PLAN_LABELS[nextPlan] })}`}
+              </span>
               </div>
               {nextPlan && (
                 <a
                   href="/provider/business/plan"
                   className="shrink-0 inline-flex items-center gap-1 text-xs font-semibold text-amber-700 hover:text-amber-900 underline underline-offset-2"
                 >
-                  Upgrade <ArrowUpRight className="h-3.5 w-3.5" />
+                  {t("provStaff_btnUpgrade")} <ArrowUpRight className="h-3.5 w-3.5" />
                 </a>
               )}
             </div>
@@ -342,12 +350,12 @@ export default function StaffClient() {
           {showInvite && (
             <div className="bg-white border border-primary/20 rounded-2xl p-5 space-y-5">
               <div>
-                <h2 className="font-semibold text-slate-800">Add Staff Member</h2>
-                <p className="text-xs text-slate-400 mt-0.5">Search by email to find and add an existing LocalPro user as staff.</p>
+                <h2 className="font-semibold text-slate-800">{t("provStaff_inviteTitle")}</h2>
+                <p className="text-xs text-slate-400 mt-0.5">{t("provStaff_inviteDesc")}</p>
               </div>
 
               <div className="space-y-2">
-                <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Email Address</label>
+                <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">{t("provStaff_emailLabel")}</label>
                 <div className="flex gap-2">
                   <div className="relative flex-1">
                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
@@ -366,7 +374,7 @@ export default function StaffClient() {
                     className="btn-secondary flex items-center gap-1.5 flex-shrink-0"
                   >
                     <Search className="h-4 w-4" />
-                    {searchLoading ? "Searching…" : "Search"}
+                    {searchLoading ? t("provStaff_btnSearching") : t("provStaff_btnSearch")}
                   </button>
                 </div>
               </div>
@@ -374,7 +382,7 @@ export default function StaffClient() {
               {searchResult === "notfound" && (
                 <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
                   <AlertCircle className="h-4 w-4 flex-shrink-0" />
-                  No user found with that email address.
+                  {t("provStaff_notFound")}
                 </div>
               )}
 
@@ -387,17 +395,17 @@ export default function StaffClient() {
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Role</label>
+                    <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">{t("provStaff_roleLabel")}</label>
                     <select className="input w-full" value={inviteRole} onChange={(e) => setInviteRole(e.target.value as StaffRole)}>
-                      <option value="worker">Worker</option>
-                      <option value="dispatcher">Dispatcher</option>
-                      <option value="supervisor">Supervisor</option>
-                      <option value="finance">Finance</option>
+                      <option value="worker">{t("provStaff_roleWorker")}</option>
+                      <option value="dispatcher">{t("provStaff_roleDispatcher")}</option>
+                      <option value="supervisor">{t("provStaff_roleSupervisor")}</option>
+                      <option value="finance">{t("provStaff_roleFinance")}</option>
                     </select>
                   </div>
 
                   <button onClick={handleInvite} disabled={saving} className="btn-primary">
-                    {saving ? "Adding…" : `Add as ${ROLE_LABELS[inviteRole]}`}
+                    {saving ? t("provStaff_btnAdding") : t("provStaff_btnAddAs", { role: ROLE_LABELS[inviteRole] })}
                   </button>
                 </div>
               )}
@@ -410,7 +418,7 @@ export default function StaffClient() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
               <input
                 className="input w-full pl-9 text-sm"
-                placeholder="Search by name or email…"
+                placeholder={t("provStaff_searchPlaceholder")}
                 value={teamSearch}
                 onChange={(e) => setTeamSearch(e.target.value)}
               />
@@ -421,18 +429,18 @@ export default function StaffClient() {
           {staff.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 bg-white rounded-2xl border border-slate-200 gap-3">
               <Users className="h-8 w-8 text-slate-300" />
-              <p className="text-sm text-slate-400">No staff members yet. Add someone to get started.</p>
+              <p className="text-sm text-slate-400">{t("provStaff_emptyNoStaff")}</p>
             </div>
           ) : filteredStaff.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 bg-white rounded-2xl border border-slate-200 gap-2">
               <Search className="h-7 w-7 text-slate-300" />
-              <p className="text-sm text-slate-400">No staff match &ldquo;{teamSearch}&rdquo;.</p>
-              <button onClick={() => setTeamSearch("")} className="text-xs text-primary hover:underline">Clear search</button>
+              <p className="text-sm text-slate-400">{t("provStaff_emptyNoMatch", { search: teamSearch })}</p>
+              <button onClick={() => setTeamSearch("")} className="text-xs text-primary hover:underline">{t("provStaff_clearSearch")}</button>
             </div>
           ) : (
             <div className="space-y-2">
               {filteredStaff.map((m) => {
-                const u = staffUser(m);
+                const u = staffUser(m, t("provStaff_unknown"));
                 const Icon = ROLE_ICONS[m.role];
                 const isEditing = editingRole?.id === m._id;
 
@@ -485,7 +493,7 @@ export default function StaffClient() {
                     {/* Inline role editor */}
                     {isEditing && (
                       <div className="border-t border-slate-100 px-4 py-4 space-y-3 bg-slate-50/60">
-                        <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Change Role</label>
+                        <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider">{t("provStaff_changeRoleLabel")}</label>
                         <div className="flex gap-2 flex-wrap">
                           {(["worker","dispatcher","supervisor","finance"] as StaffRole[]).map((r) => {
                             const RIcon = ROLE_ICONS[r];
@@ -506,7 +514,7 @@ export default function StaffClient() {
                           })}
                         </div>
                         <button onClick={() => setEditingRole(null)} className="text-xs text-slate-400 hover:text-slate-600 flex items-center gap-1">
-                          <X className="h-3 w-3" /> Close
+                          <X className="h-3 w-3" /> {t("provStaff_btnClose")}
                         </button>
                       </div>
                     )}
@@ -525,16 +533,16 @@ export default function StaffClient() {
             <CalendarDays className="h-8 w-8 text-primary" />
           </div>
           <div className="space-y-1">
-            <h3 className="font-semibold text-slate-800">Agency Schedule & Availability</h3>
+            <h3 className="font-semibold text-slate-800">{t("provStaff_scheduleTitle")}</h3>
             <p className="text-sm text-slate-400 max-w-xs">
-              Set your agency’s working hours, open days, and availability windows.
+              {t("provStaff_scheduleDesc")}
             </p>
           </div>
           <a
             href="/provider/business/schedule"
             className="btn-primary flex items-center gap-2"
           >
-            Manage Schedule <ArrowRight className="h-4 w-4" />
+            {t("provStaff_scheduleManage")} <ArrowRight className="h-4 w-4" />
           </a>
         </div>
       )}
@@ -544,14 +552,14 @@ export default function StaffClient() {
         <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
           <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
             <div>
-              <h2 className="font-semibold text-slate-800">Staff Performance</h2>
-              <p className="text-xs text-slate-400 mt-0.5">Completed jobs, ratings, and activity per staff member.</p>
+              <h2 className="font-semibold text-slate-800">{t("provStaff_perfTitle")}</h2>
+              <p className="text-xs text-slate-400 mt-0.5">{t("provStaff_perfDesc")}</p>
             </div>
             <button
               onClick={() => { setPerfStats([]); }}
               className="flex items-center gap-1.5 text-xs border border-slate-200 px-3 py-1.5 rounded-lg hover:bg-slate-50 text-slate-500 transition-colors"
             >
-              <RefreshCw className="h-3 w-3" /> Refresh
+              <RefreshCw className="h-3 w-3" /> {t("provStaff_btnRefresh")}
             </button>
           </div>
           {perfLoading ? (
@@ -561,24 +569,24 @@ export default function StaffClient() {
           ) : staff.length === 0 ? (
             <div className="flex flex-col items-center gap-2 py-12 text-center">
               <BarChart2 className="h-7 w-7 text-slate-300" />
-              <p className="text-sm text-slate-400">No staff data to display.</p>
+              <p className="text-sm text-slate-400">{t("provStaff_noStaffData")}</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm min-w-[560px]">
                 <thead>
                   <tr className="bg-slate-50 border-b border-slate-100 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-                    <th className="text-left px-5 py-3">#</th>
-                    <th className="text-left px-5 py-3">Staff</th>
-                    <th className="text-left px-5 py-3">Role</th>
-                    <th className="text-right px-5 py-3">Completed</th>
-                    <th className="text-right px-5 py-3">In Progress</th>
-                    <th className="text-right px-5 py-3">Rating</th>
+                    <th className="text-left px-5 py-3">{t("provStaff_colNum")}</th>
+                    <th className="text-left px-5 py-3">{t("provStaff_colStaff")}</th>
+                    <th className="text-left px-5 py-3">{t("provStaff_colRole")}</th>
+                    <th className="text-right px-5 py-3">{t("provStaff_colCompleted")}</th>
+                    <th className="text-right px-5 py-3">{t("provStaff_colInProgress")}</th>
+                    <th className="text-right px-5 py-3">{t("provStaff_colRating")}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
                   {staff.map((m, i) => {
-                    const u = staffUser(m);
+                    const u = staffUser(m, t("provStaff_unknown"));
                     const Icon = ROLE_ICONS[m.role];
                     const s = perfMap[u._id];
                     return (

@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useEffect, useState, useCallback } from "react";
 import Image from "next/image";
 import {
@@ -71,8 +72,7 @@ function PctBar({ pct, color }: { pct: number; color: string }) {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export default function LocationsClient() {
-  const [org, setOrg]           = useState<IBusinessOrganization | null>(null);
+export default function LocationsClient() {  const t = useTranslations("clientPages");  const [org, setOrg]           = useState<IBusinessOrganization | null>(null);
   const [loading, setLoading]   = useState(true);
   const [saving, setSaving]     = useState(false);
   const [showForm, setShowForm] = useState(false);
@@ -239,8 +239,8 @@ export default function LocationsClient() {
       <div className="flex flex-col items-center justify-center py-24 gap-3 text-center">
         <MapPin className="h-10 w-10 text-slate-300" />
         <p className="text-slate-500">
-          No business profile found.{" "}
-          <a href="/client/business" className="text-primary underline">Create one first.</a>
+          {t("bizLoc_noOrg")}{" "}
+          <a href="/client/business" className="text-primary underline">{t("bizAnalytics_createFirst")}</a>
         </p>
       </div>
     );
@@ -263,7 +263,7 @@ export default function LocationsClient() {
             <MapPin className="h-5 w-5 text-blue-600 dark:text-blue-400" />
           </div>
           <div>
-            <h1 className="text-base font-bold text-slate-800 dark:text-white">Locations</h1>
+            <h1 className="text-base font-bold text-slate-800 dark:text-white">{t("bizLoc_heading")}</h1>
             <p className="text-xs text-slate-500 dark:text-slate-400">
               {org.name}{org.locations.length > 0 && ` · ${activeCount} active${inactiveCount > 0 ? `, ${inactiveCount} inactive` : ""}`}
             </p>
@@ -285,7 +285,7 @@ export default function LocationsClient() {
             className="btn-primary flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {!showForm && atLimit ? <Lock className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
-            {showForm ? "Cancel" : "Add Location"}
+            {showForm ? t("bizLoc_cancel") : t("bizLoc_addLocation")}
           </button>
         </div>
       </div>
@@ -296,9 +296,8 @@ export default function LocationsClient() {
           <div className="flex items-center gap-2.5 text-sm text-amber-800">
             <Lock className="h-4 w-4 shrink-0" />
             <span>
-              You&apos;ve reached the <strong>{planLabel}</strong> plan limit of{" "}
-              <strong>{locationLimit} branch{locationLimit === 1 ? "" : "es"}</strong>.
-              {nextPlan && ` Upgrade to ${PLAN_LABELS[nextPlan]} to add more.`}
+              {t("bizLoc_limitBanner", { plan: planLabel, n: locationLimit, es: locationLimit === 1 ? "" : "es" })}
+              {nextPlan && ` ${t("bizAnalytics_upgradeTo", { plan: PLAN_LABELS[nextPlan] })}`}
             </span>
           </div>
           {nextPlan && (
@@ -306,7 +305,7 @@ export default function LocationsClient() {
               href="/client/business/plan"
               className="shrink-0 inline-flex items-center gap-1 text-xs font-semibold text-amber-700 hover:text-amber-900 underline underline-offset-2"
             >
-              Upgrade <ArrowUpRight className="h-3.5 w-3.5" />
+              {t("bizLoc_upgrade")} <ArrowUpRight className="h-3.5 w-3.5" />
             </a>
           )}
         </div>
@@ -316,17 +315,17 @@ export default function LocationsClient() {
       {showForm && (
         <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-5">
           <div>
-            <h2 className="font-semibold text-slate-800">{editingId ? "Edit Location" : "New Location"}</h2>
-            <p className="text-xs text-slate-400 mt-0.5">Label and address are required.</p>
+            <h2 className="font-semibold text-slate-800">{editingId ? t("bizLoc_formEditTitle") : t("bizLoc_formNewTitle")}</h2>
+            <p className="text-xs text-slate-400 mt-0.5">{t("bizLoc_formSub")}</p>
           </div>
 
           <div className="grid sm:grid-cols-2 gap-4">
             {/* Label */}
             <div>
-              <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Label *</label>
+              <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">{t("bizLoc_labelField")}</label>
               <input
                 className="input w-full"
-                placeholder="e.g. Main Branch – Cebu"
+                placeholder={t("bizLoc_labelPlaceholder")}
                 value={form.label}
                 onChange={(e) => setForm((f) => ({ ...f, label: e.target.value }))}
               />
@@ -334,7 +333,7 @@ export default function LocationsClient() {
 
             {/* Monthly Budget */}
             <div>
-              <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Monthly Budget (PHP)</label>
+              <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">{t("bizLoc_budgetField")}</label>
               <input
                 className="input w-full"
                 type="number" min={0}
@@ -345,19 +344,19 @@ export default function LocationsClient() {
 
             {/* Alert Threshold */}
             <div>
-              <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Alert Threshold (%)</label>
+              <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">{t("bizLoc_thresholdField")}</label>
               <input
                 className="input w-full"
                 type="number" min={1} max={99}
                 value={form.alertThreshold}
                 onChange={(e) => setForm((f) => ({ ...f, alertThreshold: parseInt(e.target.value, 10) || 80 }))}
               />
-              <p className="text-[11px] text-slate-400 mt-1">Notify when spend exceeds this % of budget.</p>
+              <p className="text-[11px] text-slate-400 mt-1">{t("bizLoc_thresholdHint")}</p>
             </div>
 
             {/* Branch Manager */}
             <div>
-              <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Branch Manager</label>
+              <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">{t("bizLoc_managerField")}</label>
               {membersLoading ? (
                 <div className="input w-full animate-pulse bg-slate-100" />
               ) : (
@@ -366,7 +365,7 @@ export default function LocationsClient() {
                   value={form.managerId}
                   onChange={(e) => setForm((f) => ({ ...f, managerId: e.target.value }))}
                 >
-                  <option value="">— No manager assigned —</option>
+                  <option value="">{t("bizLoc_managerPlaceholder")}</option>
                   {members.filter((m) => m.isActive).map((m) => {
                     const user = m.userId as { _id?: string; name?: string } | string;
                     const uid  = typeof user === "string" ? user : (user?._id ?? m.userId.toString());
@@ -379,19 +378,19 @@ export default function LocationsClient() {
 
             {/* Address */}
             <div className="sm:col-span-2">
-              <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Address *</label>
+              <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">{t("bizLoc_addressField")}</label>
               <LocationAutocomplete
                 value={form.address}
                 onChange={(address) => setForm((f) => ({ ...f, address }))}
-                placeholder="Start typing a full address…"
+                placeholder={t("bizLoc_addressPlaceholder")}
               />
             </div>
 
             {/* Allowed Service Categories */}
             <div className="sm:col-span-2">
               <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">
-                Allowed Service Categories
-                <span className="ml-1.5 text-slate-300 normal-case font-normal">(leave empty = all)</span>
+                {t("bizLoc_categoriesField")}
+                <span className="ml-1.5 text-slate-300 normal-case font-normal">{t("bizLoc_categoriesHint")}</span>
               </label>
               <div className="flex flex-wrap gap-2">
                 {SERVICE_CATEGORIES.map((cat) => {
@@ -417,9 +416,9 @@ export default function LocationsClient() {
 
           <div className="flex gap-3 pt-1">
             <button onClick={handleSave} disabled={saving} className="btn-primary">
-              {saving ? "Saving…" : editingId ? "Save Changes" : "Add Location"}
+              {saving ? t("bizLoc_savingButton") : editingId ? t("bizLoc_saveChanges") : t("bizLoc_addLocationButton")}
             </button>
-            <button onClick={() => setShowForm(false)} className="btn-secondary">Cancel</button>
+            <button onClick={() => setShowForm(false)} className="btn-secondary">{t("bizLoc_cancel")}</button>
           </div>
         </div>
       )}
@@ -431,9 +430,9 @@ export default function LocationsClient() {
             <MapPin className="h-6 w-6 text-slate-400" />
           </div>
           <div className="space-y-1.5 max-w-xs">
-            <p className="text-sm font-semibold text-slate-700">No locations yet</p>
+            <p className="text-sm font-semibold text-slate-700">{t("bizLoc_emptyHeading")}</p>
             <p className="text-xs text-slate-400 leading-relaxed">
-              Add your first business location to start tracking budgets, assigning managers, and monitoring jobs per site.
+              {t("bizLoc_emptyBody")}
             </p>
           </div>
           <button
@@ -442,7 +441,7 @@ export default function LocationsClient() {
             className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary text-white text-sm font-semibold hover:bg-primary-700 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {atLimit ? <Lock className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
-            {atLimit ? `Plan limit reached (${locationLimit})` : "Add your first location"}
+            {atLimit ? `Plan limit reached (${locationLimit})` : t("bizLoc_addFirst")}
           </button>
         </div>
       ) : (
@@ -485,9 +484,9 @@ export default function LocationsClient() {
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-semibold text-slate-800">{loc.label}</span>
                       {loc.isActive ? (
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 uppercase tracking-wider">Active</span>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 uppercase tracking-wider">{t("bizLoc_activeBadge")}</span>
                       ) : (
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 uppercase tracking-wider">Inactive</span>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 uppercase tracking-wider">{t("bizLoc_inactiveBadge")}</span>
                       )}
                       {managerName && (
                         <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-violet-50 text-violet-600 flex items-center gap-1">
@@ -507,8 +506,7 @@ export default function LocationsClient() {
                       </div>
                       <div className="flex items-center gap-1.5 text-xs text-slate-500">
                         <Bell className="h-3.5 w-3.5 text-slate-400" />
-                        <span>Alert at </span>
-                        <span className="font-semibold text-slate-700">{threshold}%</span>
+                        <span>{t("bizLoc_alertAt", { n: threshold })}</span>
                       </div>
                     </div>
 
@@ -519,7 +517,7 @@ export default function LocationsClient() {
                           <span key={c} className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 font-medium">{c}</span>
                         ))}
                         {cats.length > 5 && (
-                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-400">+{cats.length - 5} more</span>
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-400">{t("bizLoc_moreCategories", { n: cats.length - 5 })}</span>
                         )}
                       </div>
                     )}
@@ -529,7 +527,7 @@ export default function LocationsClient() {
                   <div className="flex items-center gap-1 flex-shrink-0">
                     <button
                       onClick={() => isDetailOpen ? setDetailLocId(null) : openDetail(loc._id.toString())}
-                      title="Branch detail"
+                      title={t("bizLoc_detailTitle", { defaultValue: "Branch detail" })}
                       className={`p-2 rounded-xl text-xs font-medium transition-colors flex items-center gap-1 ${
                         isDetailOpen ? "bg-primary/10 text-primary" : "hover:bg-slate-100 text-slate-400 hover:text-slate-600"
                       }`}
@@ -538,7 +536,7 @@ export default function LocationsClient() {
                     </button>
                     <button
                       onClick={() => handleToggle(loc)}
-                      title={loc.isActive ? "Deactivate" : "Activate"}
+                      title={loc.isActive ? t("bizLoc_deactivateTitle") : t("bizLoc_activateTitle")}
                       className="p-2 rounded-xl hover:bg-slate-100 transition-colors"
                     >
                       {loc.isActive ? <ToggleRight className="h-5 w-5 text-emerald-500" /> : <ToggleLeft className="h-5 w-5 text-slate-400" />}
@@ -546,7 +544,7 @@ export default function LocationsClient() {
                     <button
                       onClick={() => openEdit(loc)}
                       className="p-2 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
-                      title="Edit"
+                      title={t("bizLoc_editTitle")}
                     >
                       <Pencil className="h-4 w-4" />
                     </button>
@@ -556,7 +554,7 @@ export default function LocationsClient() {
                           onClick={() => handleDelete(loc._id.toString())}
                           className="px-2 py-1 rounded-lg bg-red-500 text-white text-xs font-semibold hover:bg-red-600 transition-colors"
                         >
-                          Confirm
+                          {t("bizLoc_confirmDelete")}
                         </button>
                         <button
                           onClick={() => setConfirmDeleteId(null)}
@@ -569,7 +567,7 @@ export default function LocationsClient() {
                       <button
                         onClick={() => setConfirmDeleteId(loc._id.toString())}
                         className="p-2 rounded-xl hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors"
-                        title="Remove"
+                        title={t("bizLoc_removeTitle")}
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
@@ -583,7 +581,7 @@ export default function LocationsClient() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <BarChart2 className="h-4 w-4 text-slate-400" />
-                        <h3 className="font-semibold text-slate-800 text-sm">Branch Detail</h3>
+                        <h3 className="font-semibold text-slate-800 text-sm">{t("bizLoc_branchDetailHeading")}</h3>
                       </div>
                       <button onClick={() => setDetailLocId(null)} className="p-1 rounded-lg hover:bg-slate-200 text-slate-400">
                         <X className="h-3.5 w-3.5" />
@@ -602,11 +600,11 @@ export default function LocationsClient() {
                         {/* KPI cards */}
                         <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
                           {[
-                            { label: "Budget Used", value: `${detail.kpi.budgetUsedPct}%`, icon: Wallet, color: detail.kpi.budgetUsedPct >= 90 ? "text-red-600" : detail.kpi.budgetUsedPct >= 70 ? "text-amber-600" : "text-emerald-600" },
-                            { label: "Month Spend", value: formatCurrency(detail.kpi.monthlySpend), icon: Wallet, color: "text-slate-700" },
-                            { label: "Active Jobs", value: detail.kpi.activeJobs, icon: Briefcase, color: "text-blue-600" },
-                            { label: "Completed", value: detail.kpi.completedJobs, icon: CheckCircle2, color: "text-emerald-600" },
-                            { label: "Perf. Score", value: detail.kpi.avgRating > 0 ? detail.kpi.avgRating.toFixed(1) : "—", icon: Star, color: "text-amber-500" },
+                            { label: t("bizLoc_kpiBudgetUsed"), value: `${detail.kpi.budgetUsedPct}%`, icon: Wallet, color: detail.kpi.budgetUsedPct >= 90 ? "text-red-600" : detail.kpi.budgetUsedPct >= 70 ? "text-amber-600" : "text-emerald-600" },
+                            { label: t("bizLoc_kpiMonthSpend"), value: formatCurrency(detail.kpi.monthlySpend), icon: Wallet, color: "text-slate-700" },
+                            { label: t("bizLoc_kpiActiveJobs"), value: detail.kpi.activeJobs, icon: Briefcase, color: "text-blue-600" },
+                            { label: t("bizLoc_kpiCompleted"), value: detail.kpi.completedJobs, icon: CheckCircle2, color: "text-emerald-600" },
+                            { label: t("bizLoc_kpiPerfScore"), value: detail.kpi.avgRating > 0 ? detail.kpi.avgRating.toFixed(1) : "—", icon: Star, color: "text-amber-500" },
                           ].map((c) => (
                             <div key={c.label} className="bg-white rounded-xl border border-slate-200 p-3 space-y-1.5">
                               <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">{c.label}</p>
@@ -619,7 +617,7 @@ export default function LocationsClient() {
                         {loc.monthlyBudget > 0 && (
                           <div className="space-y-1.5">
                             <div className="flex items-center justify-between text-xs">
-                              <p className="font-medium text-slate-600">Budget Utilization</p>
+                              <p className="font-medium text-slate-600">{t("bizLoc_budgetUtilization")}</p>
                               <p className={`font-bold tabular-nums ${detail.kpi.budgetUsedPct >= 90 ? "text-red-600" : detail.kpi.budgetUsedPct >= 70 ? "text-amber-600" : "text-emerald-600"}`}>
                                 {detail.kpi.budgetUsedPct}%
                               </p>
@@ -629,13 +627,13 @@ export default function LocationsClient() {
                               color={detail.kpi.budgetUsedPct >= 90 ? "#ef4444" : detail.kpi.budgetUsedPct >= 70 ? "#f59e0b" : "#10b981"}
                             />
                             <div className="flex items-center justify-between">
-                              <p className="text-[11px] text-slate-400">{formatCurrency(detail.kpi.monthlySpend)} spent</p>
-                              <p className="text-[11px] text-slate-400">{formatCurrency(loc.monthlyBudget)} budget</p>
+                              <p className="text-[11px] text-slate-400">{formatCurrency(detail.kpi.monthlySpend)} {t("bizLoc_spent", { defaultValue: "spent" })}</p>
+                              <p className="text-[11px] text-slate-400">{formatCurrency(loc.monthlyBudget)} {t("bizLoc_budgetLabel", { defaultValue: "budget" })}</p>
                             </div>
                             {detail.kpi.budgetUsedPct >= (threshold) && (
                               <div className="flex items-center gap-1.5 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mt-1">
                                 <AlertTriangle className="h-3.5 w-3.5 flex-shrink-0" />
-                                Budget threshold reached — consider reviewing spend.
+                                {t("bizLoc_thresholdAlert")}
                               </div>
                             )}
                           </div>
@@ -648,12 +646,12 @@ export default function LocationsClient() {
                           <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
                             <div className="flex items-center gap-2 px-4 py-3 border-b border-slate-100">
                               <Briefcase className="h-3.5 w-3.5 text-slate-400" />
-                              <p className="text-xs font-semibold text-slate-700">Job History</p>
+                              <p className="text-xs font-semibold text-slate-700">{t("bizLoc_jobHistory")}</p>
                             </div>
                             {detail.recentJobs.length === 0 ? (
                               <div className="flex flex-col items-center gap-1.5 py-8 text-center">
                                 <Briefcase className="h-6 w-6 text-slate-300" />
-                                <p className="text-xs text-slate-400">No jobs yet</p>
+                                <p className="text-xs text-slate-400">{t("bizLoc_noJobs")}</p>
                               </div>
                             ) : (
                               <ul className="divide-y divide-slate-50">
@@ -676,12 +674,12 @@ export default function LocationsClient() {
                           <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
                             <div className="flex items-center gap-2 px-4 py-3 border-b border-slate-100">
                               <Users className="h-3.5 w-3.5 text-slate-400" />
-                              <p className="text-xs font-semibold text-slate-700">Provider Usage History</p>
+                              <p className="text-xs font-semibold text-slate-700">{t("bizLoc_providerUsage")}</p>
                             </div>
                             {detail.topProviders.length === 0 ? (
                               <div className="flex flex-col items-center gap-1.5 py-8 text-center">
                                 <Users className="h-6 w-6 text-slate-300" />
-                                <p className="text-xs text-slate-400">No providers yet</p>
+                                <p className="text-xs text-slate-400">{t("bizLoc_noProviders")}</p>
                               </div>
                             ) : (
                               <ul className="divide-y divide-slate-50">

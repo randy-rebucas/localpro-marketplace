@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import Image from "next/image";
+import { useTranslations } from "next-intl";
 import Modal from "@/components/ui/Modal";
 import { formatCurrency } from "@/lib/utils";
 import { Star, Briefcase, Clock, CheckCircle, XCircle, User, Calendar, Heart, Sparkles, Timer } from "lucide-react";
@@ -60,6 +61,8 @@ export default function ProviderInfoButton({
 }) {
   const { user } = useAuthStore();
   const isClient = user?.role === "client";
+  const t = useTranslations("providerInfoButton");
+  const tCommon = useTranslations("common");
 
   const [open, setOpen] = useState(false);
   const [profile, setProfile] = useState<ProviderProfile | null>(null);
@@ -85,7 +88,7 @@ export default function ProviderInfoButton({
       if (isFavorite) {
         await apiFetch(`/api/favorites/${providerId}`, { method: "DELETE" });
         setIsFavorite(false);
-        toast.success("Removed from favorites");
+        toast.success(t("removedFromFavorites"));
       } else {
         const res = await apiFetch("/api/favorites", {
           method: "POST",
@@ -94,10 +97,10 @@ export default function ProviderInfoButton({
         });
         if (!res.ok) throw new Error();
         setIsFavorite(true);
-        toast.success("Added to favorites!");
+        toast.success(t("addedToFavorites"));
       }
     } catch {
-      toast.error("Something went wrong");
+      toast.error(tCommon("somethingWentWrong"));
     } finally {
       setFavLoading(false);
     }
@@ -126,7 +129,7 @@ export default function ProviderInfoButton({
         className="inline-flex items-center gap-1.5 text-xs font-medium text-indigo-600 hover:text-indigo-800 hover:underline transition-colors"
       >
         <User className="h-3.5 w-3.5" />
-        View provider
+        {t("triggerBtn")}
       </button>
 
       {showDirectJob && (
@@ -137,7 +140,7 @@ export default function ProviderInfoButton({
       />
     )}
 
-    <Modal isOpen={open} onClose={() => setOpen(false)} title="Provider Details" size="md">
+    <Modal isOpen={open} onClose={() => setOpen(false)} title={t("modalTitle")} size="md">
         <div className="p-5 space-y-5">
           {loading && (
             <div className="flex justify-center py-8">
@@ -147,7 +150,7 @@ export default function ProviderInfoButton({
 
           {error && (
             <p className="text-center text-sm text-slate-500 py-6">
-              Could not load provider profile.
+              {t("loadError")}
             </p>
           )}
 
@@ -163,14 +166,14 @@ export default function ProviderInfoButton({
                 }`}
               >
                 <Heart className={`h-3.5 w-3.5 ${isFavorite ? "fill-red-400 text-red-400" : ""}`} />
-                {isFavorite ? "Unfavorite" : "Save to Favorites"}
+                {isFavorite ? t("unfavorite") : t("saveToFavorites")}
               </button>
               <button
                 onClick={() => { setOpen(false); setShowDirectJob(true); }}
                 className="flex-1 flex items-center justify-center gap-1.5 rounded-lg bg-primary text-white py-2 text-xs font-medium hover:bg-primary/90 transition-colors"
               >
                 <Sparkles className="h-3.5 w-3.5" />
-                Post Job
+                {t("postJob")}
               </button>
             </div>
           )}
@@ -199,16 +202,16 @@ export default function ProviderInfoButton({
                     <h3 className="font-semibold text-slate-900">{profile.userId.name}</h3>
                     {profile.userId.isVerified ? (
                       <span className="inline-flex items-center gap-1 text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-medium">
-                        <CheckCircle className="h-3 w-3" /> Verified
+                        <CheckCircle className="h-3 w-3" /> {t("verified")}
                       </span>
                     ) : (
                       <span className="inline-flex items-center gap-1 text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-medium">
-                        <XCircle className="h-3 w-3" /> Unverified
+                        <XCircle className="h-3 w-3" /> {t("unverified")}
                       </span>
                     )}
                     {profile.isLocalProCertified && (
                       <span className="inline-flex items-center gap-1 text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-medium border border-indigo-200">
-                        🎖️ LocalPro Certified
+                        {t("localProCertified")}
                       </span>
                     )}
                     {profile.availabilityStatus && (
@@ -224,15 +227,15 @@ export default function ProviderInfoButton({
               {/* Stats row */}
               <div className="grid grid-cols-3 gap-3">
                 <div className="bg-slate-50 rounded-xl p-3 text-center">
-                  <p className="text-xs text-slate-500 mb-1">Rating</p>
+                  <p className="text-xs text-slate-500 mb-1">{t("ratingLabel")}</p>
                   {(profile.avgRating ?? 0) > 0 ? (
                     <Stars rating={profile.avgRating!} />
                   ) : (
-                    <p className="text-sm text-slate-400">No ratings</p>
+                    <p className="text-sm text-slate-400">{t("noRatings")}</p>
                   )}
                 </div>
                 <div className="bg-slate-50 rounded-xl p-3 text-center">
-                  <p className="text-xs text-slate-500 mb-1">Jobs Done</p>
+                  <p className="text-xs text-slate-500 mb-1">{t("jobsDoneLabel")}</p>
                   <div className="flex items-center justify-center gap-1">
                     <Briefcase className="h-4 w-4 text-indigo-500" />
                     <span className="text-sm font-semibold text-slate-800">
@@ -241,11 +244,13 @@ export default function ProviderInfoButton({
                   </div>
                 </div>
                 <div className="bg-slate-50 rounded-xl p-3 text-center">
-                  <p className="text-xs text-slate-500 mb-1">Experience</p>
+                  <p className="text-xs text-slate-500 mb-1">{t("experienceLabel")}</p>
                   <div className="flex items-center justify-center gap-1">
                     <Clock className="h-4 w-4 text-indigo-500" />
                     <span className="text-sm font-semibold text-slate-800">
-                      {profile.yearsExperience ?? 0} yr{(profile.yearsExperience ?? 0) !== 1 ? "s" : ""}
+                      {(profile.yearsExperience ?? 0) !== 1
+                        ? t("yearsExperiencePlural", { n: profile.yearsExperience ?? 0 })
+                        : t("yearsExperience", { n: 1 })}
                     </span>
                   </div>
                 </div>
@@ -256,21 +261,21 @@ export default function ProviderInfoButton({
                 <div className="flex flex-wrap gap-2">
                   {(profile.streak ?? 0) >= 3 && (
                     <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
-                      🔥 {profile.streak}-Star Streak
+                      🔥 {t("starStreak", { n: profile.streak ?? 0 })}
                     </span>
                   )}
                   {profile.avgResponseTimeHours != null && profile.avgResponseTimeHours > 0 && (
                     <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
                       <Sparkles className="h-3 w-3" />
-                      Responds in ~{profile.avgResponseTimeHours < 1
+                      {t("respondsIn", { time: profile.avgResponseTimeHours < 1
                         ? `${Math.round(profile.avgResponseTimeHours * 60)}m`
-                        : `${profile.avgResponseTimeHours.toFixed(1)}h`}
+                        : `${profile.avgResponseTimeHours.toFixed(1)}h` })}
                     </span>
                   )}
                   {profile.breakdown && profile.breakdown.count >= 3 && (
                     <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
                       <Timer className="h-3 w-3" />
-                      {Math.round((profile.breakdown.punctuality / 5) * 100)}% on-time
+                      {t("onTime", { pct: Math.round((profile.breakdown.punctuality / 5) * 100) })}
                     </span>
                   )}
                 </div>
@@ -279,12 +284,12 @@ export default function ProviderInfoButton({
               {/* Rating breakdown bars */}
               {profile.breakdown && profile.breakdown.count > 0 && (
                 <div className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 space-y-2.5">
-                  <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Detailed Ratings <span className="font-normal text-slate-400">({profile.breakdown.count} review{profile.breakdown.count !== 1 ? 's' : ''})</span></p>
+                  <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">{t("detailedRatings")} <span className="font-normal text-slate-400">{profile.breakdown.count !== 1 ? t("detailedRatingsCountPlural", { n: profile.breakdown.count }) : t("detailedRatingsCount", { n: 1 })}</span></p>
                   {([
-                    { key: "quality" as const,         label: "Quality of Work" },
-                    { key: "professionalism" as const, label: "Professionalism" },
-                    { key: "punctuality" as const,     label: "Punctuality" },
-                    { key: "communication" as const,   label: "Communication" },
+                    { key: "quality" as const,         label: t("qualityLabel") },
+                    { key: "professionalism" as const, label: t("professionalismLabel") },
+                    { key: "punctuality" as const,     label: t("punctualityLabel") },
+                    { key: "communication" as const,   label: t("communicationLabel") },
                   ]).map(({ key, label }) => {
                     const val = profile.breakdown![key];
                     const pct = Math.round((val / 5) * 100);
@@ -304,7 +309,7 @@ export default function ProviderInfoButton({
               {/* Hourly rate */}
               {profile.hourlyRate != null && profile.hourlyRate > 0 && (
                 <div className="flex items-center justify-between bg-indigo-50 rounded-xl px-4 py-3">
-                  <span className="text-sm text-indigo-700 font-medium">Hourly Rate</span>
+                  <span className="text-sm text-indigo-700 font-medium">{t("hourlyRateLabel")}</span>
                   <span className="text-sm font-bold text-indigo-900">
                     {formatCurrency(profile.hourlyRate)} / hr
                   </span>
@@ -314,7 +319,7 @@ export default function ProviderInfoButton({
               {/* Bio */}
               {profile.bio && (
                 <div>
-                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">About</p>
+                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">{t("aboutLabel")}</p>
                   <p className="text-sm text-slate-700 leading-relaxed">{profile.bio}</p>
                 </div>
               )}
@@ -322,7 +327,7 @@ export default function ProviderInfoButton({
               {/* Skills */}
               {profile.skills && profile.skills.length > 0 && (
                 <div>
-                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Skills</p>
+                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">{t("skillsLabel")}</p>
                   <div className="flex flex-wrap gap-2">
                     {profile.skills.map((s) => (
                       <span key={s} className="bg-slate-100 text-slate-700 text-xs px-2.5 py-1 rounded-full font-medium">
@@ -338,7 +343,7 @@ export default function ProviderInfoButton({
                 <div>
                   <div className="flex items-center gap-1.5 mb-2">
                     <Calendar className="h-3.5 w-3.5 text-slate-400" />
-                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Weekly Schedule</p>
+                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{t("scheduleLabel")}</p>
                   </div>
                   <div className="grid grid-cols-7 gap-1 text-center">
                     {(["mon","tue","wed","thu","fri","sat","sun"] as const).map((day) => {
@@ -358,7 +363,7 @@ export default function ProviderInfoButton({
                               <p className="text-[9px] text-indigo-600 leading-tight">{slot.to}</p>
                             </>
                           ) : (
-                            <p className="text-[9px] text-slate-400 mt-0.5">Off</p>
+                            <p className="text-[9px] text-slate-400 mt-0.5">{t("dayOff")}</p>
                           )}
                         </div>
                       );

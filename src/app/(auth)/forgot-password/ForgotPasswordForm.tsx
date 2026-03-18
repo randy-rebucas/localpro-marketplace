@@ -3,16 +3,19 @@
 import { useState } from "react";
 import Link from "next/link";
 import { CheckCircle } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 export default function ForgotPasswordForm() {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState("");
+  const t = useTranslations("auth");
+  const tc = useTranslations("common");
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!email) { setError("Email is required"); return; }
+    if (!email) { setError(t("emailRequired")); return; }
     setError("");
     setLoading(true);
     try {
@@ -22,10 +25,10 @@ export default function ForgotPasswordForm() {
         body: JSON.stringify({ email }),
       });
       const data = await res.json();
-      if (!res.ok) { setError(data.error ?? "Something went wrong"); return; }
+      if (!res.ok) { setError(data.error ?? tc("somethingWentWrong")); return; }
       setSent(true);
     } catch {
-      setError("Something went wrong. Please try again.");
+      setError(tc("somethingWentWrong"));
     } finally {
       setLoading(false);
     }
@@ -35,13 +38,12 @@ export default function ForgotPasswordForm() {
     return (
       <div className="text-center space-y-4">
         <CheckCircle className="h-12 w-12 text-green-500 mx-auto" />
-        <h2 className="text-xl font-semibold text-slate-900">Check your inbox</h2>
+        <h2 className="text-xl font-semibold text-slate-900">{t("checkYourInbox")}</h2>
         <p className="text-slate-500 text-sm">
-          If <strong>{email}</strong> is registered, you&apos;ll receive a reset link shortly.
-          Check your spam folder if you don&apos;t see it.
+          {t("resetLinkSent", { email })}
         </p>
         <Link href="/login" className="block text-sm font-medium text-primary hover:text-primary-700 transition-colors mt-4">
-          Back to login
+          {t("backToLogin")}
         </Link>
       </div>
     );
@@ -49,14 +51,14 @@ export default function ForgotPasswordForm() {
 
   return (
     <>
-      <h2 className="text-2xl font-bold text-slate-900 mb-1">Forgot your password?</h2>
+      <h2 className="text-2xl font-bold text-slate-900 mb-1">{t("forgotPasswordTitle")}</h2>
       <p className="text-slate-500 text-sm mb-6">
-        Enter your email and we&apos;ll send you a reset link.
+        {t("forgotPasswordSubtitle")}
       </p>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label htmlFor="email" className="label block mb-1">Email address</label>
+          <label htmlFor="email" className="label block mb-1">{t("email")}</label>
           <input
             id="email"
             type="email"
@@ -71,14 +73,14 @@ export default function ForgotPasswordForm() {
         </div>
 
         <button type="submit" className="btn-primary w-full py-2.5" disabled={loading}>
-          {loading ? "Sending…" : "Send reset link"}
+          {loading ? t("sending") : t("sendResetLink")}
         </button>
       </form>
 
       <p className="mt-6 text-center text-sm text-slate-500">
-        Remember it?{" "}
+        {t("rememberIt")}{" "}
         <Link href="/login" className="font-medium text-primary hover:text-primary-700 transition-colors">
-          Sign in
+          {t("signIn")}
         </Link>
       </p>
     </>

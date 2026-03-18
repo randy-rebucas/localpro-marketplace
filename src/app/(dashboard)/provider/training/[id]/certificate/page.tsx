@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Loader2, Download, ArrowLeft, ShieldCheck, Award } from "lucide-react";
 import toast from "react-hot-toast";
+import { useTranslations } from "next-intl";
 
 interface CertData {
   providerName: string;
@@ -25,6 +26,7 @@ export default function CertificatePage({ params }: { params: Promise<{ id: stri
   const { id } = use(params);
   const [cert, setCert] = useState<CertData | null>(null);
   const [loading, setLoading] = useState(true);
+  const t = useTranslations("training");
 
   useEffect(() => {
     fetch(`/api/provider/training/${id}/certificate`)
@@ -33,7 +35,7 @@ export default function CertificatePage({ params }: { params: Promise<{ id: stri
         if (data.error) { toast.error(data.error); return; }
         setCert(data as CertData);
       })
-      .catch(() => toast.error("Failed to load certificate."))
+        .catch(() => toast.error(t("loadFailed")))
       .finally(() => setLoading(false));
   }, [id]);
 
@@ -51,9 +53,9 @@ export default function CertificatePage({ params }: { params: Promise<{ id: stri
     return (
       <div className="flex flex-col items-center gap-4 py-32 text-slate-500">
         <ShieldCheck className="h-12 w-12 opacity-30" />
-        <p className="font-medium">Certificate not available.</p>
+        <p className="font-medium">{t("certificate.notAvailable")}</p>
         <Link href="/provider/training" className="text-sm text-indigo-600 hover:underline">
-          Back to Training
+          {t("certificate.backToTraining")}
         </Link>
       </div>
     );
@@ -88,13 +90,13 @@ export default function CertificatePage({ params }: { params: Promise<{ id: stri
             href={`/provider/training/${id}`}
             className="flex items-center gap-1.5 text-sm text-slate-600 hover:text-slate-900 transition-colors"
           >
-            <ArrowLeft className="h-4 w-4" /> Back to Course
+            <ArrowLeft className="h-4 w-4" /> {t("backToCourse")}
           </Link>
           <button
             onClick={() => window.print()}
             className="flex items-center gap-2 bg-indigo-600 text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors shadow-sm"
           >
-            <Download className="h-4 w-4" /> Download / Print PDF
+            <Download className="h-4 w-4" /> {t("downloadCertificate")}
           </button>
         </div>
 
@@ -162,7 +164,7 @@ export default function CertificatePage({ params }: { params: Promise<{ id: stri
 
             {/* Certificate of Completion heading */}
             <p className="text-xs font-semibold tracking-[0.35em] uppercase text-slate-400 mb-2">
-              Certificate of Completion
+              {t("certificate.title")}
             </p>
 
             {/* Decorative rule */}
@@ -173,7 +175,7 @@ export default function CertificatePage({ params }: { params: Promise<{ id: stri
             </div>
 
             {/* This certifies that */}
-            <p className="text-[11px] italic text-slate-500 mb-1">This certifies that</p>
+            <p className="text-[11px] italic text-slate-500 mb-1">{t("certificate.thisCertifies")}</p>
 
             {/* Provider name */}
             <h1
@@ -186,7 +188,7 @@ export default function CertificatePage({ params }: { params: Promise<{ id: stri
             </h1>
 
             {/* has successfully completed */}
-            <p className="text-[11px] italic text-slate-500 mb-2">has successfully completed</p>
+            <p className="text-[11px] italic text-slate-500 mb-2">{t("certificate.hasCompleted")}</p>
 
             {/* Course title */}
             <h2
@@ -210,7 +212,7 @@ export default function CertificatePage({ params }: { params: Promise<{ id: stri
               {/* Completion date */}
               <div className="text-left">
                 <div className={`h-px w-28 mb-1 ${isCertification ? "bg-yellow-400" : "bg-slate-300"}`} />
-                <p className="text-[10px] text-slate-500 font-medium">Date of Completion</p>
+                <p className="text-[10px] text-slate-500 font-medium">{t("certificate.dateOfCompletion")}</p>
                 <p className={`text-xs font-semibold ${isCertification ? "text-yellow-800" : "text-slate-700"}`}>
                   {formatLongDate(cert.completedAt)}
                 </p>
@@ -226,14 +228,14 @@ export default function CertificatePage({ params }: { params: Promise<{ id: stri
                   ? <ShieldCheck className="h-5 w-5 text-yellow-600 mb-0.5" />
                   : <Award className="h-5 w-5 text-indigo-600 mb-0.5" />}
                 <p className={`text-[9px] font-bold tracking-wider uppercase ${isCertification ? "text-yellow-700" : "text-indigo-700"}`}>
-                  {isCertification ? "LocalPro Certified" : "Completed"}
+                  {isCertification ? t("certificate.localproCertified") : t("completed")}
                 </p>
               </div>
 
               {/* Certificate number */}
               <div className="text-right">
                 <div className={`h-px w-28 ml-auto mb-1 ${isCertification ? "bg-yellow-400" : "bg-slate-300"}`} />
-                <p className="text-[10px] text-slate-500 font-medium">Certificate No.</p>
+                <p className="text-[10px] text-slate-500 font-medium">{t("certificate.certificateNo")}</p>
                 <p className={`text-xs font-mono font-semibold ${isCertification ? "text-yellow-800" : "text-slate-700"}`}>
                   {cert.certificateNumber}
                 </p>
@@ -244,7 +246,7 @@ export default function CertificatePage({ params }: { params: Promise<{ id: stri
 
         {/* Helper text — hidden when printing */}
         <p className="no-print mt-4 text-xs text-slate-400 text-center">
-          Click &quot;Download / Print PDF&quot; → Save as PDF in your browser&apos;s print dialog.
+          {t("certificate.printHint")}
         </p>
       </div>
     </>

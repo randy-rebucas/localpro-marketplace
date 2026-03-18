@@ -4,9 +4,13 @@ import { JobStatusBadge } from "@/components/ui/Badge";
 import { formatCurrency, formatRelativeTime } from "@/lib/utils";
 import Link from "next/link";
 import { Briefcase, ShieldCheck } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 
 export async function RecentJobs({ userId }: { userId: string }) {
-  const recentJobs = await jobRepository.findRecentForClient(userId, 5);
+  const [recentJobs, t] = await Promise.all([
+    jobRepository.findRecentForClient(userId, 5),
+    getTranslations("clientPages"),
+  ]);
 
   const jobIds = recentJobs.map((j) => String(j._id));
   const fundedMap =
@@ -17,16 +21,16 @@ export async function RecentJobs({ userId }: { userId: string }) {
   return (
     <div className="bg-white rounded-xl border border-slate-200 shadow-card">
       <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-        <h3 className="font-semibold text-slate-900">Recent Jobs</h3>
+        <h3 className="font-semibold text-slate-900">{t("dash_recentJobs")}</h3>
         <Link href="/client/jobs" className="text-sm text-primary hover:underline">
-          View all
+          {t("dash_viewAll")}
         </Link>
       </div>
       {recentJobs.length === 0 ? (
         <div className="px-6 py-12 text-center text-slate-400">
-          <p className="text-sm">No jobs yet.</p>
+          <p className="text-sm">{t("dash_noJobsYet")}</p>
           <Link href="/client/post-job" className="mt-3 inline-block btn-primary text-xs">
-            Post your first job
+            {t("dash_postFirstJob")}
           </Link>
         </div>
       ) : (
@@ -57,7 +61,7 @@ export async function RecentJobs({ userId }: { userId: string }) {
                   </div>
                   <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
                     <div className="text-right hidden sm:block">
-                      <p className="text-[10px] text-slate-400">Budget</p>
+                      <p className="text-[10px] text-slate-400">{t("dash_budgetLabel")}</p>
                       <p className="text-sm font-semibold text-slate-800">{formatCurrency(job.budget)}</p>
                     </div>
                     <JobStatusBadge status={job.status} />
@@ -67,12 +71,12 @@ export async function RecentJobs({ userId }: { userId: string }) {
                   <div className="mt-2 flex items-center gap-2 rounded-lg bg-amber-50 border border-amber-100 px-3 py-2">
                     <ShieldCheck className="h-3.5 w-3.5 text-amber-500 flex-shrink-0" />
                     <span className="text-xs text-slate-600">
-                      Funded:{" "}
+                      {t("dash_funded")}{" "}
                       <span className="font-semibold text-slate-800">{formatCurrency(fundedAmount)}</span>
                     </span>
                     {fundedAmount !== job.budget && (
                       <span className="text-xs text-slate-400 line-through ml-1">
-                        {formatCurrency(job.budget)} budget
+                        {t("dash_budgetSuffix", { amount: formatCurrency(job.budget) })}
                       </span>
                     )}
                   </div>

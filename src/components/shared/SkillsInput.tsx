@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, KeyboardEvent } from "react";
+import { useTranslations } from "next-intl";
 import { X } from "lucide-react";
 
 interface SkillsInputProps {
@@ -25,9 +26,11 @@ export default function SkillsInput({
   value,
   onChange,
   maxSkills = 20,
-  placeholder = "Type a skill and press Enter…",
+  placeholder,
   externalSuggestions = [],
 }: SkillsInputProps) {
+  const t = useTranslations("skillsInput");
+  const resolvedPlaceholder = placeholder ?? t("defaultPlaceholder");
   const [inputValue, setInputValue] = useState("");
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [open, setOpen] = useState(false);
@@ -146,7 +149,7 @@ export default function SkillsInput({
               type="button"
               onClick={(e) => { e.stopPropagation(); removeSkill(i); }}
               className="flex-shrink-0 rounded hover:bg-primary/20 transition-colors p-0.5"
-              aria-label={`Remove ${skill}`}
+              aria-label={t("removeSkillLabel", { skill })}
             >
               <X className="h-3 w-3" />
             </button>
@@ -161,7 +164,7 @@ export default function SkillsInput({
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={handleKeyDown}
             onFocus={() => { if (suggestions.length > 0) setOpen(true); }}
-            placeholder={value.length === 0 ? placeholder : ""}
+            placeholder={value.length === 0 ? resolvedPlaceholder : ""}
             className="flex-1 min-w-[140px] bg-transparent text-sm text-slate-900 placeholder:text-slate-400 outline-none"
           />
         )}
@@ -169,7 +172,7 @@ export default function SkillsInput({
 
       {/* Helper text */}
       <p className="text-xs text-slate-400 mt-1 flex justify-between">
-        <span>Press <kbd className="px-1 py-0.5 rounded border border-slate-200 bg-slate-50 text-xs font-mono">Enter</kbd> or <kbd className="px-1 py-0.5 rounded border border-slate-200 bg-slate-50 text-xs font-mono">,</kbd> to add · <kbd className="px-1 py-0.5 rounded border border-slate-200 bg-slate-50 text-xs font-mono">⌫</kbd> to remove</span>
+        <span>{t("hintPress")} <kbd className="px-1 py-0.5 rounded border border-slate-200 bg-slate-50 text-xs font-mono">Enter</kbd> {t("hintOr")} <kbd className="px-1 py-0.5 rounded border border-slate-200 bg-slate-50 text-xs font-mono">,</kbd> {t("hintToAdd")} · <kbd className="px-1 py-0.5 rounded border border-slate-200 bg-slate-50 text-xs font-mono">⌫</kbd> {t("hintToRemove")}</span>
         <span>{value.length}/{maxSkills}</span>
       </p>
 

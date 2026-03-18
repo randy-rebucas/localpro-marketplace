@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Sparkles, Loader2, ChevronDown, ChevronUp, FileText, ListChecks, ArrowRight } from "lucide-react";
 import { apiFetch } from "@/lib/fetchClient";
 import toast from "react-hot-toast";
+import { useTranslations } from "next-intl";
 
 interface ScopeResult {
   summary: string;
@@ -28,6 +29,7 @@ function getSenderRole(msg: RawMessage): string {
 }
 
 export default function ChatScopePanel({ messages, jobTitle }: Props) {
+  const t = useTranslations("chatScopePanel");
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<ScopeResult | null>(null);
@@ -37,7 +39,7 @@ export default function ChatScopePanel({ messages, jobTitle }: Props) {
   const generate = async () => {
     if (loading) return;
     if (textMessages.length < 2) {
-      toast.error("Need at least 2 messages to generate a summary.");
+      toast.error(t("notEnoughMessages"));
       return;
     }
     setLoading(true);
@@ -56,13 +58,13 @@ export default function ChatScopePanel({ messages, jobTitle }: Props) {
       });
       const data = await res.json() as ScopeResult & { error?: string };
       if (!res.ok) {
-        toast.error(data.error ?? "Could not generate summary.");
+        toast.error(data.error ?? t("generateFailed"));
         return;
       }
       setResult(data);
       setOpen(true);
     } catch {
-      toast.error("Failed to reach AI service.");
+      toast.error(t("serviceError"));
     } finally {
       setLoading(false);
     }
@@ -87,7 +89,7 @@ export default function ChatScopePanel({ messages, jobTitle }: Props) {
           {loading
             ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
             : <Sparkles className="h-3.5 w-3.5" />}
-          {loading ? "Generating summary…" : result ? "View Scope Summary" : "AI Scope Summary"}
+          {loading ? t("generatingBtn") : result ? t("viewSummaryBtn") : t("aiSummaryBtn")}
           {result && (open
             ? <ChevronUp className="h-3 w-3" />
             : <ChevronDown className="h-3 w-3" />)}
@@ -99,7 +101,7 @@ export default function ChatScopePanel({ messages, jobTitle }: Props) {
             disabled={loading}
             className="text-[10px] text-slate-400 hover:text-violet-600 transition-colors"
           >
-            Refresh
+            {t("refreshBtn")}
           </button>
         )}
       </div>
@@ -118,7 +120,7 @@ export default function ChatScopePanel({ messages, jobTitle }: Props) {
             {result.agreements.length > 0 && (
               <div className="px-4 py-3">
                 <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-2 flex items-center gap-1">
-                  <ListChecks className="h-3.5 w-3.5" /> Agreements
+                  <ListChecks className="h-3.5 w-3.5" /> {t("agreementsHeading")}
                 </p>
                 <ul className="space-y-1.5">
                   {result.agreements.map((a, i) => (
@@ -135,7 +137,7 @@ export default function ChatScopePanel({ messages, jobTitle }: Props) {
             {result.nextSteps.length > 0 && (
               <div className="px-4 py-3">
                 <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-2 flex items-center gap-1">
-                  <ArrowRight className="h-3.5 w-3.5" /> Next Steps
+                  <ArrowRight className="h-3.5 w-3.5" /> {t("nextStepsHeading")}
                 </p>
                 <ul className="space-y-1.5">
                   {result.nextSteps.map((s, i) => (
@@ -151,7 +153,7 @@ export default function ChatScopePanel({ messages, jobTitle }: Props) {
 
           <div className="px-4 py-2 bg-slate-50 border-t border-slate-100">
             <p className="text-[10px] text-slate-400">
-              AI-generated summary based on your conversation. Always verify details directly.
+              {t("disclaimer")}
             </p>
           </div>
         </div>

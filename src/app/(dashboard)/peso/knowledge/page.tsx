@@ -5,12 +5,15 @@ import { getArticlesForFolder } from "@/lib/knowledge";
 import KnowledgeBase from "@/components/shared/KnowledgeBase";
 import TourGuide from "@/components/shared/TourGuide";
 import { BookOpen } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 
 export const metadata: Metadata = { title: "Knowledge Base" };
 
 export default async function PesoKnowledgePage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
+
+  const t = await getTranslations("pesoPages");
 
   const articles = getArticlesForFolder("peso").map((a) => ({
     _id:     a.slug,
@@ -36,9 +39,9 @@ export default async function PesoKnowledgePage() {
           <BookOpen className="h-6 w-6 text-emerald-600" />
         </div>
         <div>
-          <h2 className="text-2xl font-bold text-slate-900">Knowledge Base</h2>
+          <h2 className="text-2xl font-bold text-slate-900">{t("knowledgeBase")}</h2>
           <p className="text-slate-500 text-sm mt-0.5">
-            Guides and answers for PESO officers · {articles.length} articles
+            {t("knowledgeSub", { count: articles.length })}
           </p>
         </div>
       </div>

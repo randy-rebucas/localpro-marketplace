@@ -5,8 +5,10 @@ import { formatCurrency, formatRelativeTime } from "@/lib/utils";
 import { calculateCommission } from "@/lib/commission";
 import Link from "next/link";
 import { Briefcase, ShieldCheck, Store } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 
 export async function RecentActivity({ userId }: { userId: string }) {
+  const t = await getTranslations("providerPages");
   const recentJobs = await jobRepository.findRecentForProvider(userId, 5);
 
   const jobIds = recentJobs.map((j) => String(j._id));
@@ -18,9 +20,9 @@ export async function RecentActivity({ userId }: { userId: string }) {
   return (
     <div className="bg-white rounded-xl border border-slate-200 shadow-card">
       <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-        <h3 className="font-semibold text-slate-900">Recent Activity</h3>
+        <h3 className="font-semibold text-slate-900">{t("provDash_activityTitle")}</h3>
         <Link href="/provider/jobs" className="text-sm text-primary hover:underline">
-          View all
+          {t("provDash_activityViewAll")}
         </Link>
       </div>
 
@@ -29,10 +31,10 @@ export async function RecentActivity({ userId }: { userId: string }) {
           <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-3">
             <Store className="h-6 w-6 text-primary" />
           </div>
-          <p className="text-slate-600 text-sm font-medium">No jobs yet</p>
-          <p className="text-slate-400 text-xs mt-1 mb-4">Find your first job in the marketplace</p>
+          <p className="text-slate-600 text-sm font-medium">{t("provDash_activityEmpty")}</p>
+          <p className="text-slate-400 text-xs mt-1 mb-4">{t("provDash_activityEmptySub")}</p>
           <Link href="/provider/marketplace" className="btn-primary text-xs">
-            Browse marketplace →
+            {t("provDash_activityBrowse")}
           </Link>
         </div>
       ) : (
@@ -62,7 +64,7 @@ export async function RecentActivity({ userId }: { userId: string }) {
                   </div>
                   <div className="flex items-center gap-3 flex-shrink-0">
                     <div className="hidden sm:block text-right">
-                      <p className="text-xs text-slate-400">Budget</p>
+                      <p className="text-xs text-slate-400">{t("provDash_activityBudget")}</p>
                       <p className="text-sm font-semibold text-slate-800">{formatCurrency(job.budget)}</p>
                     </div>
                     <JobStatusBadge status={job.status} />
@@ -72,11 +74,11 @@ export async function RecentActivity({ userId }: { userId: string }) {
                   <div className="mt-2 flex items-center gap-2 rounded-lg bg-emerald-50 border border-emerald-100 px-3 py-2">
                     <ShieldCheck className="h-3.5 w-3.5 text-emerald-500 flex-shrink-0" />
                     <span className="text-xs text-slate-600">
-                      Funded:{" "}
+                      {t("provDash_activityFunded")}{" "}
                       <span className="font-semibold text-slate-800">{formatCurrency(fundedGross)}</span>
                     </span>
                     <span className="text-xs text-emerald-700 font-medium">
-                      · You receive: {formatCurrency(fundedNet)}
+                      {t("provDash_activityYouReceive")} {formatCurrency(fundedNet)}
                     </span>
                   </div>
                 )}

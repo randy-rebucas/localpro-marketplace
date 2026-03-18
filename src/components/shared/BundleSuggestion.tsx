@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { getBundleSuggestions } from "@/lib/recommendations";
 import { Sparkles } from "lucide-react";
 
@@ -9,6 +10,7 @@ interface Props {
 }
 
 export default function BundleSuggestion({ category }: Props) {
+  const t = useTranslations("bundleSuggestion");
   const suggestions = getBundleSuggestions(category);
   if (suggestions.length === 0) return null;
 
@@ -16,8 +18,8 @@ export default function BundleSuggestion({ category }: Props) {
     <div className="bg-white border border-slate-200 rounded-2xl shadow-card p-5 space-y-3">
       <div className="flex items-center gap-2">
         <Sparkles className="h-4 w-4 text-amber-500" />
-        <h3 className="text-sm font-semibold text-slate-800">You may also need</h3>
-        <span className="text-xs text-slate-400">— bundle related services</span>
+        <h3 className="text-sm font-semibold text-slate-800">{t("heading")}</h3>
+        <span className="text-xs text-slate-400">{t("subheading")}</span>
       </div>
 
       <div className="flex gap-3 overflow-x-auto pb-1 -mx-1 px-1">
@@ -32,7 +34,7 @@ export default function BundleSuggestion({ category }: Props) {
               {s.category}
             </span>
             <span className="text-xs text-slate-400 leading-snug">{s.reason}</span>
-            <span className="text-xs font-medium text-primary mt-1">Post Job →</span>
+            <span className="text-xs font-medium text-primary mt-1">{t("postJob")}</span>
           </Link>
         ))}
       </div>

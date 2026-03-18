@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import toast from "react-hot-toast";
 import Button from "@/components/ui/Button";
 import Card, { CardBody, CardFooter } from "@/components/ui/Card";
@@ -19,14 +20,6 @@ import { Photos }         from "./steps/Photos";
 import { ReviewSubmit }   from "./steps/ReviewSubmit";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-
-const STEP_TITLES    = ["Job Details", "Budget & Schedule", "Photos", "Review & Submit"];
-const STEP_SUBTITLES = [
-  "Describe the work you need — AI can help write a description.",
-  "Set your budget and preferred date so providers can send accurate quotes.",
-  "Add photos to help providers understand the scope. (optional)",
-  "Double-check everything before sending to providers.",
-];
 
 function makeInitial(data: Partial<FormData> = {}): FormData {
   return {
@@ -51,6 +44,10 @@ interface Props {
 
 export default function PostJobClient({ categories, initialData }: Props) {
   const router = useRouter();
+  const t = useTranslations("clientPages");
+
+  const STEP_TITLES    = [t("postJob_step0Title"), t("postJob_step1Title"), t("postJob_step2Title"), t("postJob_step3Title")];
+  const STEP_SUBTITLES = [t("postJob_step0Sub"), t("postJob_step1Sub"), t("postJob_step2Sub"), t("postJob_step3Sub")];
   const isPrefilled = !!(initialData && Object.values(initialData).some(Boolean));
 
   const [step, setStep]     = useState(0);
@@ -183,17 +180,17 @@ export default function PostJobClient({ categories, initialData }: Props) {
   // ── Navigation ────────────────────────────────────────────────────────────────
   function validateStep0() {
     const e: Partial<FormData> = {};
-    if (!form.title || form.title.length < 5)              e.title       = "Title must be at least 5 characters";
-    if (!form.category)                                    e.category    = "Please select a category";
-    if (!form.description || form.description.length < 20) e.description = "Description must be at least 20 characters";
+    if (!form.title || form.title.length < 5)              e.title       = t("postJob_errTitleShort");
+    if (!form.category)                                    e.category    = t("postJob_errCategory");
+    if (!form.description || form.description.length < 20) e.description = t("postJob_errDescShort");
     return e;
   }
 
   function validateStep1() {
     const e: Partial<FormData> = {};
-    if (!form.budget || isNaN(Number(form.budget)) || Number(form.budget) < 1) e.budget       = "Please enter a valid budget";
-    if (!form.location)                                                          e.location     = "Location is required";
-    if (!form.scheduleDate)                                                      e.scheduleDate = "Schedule date is required";
+    if (!form.budget || isNaN(Number(form.budget)) || Number(form.budget) < 1) e.budget       = t("postJob_errBudget");
+    if (!form.location)                                                          e.location     = t("postJob_errLocation");
+    if (!form.scheduleDate)                                                      e.scheduleDate = t("postJob_errScheduleDate");
     return e;
   }
 
@@ -245,11 +242,11 @@ export default function PostJobClient({ categories, initialData }: Props) {
         }),
       });
       const data = await res.json() as { error?: string };
-      if (!res.ok) { toast.error(data.error ?? "Failed to post job"); return; }
-      toast.success("Job posted! It will be reviewed by our team.");
+      if (!res.ok) { toast.error(data.error ?? t("postJob_submitFailed")); return; }
+      toast.success(t("postJob_submitSuccess"));
       trackJobPost({ category: form.category, budget: Number(form.budget) });
       router.push("/client/jobs");
-    } catch { toast.error("Something went wrong. Please try again."); }
+    } catch { toast.error(t("postJob_submitError")); }
     finally   { setIsSubmitting(false); }
   }
 
@@ -258,12 +255,12 @@ export default function PostJobClient({ categories, initialData }: Props) {
     <div className="max-w-2xl mx-auto space-y-6">
       <TourGuide
         pageKey="client-post-job"
-        title="How to post a job"
+        title={t("postJob_tourTitle")}
         steps={[
-          { icon: "🔧", title: "Service details",  description: "Choose a category, describe what you need done, and enter your location." },
-          { icon: "💰", title: "Budget & schedule", description: "Set your budget and preferred date. Providers use this to send accurate quotes." },
-          { icon: "📸", title: "Upload photos",     description: "Add photos to help providers understand the scope of work (optional but recommended)." },
-          { icon: "🚀", title: "Submit & wait",     description: "Eligible providers in your area will be notified and start sending quotes." },
+          { icon: "🔧", title: t("postJob_tourStep1Title"),  description: t("postJob_tourStep1Desc") },
+          { icon: "💰", title: t("postJob_tourStep2Title"), description: t("postJob_tourStep2Desc") },
+          { icon: "📸", title: t("postJob_tourStep3Title"),     description: t("postJob_tourStep3Desc") },
+          { icon: "🚀", title: t("postJob_tourStep4Title"),     description: t("postJob_tourStep4Desc") },
         ]}
       />
 
@@ -272,8 +269,8 @@ export default function PostJobClient({ categories, initialData }: Props) {
         <div className="flex items-center gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm">
           <Copy className="h-4 w-4 text-blue-500 flex-shrink-0" />
           <p className="text-blue-800">
-            <span className="font-medium">Pre-filled from a similar job.</span>{" "}
-            Review and adjust each field before submitting.
+            <span className="font-medium">{t("postJob_preFillNotice")}</span>{" "}
+            {t("postJob_preFillSub")}
           </p>
         </div>
       )}
@@ -282,7 +279,7 @@ export default function PostJobClient({ categories, initialData }: Props) {
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h1 className="text-xl sm:text-2xl font-bold text-slate-900">
-            {isPrefilled ? "Post Similar Job" : "Post a Job"}
+            {isPrefilled ? t("postJob_titlePrefilled") : t("postJob_titleNew")}
           </h1>
           <p className="text-sm text-slate-500 mt-0.5 hidden sm:block">{STEP_SUBTITLES[step]}</p>
         </div>
@@ -298,7 +295,7 @@ export default function PostJobClient({ categories, initialData }: Props) {
       <Card>
         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
           <h2 className="font-semibold text-slate-900">{STEP_TITLES[step]}</h2>
-          <span className="text-xs text-slate-400 font-medium">Step {step + 1} of {STEP_TITLES.length}</span>
+          <span className="text-xs text-slate-400 font-medium">{t("postJob_stepOf", { current: step + 1, total: STEP_TITLES.length })}</span>
         </div>
 
         <CardBody>
@@ -339,15 +336,15 @@ export default function PostJobClient({ categories, initialData }: Props) {
 
         <CardFooter className="flex items-center justify-between gap-3">
           <Button variant="secondary" onClick={() => { setStep((s) => s - 1); setErrors({}); }} disabled={step === 0}>
-            ← Back
+            {t("postJob_backButton")}
           </Button>
           {step < STEP_TITLES.length - 1 ? (
             <Button onClick={nextStep} isLoading={isUploadingPhotos}>
-              {isUploadingPhotos ? "Uploading…" : "Continue →"}
+              {isUploadingPhotos ? t("postJob_uploadingButton") : t("postJob_continueButton")}
             </Button>
           ) : (
             <Button onClick={handleSubmit} isLoading={isSubmitting}>
-              🚀 Submit Job
+              {t("postJob_submitButton")}
             </Button>
           )}
         </CardFooter>

@@ -1,4 +1,5 @@
 "use client";
+import { useTranslations } from "next-intl";
 
 import { useEffect, useState, useCallback, type ElementType } from "react";
 import Image from "next/image";
@@ -32,9 +33,16 @@ interface UserSearchResult {
 
 type Tab = "team" | "activity" | "security";
 
-const ROLE_LABELS: Record<BusinessMemberRole, string> = {
-  owner: "Owner", manager: "Manager", supervisor: "Supervisor", finance: "Finance",
-};
+const BUILD_ROLE_LABELS = (t: any): Record<BusinessMemberRole, string> => ({
+  owner: t("bizMembers_roleOwner"), manager: t("bizMembers_roleManager"), supervisor: t("bizMembers_roleSupervisor"), finance: t("bizMembers_roleFinance"),
+});
+const BUILD_ROLE_DESCS = (t: any): Record<BusinessMemberRole, string> => ({
+  owner: t("bizMembers_roleOwnerDesc"),
+  manager: t("bizMembers_roleManagerDesc"),
+  supervisor: t("bizMembers_roleSupervisorDesc"),
+  finance: t("bizMembers_roleFinanceDesc"),
+});
+
 const ROLE_COLORS: Record<BusinessMemberRole, string> = {
   owner: "bg-yellow-100 text-yellow-700", manager: "bg-blue-100 text-blue-700",
   supervisor: "bg-violet-100 text-violet-700", finance: "bg-emerald-100 text-emerald-700",
@@ -46,13 +54,6 @@ const ROLE_RING: Record<BusinessMemberRole, string> = {
   owner: "bg-yellow-50 ring-yellow-100 text-yellow-600", manager: "bg-blue-50 ring-blue-100 text-blue-600",
   supervisor: "bg-violet-50 ring-violet-100 text-violet-600", finance: "bg-emerald-50 ring-emerald-100 text-emerald-600",
 };
-const ROLE_DESCS: Record<BusinessMemberRole, string> = {
-  owner: "Full access. Manages org settings, members, escrow, and billing.",
-  manager: "Add/remove members, update branches, view all analytics and reports.",
-  supervisor: "Read-only access to assigned branches and job overview.",
-  finance: "Can approve and release escrow payments. Cannot manage members.",
-};
-
 const EVENT_LABELS: Record<string, string> = {
   job_created: "Created job", job_approved: "Approved job", job_rejected: "Rejected job",
   quote_submitted: "Submitted quote", quote_accepted: "Accepted quote",
@@ -82,9 +83,11 @@ function Avatar({ name, avatar, size = "sm" }: { name?: string; avatar?: string 
   );
 }
 
-export default function MembersClient() {
-  const [org, setOrg]                     = useState<IBusinessOrganization | null>(null);
+export default function MembersClient() {  const t = useTranslations("clientPages");  const [org, setOrg]                     = useState<IBusinessOrganization | null>(null);
   const [members, setMembers]             = useState<IBusinessMember[]>([]);
+  // Build translatable role constants
+  const ROLE_LABELS = BUILD_ROLE_LABELS(t);
+  const ROLE_DESCS = BUILD_ROLE_DESCS(t);
   const [logs, setLogs]                   = useState<ActivityLogEntry[]>([]);
   const [logsTotal, setLogsTotal]         = useState(0);
   const [logsPage, setLogsPage]           = useState(1);

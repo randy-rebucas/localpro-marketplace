@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { fetchClient } from "@/lib/fetchClient";
 import toast from "react-hot-toast";
+import { useTranslations } from "next-intl";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -41,6 +42,8 @@ export default function CompanyProfileClient() {
   const [loadError, setLoadError] = useState(false);
   const [saving, setSaving]   = useState(false);
   const [dirty, setDirty]     = useState(false);
+
+  const t = useTranslations("companyProfile");
 
   const [name, setName]                       = useState("");
   const [type, setType]                       = useState<"agency" | "company" | "other">("agency");
@@ -77,7 +80,7 @@ export default function CompanyProfileClient() {
       }
     } catch {
       setLoadError(true);
-      toast.error("Failed to load profile.");
+      toast.error(t("toastLoadFailed"));
     }
     finally { setLoading(false); }
   }, []);
@@ -92,7 +95,7 @@ export default function CompanyProfileClient() {
   }
 
   async function handleSave() {
-    if (!name.trim()) return toast.error("Agency name is required.");
+    if (!name.trim()) return toast.error(t("nameRequired"));
     setSaving(true);
     try {
       await fetchClient("/api/provider/agency/profile", {
@@ -102,11 +105,11 @@ export default function CompanyProfileClient() {
           operatingHours, website, logo, banner, serviceCategories,
         }),
       });
-      toast.success("Profile saved successfully.");
+      toast.success(t("saveSuccess"));
       setDirty(false);
       await load();
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Failed to save.");
+      toast.error(e instanceof Error ? e.message : t("saveFailed"));
     } finally {
       setSaving(false);
     }
@@ -125,8 +128,8 @@ export default function CompanyProfileClient() {
     return (
       <div className="flex flex-col items-center justify-center py-24 gap-4 text-center">
         <AlertCircle className="h-10 w-10 text-red-400" />
-        <p className="text-slate-600 font-medium">Failed to load profile</p>
-        <button onClick={load} className="btn-secondary text-sm px-4 py-2">Try Again</button>
+        <p className="text-slate-600 font-medium">{t("loadFailed")}</p>
+        <button onClick={load} className="btn-secondary text-sm px-4 py-2">{t("tryAgain")}</button>
       </div>
     );
   }
@@ -136,8 +139,8 @@ export default function CompanyProfileClient() {
       <div className="flex flex-col items-center justify-center py-24 gap-3 text-center">
         <Building2 className="h-10 w-10 text-slate-300" />
         <p className="text-slate-500">
-          No agency profile found.{" "}
-          <Link href="/provider/business" className="text-primary underline">Create one first.</Link>
+          {t("notFound")}{" "}
+          <Link href="/provider/business" className="text-primary underline">{t("createFirst")}</Link>
         </p>
       </div>
     );
@@ -153,14 +156,14 @@ export default function CompanyProfileClient() {
             <Building2 className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
           </div>
           <div>
-            <h1 className="text-base font-bold text-slate-800 dark:text-white">Company Profile</h1>
-            <p className="text-xs text-slate-500 dark:text-slate-400">Edit your agency&apos;s public information.</p>
+            <h1 className="text-base font-bold text-slate-800 dark:text-white">{t("heading")}</h1>
+            <p className="text-xs text-slate-500 dark:text-slate-400">{t("subheading")}</p>
           </div>
         </div>
         <button
           onClick={load}
           className="p-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
-          title="Refresh"
+          title={t("refresh")}
         >
           <RefreshCw className="h-4 w-4" />
         </button>
@@ -170,100 +173,100 @@ export default function CompanyProfileClient() {
       {dirty && (
         <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-xl px-4 py-2.5 text-amber-800 text-sm">
           <AlertCircle className="h-4 w-4 flex-shrink-0 text-amber-500" />
-          <span className="flex-1">You have unsaved changes.</span>
-          <button onClick={load} className="text-xs underline hover:no-underline">Discard</button>
+          <span className="flex-1">{t("unsavedChanges")}</span>
+          <button onClick={load} className="text-xs underline hover:no-underline">{t("discard")}</button>
         </div>
       )}
 
       {/* ── Section 1: Basic Info ── */}
       <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-4">
-        <h2 className="font-semibold text-slate-800 border-b border-slate-100 pb-3">Basic Info</h2>
+        <h2 className="font-semibold text-slate-800 border-b border-slate-100 pb-3">{t("basicInfo")}</h2>
         <div>
-          <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Agency / Company Name *</label>
-          <input className="input w-full" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Cebu Pro Services Agency" />
+          <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">{t("labelName")}</label>
+          <input className="input w-full" value={name} onChange={(e) => setName(e.target.value)} placeholder={t("placeholderName")} />
         </div>
         <div>
-          <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Type</label>
+          <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">{t("labelType")}</label>
           <select className="input w-full" value={type} onChange={(e) => setType(e.target.value as typeof type)}>
-            <option value="agency">Agency</option>
-            <option value="company">Company</option>
-            <option value="other">Other</option>
+            <option value="agency">{t("typeAgency")}</option>
+            <option value="company">{t("typeCompany")}</option>
+            <option value="other">{t("typeOther")}</option>
           </select>
         </div>
         <div>
-          <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Description / About</label>
+          <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">{t("labelDescription")}</label>
           <textarea
             className="input w-full min-h-[80px] resize-none"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            placeholder="Describe your agency's services, experience, and values…"
+            placeholder={t("placeholderDescription")}
           />
         </div>
       </div>
 
       {/* ── Section 2: Business Details ── */}
       <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-4">
-        <h2 className="font-semibold text-slate-800 border-b border-slate-100 pb-3">Business Details</h2>
+        <h2 className="font-semibold text-slate-800 border-b border-slate-100 pb-3">{t("businessDetails")}</h2>
         <div className="grid sm:grid-cols-2 gap-4">
           <div>
-            <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Business Registration Number</label>
-            <input className="input w-full" value={registrationNumber} onChange={(e) => field(setRegistrationNumber)(e.target.value)} placeholder="e.g. DTI-2024-12345" />
-            <p className="text-[11px] text-slate-400 mt-1">DTI, SEC, or local business permit number.</p>
+            <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">{t("labelRegNo")}</label>
+            <input className="input w-full" value={registrationNumber} onChange={(e) => field(setRegistrationNumber)(e.target.value)} placeholder={t("placeholderRegNo")} />
+            <p className="text-[11px] text-slate-400 mt-1">{t("helperRegNo")}</p>
           </div>
           <div>
-            <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Operating Hours</label>
-            <input className="input w-full" value={operatingHours} onChange={(e) => field(setOperatingHours)(e.target.value)} placeholder="e.g. Mon–Fri 8am–6pm" />
-            <p className="text-[11px] text-slate-400 mt-1">Shown on your public profile.</p>
+            <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">{t("labelHours")}</label>
+            <input className="input w-full" value={operatingHours} onChange={(e) => field(setOperatingHours)(e.target.value)} placeholder={t("placeholderHours")} />
+            <p className="text-[11px] text-slate-400 mt-1">{t("helperHours")}</p>
           </div>
           <div className="sm:col-span-2">
-            <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Website URL</label>
-            <input className="input w-full" type="url" value={website} onChange={(e) => field(setWebsite)(e.target.value)} placeholder="https://yourwebsite.com" />
+            <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">{t("labelWebsite")}</label>
+            <input className="input w-full" type="url" value={website} onChange={(e) => field(setWebsite)(e.target.value)} placeholder={t("placeholderWebsite")} />
           </div>
         </div>
       </div>
 
       {/* ── Section 3: Branding ── */}
       <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-4">
-        <h2 className="font-semibold text-slate-800 border-b border-slate-100 pb-3">Branding</h2>
+        <h2 className="font-semibold text-slate-800 border-b border-slate-100 pb-3">{t("branding")}</h2>
         <div className="grid sm:grid-cols-2 gap-4">
           <div>
-            <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Logo URL</label>
-            <input className="input w-full" value={logo} onChange={(e) => field(setLogo)(e.target.value)} placeholder="https://cdn.example.com/logo.png" />
+            <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">{t("labelLogo")}</label>
+            <input className="input w-full" value={logo} onChange={(e) => field(setLogo)(e.target.value)} placeholder={t("placeholderLogo")} />
             {logo && (
               <div className="mt-2 flex items-center gap-2">
                 <Image src={logo} alt="logo preview" width={40} height={40} className="w-10 h-10 rounded-full object-cover border border-slate-200" onError={() => { setLogo(""); setDirty(true); }} />
                 <div>
-                  <p className="text-xs text-slate-500 font-medium">Logo preview</p>
-                  <button type="button" onClick={() => { setLogo(""); setDirty(true); }} className="text-[11px] text-red-400 hover:underline">Remove</button>
+                  <p className="text-xs text-slate-500 font-medium">{t("logoPreview")}</p>
+                  <button type="button" onClick={() => { setLogo(""); setDirty(true); }} className="text-[11px] text-red-400 hover:underline">{t("remove")}</button>
                 </div>
               </div>
             )}
           </div>
           <div>
-            <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Banner URL</label>
-            <input className="input w-full" value={banner} onChange={(e) => field(setBanner)(e.target.value)} placeholder="https://cdn.example.com/banner.jpg" />
+            <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">{t("labelBanner")}</label>
+            <input className="input w-full" value={banner} onChange={(e) => field(setBanner)(e.target.value)} placeholder={t("placeholderBanner")} />
             {banner && (
               <div className="mt-2 space-y-1">
                 <Image src={banner} alt="banner preview" width={400} height={80} className="w-full h-14 object-cover rounded-lg border border-slate-200" onError={() => { setBanner(""); setDirty(true); }} />
-                <button type="button" onClick={() => { setBanner(""); setDirty(true); }} className="text-[11px] text-red-400 hover:underline">Remove</button>
+                <button type="button" onClick={() => { setBanner(""); setDirty(true); }} className="text-[11px] text-red-400 hover:underline">{t("remove")}</button>
               </div>
             )}
           </div>
         </div>
-        <p className="text-[11px] text-slate-400">Paste a direct image URL. Use Cloudinary, Imgur, or any CDN.</p>
+        <p className="text-[11px] text-slate-400">{t("helperBranding")}</p>
       </div>
 
       {/* ── Section 4: Service Categories ── */}
       <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-4">
         <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-          <h2 className="font-semibold text-slate-800">Service Categories</h2>
+          <h2 className="font-semibold text-slate-800">{t("serviceCategories")}</h2>
           {serviceCategories.length > 0 && (
             <span className="text-[11px] font-semibold bg-primary/10 text-primary px-2 py-0.5 rounded-full">
-              {serviceCategories.length} selected
+              {t("selectedCount", { count: serviceCategories.length })}
             </span>
           )}
         </div>
-        <p className="text-xs text-slate-400">Select all categories your agency provides services in.</p>
+        <p className="text-xs text-slate-400">{t("categoriesHint")}</p>
         <div className="flex flex-wrap gap-2">
           {SERVICE_CATEGORIES.map((cat) => {
             const active = serviceCategories.includes(cat);
@@ -290,9 +293,9 @@ export default function CompanyProfileClient() {
       <div className="flex gap-3 pb-4">
         <button onClick={handleSave} disabled={saving} className="btn-primary flex items-center gap-2">
           <Save className="h-4 w-4" />
-          {saving ? "Saving…" : "Save Profile"}
+          {saving ? t("saving") : t("saveProfile")}
         </button>
-        <button onClick={load} className="btn-secondary">Discard Changes</button>
+        <button onClick={load} className="btn-secondary">{t("discardChanges")}</button>
       </div>
 
     </div>

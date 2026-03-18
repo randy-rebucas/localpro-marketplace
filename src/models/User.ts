@@ -139,6 +139,8 @@ const UserSchema = new Schema<UserDocument>(
     savedPaymentMethodId:   { type: String, default: null },
     savedPaymentMethodLast4: { type: String, default: null },
     savedPaymentMethodBrand: { type: String, default: null },
+    // Display language preference
+    preferredLocale: { type: String, enum: ["en", "tl"], default: "en" },
     // User-level preferences
     preferences: {
       type: new Schema({

@@ -8,6 +8,7 @@ import ChatScopePanel from "./ChatScopePanel";
 import { PageLoader } from "@/components/ui/Spinner";
 import { apiFetch } from "@/lib/fetchClient";
 import toast from "react-hot-toast";
+import { useTranslations } from "next-intl";
 
 interface RawMessage {
   _id: string;
@@ -50,13 +51,13 @@ interface ChatWindowProps {
 
 const SAME_GROUP_GAP_MS = 5 * 60 * 1000; // 5 minutes
 
-function formatDateSeparator(date: Date): string {
+function formatDateSeparator(date: Date, labels: { today: string; yesterday: string }): string {
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const yesterday = new Date(today.getTime() - 86_400_000);
   const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-  if (d.getTime() === today.getTime()) return "Today";
-  if (d.getTime() === yesterday.getTime()) return "Yesterday";
+  if (d.getTime() === today.getTime()) return labels.today;
+  if (d.getTime() === yesterday.getTime()) return labels.yesterday;
   return date.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" });
 }
 
@@ -67,13 +68,16 @@ export default function ChatWindow({
   streamUrl,
   currentUserId,
   header,
-  emptyMessage = "No messages yet. Start the conversation!",
+  emptyMessage,
   transformResponse,
   streamTransform,
   currentUserRole,
   jobTitle,
   jobStatus,
 }: ChatWindowProps) {
+  const t = useTranslations("chatWindow");
+  const resolvedEmptyMessage = emptyMessage ?? t("noMessages");
+  const dateSepLabels = { today: t("today"), yesterday: t("yesterday") };
   const [messages, setMessages] = useState<RawMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -202,15 +206,15 @@ export default function ChatWindow({
       if (prev.some((m) => m._id === msg._id)) return prev;
       return [...prev, msg];
     });
-    toast.success("File sent!");
+    toast.success(t("fileSent"));
     setTimeout(() => scrollToBottom(), 50);
-  }, [attachUrl]);
+  }, [attachUrl, t]);
 
   const getSenderId = (msg: RawMessage) =>
     !msg.senderId || typeof msg.senderId === "string" ? (msg.senderId ?? "") : msg.senderId._id;
 
   const getSenderName = (msg: RawMessage) =>
-    !msg.senderId || typeof msg.senderId === "string" ? "Unknown" : msg.senderId.name;
+    !msg.senderId || typeof msg.senderId === "string" ? t("unknownSender") : msg.senderId.name;
 
   const getSenderRole = (msg: RawMessage) =>
     !msg.senderId || typeof msg.senderId === "string" ? "" : msg.senderId.role;
@@ -242,7 +246,7 @@ export default function ChatWindow({
         )}
 
         {!loading && !error && messages.length === 0 && (
-          <p className="text-center text-sm text-slate-400 mt-8">{emptyMessage}</p>
+          <p className="text-center text-sm text-slate-400 mt-8">{resolvedEmptyMessage}</p>
         )}
 
         {!loading && !error && messages.map((msg, i) => {
@@ -272,7 +276,7 @@ export default function ChatWindow({
                 <div className="flex items-center gap-2 my-2">
                   <div className="flex-1 h-px bg-slate-200" />
                   <span className="text-[11px] text-slate-400 font-medium">
-                    {formatDateSeparator(msgDate)}
+                    {formatDateSeparator(msgDate, dateSepLabels)}
                   </span>
                   <div className="flex-1 h-px bg-slate-200" />
                 </div>

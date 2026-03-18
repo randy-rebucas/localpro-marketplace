@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import {
   Wallet, ArrowDownCircle, ArrowUpCircle,
   BadgeCheck, AlertTriangle, ChevronDown, ChevronUp,
@@ -37,6 +38,7 @@ function TxDetail({ label, value, mono }: { label: string; value: string; mono?:
 // ─── Main component ──────────────────────────────────────────────────────────
 
 export default function WalletLedgerTable() {
+  const t = useTranslations("clientPages");
   const [transactions, setTransactions] = useState<IWalletTransaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -92,7 +94,7 @@ export default function WalletLedgerTable() {
   if (transactions.length === 0) {
     return (
       <div className="px-6 py-12 text-center text-sm text-slate-400">
-        No transactions yet. Top up or withdraw to get started.
+        {t("wallet_emptyLedger")}
       </div>
     );
   }
@@ -102,21 +104,21 @@ export default function WalletLedgerTable() {
       {/* Column headers */}
       <div className="hidden sm:grid grid-cols-[2fr_1fr_1fr_1fr_auto] gap-4 px-6 py-2 bg-slate-50 border-b border-slate-100 text-xs font-medium text-slate-400 uppercase tracking-wide">
         <div className="flex items-center justify-between col-span-full sm:contents">
-          <span>Description</span>
-          <span className="hidden sm:block text-right">Amount</span>
-          <span className="hidden sm:block text-right">Balance After</span>
-          <span className="hidden sm:block text-right">Date</span>
+          <span>{t("wallet_colDescription")}</span>
+          <span className="hidden sm:block text-right">{t("wallet_colAmount")}</span>
+          <span className="hidden sm:block text-right">{t("wallet_colBalanceAfter")}</span>
+          <span className="hidden sm:block text-right">{t("wallet_colDate")}</span>
           <div className="hidden sm:flex items-center gap-3 justify-end">
             {unaccounted > 0 ? (
               <span className="inline-flex items-center gap-1 text-[10px] font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5 normal-case tracking-normal">
-                <AlertTriangle className="h-3 w-3" />{unaccounted} missing
+                <AlertTriangle className="h-3 w-3" />{t("wallet_nMissing", { n: unaccounted })}
               </span>
             ) : (
               <span className="inline-flex items-center gap-1 text-[10px] font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-0.5 normal-case tracking-normal">
-                <BadgeCheck className="h-3 w-3" />All accounted
+                <BadgeCheck className="h-3 w-3" />{t("wallet_allAccounted2")}
               </span>
             )}
-            <button onClick={load} title="Refresh" className="text-slate-400 hover:text-slate-600 transition-colors">
+            <button onClick={load} title={t("wallet_retry", { defaultValue: "Refresh" })} className="text-slate-400 hover:text-slate-600 transition-colors">
               <RefreshCw className="h-3.5 w-3.5" />
             </button>
           </div>
@@ -159,7 +161,7 @@ export default function WalletLedgerTable() {
                     {/* Mobile: date + balance */}
                     <p className="text-xs text-slate-400 mt-0.5 sm:hidden">
                       {dateObj.toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" })}
-                      {" · "}Balance: <span className="font-medium text-slate-600">{formatCurrency(tx.balanceAfter)}</span>
+                      {" · "}{t("wallet_mobileBalance", { defaultValue: "Balance:" })} <span className="font-medium text-slate-600">{formatCurrency(tx.balanceAfter)}</span>
                     </p>
                   </div>
                   {/* Chevron on mobile */}
@@ -200,7 +202,7 @@ export default function WalletLedgerTable() {
                       className="inline-flex items-center gap-1 text-[10px] font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-0.5"
                     >
                       <BadgeCheck className="h-3 w-3" />
-                      Accounted
+                      {t("wallet_ledgerAccounted")}
                     </span>
                   ) : (
                     <span
@@ -208,7 +210,7 @@ export default function WalletLedgerTable() {
                       className="inline-flex items-center gap-1 text-[10px] font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5"
                     >
                       <AlertTriangle className="h-3 w-3" />
-                      Pending
+                      {t("wallet_statusPending")}
                     </span>
                   )}
                   <span className="text-slate-400">
@@ -222,19 +224,19 @@ export default function WalletLedgerTable() {
                 <div className="bg-slate-50 border-t border-slate-100 px-6 py-4">
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
                     <TxDetail
-                      label="Amount"
+                      label={t("wallet_detailAmount")}
                       value={`${cfg.credit ? "+" : "−"}${formatCurrency(tx.amount)}`}
                     />
                     <TxDetail
-                      label="Balance After"
+                      label={t("wallet_detailBalanceAfter")}
                       value={formatCurrency(tx.balanceAfter)}
                     />
                     <TxDetail
-                      label="Date"
+                      label={t("wallet_detailDate")}
                       value={dateObj.toLocaleDateString("en-PH", { year: "numeric", month: "long", day: "numeric" })}
                     />
                     <TxDetail
-                      label="Time"
+                      label={t("wallet_detailTime")}
                       value={dateObj.toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
                     />
                   </div>
@@ -242,13 +244,13 @@ export default function WalletLedgerTable() {
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4 border-t border-slate-200">
                     <div className="flex items-start gap-2">
                       <Hash className="h-3.5 w-3.5 text-slate-400 mt-0.5 flex-shrink-0" />
-                      <TxDetail label="Transaction ID" value={String(tx._id)} mono />
+                      <TxDetail label={t("wallet_detailTxId")} value={String(tx._id)} mono />
                     </div>
 
                     {tx.refId && (
                       <div className="flex items-start gap-2">
                         <BookOpen className="h-3.5 w-3.5 text-slate-400 mt-0.5 flex-shrink-0" />
-                        <TxDetail label="Reference ID" value={String(tx.refId)} mono />
+                        <TxDetail label={t("wallet_detailRefId")} value={String(tx.refId)} mono />
                       </div>
                     )}
 
@@ -256,17 +258,17 @@ export default function WalletLedgerTable() {
                       <CalendarDays className="h-3.5 w-3.5 text-slate-400 mt-0.5 flex-shrink-0" />
                       {tx.ledgerJournalId ? (
                         <div className="flex flex-col gap-0.5">
-                          <span className="text-[10px] uppercase tracking-wide text-slate-400 font-medium">Ledger Journal</span>
+                          <span className="text-[10px] uppercase tracking-wide text-slate-400 font-medium">{t("wallet_detailLedger")}</span>
                           <span className="text-xs font-mono text-emerald-700 break-all">{String(tx.ledgerJournalId)}</span>
                           <span className="inline-flex items-center gap-1 text-[10px] text-emerald-600 font-medium mt-0.5">
-                            <BadgeCheck className="h-3 w-3" /> Accounted
+                            <BadgeCheck className="h-3 w-3" /> {t("wallet_ledgerAccounted")}
                           </span>
                         </div>
                       ) : (
                         <div className="flex flex-col gap-0.5">
-                          <span className="text-[10px] uppercase tracking-wide text-slate-400 font-medium">Ledger Journal</span>
+                          <span className="text-[10px] uppercase tracking-wide text-slate-400 font-medium">{t("wallet_detailLedger")}</span>
                           <span className="inline-flex items-center gap-1 text-[10px] text-amber-600 font-medium">
-                            <AlertTriangle className="h-3 w-3" /> No journal entry — pending reconciliation
+                            <AlertTriangle className="h-3 w-3" /> {t("wallet_ledgerPending")}
                           </span>
                         </div>
                       )}

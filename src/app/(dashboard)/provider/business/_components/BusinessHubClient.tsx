@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -78,6 +79,7 @@ function RevenueTooltip({ active, payload, label }: { active?: boolean; payload?
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function BusinessHubClient() {
+  const t = useTranslations("providerPages");
   const [profile, setProfile]         = useState<AgencyProfile | null>(null);
   const [loading, setLoading]         = useState(true);
   const [creating, setCreating]       = useState(false);
@@ -111,7 +113,7 @@ export default function BusinessHubClient() {
   useEffect(() => { loadProfile(); }, [loadProfile]);
 
   async function handleCreate() {
-    if (!form.name.trim()) return setError("Organization name is required.");
+    if (!form.name.trim()) return setError(t("provBiz_errorNameRequired", { defaultValue: "Organization name is required." }));
     setCreating(true); setError(null);
     try {
       const data = await fetchClient<{ agency: AgencyProfile }>("/api/provider/agency/profile", {
@@ -121,7 +123,7 @@ export default function BusinessHubClient() {
       setProfile(data.agency);
       setShowCreate(false);
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Failed to create agency profile.");
+      setError(e instanceof Error ? e.message : t("provBiz_errorCreateFailed", { defaultValue: "Failed to create agency profile." }));
     } finally {
       setCreating(false);
     }
@@ -156,14 +158,13 @@ export default function BusinessHubClient() {
           <Building2 className="h-10 w-10 text-primary" />
         </div>
         <div>
-          <h2 className="text-xl font-bold text-slate-800">No Agency Profile Yet</h2>
+          <h2 className="text-xl font-bold text-slate-800">{t("provBiz_noProfile")}</h2>
           <p className="text-slate-500 mt-1.5 max-w-sm text-sm leading-relaxed">
-            Set up your agency profile to manage staff, dispatch jobs, track revenue,
-            and run your service business — all in one place.
+            {t("provBiz_noProfileDesc")}
           </p>
         </div>
         <button onClick={() => setShowCreate(true)} className="btn-primary flex items-center gap-2">
-          <Plus className="h-4 w-4" /> Create Agency Profile
+          <Plus className="h-4 w-4" /> {t("provBiz_createProfile")}
         </button>
       </div>
     );
@@ -174,8 +175,8 @@ export default function BusinessHubClient() {
     return (
       <div className="max-w-md mx-auto py-16 space-y-6">
         <div>
-          <h2 className="text-xl font-bold text-slate-900">Create Agency Profile</h2>
-          <p className="text-sm text-slate-400 mt-0.5">Fill in your agency details below.</p>
+          <h2 className="text-xl font-bold text-slate-900">{t("provBiz_createProfile")}</h2>
+          <p className="text-sm text-slate-400 mt-0.5">{t("provBiz_createSub")}</p>
         </div>
         {error && (
           <p className="text-sm text-red-500 bg-red-50 border border-red-200 rounded-xl px-4 py-2.5">{error}</p>
@@ -183,35 +184,35 @@ export default function BusinessHubClient() {
         <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-4">
           <div>
             <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
-              Organization Name *
+              {t("provBiz_orgNameLabel")}
             </label>
             <input
               className="input w-full"
-              placeholder="e.g. Cebu Pro Services Agency"
+              placeholder={t("provBiz_orgNamePlaceholder")}
               value={form.name}
               onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
             />
           </div>
           <div>
             <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
-              Type
+              {t("provBiz_typeLabel")}
             </label>
             <select
               className="input w-full"
               value={form.type}
               onChange={(e) => setForm((f) => ({ ...f, type: e.target.value as typeof form.type }))}
             >
-              <option value="agency">Agency</option>
-              <option value="company">Company</option>
-              <option value="other">Other</option>
+              <option value="agency">{t("provBiz_typeAgency")}</option>
+              <option value="company">{t("provBiz_typeCompany")}</option>
+              <option value="other">{t("provBiz_typeOther")}</option>
             </select>
           </div>
         </div>
         <div className="flex gap-3">
           <button onClick={handleCreate} disabled={creating} className="btn-primary flex-1">
-            {creating ? "Creating…" : "Create Agency"}
+            {creating ? t("provBiz_creating") : t("provBiz_createButton")}
           </button>
-          <button onClick={() => setShowCreate(false)} className="btn-secondary flex-1">Cancel</button>
+          <button onClick={() => setShowCreate(false)} className="btn-secondary flex-1">{t("provBiz_cancel")}</button>
         </div>
       </div>
     );
@@ -228,14 +229,14 @@ export default function BusinessHubClient() {
   const staffMax = Math.max(...(snap?.topStaff.map((s) => s.completedJobs) ?? [1]), 1);
 
   const KPI_CARDS = [
-    { label: "Active Jobs",       value: kpi?.activeJobs ?? 0,                     icon: Briefcase,    color: "text-blue-600",    bg: "bg-blue-50",    ring: "ring-blue-100",    sub: "open + assigned",    href: "/provider/business/jobs" },
-    { label: "In Progress",       value: kpi?.inProgress ?? 0,                     icon: Clock,        color: "text-violet-600",  bg: "bg-violet-50",  ring: "ring-violet-100",  sub: "being worked on",    href: "/provider/business/jobs" },
-    { label: "Completed",         value: kpi?.completedThisMonth ?? 0,             icon: CheckCircle2, color: "text-teal-600",    bg: "bg-teal-50",    ring: "ring-teal-100",    sub: "this month",         href: "/provider/business/jobs" },
-    { label: "Staff",             value: kpi?.staffCount ?? 0,                     icon: Users,        color: "text-sky-600",     bg: "bg-sky-50",     ring: "ring-sky-100",     sub: "team members",       href: "/provider/business/staff" },
-    { label: "Monthly Revenue",   value: formatCurrency(kpi?.monthlyRevenue ?? 0), icon: TrendingUp,   color: "text-emerald-600", bg: "bg-emerald-50", ring: "ring-emerald-100", sub: "this month",         href: "/provider/business/earnings" },
-    { label: "Avg Rating",        value: `${(kpi?.avgRating ?? 0).toFixed(1)} ★`,  icon: Star,         color: "text-amber-600",   bg: "bg-amber-50",   ring: "ring-amber-100",   sub: "across all staff",   href: "/provider/business/reviews" },
-    { label: "Completion Rate",   value: `${kpi?.completionRate ?? 0}%`,            icon: CheckCircle2, color: "text-teal-600",    bg: "bg-teal-50",    ring: "ring-teal-100",    sub: "overall rate",       href: "/provider/business/analytics" },
-    { label: "Pending Payouts",   value: formatCurrency(kpi?.pendingPayouts ?? 0), icon: DollarSign,   color: "text-orange-600",  bg: "bg-orange-50",  ring: "ring-orange-100",  sub: "awaiting release",   href: "/provider/business/earnings" },
+    { label: t("provBiz_kpiActiveJobs"),      value: kpi?.activeJobs ?? 0,                     icon: Briefcase,    color: "text-blue-600",    bg: "bg-blue-50",    ring: "ring-blue-100",    sub: t("provBiz_kpiActiveJobsSub"),      href: "/provider/business/jobs" },
+    { label: t("provBiz_kpiInProgress"),      value: kpi?.inProgress ?? 0,                     icon: Clock,        color: "text-violet-600",  bg: "bg-violet-50",  ring: "ring-violet-100",  sub: t("provBiz_kpiInProgressSub"),      href: "/provider/business/jobs" },
+    { label: t("provBiz_kpiCompleted"),       value: kpi?.completedThisMonth ?? 0,             icon: CheckCircle2, color: "text-teal-600",    bg: "bg-teal-50",    ring: "ring-teal-100",    sub: t("provBiz_kpiCompletedSub"),       href: "/provider/business/jobs" },
+    { label: t("provBiz_kpiStaff"),           value: kpi?.staffCount ?? 0,                     icon: Users,        color: "text-sky-600",     bg: "bg-sky-50",     ring: "ring-sky-100",     sub: t("provBiz_kpiStaffSub"),           href: "/provider/business/staff" },
+    { label: t("provBiz_kpiMonthlyRevenue"), value: formatCurrency(kpi?.monthlyRevenue ?? 0), icon: TrendingUp,   color: "text-emerald-600", bg: "bg-emerald-50", ring: "ring-emerald-100", sub: t("provBiz_kpiMonthlyRevenueSub"), href: "/provider/business/earnings" },
+    { label: t("provBiz_kpiAvgRating"),       value: `${(kpi?.avgRating ?? 0).toFixed(1)} ★`,  icon: Star,         color: "text-amber-600",   bg: "bg-amber-50",   ring: "ring-amber-100",   sub: t("provBiz_kpiAvgRatingSub"),       href: "/provider/business/reviews" },
+    { label: t("provBiz_kpiCompletionRate"), value: `${kpi?.completionRate ?? 0}%`,            icon: CheckCircle2, color: "text-teal-600",    bg: "bg-teal-50",    ring: "ring-teal-100",    sub: t("provBiz_kpiCompletionRateSub"), href: "/provider/business/analytics" },
+    { label: t("provBiz_kpiPendingPayouts"), value: formatCurrency(kpi?.pendingPayouts ?? 0), icon: DollarSign,   color: "text-orange-600",  bg: "bg-orange-50",  ring: "ring-orange-100",  sub: t("provBiz_kpiPendingPayoutsSub"), href: "/provider/business/earnings" },
   ];
 
   return (
@@ -262,9 +263,9 @@ export default function BusinessHubClient() {
             <p className="text-xs text-slate-500 capitalize mt-0.5">
               <span className="font-medium">{profile!.type}</span>
               <span className="mx-1.5 text-slate-300">·</span>
-              {kpi?.staffCount ?? 0} staff
+              {kpi?.staffCount ?? 0} {t("provBiz_staff")}
               <span className="mx-1.5 text-slate-300">·</span>
-              {profile!.serviceAreas.length} area{profile!.serviceAreas.length !== 1 ? "s" : ""}
+              {profile!.serviceAreas.length} {profile!.serviceAreas.length !== 1 ? t("provBiz_areaPlural") : t("provBiz_areaSingular")}
             </p>
           </div>
         </div>
@@ -272,7 +273,7 @@ export default function BusinessHubClient() {
           href="/provider/business/profile"
           className="hidden sm:flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-800 border border-slate-200 px-3 py-1.5 rounded-lg hover:bg-slate-50 transition-colors flex-shrink-0"
         >
-          <Settings className="h-3.5 w-3.5" /> Edit Profile
+          <Settings className="h-3.5 w-3.5" /> {t("provBiz_editProfile")}
         </Link>
       </div>
 
@@ -311,16 +312,16 @@ export default function BusinessHubClient() {
             <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
               <div className="flex items-center gap-2">
                 <TrendingUp className="h-4 w-4 text-slate-400" />
-                <h2 className="font-semibold text-slate-800 text-sm">Monthly Revenue</h2>
+                <h2 className="font-semibold text-slate-800 text-sm">{t("provBiz_monthlyRevenue")}</h2>
               </div>
               <Link href="/provider/business/earnings" className="text-xs text-primary hover:underline flex items-center gap-1">
-                View earnings <ChevronRight className="h-3 w-3" />
+                {t("provBiz_viewEarnings")} <ChevronRight className="h-3 w-3" />
               </Link>
             </div>
             {(snap?.revenueTrend?.length ?? 0) === 0 || snap?.revenueTrend.every((r) => r.revenue === 0) ? (
               <div className="flex flex-col items-center gap-2 py-10 text-center">
                 <BarChart2 className="h-7 w-7 text-slate-300" />
-                <p className="text-sm text-slate-400">No revenue data yet</p>
+                <p className="text-sm text-slate-400">{t("provBiz_noRevenueData")}</p>
               </div>
             ) : (
               <div className="px-4 pt-4 pb-3">
@@ -346,17 +347,17 @@ export default function BusinessHubClient() {
               <div className="flex items-center gap-2">
                 <PieChart className="h-4 w-4 text-slate-400" />
                 <h2 className="font-semibold text-slate-800 text-sm">
-                  Jobs by Category <span className="text-slate-400 font-normal text-xs">(this month)</span>
+                  {t("provBiz_jobsByCategory")} <span className="text-slate-400 font-normal text-xs">({t("provBiz_thisMonth")})</span>
                 </h2>
               </div>
               <Link href="/provider/business/analytics" className="text-xs text-primary hover:underline flex items-center gap-1">
-                Analytics <ChevronRight className="h-3 w-3" />
+                {t("provBiz_analytics")} <ChevronRight className="h-3 w-3" />
               </Link>
             </div>
             {catEntries.length === 0 ? (
               <div className="flex flex-col items-center gap-2 py-10 text-center">
                 <PieChart className="h-7 w-7 text-slate-300" />
-                <p className="text-sm text-slate-400">No category data yet</p>
+                <p className="text-sm text-slate-400">{t("provBiz_noCategoryData")}</p>
               </div>
             ) : (
               <div className="px-5 py-4 space-y-3">
@@ -381,17 +382,17 @@ export default function BusinessHubClient() {
             <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
               <div className="flex items-center gap-2">
                 <Users className="h-4 w-4 text-slate-400" />
-                <h2 className="font-semibold text-slate-800 text-sm">Top Staff</h2>
+                <h2 className="font-semibold text-slate-800 text-sm">{t("provBiz_topStaff")}</h2>
               </div>
               <Link href="/provider/business/staff" className="text-xs text-primary hover:underline flex items-center gap-1">
-                Manage staff <ChevronRight className="h-3 w-3" />
+                {t("provBiz_manageStaff")} <ChevronRight className="h-3 w-3" />
               </Link>
             </div>
             {(snap?.topStaff.length ?? 0) === 0 ? (
               <div className="flex flex-col items-center gap-2 py-10 text-center">
                 <Users className="h-7 w-7 text-slate-300" />
-                <p className="text-sm text-slate-400">No staff added yet</p>
-                <Link href="/provider/business/staff" className="text-xs text-primary hover:underline">Add team members →</Link>
+                <p className="text-sm text-slate-400">{t("provBiz_noStaffAdded")}</p>
+                <Link href="/provider/business/staff" className="text-xs text-primary hover:underline">{t("provBiz_addTeamMembers")} →</Link>
               </div>
             ) : (
               <div className="px-5 py-4 space-y-3">
@@ -424,17 +425,17 @@ export default function BusinessHubClient() {
             <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
               <div className="flex items-center gap-2">
                 <MapPin className="h-4 w-4 text-slate-400" />
-                <h2 className="font-semibold text-slate-800 text-sm">Service Coverage</h2>
+                <h2 className="font-semibold text-slate-800 text-sm">{t("provBiz_serviceCoverage")}</h2>
               </div>
               <Link href="/provider/business/service-areas" className="text-xs text-primary hover:underline flex items-center gap-1">
-                Manage <ChevronRight className="h-3 w-3" />
+                {t("provBiz_manage")} <ChevronRight className="h-3 w-3" />
               </Link>
             </div>
             {profile!.serviceAreas.length === 0 ? (
               <div className="flex flex-col items-center gap-2 py-10 text-center">
                 <MapPin className="h-7 w-7 text-slate-300" />
-                <p className="text-sm text-slate-400">No service areas set</p>
-                <Link href="/provider/business/service-areas" className="text-xs text-primary hover:underline">Add areas →</Link>
+                <p className="text-sm text-slate-400">{t("provBiz_noServiceAreas")}</p>
+                <Link href="/provider/business/service-areas" className="text-xs text-primary hover:underline">{t("provBiz_addAreas")} →</Link>
               </div>
             ) : (
               <div className="px-5 py-4 flex flex-wrap gap-2">
@@ -448,7 +449,7 @@ export default function BusinessHubClient() {
                   href="/provider/business/service-areas"
                   className="inline-flex items-center gap-1 text-xs text-primary border border-primary/20 bg-primary/5 rounded-lg px-3 py-1.5 hover:bg-primary/10 transition-colors"
                 >
-                  <Plus className="h-3 w-3" /> Add area
+                  <Plus className="h-3 w-3" /> {t("provBiz_addArea")}
                 </Link>
               </div>
             )}

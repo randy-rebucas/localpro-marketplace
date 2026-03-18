@@ -2,6 +2,7 @@
 
 import { useEffect, useCallback, useState } from "react";
 import { RefreshCw, X } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useAuthStore } from "@/stores/authStore";
 import { subscribePush, unsubscribePush } from "@/app/push/actions";
 
@@ -29,6 +30,7 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array<ArrayBuffer> {
  */
 export default function PwaSetup() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const t = useTranslations("pwaSetup");
   const [pendingWorker, setPendingWorker] = useState<ServiceWorker | null>(null);
   const [dismissed, setDismissed] = useState(false);
 
@@ -109,17 +111,17 @@ export default function PwaSetup() {
     >
       <RefreshCw size={16} className="flex-shrink-0 text-primary animate-spin [animation-duration:3s]" />
       <span className="flex-1 text-slate-700 dark:text-slate-200 font-medium">
-        A new version is available.
+        {t("updateAvailable")}
       </span>
       <button
         onClick={applyUpdate}
         className="flex-shrink-0 px-3 py-1.5 rounded-lg bg-primary text-white text-xs font-semibold hover:bg-primary/90 transition-colors"
       >
-        Reload
+        {t("reload")}
       </button>
       <button
         onClick={() => setDismissed(true)}
-        aria-label="Dismiss update notification"
+        aria-label={t("dismissAriaLabel")}
         className="flex-shrink-0 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
       >
         <X size={14} />

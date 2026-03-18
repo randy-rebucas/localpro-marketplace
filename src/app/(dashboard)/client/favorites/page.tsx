@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { getCurrentUser } from "@/lib/auth";
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { Suspense } from "react";
 import TourGuide from "@/components/shared/TourGuide";
 import RealtimeRefresher from "@/components/shared/RealtimeRefresher";
@@ -12,6 +13,7 @@ export const metadata: Metadata = { title: "Favorite Providers" };
 export default async function ClientFavoritesPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
+  const t = await getTranslations("clientPages");
 
   return (
     <div className="space-y-6">
@@ -30,9 +32,9 @@ export default async function ClientFavoritesPage() {
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900">Favorite Providers</h2>
+          <h2 className="text-2xl font-bold text-slate-900">{t("favorites")}</h2>
           <p className="text-slate-500 text-sm mt-1">
-            Save providers you trust and post jobs directly to them.
+            {t("favoritesSub")}
           </p>
         </div>
       </div>

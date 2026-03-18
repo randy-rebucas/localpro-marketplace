@@ -7,6 +7,7 @@ import {
   CheckCircle, Clock, AlertTriangle, Plus, Trash2, Save,
   X, RefreshCw, ExternalLink, AlertCircle,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { fetchClient } from "@/lib/fetchClient";
 import toast from "react-hot-toast";
 
@@ -60,22 +61,32 @@ const TAX_STATUS_BADGE: Record<TaxStatus, string> = {
   not_provided: "bg-slate-100 text-slate-500",
 };
 
-const TAX_STATUS_LABEL: Record<TaxStatus, string> = {
-  compliant:    "Compliant",
-  pending:      "Pending",
-  not_provided: "Not Provided",
-};
-
-const INS_STATUS_LABEL: Record<InsuranceStatus, string> = {
-  verified: "Verified",
-  pending:  "Pending",
-  expired:  "Expired",
-  none:     "Not Provided",
-};
+// Labels built inside component via t()
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function ComplianceClient() {
+  const t = useTranslations("providerPages");
+
+  const TAX_STATUS_LABEL: Record<TaxStatus, string> = {
+    compliant:    t("provCompliance_taxOptCompliant"),
+    pending:      t("provCompliance_taxStatusPending"),
+    not_provided: t("provCompliance_taxStatusNotProvided"),
+  };
+
+  const INS_STATUS_LABEL: Record<InsuranceStatus, string> = {
+    verified: t("provCompliance_insStatusVerified"),
+    pending:  t("provCompliance_taxStatusPending"),
+    expired:  t("provCompliance_insStatusExpired"),
+    none:     t("provCompliance_insStatusNone"),
+  };
+
+  const PERMIT_STATUS_LABEL: Record<PermitStatus, string> = {
+    verified: t("provCompliance_permitStatusVerified"),
+    pending:  t("provCompliance_permitStatusPending"),
+    expired:  t("provCompliance_permitStatusExpired"),
+  };
+
   const [name, setName]           = useState("");
   const [data, setData]           = useState<Compliance | null>(null);
   const [loading, setLoading]     = useState(true);
@@ -111,7 +122,7 @@ export default function ComplianceClient() {
       });
     } catch {
       setLoadError(true);
-      toast.error("Failed to load compliance data.");
+      toast.error(t("provCompliance_errLoad"));
     } finally {
       setLoading(false);
     }
@@ -140,10 +151,10 @@ export default function ComplianceClient() {
         method: "PATCH",
         body: JSON.stringify(taxForm),
       });
-      toast.success("Tax information saved.");
+      toast.success(t("provCompliance_toastTaxSaved"));
       await load();
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Failed to save.");
+      toast.error(e instanceof Error ? e.message : t("provCompliance_errSave"));
     } finally {
       setSavingTax(false);
     }
@@ -161,10 +172,10 @@ export default function ComplianceClient() {
           insuranceStatus: insForm.insuranceStatus,
         }),
       });
-      toast.success("Insurance information saved.");
+      toast.success(t("provCompliance_toastInsSaved"));
       await load();
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Failed to save.");
+      toast.error(e instanceof Error ? e.message : t("provCompliance_errSave"));
     } finally {
       setSavingIns(false);
     }
@@ -173,19 +184,19 @@ export default function ComplianceClient() {
   // ── Add permit ─────────────────────────────────────────────────────────────
 
   async function handleAddPermit() {
-    if (!permitForm.title.trim()) { toast.error("Permit title is required."); return; }
+    if (!permitForm.title.trim()) { toast.error(t("provCompliance_errPermitTitle")); return; }
     setSavingPermit(true);
     try {
       await fetchClient("/api/provider/agency/compliance", {
         method: "POST",
         body: JSON.stringify(permitForm),
       });
-      toast.success("Permit added.");
+      toast.success(t("provCompliance_toastPermitAdded"));
       setShowPermitForm(false);
       setPermitForm({ ...EMPTY_PERMIT });
       await load();
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Failed to add permit.");
+      toast.error(e instanceof Error ? e.message : t("provCompliance_errAddPermit"));
     } finally {
       setSavingPermit(false);
     }
@@ -197,10 +208,10 @@ export default function ComplianceClient() {
     setConfirmDelete(null);
     try {
       await fetchClient(`/api/provider/agency/compliance?permitIndex=${idx}`, { method: "DELETE" });
-      toast.success("Permit removed.");
+      toast.success(t("provCompliance_toastPermitRemoved"));
       await load();
     } catch {
-      toast.error("Failed to remove permit.");
+      toast.error(t("provCompliance_errRemovePermit"));
     }
   }
 
@@ -220,8 +231,8 @@ export default function ComplianceClient() {
     return (
       <div className="flex flex-col items-center justify-center py-24 gap-4 text-center">
         <AlertCircle className="h-10 w-10 text-red-400" />
-        <p className="text-slate-600 font-medium">Failed to load compliance data</p>
-        <button onClick={load} className="btn-secondary text-sm px-4 py-2">Try Again</button>
+        <p className="text-slate-600 font-medium">{t("provCompliance_errLoadHeading")}</p>
+        <button onClick={load} className="btn-secondary text-sm px-4 py-2">{t("provCompliance_btnRetry")}</button>
       </div>
     );
   }
@@ -231,8 +242,8 @@ export default function ComplianceClient() {
       <div className="flex flex-col items-center justify-center py-24 gap-3 text-center">
         <ShieldCheck className="h-10 w-10 text-slate-300" />
         <p className="text-slate-500">
-          No agency profile found.{" "}
-          <Link href="/provider/business" className="text-primary underline">Create one first.</Link>
+          {t("provCompliance_noAgency")}{" "}
+          <Link href="/provider/business" className="text-primary underline">{t("provCompliance_noAgencyLink")}</Link>
         </p>
       </div>
     );
@@ -245,11 +256,11 @@ export default function ComplianceClient() {
 
   // What's missing
   const tips: string[] = [];
-  if (data.permits.length === 0)                         tips.push("Add at least one business permit.");
-  if (!data.permits.some((p) => p.status === "verified")) tips.push("Get a permit verified.");
-  if (data.insuranceStatus !== "verified")                tips.push("Upload and verify insurance coverage.");
-  if (!data.tin.trim())                                   tips.push("Enter your TIN number.");
-  if (data.taxStatus !== "compliant")                     tips.push("Set tax status to Compliant.");
+  if (data.permits.length === 0)                          tips.push(t("provCompliance_tipNoPermits"));
+  if (!data.permits.some((p) => p.status === "verified")) tips.push(t("provCompliance_tipVerifyPermit"));
+  if (data.insuranceStatus !== "verified")                tips.push(t("provCompliance_tipInsurance"));
+  if (!data.tin.trim())                                   tips.push(t("provCompliance_tipTin"));
+  if (data.taxStatus !== "compliant")                     tips.push(t("provCompliance_tipTaxStatus"));
 
   return (
     <div className="space-y-6 max-w-2xl">
@@ -261,7 +272,7 @@ export default function ComplianceClient() {
             <ShieldCheck className="h-5 w-5 text-teal-600 dark:text-teal-400" />
           </div>
           <div>
-            <h1 className="text-base font-bold text-slate-800 dark:text-white">Compliance &amp; Legal</h1>
+            <h1 className="text-base font-bold text-slate-800 dark:text-white">{t("provCompliance_heading")}</h1>
             <p className="text-xs text-slate-500 dark:text-slate-400">{name}</p>
           </div>
         </div>
@@ -282,8 +293,8 @@ export default function ComplianceClient() {
               <ShieldCheck className="h-6 w-6 text-primary" />
             </div>
             <div>
-              <h2 className="font-semibold text-slate-800">Compliance Score</h2>
-              <p className="text-xs text-slate-400 mt-0.5">{met} of {total} requirements met</p>
+              <h2 className="font-semibold text-slate-800">{t("provCompliance_scoreTitle")}</h2>
+              <p className="text-xs text-slate-400 mt-0.5">{t("provCompliance_scoreMet", { met, total })}</p>
             </div>
           </div>
           <p className={`text-3xl font-bold tabular-nums ${scoreColor}`}>{score}%</p>
@@ -293,12 +304,12 @@ export default function ComplianceClient() {
             <div className={`h-full rounded-full transition-all ${barColor}`} style={{ width: `${score}%` }} />
           </div>
           <p className="text-[11px] text-slate-400 mt-1.5">
-            Complete all requirements to unlock full agency features and build client trust.
+            {t("provCompliance_scoreNote")}
           </p>
         </div>
         {tips.length > 0 && score < 100 && (
           <div className="mt-4 bg-amber-50 border border-amber-100 rounded-xl px-4 py-3 space-y-1.5">
-            <p className="text-[11px] font-semibold text-amber-700 uppercase tracking-wider">What to improve</p>
+            <p className="text-[11px] font-semibold text-amber-700 uppercase tracking-wider">{t("provCompliance_tipsLabel")}</p>
             <ul className="space-y-1">
               {tips.map((tip) => (
                 <li key={tip} className="flex items-start gap-1.5 text-xs text-amber-800">
@@ -318,8 +329,8 @@ export default function ComplianceClient() {
             <FileText className="h-5 w-5 text-blue-600" />
           </div>
           <div className="flex-1">
-            <h3 className="font-semibold text-slate-800">Business Permits</h3>
-            <p className="text-xs text-slate-400 mt-0.5">Licenses and government permits on file.</p>
+              <h3 className="font-semibold text-slate-800">{t("provCompliance_permitsTitle")}</h3>
+              <p className="text-xs text-slate-400 mt-0.5">{t("provCompliance_permitsDesc")}</p>
           </div>
           {data.permits.length > 0 && (
             <span className="text-[11px] font-semibold bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">
@@ -330,51 +341,51 @@ export default function ComplianceClient() {
             onClick={() => { setShowPermitForm((v) => !v); setPermitForm({ ...EMPTY_PERMIT }); }}
             className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-primary border border-slate-200 hover:border-primary/40 px-3 py-1.5 rounded-lg transition-colors"
           >
-            <Plus className="h-3.5 w-3.5" /> Add Permit
+            <Plus className="h-3.5 w-3.5" /> {t("provCompliance_btnAddPermit")}
           </button>
         </div>
 
         {/* Add permit form */}
         {showPermitForm && (
           <div className="px-5 py-4 border-b border-slate-100 bg-slate-50 space-y-3">
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">New Permit</p>
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">{t("provCompliance_permitFormTitle")}</p>
             <div className="grid sm:grid-cols-2 gap-3">
               <div className="sm:col-span-2">
-                <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Title *</label>
+                <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">{t("provCompliance_permitFieldTitle")}</label>
                 <input
                   className="input w-full"
-                  placeholder="e.g. Mayor's Business Permit"
+                  placeholder={t("provCompliance_permitPlaceholderTitle")}
                   value={permitForm.title}
                   onChange={(e) => setPermitForm((f) => ({ ...f, title: e.target.value }))}
                 />
               </div>
               <div>
-                <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Document URL</label>
+                <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">{t("provCompliance_permitFieldUrl")}</label>
                 <input
                   className="input w-full"
-                  placeholder="https://... (optional)"
+                  placeholder={t("provCompliance_permitPlaceholderUrl")}
                   value={permitForm.url}
                   onChange={(e) => setPermitForm((f) => ({ ...f, url: e.target.value }))}
                 />
               </div>
               <div>
-                <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Status</label>
+                <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">{t("provCompliance_permitFieldStatus")}</label>
                 <select
                   className="input w-full"
                   value={permitForm.status}
                   onChange={(e) => setPermitForm((f) => ({ ...f, status: e.target.value as PermitStatus }))}
                 >
-                  <option value="pending">Pending</option>
-                  <option value="verified">Verified</option>
-                  <option value="expired">Expired</option>
+                  <option value="pending">{t("provCompliance_permitStatusPending")}</option>
+                  <option value="verified">{t("provCompliance_permitStatusVerified")}</option>
+                  <option value="expired">{t("provCompliance_permitStatusExpired")}</option>
                 </select>
               </div>
             </div>
             <div className="flex gap-2">
               <button onClick={handleAddPermit} disabled={savingPermit} className="btn-primary flex items-center gap-2 text-sm">
-                <Save className="h-3.5 w-3.5" /> {savingPermit ? "Saving…" : "Add Permit"}
+                <Save className="h-3.5 w-3.5" /> {savingPermit ? t("provCompliance_btnSaving") : t("provCompliance_btnAddPermit")}
               </button>
-              <button onClick={() => setShowPermitForm(false)} className="btn-secondary text-sm">Cancel</button>
+              <button onClick={() => setShowPermitForm(false)} className="btn-secondary text-sm">{t("provCompliance_btnCancel")}</button>
             </div>
           </div>
         )}
@@ -382,7 +393,7 @@ export default function ComplianceClient() {
         {/* Permit list */}
         {data.permits.length === 0 ? (
           <div className="px-5 py-8 text-center">
-            <p className="text-sm text-slate-400 italic">No permits on file. Click "Add Permit" to record one.</p>
+            <p className="text-sm text-slate-400 italic">{t("provCompliance_permitEmpty")}</p>
           </div>
         ) : (
           <div className="divide-y divide-slate-50">
@@ -403,17 +414,17 @@ export default function ComplianceClient() {
                         rel="noopener noreferrer"
                         className="text-[11px] text-primary hover:underline flex items-center gap-0.5 mt-0.5"
                       >
-                        <ExternalLink className="h-2.5 w-2.5" /> View document
+                        <ExternalLink className="h-2.5 w-2.5" /> {t("provCompliance_viewDocument")}
                       </a>
                     )}
                   </div>
                   <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider flex-shrink-0 ${STATUS_BADGE[permit.status]}`}>
-                    {permit.status}
+                    {PERMIT_STATUS_LABEL[permit.status]}
                   </span>
                   {confirmDelete === idx ? (
                     <div className="flex items-center gap-1">
                       <button onClick={() => handleDeletePermit(idx)} className="px-2 py-1 rounded-lg bg-red-500 text-white text-xs font-semibold hover:bg-red-600 transition-colors">
-                        Remove
+                        {t("provCompliance_btnRemove")}
                       </button>
                       <button onClick={() => setConfirmDelete(null)} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 transition-colors">
                         <X className="h-3.5 w-3.5" />
@@ -438,31 +449,31 @@ export default function ComplianceClient() {
             <ShieldCheck className="h-5 w-5 text-violet-600" />
           </div>
           <div>
-            <h3 className="font-semibold text-slate-800">Insurance</h3>
-            <p className="text-xs text-slate-400 mt-0.5">Liability and workers compensation coverage.</p>
+              <h3 className="font-semibold text-slate-800">{t("provCompliance_insTitle")}</h3>
+              <p className="text-xs text-slate-400 mt-0.5">{t("provCompliance_insDesc")}</p>
           </div>
         </div>
         <div className="px-5 py-5 space-y-4">
           <div>
-            <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Insurance Document URL</label>
+            <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">{t("provCompliance_insFieldUrl")}</label>
             <input
               className="input w-full"
-              placeholder="https://drive.google.com/... or other document link"
+              placeholder={t("provCompliance_insPlaceholderUrl")}
               value={insForm.insuranceUrl}
               onChange={(e) => setInsForm((f) => ({ ...f, insuranceUrl: e.target.value }))}
             />
           </div>
           <div>
-            <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Insurance Status</label>
+            <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">{t("provCompliance_insFieldStatus")}</label>
             <select
               className="input w-full"
               value={insForm.insuranceStatus}
               onChange={(e) => setInsForm((f) => ({ ...f, insuranceStatus: e.target.value as InsuranceStatus }))}
             >
-              <option value="none">Not Provided</option>
-              <option value="pending">Pending Review</option>
-              <option value="verified">Verified</option>
-              <option value="expired">Expired</option>
+              <option value="none">{t("provCompliance_insStatusNone")}</option>
+              <option value="pending">{t("provCompliance_insStatusPending")}</option>
+              <option value="verified">{t("provCompliance_insStatusVerified")}</option>
+              <option value="expired">{t("provCompliance_insStatusExpired")}</option>
             </select>
           </div>
           <div className="flex items-center justify-between pt-1">
@@ -482,7 +493,7 @@ export default function ComplianceClient() {
               })()}
             </div>
             <button onClick={handleSaveInsurance} disabled={savingIns} className="btn-primary flex items-center gap-2 text-sm">
-              <Save className="h-3.5 w-3.5" /> {savingIns ? "Saving…" : "Save"}
+              <Save className="h-3.5 w-3.5" /> {savingIns ? t("provCompliance_btnSaving") : t("provCompliance_btnSave")}
             </button>
           </div>
         </div>
@@ -495,17 +506,17 @@ export default function ComplianceClient() {
             <Award className="h-5 w-5 text-amber-600" />
           </div>
           <div>
-            <h3 className="font-semibold text-slate-800">Certifications</h3>
-            <p className="text-xs text-slate-400 mt-0.5">Professional certifications and training records.</p>
+              <h3 className="font-semibold text-slate-800">{t("provCompliance_certTitle")}</h3>
+              <p className="text-xs text-slate-400 mt-0.5">{t("provCompliance_certDesc")}</p>
           </div>
         </div>
         <div className="px-5 py-5">
           <p className="text-sm text-slate-500">
-            Certifications are managed in your{" "}
+            {t("provCompliance_certTextPre")}{" "}
             <Link href="/provider/business/profile" className="text-primary hover:underline font-medium">
-              Agency Profile
+              {t("provCompliance_certProfileLink")}
             </Link>
-            . Add TESDA, ISO, and other relevant certifications there to display them on your public profile.
+            {t("provCompliance_certTextPost")}
           </p>
         </div>
       </div>
@@ -517,14 +528,14 @@ export default function ComplianceClient() {
             <ReceiptText className="h-5 w-5 text-emerald-600" />
           </div>
           <div>
-            <h3 className="font-semibold text-slate-800">Tax Information</h3>
-            <p className="text-xs text-slate-400 mt-0.5">Required for payout processing above threshold.</p>
+              <h3 className="font-semibold text-slate-800">{t("provCompliance_taxTitle")}</h3>
+              <p className="text-xs text-slate-400 mt-0.5">{t("provCompliance_taxDesc")}</p>
           </div>
         </div>
         <div className="px-5 py-5 space-y-4">
           <div className="grid sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">TIN</label>
+              <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">{t("provCompliance_taxFieldTin")}</label>
               <input
                 className="input w-full font-mono"
                 placeholder="000-000-000-000"
@@ -533,25 +544,25 @@ export default function ComplianceClient() {
               />
             </div>
             <div>
-              <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">VAT Registration No.</label>
+              <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">{t("provCompliance_taxFieldVat")}</label>
               <input
                 className="input w-full font-mono"
-                placeholder="Optional"
+                placeholder={t("provCompliance_taxPlaceholderVat")}
                 value={taxForm.vat}
                 onChange={(e) => setTaxForm((f) => ({ ...f, vat: e.target.value }))}
               />
             </div>
           </div>
           <div>
-            <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Tax Compliance Status</label>
+            <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">{t("provCompliance_taxFieldStatus")}</label>
             <select
               className="input w-full"
               value={taxForm.taxStatus}
               onChange={(e) => setTaxForm((f) => ({ ...f, taxStatus: e.target.value as TaxStatus }))}
             >
-              <option value="not_provided">Not Provided</option>
-              <option value="pending">Pending Verification</option>
-              <option value="compliant">Compliant</option>
+              <option value="not_provided">{t("provCompliance_taxOptNotProvided")}</option>
+              <option value="pending">{t("provCompliance_taxOptPending")}</option>
+              <option value="compliant">{t("provCompliance_taxOptCompliant")}</option>
             </select>
           </div>
           <div className="flex items-center justify-between pt-1">
@@ -559,7 +570,7 @@ export default function ComplianceClient() {
               {TAX_STATUS_LABEL[taxForm.taxStatus]}
             </span>
             <button onClick={handleSaveTax} disabled={savingTax} className="btn-primary flex items-center gap-2 text-sm">
-              <Save className="h-3.5 w-3.5" /> {savingTax ? "Saving…" : "Save"}
+              <Save className="h-3.5 w-3.5" /> {savingTax ? t("provCompliance_btnSaving") : t("provCompliance_btnSave")}
             </button>
           </div>
         </div>
@@ -572,26 +583,26 @@ export default function ComplianceClient() {
             <FileCheck2 className="h-5 w-5 text-teal-600" />
           </div>
           <div>
-            <h3 className="font-semibold text-slate-800">Contracts &amp; Templates</h3>
-            <p className="text-xs text-slate-400 mt-0.5">Standard service agreements and work order templates.</p>
+              <h3 className="font-semibold text-slate-800">{t("provCompliance_contractsTitle")}</h3>
+              <p className="text-xs text-slate-400 mt-0.5">{t("provCompliance_contractsDesc")}</p>
           </div>
         </div>
         <div className="px-5 py-5 space-y-3">
           {[
-            { label: "Service Agreement Template",  detail: "Standard client-provider agreement" },
-            { label: "Staff NDA Template",          detail: "Non-disclosure for staff members" },
-            { label: "Work Order Template",         detail: "Per-job work authorization form" },
+            { label: t("provCompliance_ctSvcAgreement"),  detail: t("provCompliance_ctSvcAgreementDetail") },
+            { label: t("provCompliance_ctStaffNda"),      detail: t("provCompliance_ctStaffNdaDetail") },
+            { label: t("provCompliance_ctWorkOrder"),     detail: t("provCompliance_ctWorkOrderDetail") },
           ].map((item) => (
             <div key={item.label} className="flex items-center justify-between py-2 border-b border-slate-50 last:border-0">
               <div>
                 <p className="text-sm font-medium text-slate-700">{item.label}</p>
                 <p className="text-[11px] text-slate-400">{item.detail}</p>
               </div>
-              <span className="text-[11px] text-slate-400 italic">Coming soon</span>
+              <span className="text-[11px] text-slate-400 italic">{t("provCompliance_comingSoon")}</span>
             </div>
           ))}
           <p className="text-[11px] text-slate-400 pt-1">
-            Need to submit documents? Email us at{" "}
+            {t("provCompliance_emailNote")}{" "}
             <span className="text-primary">support@localpro.ph</span>.
           </p>
         </div>

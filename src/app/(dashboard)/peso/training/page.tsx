@@ -7,6 +7,7 @@ import {
   Search, X, Loader2, Award, ShieldCheck, AlertTriangle, Users,
 } from "lucide-react";
 import { apiFetch } from "@/lib/fetchClient";
+import { useTranslations } from "next-intl";
 
 interface Certification {
   _id: string;
@@ -55,6 +56,7 @@ function isExpired(expiresAt?: string) {
 }
 
 export default function TrainingPage() {
+  const t = useTranslations("pesoPages");
   const [providers, setProviders] = useState<Provider[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -143,10 +145,10 @@ export default function TrainingPage() {
         <div>
           <h1 className="text-xl font-bold text-slate-800 flex items-center gap-2">
             <GraduationCap className="h-5 w-5 text-blue-600" />
-            Training &amp; Certifications
+            {t("training")}
           </h1>
           <p className="text-sm text-slate-500 mt-0.5">
-            Manage TESDA/PESO certifications for registered workers.
+            {t("trainingSub")}
           </p>
         </div>
         {!loading && (

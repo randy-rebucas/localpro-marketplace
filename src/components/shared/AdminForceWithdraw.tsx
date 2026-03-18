@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import toast from "react-hot-toast";
 import Button from "@/components/ui/Button";
 import Modal from "@/components/ui/Modal";
@@ -20,6 +21,8 @@ interface Props {
  */
 export default function AdminForceWithdraw({ jobId, status, providerName }: Props) {
   const router = useRouter();
+  const t = useTranslations("adminForceWithdraw");
+  const tCommon = useTranslations("common");
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -29,7 +32,7 @@ export default function AdminForceWithdraw({ jobId, status, providerName }: Prop
 
   async function handleSubmit() {
     if (reason.trim().length < 5) {
-      toast.error("Please provide a reason (at least 5 characters)");
+      toast.error(t("reasonTooShort"));
       return;
     }
     setIsLoading(true);
@@ -40,12 +43,12 @@ export default function AdminForceWithdraw({ jobId, status, providerName }: Prop
         body: JSON.stringify({ reason: reason.trim() }),
       });
       const data = await res.json();
-      if (!res.ok) { toast.error(data.error ?? "Force withdraw failed"); return; }
+      if (!res.ok) { toast.error(data.error ?? t("withdrawFailed")); return; }
       toast.success(data.message);
       setOpen(false);
       router.refresh();
     } catch {
-      toast.error("Something went wrong");
+      toast.error(tCommon("somethingWentWrong"));
     } finally {
       setIsLoading(false);
     }
@@ -58,33 +61,32 @@ export default function AdminForceWithdraw({ jobId, status, providerName }: Prop
         className="inline-flex items-center gap-2 rounded-lg border border-orange-200 bg-orange-50 px-3 py-2 text-sm font-medium text-orange-700 hover:bg-orange-100 transition-colors"
       >
         <UserX className="h-4 w-4" />
-        Force Withdraw Provider
+        {t("triggerBtn")}
       </button>
 
-      <Modal isOpen={open} onClose={() => setOpen(false)} title="Force Withdraw Provider">
+      <Modal isOpen={open} onClose={() => setOpen(false)} title={t("modalTitle")}>
         <div className="space-y-4">
           <div className="rounded-lg border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-800">
-            <p className="font-semibold mb-0.5">⚠ This action cannot be undone</p>
+            <p className="font-semibold mb-0.5">{t("warningTitle")}</p>
             <p>
               {providerName ? (
-                <><strong>{providerName}</strong> will be removed from this job.</>
+                <><strong>{providerName}</strong>{" "}{t("warningBodyNamedSuffix")}</>
               ) : (
-                "The assigned provider will be removed from this job."
+                t("warningBodyGeneric")
               )}{" "}
-              The job will be re-opened to the board. If escrow is already funded, it stays held —
-              the client will not need to pay again.
+              {t("warningBodyTrail")}
             </p>
           </div>
 
           <div className="space-y-1.5">
             <label className="text-xs font-medium text-slate-700" htmlFor="fw-reason">
-              Reason <span className="text-red-500">*</span>
+              {t("reasonLabel")} <span className="text-red-500">*</span>
             </label>
             <textarea
               id="fw-reason"
               rows={3}
               className="input w-full resize-none"
-              placeholder="e.g. Provider unresponsive for 72 hours, confirmed cannot do the job..."
+              placeholder={t("reasonPlaceholder")}
               value={reason}
               onChange={(e) => setReason(e.target.value)}
             />
@@ -92,7 +94,7 @@ export default function AdminForceWithdraw({ jobId, status, providerName }: Prop
 
           <div className="flex justify-end gap-3 pt-1">
             <Button variant="secondary" onClick={() => setOpen(false)} disabled={isLoading}>
-              Cancel
+              {tCommon("cancel")}
             </Button>
             <Button
               variant="danger"
@@ -100,7 +102,7 @@ export default function AdminForceWithdraw({ jobId, status, providerName }: Prop
               isLoading={isLoading}
               disabled={reason.trim().length < 5}
             >
-              Confirm Force Withdraw
+              {t("confirmBtn")}
             </Button>
           </div>
         </div>

@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import toast from "react-hot-toast";
 import { apiFetch } from "@/lib/fetchClient";
 import { containsContactInfo } from "@/lib/contactFilter";
+import { useTranslations } from "next-intl";
 
 interface MessageInputProps {
   onSend: (body: string) => Promise<void>;
@@ -31,9 +32,11 @@ export default function MessageInput({
   onSend,
   onAttach,
   disabled,
-  placeholder = "Type a message…",
+  placeholder,
   aiSuggestData,
 }: MessageInputProps) {
+  const t = useTranslations("messageInput");
+  const resolvedPlaceholder = placeholder ?? t("defaultPlaceholder");
   const [value, setValue] = useState("");
   const [sending, setSending] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
@@ -66,7 +69,7 @@ export default function MessageInput({
       await onSend(trimmed);
     } catch (err) {
       setValue(trimmed);
-      toast.error(err instanceof Error ? err.message : "Failed to send message");
+      toast.error(err instanceof Error ? err.message : t("sendFailed"));
     } finally {
       setSending(false);
       textareaRef.current?.focus();
@@ -98,10 +101,10 @@ export default function MessageInput({
         body: JSON.stringify(aiSuggestData),
       });
       const data = await res.json();
-      if (!res.ok) { toast.error(data.error ?? "Could not fetch suggestions"); return; }
+      if (!res.ok) { toast.error(data.error ?? t("suggestionsFailed")); return; }
       setSuggestions(data.replies ?? []);
     } catch {
-      toast.error("Could not reach AI service.");
+      toast.error(t("serviceError"));
     } finally {
       setLoadingSuggestions(false);
     }
@@ -127,7 +130,7 @@ export default function MessageInput({
       await onAttach(pendingFile);
       setPendingFile(null);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to upload file");
+      toast.error(err instanceof Error ? err.message : t("uploadFailed"));
     } finally {
       setUploadingFile(false);
     }
@@ -142,7 +145,7 @@ export default function MessageInput({
         <div className="mx-3 mt-2.5 flex items-start gap-2 rounded-xl bg-amber-50 border border-amber-200 px-3 py-2">
           <ShieldAlert className="h-4 w-4 text-amber-500 flex-shrink-0 mt-0.5" />
           <p className="text-xs text-amber-700 leading-snug">
-            Sharing phone numbers, emails, or social handles is not allowed. Contact details will be removed before delivery to protect both parties.
+            {t("contactWarning")}
           </p>
         </div>
       )}
@@ -170,7 +173,7 @@ export default function MessageInput({
               {loadingSuggestions
                 ? <Loader2 className="h-3 w-3 animate-spin" />
                 : <Sparkles className="h-3 w-3" />}
-              {loadingSuggestions ? "Suggesting…" : "Suggest replies"}
+              {loadingSuggestions ? t("suggesting") : t("suggestReplies")}
             </button>
           )}
         </div>
@@ -201,7 +204,7 @@ export default function MessageInput({
                   onClick={sendFile}
                   className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-primary text-white text-xs font-medium hover:bg-primary-700 transition-colors"
                 >
-                  <Send className="h-3 w-3" /> Send
+                  <Send className="h-3 w-3" /> {t("sendFileBtn")}
                 </button>
                 <button
                   type="button"
@@ -214,7 +217,7 @@ export default function MessageInput({
             ) : (
               <div className="flex items-center gap-1.5 text-xs text-slate-500">
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                Uploading…
+                {t("uploading")}
               </div>
             )}
           </div>
@@ -239,7 +242,7 @@ export default function MessageInput({
             type="button"
             onClick={() => fileInputRef.current?.click()}
             disabled={disabled || uploadingFile}
-            title="Attach file"
+            title={t("attachTitle")}
             className="flex-shrink-0 flex items-center justify-center h-10 w-10 rounded-xl border border-slate-200 text-slate-400 hover:text-primary hover:border-primary/40 transition-colors disabled:opacity-40"
           >
             <Paperclip className="h-4 w-4" />
@@ -253,7 +256,7 @@ export default function MessageInput({
           onChange={(e) => { setValue(e.target.value); if (suggestions.length > 0) setSuggestions([]); }}
           onKeyDown={handleKeyDown}
           onInput={handleInput}
-          placeholder={placeholder}
+          placeholder={resolvedPlaceholder}
           disabled={disabled || sending}
           className={cn(
             "flex-1 resize-none rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5",

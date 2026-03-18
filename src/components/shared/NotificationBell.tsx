@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Bell, ChevronRight } from "lucide-react";
 import { useNotificationStore } from "@/stores/notificationStore";
 import { useAuthStore } from "@/stores/authStore";
@@ -12,6 +13,7 @@ import type { INotification } from "@/types";
 
 export default function NotificationBell() {
   const router = useRouter();
+  const t = useTranslations("notificationBell");
   const user = useAuthStore((s) => s.user);
   const notifications = useNotificationStore((s) => s.notifications);
   const unreadCount = useNotificationStore((s) => s.unreadCount);
@@ -80,7 +82,7 @@ export default function NotificationBell() {
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
             <span className="text-sm font-semibold text-slate-900 flex items-center gap-1.5">
-              Notifications
+              {t("heading")}
               {unreadCount > 0 && (
                 <span className="inline-flex items-center justify-center h-4 px-1.5 rounded-full bg-red-100 text-red-600 text-[10px] font-bold">
                   {unreadCount}
@@ -89,7 +91,7 @@ export default function NotificationBell() {
             </span>
             {unreadCount > 0 && (
               <button onClick={() => markAllRead()} className="text-xs text-primary hover:underline">
-                Mark all read
+                {t("markAllRead")}
               </button>
             )}
           </div>
@@ -99,7 +101,7 @@ export default function NotificationBell() {
             {notifications.length === 0 ? (
               <div className="py-10 flex flex-col items-center gap-2 text-center">
                 <Bell className="h-6 w-6 text-slate-300" />
-                <p className="text-sm text-slate-400">No notifications yet</p>
+                <p className="text-sm text-slate-400">{t("empty")}</p>
               </div>
             ) : (
               notifications.map((n, i) => {
@@ -143,7 +145,7 @@ export default function NotificationBell() {
               }}
               className="text-xs font-medium text-primary hover:underline"
             >
-              View all notifications
+              {t("viewAll")}
             </button>
           </div>
         </div>

@@ -4,6 +4,7 @@ import { useState } from "react";
 import toast from "react-hot-toast";
 import { UserPlus, CheckCircle2, X, Loader2 } from "lucide-react";
 import { apiFetch } from "@/lib/fetchClient";
+import { useTranslations } from "next-intl";
 
 const INPUT_CLS =
   "mt-1 w-full border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-700 placeholder:text-slate-400 outline-none focus:ring-1 focus:ring-blue-400 transition";
@@ -20,6 +21,7 @@ const EMPTY_FORM = {
 };
 
 export default function ReferralsPage() {
+  const t = useTranslations("pesoPages");
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
@@ -70,10 +72,9 @@ export default function ReferralsPage() {
     <div className="max-w-xl mx-auto space-y-5">
       {/* Header */}
       <div>
-        <h1 className="text-xl font-bold text-slate-800">Refer a Provider</h1>
+        <h1 className="text-xl font-bold text-slate-800">{t("referProvider")}</h1>
         <p className="text-sm text-slate-500 mt-0.5">
-          Create a LocalPro provider account for a worker you&apos;ve referred.
-          They will receive an activation link by email.
+          {t("referProviderSub")}
         </p>
       </div>
 
@@ -192,7 +193,7 @@ export default function ReferralsPage() {
             ) : (
               <UserPlus className="h-4 w-4" />
             )}
-            {submitting ? "Creating Account…" : "Refer Provider"}
+            {submitting ? t("submittingReferral") : t("submitReferral")}
           </button>
           <p className="text-center text-xs text-slate-400 mt-2">
             Fields marked <span className="text-red-400">*</span> are required.

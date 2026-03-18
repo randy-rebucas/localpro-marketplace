@@ -1,28 +1,17 @@
 import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 import { MessageSquare, ImagePlus, History, Briefcase } from "lucide-react";
 import Link from "next/link";
 
 export const metadata: Metadata = { title: "Messages" };
 
-const TIPS = [
-  {
-    icon: <MessageSquare className="h-4 w-4" />,
-    title: "One thread per job",
-    text: "Each assigned job gets its own private conversation with the provider.",
-  },
-  {
-    icon: <ImagePlus className="h-4 w-4" />,
-    title: "Share files & photos",
-    text: "Attach images or documents directly in the chat to clarify details.",
-  },
-  {
-    icon: <History className="h-4 w-4" />,
-    title: "Full history saved",
-    text: "Every message is stored and searchable — nothing gets lost.",
-  },
-];
-
-export default function ClientMessagesPage() {
+export default async function ClientMessagesPage() {
+  const t = await getTranslations("clientPages");
+  const TIPS = [
+    { icon: <MessageSquare className="h-4 w-4" />, title: t("msgTip1Title"), text: t("msgTip1Text") },
+    { icon: <ImagePlus className="h-4 w-4" />, title: t("msgTip2Title"), text: t("msgTip2Text") },
+    { icon: <History className="h-4 w-4" />, title: t("msgTip3Title"), text: t("msgTip3Text") },
+  ];
   return (
     <div className="flex-1 flex flex-col items-center justify-center gap-8 px-10 py-16 text-center select-none">
 
@@ -38,9 +27,9 @@ export default function ClientMessagesPage() {
 
       {/* Heading */}
       <div className="space-y-1.5">
-        <p className="text-base font-semibold text-slate-700">No conversation open</p>
+        <p className="text-base font-semibold text-slate-700">{t("msgNoConvo")}</p>
         <p className="text-sm text-slate-400 max-w-[260px]">
-          Select a job thread from the sidebar to start chatting with your provider.
+          {t("msgSidebarHint")}
         </p>
       </div>
 
@@ -65,7 +54,7 @@ export default function ClientMessagesPage() {
         className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary/8 text-primary text-xs font-medium hover:bg-primary/14 transition-colors"
       >
         <Briefcase className="h-3.5 w-3.5" />
-        View My Jobs
+        {t("msgViewJobs")}
       </Link>
     </div>
   );

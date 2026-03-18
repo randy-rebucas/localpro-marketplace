@@ -9,8 +9,10 @@ import {
   CircleDollarSign, Briefcase, Star, TrendingUp, Zap,
   TriangleAlert, ShieldCheck, FileText,
 } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 
 export async function DashboardKpis({ userId }: { userId: string }) {
+  const t = await getTranslations("providerPages");
   const [activeJobs, earnings, ratingSummary, profileDoc, pendingQuotes, escrowPending, monthlyNet] =
     await Promise.all([
       jobRepository.countActiveForProvider(userId),
@@ -36,8 +38,8 @@ export async function DashboardKpis({ userId }: { userId: string }) {
     (completedJobCount > 0 && completionRate < 70);
   const perfWarningMsg =
     avgRating > 0 && avgRating < 3.5
-      ? `Your rating is ${avgRating.toFixed(1)}★ — aim for 3.5★+ to avoid account restrictions.`
-      : `Your completion rate is ${completionRate}% — maintain 70%+ to stay in good standing.`;
+      ? t("provDash_perfWarningRating", { rating: avgRating.toFixed(1) })
+      : t("provDash_perfWarningCompletion", { rate: completionRate });
 
   const responseRatePct =
     avgResponseTimeHours <= 0 ? 0
@@ -53,9 +55,9 @@ export async function DashboardKpis({ userId }: { userId: string }) {
         <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3.5">
           <TriangleAlert className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
           <div>
-            <p className="text-sm font-medium text-amber-800">Performance needs attention</p>
+            <p className="text-sm font-medium text-amber-800">{t("provDash_perfWarningTitle")}</p>
             <p className="text-xs text-amber-700 mt-0.5">
-              {perfWarningMsg} Focus on delivering quality work and communicating proactively with clients.
+              {perfWarningMsg} {t("provDash_perfWarningFocus")}
             </p>
           </div>
         </div>
@@ -64,27 +66,27 @@ export async function DashboardKpis({ userId }: { userId: string }) {
       {/* KPI cards — row 1: financials */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <KpiCard
-          title="This Month"
+          title={t("provDash_kpiThisMonth")}
           value={formatCurrency(monthlyNet)}
-          subtitle="Net earnings (current month)"
+          subtitle={t("provDash_kpiThisMonthSub")}
           icon={<CircleDollarSign className="h-5 w-5" />}
         />
         <KpiCard
-          title="Total Earnings"
+          title={t("provDash_kpiTotalEarnings")}
           value={formatCurrency(earnings.net)}
-          subtitle="All-time net after commission"
+          subtitle={t("provDash_kpiTotalEarningsSub")}
           icon={<CircleDollarSign className="h-5 w-5" />}
         />
         <KpiCard
-          title="Escrow Pending"
+          title={t("provDash_kpiEscrow")}
           value={formatCurrency(escrowPending)}
-          subtitle="Funded, awaiting release"
+          subtitle={t("provDash_kpiEscrowSub")}
           icon={<ShieldCheck className="h-5 w-5" />}
         />
         <KpiCard
-          title="Pending Quotes"
+          title={t("provDash_kpiPendingQuotes")}
           value={pendingQuotes}
-          subtitle={pendingQuotes === 1 ? "Awaiting client decision" : "Awaiting client decisions"}
+          subtitle={pendingQuotes === 1 ? t("provDash_kpiPendingQuotesSub") : t("provDash_kpiPendingQuotesSubPlural")}
           icon={<FileText className="h-5 w-5" />}
         />
       </div>
@@ -92,25 +94,25 @@ export async function DashboardKpis({ userId }: { userId: string }) {
       {/* KPI cards — row 2: performance */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <KpiCard
-          title="Active Jobs"
+          title={t("provDash_kpiActiveJobs")}
           value={activeJobs}
-          subtitle="Assigned & in-progress"
+          subtitle={t("provDash_kpiActiveJobsSub")}
           icon={<Briefcase className="h-5 w-5" />}
         />
         <KpiCard
-          title="Avg Rating"
+          title={t("provDash_kpiAvgRating")}
           value={avgRating > 0 ? `${avgRating.toFixed(1)} ★` : "—"}
-          subtitle={`${reviewCount} review${reviewCount !== 1 ? "s" : ""}`}
+          subtitle={reviewCount !== 1 ? t("provDash_kpiReviewCountPlural", { n: reviewCount }) : t("provDash_kpiReviewCount", { n: reviewCount })}
           icon={<Star className="h-5 w-5" />}
         />
         <KpiCard
-          title="Completion Rate"
+          title={t("provDash_kpiCompletionRate")}
           value={completedJobCount > 0 ? `${completionRate}%` : "—"}
-          subtitle={`${completedJobCount} job${completedJobCount !== 1 ? "s" : ""} completed`}
+          subtitle={completedJobCount !== 1 ? t("provDash_kpiJobCompletedPlural", { n: completedJobCount }) : t("provDash_kpiJobCompleted", { n: completedJobCount })}
           icon={<TrendingUp className="h-5 w-5" />}
         />
         <KpiCard
-          title="Avg Response"
+          title={t("provDash_kpiAvgResponse")}
           value={
             avgResponseTimeHours > 0
               ? avgResponseTimeHours < 1
@@ -121,9 +123,9 @@ export async function DashboardKpis({ userId }: { userId: string }) {
           subtitle={
             avgResponseTimeHours > 0
               ? avgResponseTimeHours <= 2
-                ? `⚡ Fast Responder · ~${responseRatePct}% rate`
-                : `~${responseRatePct}% response rate`
-              : "Time to first update"
+                ? t("provDash_kpiResponseFast", { pct: responseRatePct })
+                : t("provDash_kpiResponseRate", { pct: responseRatePct })
+              : t("provDash_kpiResponseTime")
           }
           icon={<Zap className="h-5 w-5" />}
         />

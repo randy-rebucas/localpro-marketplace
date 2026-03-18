@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 import { EditRecurringClient } from "../../_components/EditRecurringClient";
+import { getTranslations } from "next-intl/server";
 
 export const metadata: Metadata = { title: "Edit Recurring Schedule" };
 
@@ -16,6 +17,8 @@ export default async function EditRecurringPage({
   if (!user) redirect("/login");
   if (user.role !== "client") redirect("/dashboard");
 
+  const t = await getTranslations("clientPages");
+
   return (
     <div className="space-y-5">
       <Link
@@ -23,13 +26,13 @@ export default async function EditRecurringPage({
         className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-primary transition"
       >
         <ChevronLeft className="h-4 w-4" />
-        Back to Schedule
+        {t("backToSchedule")}
       </Link>
 
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Edit Schedule</h1>
+        <h1 className="text-2xl font-bold text-slate-900">{t("editSchedule")}</h1>
         <p className="text-slate-500 text-sm mt-1">
-          Update the details for this recurring booking.
+          {t("editScheduleSub")}
         </p>
       </div>
 

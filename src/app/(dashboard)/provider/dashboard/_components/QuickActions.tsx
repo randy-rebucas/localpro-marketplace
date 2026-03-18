@@ -1,50 +1,52 @@
 import Link from "next/link";
 import { Store, Briefcase, MessageSquare, User, Star, Wallet, FileText } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 
-const ACTIONS = [
-  {
-    href: "/provider/marketplace",
-    icon: Store,
-    label: "Marketplace",
-    description: "Browse & submit quotes",
-  },
-  {
-    href: "/provider/jobs",
-    icon: Briefcase,
-    label: "My Jobs",
-    description: "Track your work",
-  },
-  {
-    href: "/provider/earnings",
-    icon: Wallet,
-    label: "Withdraw Earnings",
-    description: "Request a payout",
-  },
-  {
-    href: "/provider/messages",
-    icon: MessageSquare,
-    label: "Messages",
-    description: "Chat with clients",
-  },
-  {
-    href: "/provider/profile",
-    icon: User,
-    label: "My Profile",
-    description: "Update your profile",
-  },
-  {
-    href: "/provider/reviews",
-    icon: Star,
-    label: "My Reviews",
-    description: "Client feedback",
-  },
-];
+export async function QuickActions() {
+  const t = await getTranslations("providerPages");
+  const ACTIONS = [
+    {
+      href: "/provider/marketplace",
+      icon: Store,
+      label: t("provDash_qaMarketplace"),
+      description: t("provDash_qaMarketplaceSub"),
+    },
+    {
+      href: "/provider/jobs",
+      icon: Briefcase,
+      label: t("provDash_qaJobs"),
+      description: t("provDash_qaJobsSub"),
+    },
+    {
+      href: "/provider/earnings",
+      icon: Wallet,
+      label: t("provDash_qaEarnings"),
+      description: t("provDash_qaEarningsSub"),
+    },
+    {
+      href: "/provider/messages",
+      icon: MessageSquare,
+      label: t("provDash_qaMessages"),
+      description: t("provDash_qaMessagesSub"),
+    },
+    {
+      href: "/provider/profile",
+      icon: User,
+      label: t("provDash_qaProfile"),
+      description: t("provDash_qaProfileSub"),
+    },
+    {
+      href: "/provider/reviews",
+      icon: Star,
+      label: t("provDash_qaReviews"),
+      description: t("provDash_qaReviewsSub"),
+    },
+  ];
 
-export function QuickActions() {
   return (
     <div className="bg-white rounded-xl border border-slate-200 shadow-card">
       <div className="px-5 py-4 border-b border-slate-100">
-        <h3 className="font-semibold text-slate-900 text-sm">Quick Actions</h3>
+        <h3 className="font-semibold text-slate-900 text-sm">{t("provDash_quickActionsTitle")}</h3>
       </div>
       <ul className="divide-y divide-slate-100">
         {ACTIONS.map(({ href, icon: Icon, label, description }) => (

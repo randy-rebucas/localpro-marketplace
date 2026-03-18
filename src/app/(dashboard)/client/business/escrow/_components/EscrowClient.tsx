@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useEffect, useState, useCallback } from "react";
 import {
   Wallet, Clock, CheckCircle, Download, CreditCard, ChevronRight,
@@ -48,6 +49,7 @@ const STATUS_BADGE: Record<string, string> = {
 };
 
 export default function EscrowClient() {
+  const t = useTranslations("clientPages");
   const [org, setOrg]           = useState<IBusinessOrganization | null>(null);
   const [orgId, setOrgId]       = useState("");
   const [data, setData]         = useState<EscrowData | null>(null);
@@ -117,8 +119,8 @@ export default function EscrowClient() {
       <div className="flex flex-col items-center justify-center py-24 gap-3 text-center">
         <Wallet className="h-10 w-10 text-slate-300" />
         <p className="text-slate-500">
-          No business profile found.{" "}
-          <a href="/client/business" className="text-primary underline">Create one first.</a>
+          {t("bizEscrow_noOrg")}{" "}
+          <a href="/client/business" className="text-primary underline">{t("bizAnalytics_createFirst")}</a>
         </p>
       </div>
     );
@@ -134,7 +136,7 @@ export default function EscrowClient() {
             <CreditCard className="h-5 w-5 text-teal-600 dark:text-teal-400" />
           </div>
           <div>
-            <h1 className="text-base font-bold text-slate-800 dark:text-white">Escrow &amp; Payments</h1>
+            <h1 className="text-base font-bold text-slate-800 dark:text-white">{t("bizEscrow_heading")}</h1>
             <p className="text-xs text-slate-500 dark:text-slate-400">{org.name}</p>
           </div>
         </div>
@@ -159,18 +161,18 @@ export default function EscrowClient() {
             color: "text-blue-600", bg: "bg-blue-50", ring: "ring-blue-100",
           },
           {
-            label: "Pending Releases",
+            label: t("bizEscrow_kpiPending"),
             value: data.pendingReleases.length,
-            sub:   "jobs awaiting escrow release",
+            sub:   t("bizEscrow_kpiPendingSub"),
             icon:  Clock,
             color: data.pendingReleases.length > 0 ? "text-amber-600" : "text-slate-400",
             bg:    data.pendingReleases.length > 0 ? "bg-amber-50"    : "bg-slate-50",
             ring:  data.pendingReleases.length > 0 ? "ring-amber-100" : "ring-slate-100",
           },
           {
-            label: "Payment History",
+            label: t("bizEscrow_kpiHistory"),
             value: data.historyTotal,
-            sub:   "completed payments",
+            sub:   t("bizEscrow_kpiHistorySub"),
             icon:  CreditCard,
             color: "text-emerald-600", bg: "bg-emerald-50", ring: "ring-emerald-100",
           },
@@ -193,11 +195,11 @@ export default function EscrowClient() {
 
         {/* ── LEFT: Pending Releases ── */}
         <div className="lg:col-span-2 space-y-3">
-          <h2 className="font-semibold text-slate-800">Pending Releases</h2>
+          <h2 className="font-semibold text-slate-800">{t("bizEscrow_pendingSection")}</h2>
           {data.pendingReleases.length === 0 ? (
             <div className="text-center py-14 bg-white rounded-2xl border border-slate-200">
               <CheckCircle className="h-8 w-8 text-emerald-400 mx-auto mb-2" />
-              <p className="text-sm text-slate-500">No pending escrow releases.</p>
+              <p className="text-sm text-slate-500">{t("bizEscrow_noPending")}</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -240,7 +242,7 @@ export default function EscrowClient() {
                   {/* Milestone list (if any) */}
                   {rel.milestones.length > 0 && (
                     <div className="space-y-1.5 pt-1 border-t border-slate-100">
-                      <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Milestones</p>
+                      <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">{t("bizEscrow_milestones")}</p>
                       {rel.milestones.map((ms) => (
                         <div key={ms._id} className="flex items-center justify-between text-xs">
                           <span className={`flex items-center gap-1.5 ${ms.status === "released" ? "text-slate-400 line-through" : "text-slate-700"}`}>
@@ -263,13 +265,13 @@ export default function EscrowClient() {
                       onClick={() => setSelected(selected?.jobId === rel.jobId ? null : rel)}
                       className="text-xs px-3 py-1.5 rounded-lg border border-primary text-primary hover:bg-primary/10 transition-colors"
                     >
-                      {selected?.jobId === rel.jobId ? "Cancel" : "Release Escrow"}
+                      {selected?.jobId === rel.jobId ? t("bizEscrow_cancelButton") : t("bizEscrow_releaseEscrow")}
                     </button>
                     <a
                       href={`/client/jobs/${rel.jobId}`}
                       className="text-xs text-slate-400 hover:text-slate-600 flex items-center gap-1"
                     >
-                      View Job <ChevronRight className="h-3 w-3" />
+                      {t("bizEscrow_viewJob")} <ChevronRight className="h-3 w-3" />
                     </a>
                   </div>
 
@@ -314,7 +316,7 @@ export default function EscrowClient() {
                                 disabled={releasing}
                                 className="text-xs bg-emerald-600 text-white px-3 py-1.5 rounded-lg hover:bg-emerald-700 disabled:opacity-50 transition-colors font-medium"
                               >
-                                Confirm
+                                {t("bizEscrow_confirmButton")}
                               </button>
                               <button
                                 onClick={() => { setPartialJobId(null); setPartialAmountInput(""); }}
@@ -329,7 +331,7 @@ export default function EscrowClient() {
                               disabled={releasing}
                               className="text-xs border border-slate-300 text-slate-600 px-4 py-1.5 rounded-lg hover:bg-slate-100 disabled:opacity-50 transition-colors"
                             >
-                              Partial Release
+                              {t("bizEscrow_partialButton")}
                             </button>
                           )
                         )}
@@ -346,13 +348,13 @@ export default function EscrowClient() {
         <div className="lg:col-span-1 space-y-4">
           {/* How it works */}
           <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-3">
-            <h2 className="font-semibold text-slate-800">How Escrow Works</h2>
+            <h2 className="font-semibold text-slate-800">{t("bizEscrow_howTitle")}</h2>
             <ol className="space-y-3">
               {[
-                { icon: Layers,       step: "1", title: "Job Funded",    desc: "Client funds escrow when job begins." },
-                { icon: Clock,        step: "2", title: "Work Done",     desc: "Provider completes the job." },
-                { icon: CheckCircle,  step: "3", title: "Release",       desc: "Finance approves fund release to provider." },
-                { icon: ArrowUpRight, step: "4", title: "Payout",        desc: "Provider receives funds via payout." },
+                { icon: Layers,       step: "1", title: t("bizEscrow_howStep1"),    desc: t("bizEscrow_howStep1Desc") },
+                { icon: Clock,        step: "2", title: t("bizEscrow_howStep2"),     desc: t("bizEscrow_howStep2Desc") },
+                { icon: CheckCircle,  step: "3", title: t("bizEscrow_howStep3"),       desc: t("bizEscrow_howStep3Desc") },
+                { icon: ArrowUpRight, step: "4", title: t("bizEscrow_howStep4"),        desc: t("bizEscrow_howStep4Desc") },
               ].map((s) => (
                 <li key={s.step} className="flex items-start gap-3">
                   <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 text-xs font-bold text-primary">
@@ -369,23 +371,22 @@ export default function EscrowClient() {
 
           {/* Approval note */}
           <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 space-y-1">
-            <p className="text-xs font-semibold text-blue-800">Multi-Approval Release</p>
+            <p className="text-xs font-semibold text-blue-800">{t("bizEscrow_multiApprovalTitle")}</p>
             <p className="text-[11px] text-blue-700 leading-relaxed">
-              Full releases above ₱10,000 require Finance Officer approval before processing.
-              Milestone releases can be done per-completion.
+              {t("bizEscrow_multiApprovalBody")}
             </p>
           </div>
 
           {/* Invoice download */}
           <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-3">
             <div>
-              <h2 className="font-semibold text-slate-800">Invoices</h2>
-              <p className="text-xs text-slate-400 mt-0.5">Download payment invoices for accounting.</p>
+              <h2 className="font-semibold text-slate-800">{t("bizEscrow_invoices")}</h2>
+              <p className="text-xs text-slate-400 mt-0.5">{t("bizEscrow_invoicesSub")}</p>
             </div>
             {[
-              { label: "This Month", months: 1 },
-              { label: "Last 3 Months", months: 3 },
-              { label: "Last 12 Months", months: 12 },
+              { label: t("bizEscrow_invoiceThisMonth"), months: 1 },
+              { label: t("bizEscrow_invoice3mo"), months: 3 },
+              { label: t("bizEscrow_invoice12mo"), months: 12 },
             ].map((r) => (
               <a
                 key={r.label}
@@ -406,23 +407,23 @@ export default function EscrowClient() {
       {/* ── Payment History ── */}
       <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
         <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
-          <h2 className="font-semibold text-slate-800">Payment History</h2>
+          <h2 className="font-semibold text-slate-800">{t("bizEscrow_paymentHistory")}</h2>
           <span className="text-xs text-slate-400">{data.historyTotal} total</span>
         </div>
 
         {data.paymentHistory.length === 0 ? (
-          <p className="text-sm text-slate-400 text-center py-10">No completed payments yet.</p>
+          <p className="text-sm text-slate-400 text-center py-10">{t("bizEscrow_noPayments")}</p>
         ) : (
           <>
             <div className="overflow-x-auto">
               <table className="w-full text-sm min-w-[560px]">
                 <thead>
                   <tr className="bg-slate-50 border-b border-slate-100 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-                    <th className="text-left px-5 py-3">Date</th>
-                    <th className="text-left px-5 py-3">Job</th>
-                    <th className="text-left px-5 py-3">Provider</th>
-                    <th className="text-left px-5 py-3">Method</th>
-                    <th className="text-right px-5 py-3">Amount</th>
+                    <th className="text-left px-5 py-3">{t("bizEscrow_colDate")}</th>
+                    <th className="text-left px-5 py-3">{t("bizEscrow_colJob")}</th>
+                    <th className="text-left px-5 py-3">{t("bizEscrow_colProvider")}</th>
+                    <th className="text-left px-5 py-3">{t("bizEscrow_colMethod")}</th>
+                    <th className="text-right px-5 py-3">{t("bizEscrow_colAmount")}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">

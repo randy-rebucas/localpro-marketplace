@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import toast from "react-hot-toast";
 import { ShieldCheck, Search, ExternalLink, CheckCircle2, X, Star, Briefcase, Loader2 } from "lucide-react";
 import { apiFetch } from "@/lib/fetchClient";
@@ -33,6 +34,7 @@ function getInitials(name: string) {
 }
 
 export default function VerificationPage() {
+  const t = useTranslations("pesoPages");
   const [providers, setProviders] = useState<Provider[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -96,10 +98,10 @@ export default function VerificationPage() {
         <div>
           <h1 className="text-xl font-bold text-slate-800 flex items-center gap-2">
             <ShieldCheck className="h-5 w-5 text-blue-600" />
-            Provider Verification
+            {t("verifyTitle")}
           </h1>
           <p className="text-sm text-slate-500 mt-0.5">
-            Review and assign verification badges to registered providers.
+            {t("verifySub")}
           </p>
         </div>
         {!loading && (
@@ -162,11 +164,11 @@ export default function VerificationPage() {
           <div className="py-14 flex flex-col items-center gap-2 text-slate-400">
             <ShieldCheck className="h-8 w-8 opacity-30" />
             <p className="text-sm">
-              {search ? `No providers matching "${search}".` : "No providers found."}
+              {search ? t("noProvidersMatchingSearch", { search }) : t("noProvidersFound")}
             </p>
             {search && (
               <button onClick={() => setSearch("")} className="text-xs text-blue-500 hover:underline">
-                Clear search
+                {t("clearSearch")}
               </button>
             )}
           </div>
@@ -218,7 +220,7 @@ export default function VerificationPage() {
                       {/* Tags */}
                       <div className="flex items-center gap-1.5 flex-wrap justify-end">
                         {tags.length === 0 ? (
-                          <span className="text-xs text-slate-300 italic">No tags</span>
+                        <span className="text-xs text-slate-300 italic">{t("noTagsLabel")}</span>
                         ) : (
                           tags.map((tag) => (
                             <span key={tag} className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${TAG_META[tag].color}`}>
@@ -244,7 +246,7 @@ export default function VerificationPage() {
                   {isExpanded && (
                     <div className="px-5 pb-4 pt-3 bg-slate-50 border-t border-slate-100">
                       <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2.5">
-                        Verification Tags
+                        {t("verificationTagsSection")}
                       </p>
                       <div className="flex flex-wrap gap-2">
                         {ALL_TAGS.map((tag) => {
