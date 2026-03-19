@@ -23,7 +23,7 @@ export const GET = withHandler(async (req: NextRequest) => {
 
   const profiles = await ProviderProfile.find({
     $or: [
-      { skills: { $elemMatch: { $regex: categoryRegex } } },
+      { "skills.skill": { $regex: categoryRegex } },
       { bio: { $regex: categoryRegex } },
     ],
     availabilityStatus: { $ne: "unavailable" },
@@ -50,7 +50,7 @@ export const GET = withHandler(async (req: NextRequest) => {
       const profile = p as {
         userId: { toString(): string };
         bio: string;
-        skills: string[];
+        skills: Array<{ skill: string; yearsExperience: number; hourlyRate: string }>;
         avgRating?: number;
         completedJobCount?: number;
         hourlyRate?: number;
@@ -62,7 +62,7 @@ export const GET = withHandler(async (req: NextRequest) => {
         id: uid,
         name: uData.name,
         avatar: uData.avatar ?? null,
-        skills: profile.skills ?? [],
+        skills: (profile.skills ?? []).map((s) => s.skill),
         bio: profile.bio ?? "",
         avgRating: profile.avgRating ?? 0,
         completedJobCount: profile.completedJobCount ?? 0,

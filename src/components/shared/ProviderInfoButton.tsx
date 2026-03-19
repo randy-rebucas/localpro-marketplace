@@ -18,7 +18,7 @@ interface WorkSlot { enabled: boolean; from: string; to: string; }
 interface ProviderProfile {
   userId: { name: string; email: string; isVerified: boolean; avatar?: string | null };
   bio?: string;
-  skills?: string[];
+  skills?: Array<{ skill: string; yearsExperience: number; hourlyRate: string }>;
   yearsExperience?: number;
   hourlyRate?: number | null;
   avgRating?: number;
@@ -325,8 +325,8 @@ export default function ProviderInfoButton({
                   <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Skills</p>
                   <div className="flex flex-wrap gap-2">
                     {profile.skills.map((s) => (
-                      <span key={s} className="bg-slate-100 text-slate-700 text-xs px-2.5 py-1 rounded-full font-medium">
-                        {s}
+                      <span key={s.skill} className="bg-slate-100 text-slate-700 text-xs px-2.5 py-1 rounded-full font-medium">
+                        {s.skill}
                       </span>
                     ))}
                   </div>

@@ -10,7 +10,11 @@ const ReferSchema = z.object({
   email:             z.string().email(),
   phone:             z.string().max(30).optional(),
   barangay:          z.string().max(100).optional(),
-  skills:            z.array(z.string().min(1).max(60)).max(20).optional(),
+  skills:            z.array(z.object({
+    skill: z.string().min(1).max(100),
+    yearsExperience: z.number().int().min(0).max(50).default(0),
+    hourlyRate: z.string().max(20).default(""),
+  })).max(20).optional(),
   livelihoodProgram: z.string().max(200).optional(),
 });
 

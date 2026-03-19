@@ -148,7 +148,7 @@ export default function ProviderOnboardingPage() {
       const res = await apiFetch("/api/providers/profile", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ skills }),
+        body: JSON.stringify({ skills: skills.map((s) => ({ skill: s, yearsExperience: 0, hourlyRate: "" })) }),
       });
       if (!res.ok) { const d = await res.json(); toast.error(d.error ?? "Failed to save skills"); return; }
       setStep(2);

@@ -113,7 +113,7 @@ export const POST = withHandler(async (req: NextRequest) => {
       if (role === "provider" && (skills || workExperiences || yearsOfExperience != null)) {
         await providerProfileRepository.create({
           userId:          newUser._id,
-          skills:          skills          ? skills.split("|").map((s) => s.trim()).filter(Boolean)          : [],
+          skills:          skills          ? skills.split("|").map((s) => s.trim()).filter(Boolean).map((s) => ({ skill: s, yearsExperience: 0, hourlyRate: "" }))          : [],
           workExperiences: workExperiences ? workExperiences.split("|").map((s) => s.trim()).filter(Boolean) : [],
           yearsExperience: yearsOfExperience ?? 0,
         });

@@ -39,7 +39,7 @@ export const POST = withHandler(async () => {
     }, { status: 403 });
   }
 
-  const skills: string[]   = profile?.skills ?? [];
+  const skills: string[]   = (profile?.skills ?? []).map((s: { skill: string }) => s.skill);
   const years: number      = profile?.yearsExperience ?? 0;
   const rate: number | null = profile?.hourlyRate ?? null;
   const serviceAreas        = (profile?.serviceAreas ?? []) as { label: string; address: string }[];

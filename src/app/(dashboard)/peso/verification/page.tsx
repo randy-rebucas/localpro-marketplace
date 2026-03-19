@@ -11,7 +11,7 @@ interface Provider {
   _id: string;
   name: string;
   email: string;
-  skills: string[];
+  skills: Array<{ skill: string; yearsExperience: number; hourlyRate: string }>;
   barangay?: string;
   rating: number;
   jobsCompleted: number;

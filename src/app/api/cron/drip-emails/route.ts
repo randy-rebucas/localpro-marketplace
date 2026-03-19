@@ -79,7 +79,7 @@ export async function GET(req: NextRequest) {
     const profile = await ProviderProfile.findOne({ userId: provider._id })
       .select("skills")
       .lean();
-    if (profile && (profile as { skills?: string[] }).skills?.length) continue;
+    if (profile && (profile as { skills?: unknown[] }).skills?.length) continue;
     await sendDripDay3ProviderEmail(provider.email, provider.name ?? "there");
     day3ProviderCount++;
   }

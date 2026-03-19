@@ -9,7 +9,7 @@ interface WorkerEntry {
   name: string;
   email: string;
   barangay?: string | null;
-  skills: string[];
+  skills: Array<{ skill: string; yearsExperience: number; hourlyRate: string }>;
   certifications: { title: string; issuer: string }[];
   pesoVerificationTags: string[];
   avgRating: number;
@@ -177,7 +177,7 @@ export default function WorkforceRegistryPage() {
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap gap-1">
                         {(w.skills ?? []).slice(0, 3).map((s) => (
-                          <span key={s} className="bg-slate-100 text-slate-600 text-xs px-2 py-0.5 rounded-full whitespace-nowrap">{s}</span>
+                          <span key={s.skill} className="bg-slate-100 text-slate-600 text-xs px-2 py-0.5 rounded-full whitespace-nowrap">{s.skill}</span>
                         ))}
                         {(w.skills ?? []).length > 3 && (
                           <span className="text-xs text-slate-400 self-center">+{(w.skills ?? []).length - 3} more</span>

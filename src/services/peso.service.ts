@@ -29,7 +29,7 @@ export interface ReferProviderDto {
   email: string;
   phone?: string;
   barangay?: string;
-  skills?: string[];
+  skills?: Array<{ skill: string; yearsExperience: number; hourlyRate: string }>;
   livelihoodProgram?: string;
 }
 
@@ -190,7 +190,7 @@ export class PesoService {
 
       try {
         const skills = row.skills
-          ? row.skills.split(",").map((s) => s.trim()).filter(Boolean)
+          ? row.skills.split(",").map((s) => s.trim()).filter(Boolean).map((s) => ({ skill: s, yearsExperience: 0, hourlyRate: "" }))
           : [];
 
         const tempPassword = crypto.randomBytes(10).toString("hex");

@@ -23,7 +23,7 @@ export interface ServiceArea { _id: string; label: string; address: string; }
 export interface ProviderProfileData {
   userId: { _id: string; name: string; email: string; isVerified: boolean; avatar?: string | null };
   bio?: string;
-  skills?: string[];
+  skills?: Array<{ skill: string; yearsExperience: number; hourlyRate: string }>;
   workExperiences?: string[];
   yearsExperience?: number;
   hourlyRate?: number | null;
@@ -404,8 +404,8 @@ export default function ProfileClient({
                 </h3>
                 <div className="flex flex-wrap gap-2">
                   {profile.skills?.map((s) => (
-                    <span key={s} className="text-xs bg-primary/8 text-primary px-3 py-1 rounded-full font-medium border border-primary/15">
-                      {s}
+                    <span key={s.skill} className="text-xs bg-primary/8 text-primary px-3 py-1 rounded-full font-medium border border-primary/15">
+                      {s.skill}
                     </span>
                   ))}
                 </div>

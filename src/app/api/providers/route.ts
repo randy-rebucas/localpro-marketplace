@@ -24,7 +24,7 @@ export const GET = withHandler(async (req: NextRequest) => {
   type ProviderRow = {
     userId: { _id: { toString(): string }; name?: string };
     bio?: string;
-    skills?: string[];
+    skills?: Array<{ skill: string; yearsExperience: number; hourlyRate: string }>;
     availabilityStatus?: string;
   };
 

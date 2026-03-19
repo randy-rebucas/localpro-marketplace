@@ -78,7 +78,7 @@ export class ProviderProfileService {
     return {
       userId: { name: user.name, email: user.email, isVerified: user.isVerified ?? false },
       bio: "",
-      skills: [] as string[],
+      skills: [] as Array<{ skill: string; yearsExperience: number; hourlyRate: string }>,
       yearsExperience: 0,
       hourlyRate: null as number | null,
       avgRating: Math.round(ratingStats.avgRating * 10) / 10,
@@ -98,14 +98,14 @@ export class ProviderProfileService {
       const skillNames = input.skills.map((s) => s.skill);
       await skillRepository.upsertMany(skillNames);
     }
-    const dataToUpsert: Omit<Partial<UpdateProfileInput>, 'skills'> & { skills?: string[] } = {
+    const dataToUpsert: Partial<UpdateProfileInput> = {
       bio: input.bio,
       yearsExperience: input.yearsExperience,
       hourlyRate: input.hourlyRate,
       portfolioItems: input.portfolioItems,
       availabilityStatus: input.availabilityStatus,
       schedule: input.schedule,
-      skills: input.skills?.length ? input.skills.map((s) => s.skill) : undefined,
+      skills: input.skills?.length ? input.skills : undefined,
     };
     return providerProfileRepository.upsert(user.userId, dataToUpsert as Parameters<typeof providerProfileRepository.upsert>[1]);
   }

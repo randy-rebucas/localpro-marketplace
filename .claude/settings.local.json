@@ -77,7 +77,10 @@
       "Bash(pnpm tsc:*)",
       "Bash(find \"c:\\\\Users\\\\corew\\\\localpro-marketplace\\\\src\\\\app\\\\\\(dashboard\\)\\\\provider\\\\business\" -type f)",
       "Bash(ls \"C:/Users/corew/localpro-marketplace/src/app/\\(dashboard\\)/provider/business/\")",
-      "Bash(ls \"C:/Users/corew/localpro-marketplace/src/app/\\(dashboard\\)/provider/business/analytics/_components/\")"
+      "Bash(ls \"C:/Users/corew/localpro-marketplace/src/app/\\(dashboard\\)/provider/business/analytics/_components/\")",
+      "Bash(npx next:*)",
+      "Bash(./node_modules/.bin/tsc --noEmit)",
+      "Bash(node ./node_modules/typescript/bin/tsc --noEmit)"
     ]
   }
 }

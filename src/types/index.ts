@@ -604,7 +604,7 @@ export interface IProviderProfile {
   _id: Types.ObjectId | string;
   userId: Types.ObjectId | string | IUser;
   bio: string;
-  skills: string[];
+  skills: Array<{ skill: string; yearsExperience: number; hourlyRate: string }>;
   workExperiences?: string[];
   yearsExperience: number;
   hourlyRate?: number;

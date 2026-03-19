@@ -39,7 +39,7 @@ export interface WorkforceRegistryEntry {
   email: string;
   avatar?: string | null;
   barangay?: string | null;
-  skills: string[];
+  skills: Array<{ skill: string; yearsExperience: number; hourlyRate: string }>;
   certifications: unknown[];
   pesoVerificationTags: string[];
   pesoReferredBy?: string | null;
@@ -102,7 +102,7 @@ export class PesoRepository {
     await this.connect();
     const result = await ProviderProfile.aggregate([
       { $unwind: "$skills" },
-      { $group: { _id: "$skills", count: { $sum: 1 } } },
+      { $group: { _id: "$skills.skill", count: { $sum: 1 } } },
       { $sort: { count: -1 } },
       { $limit: limit },
       { $project: { skill: "$_id", count: 1, _id: 0 } },
@@ -172,7 +172,7 @@ export class PesoRepository {
       ProviderProfile.aggregate([
         { $match: providerFilter },
         { $unwind: "$skills" },
-        { $group: { _id: "$skills", count: { $sum: 1 } } },
+        { $group: { _id: "$skills.skill", count: { $sum: 1 } } },
         { $sort: { count: -1 } },
         { $limit: limit },
         { $project: { skill: "$_id", count: 1, _id: 0 } },
@@ -234,7 +234,7 @@ export class PesoRepository {
 
     const profileMatch: Record<string, unknown> = {};
     if (barangay) profileMatch.barangay = { $regex: barangay, $options: "i" };
-    if (skill) profileMatch.skills = { $elemMatch: { $regex: skill, $options: "i" } };
+    if (skill) profileMatch["skills.skill"] = { $regex: skill, $options: "i" };
     if (verificationTag) profileMatch.pesoVerificationTags = verificationTag;
     if (minRating !== undefined) profileMatch.avgRating = { $gte: minRating };
 

@@ -29,7 +29,11 @@ const CreateUserSchema = z.object({
   isVerified:      z.boolean().optional().default(false),
   // Provider-only optional fields
   phone:           z.string().max(30).optional(),
-  skills:          z.array(z.string().min(1).max(60)).max(20).optional(),
+  skills:          z.array(z.object({
+    skill: z.string().min(1).max(100),
+    yearsExperience: z.number().int().min(0).max(50).default(0),
+    hourlyRate: z.string().max(20).default(""),
+  })).max(20).optional(),
   yearsExperience: z.number().int().min(0).max(60).optional(),
   // PESO-only: office details (required when role = peso)
   pesoOffice: z.object({

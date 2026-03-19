@@ -29,7 +29,7 @@ interface Provider {
     email?: string;
   };
   bio?: string;
-  skills?: string[];
+  skills?: Array<{ skill: string; yearsExperience: number; hourlyRate: string }>;
   avgRating?: number;
   completedJobCount?: number;
   isLocalProCertified?: boolean;
@@ -366,8 +366,8 @@ export function RequestConsultationForm({ userId, hasAIAccess = false }: Request
                           {provider.skills && provider.skills.length > 0 && (
                             <div className="flex gap-1 mt-1.5 flex-wrap">
                               {provider.skills.slice(0, 3).map((skill) => (
-                                <span key={skill} className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded">
-                                  {skill}
+                                <span key={skill.skill} className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded">
+                                  {skill.skill}
                                 </span>
                               ))}
                               {provider.skills.length > 3 && (
