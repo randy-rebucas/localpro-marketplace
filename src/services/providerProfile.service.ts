@@ -8,9 +8,16 @@ import { NotFoundError, ForbiddenError } from "@/lib/errors";
 import type { TokenPayload } from "@/lib/auth";
 import type { PortfolioItem, WeeklySchedule } from "@/types";
 
+// Skill interface matching frontend and database schema
+interface SkillEntry {
+  skill: string;
+  yearsExperience: number;
+  hourlyRate: string;
+}
+
 export interface UpdateProfileInput {
   bio?: string;
-  skills?: string[];
+  skills?: SkillEntry[];
   yearsExperience?: number;
   hourlyRate?: number;
   portfolioItems?: PortfolioItem[];
@@ -86,9 +93,10 @@ export class ProviderProfileService {
     if (user.role !== "provider") {
       throw new ForbiddenError("Only providers can update a profile");
     }
-    // Record any new skills into the shared skills catalogue
+    // Record any new skills into the shared skills catalogue (extract skill names from objects)
     if (input.skills?.length) {
-      await skillRepository.upsertMany(input.skills);
+      const skillNames = input.skills.map((s) => s.skill);
+      await skillRepository.upsertMany(skillNames);
     }
     return providerProfileRepository.upsert(user.userId, input);
   }

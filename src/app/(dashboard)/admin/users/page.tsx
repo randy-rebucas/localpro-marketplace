@@ -122,7 +122,7 @@ export default async function AdminUsersPage({
     ? await providerProfileRepository.findForExport(providerUserIds)
     : [];
 
-  const providerProfiles: Record<string, { skills: string[]; workExperiences: string[]; yearsExperience: number; availabilityStatus: string }> =
+  const providerProfiles: Record<string, { skills: Array<{ skill: string; yearsExperience: number; hourlyRate: string }>; workExperiences: string[]; yearsExperience: number; availabilityStatus: string }> =
     Object.fromEntries(
       providerProfileRows.map((p) => [
         p.userId.toString(),

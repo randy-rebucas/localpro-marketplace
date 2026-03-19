@@ -6,6 +6,15 @@ export interface ProviderProfileDocument
   extends Omit<IProviderProfile, "_id">,
     Document {}
 
+const SkillSchema = new Schema(
+  {
+    skill: { type: String, required: true, trim: true, maxlength: 100 },
+    yearsExperience: { type: Number, default: 0, min: 0, max: 50 },
+    hourlyRate: { type: String, default: "", trim: true, maxlength: 20 },
+  },
+  { _id: false }
+);
+
 const PortfolioItemSchema = new Schema(
   {
     title: { type: String, required: true, trim: true },
@@ -38,7 +47,7 @@ const ProviderProfileSchema = new Schema<ProviderProfileDocument>(
       index: true,
     },
     bio: { type: String, default: "", trim: true, maxlength: 1000 },
-    skills: [{ type: String, trim: true }],
+    skills: [SkillSchema],
     workExperiences: [{ type: String, trim: true }],
     yearsExperience: { type: Number, default: 0, min: 0 },
     hourlyRate: { type: Number, default: null, min: 0 },

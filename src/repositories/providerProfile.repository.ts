@@ -105,7 +105,7 @@ export class ProviderProfileRepository extends BaseRepository<ProviderProfileDoc
   /** Batch fetch export fields (skills, workExperiences, yearsExperience, availabilityStatus) for the user CSV export and admin list. */
   async findForExport(
     userIds: string[]
-  ): Promise<Array<{ userId: { toString(): string }; skills: string[]; workExperiences: string[]; yearsExperience: number; availabilityStatus: string }>> {
+  ): Promise<Array<{ userId: { toString(): string }; skills: Array<{ skill: string; yearsExperience: number; hourlyRate: string }>; workExperiences: string[]; yearsExperience: number; availabilityStatus: string }>> {
     await this.connect();
     return ProviderProfile.find({ userId: { $in: userIds } })
       .select("userId skills workExperiences yearsExperience availabilityStatus")
@@ -115,7 +115,7 @@ export class ProviderProfileRepository extends BaseRepository<ProviderProfileDoc
   /** Return every distinct skill string across all provider profiles, sorted A→Z. */
   async findDistinctSkills(): Promise<string[]> {
     await this.connect();
-    const skills = await ProviderProfile.distinct("skills");
+    const skills = await ProviderProfile.distinct("skills.skill");
     return (skills as string[]).filter(Boolean).sort((a, b) => a.localeCompare(b));
   }
 
@@ -132,7 +132,7 @@ export class ProviderProfileRepository extends BaseRepository<ProviderProfileDoc
   }): Promise<string[]> {
     await this.connect();
     const q: Record<string, unknown> = {};
-    if (filters.skill)                  q.skills             = filters.skill;
+    if (filters.skill)                  q["skills.skill"]   = filters.skill;
     if ((filters.minRating ?? 0) > 0)   q.avgRating          = { $gte: filters.minRating };
     if ((filters.minJobs   ?? 0) > 0)   q.completedJobCount  = { $gte: filters.minJobs };
     if (filters.availability)           q.availabilityStatus = filters.availability;

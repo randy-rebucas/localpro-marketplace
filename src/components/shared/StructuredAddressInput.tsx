@@ -128,41 +128,47 @@ function GoogleStructuredInput({ street: initStreet, postal: initPostal, onSelec
   const isConfirmed = !!confirmed;
 
   return (
-    <div ref={containerRef} className="space-y-2">
-      {/* Street + Postal fields */}
-      <div className="grid grid-cols-[1fr_120px] gap-2">
-        <div className="relative">
-          <MapPin className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+    <div ref={containerRef} className="space-y-3">
+      {/* Street + Postal fields with labels */}
+      <div className="grid grid-cols-[1fr_120px] gap-3">
+        <div>
+          <label className="block text-xs font-medium text-slate-600 mb-1">Street Address</label>
+          <div className="relative">
+            <MapPin className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+            <input
+              type="text"
+              value={street}
+              onChange={(e) => {
+              setStreet(e.target.value);
+              if (confirmed) onSelect("");
+            }}
+              onKeyDown={(e) => { if (e.key === "Escape") clearSuggestions(); }}
+              placeholder="e.g., 123 Main Street"
+              maxLength={150}
+              autoComplete="off"
+              className={`w-full rounded-md border px-2.5 py-1.5 pl-8 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary ${
+                isConfirmed ? "border-green-300 bg-green-50/50" : "border-slate-200"
+              }`}
+            />
+          </div>
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-slate-600 mb-1">Postal Code</label>
           <input
             type="text"
-            value={street}
+            value={postal}
             onChange={(e) => {
-            setStreet(e.target.value);
-            if (confirmed) onSelect("");
-          }}
-            onKeyDown={(e) => { if (e.key === "Escape") clearSuggestions(); }}
-            placeholder="Street address"
-            maxLength={150}
+              setPostal(e.target.value);
+              if (confirmed) onSelect("");
+            }}
+            placeholder="e.g., 10001"
+            maxLength={20}
             autoComplete="off"
-            className={`w-full rounded-md border px-2.5 py-1.5 pl-8 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary ${
+            className={`w-full rounded-md border px-2.5 py-1.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary ${
               isConfirmed ? "border-green-300 bg-green-50/50" : "border-slate-200"
             }`}
           />
         </div>
-        <input
-          type="text"
-          value={postal}
-          onChange={(e) => {
-            setPostal(e.target.value);
-            if (confirmed) onSelect("");
-          }}
-          placeholder="Postal code"
-          maxLength={20}
-          autoComplete="off"
-          className={`w-full rounded-md border px-2.5 py-1.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary ${
-            isConfirmed ? "border-green-300 bg-green-50/50" : "border-slate-200"
-          }`}
-        />
       </div>
 
       {/* Confirmed address display */}
@@ -269,39 +275,45 @@ function NominatimStructuredInput({ street: initStreet, postal: initPostal, onSe
   const isConfirmed = !!confirmed;
 
   return (
-    <div ref={containerRef} className="space-y-2">
-      <div className="grid grid-cols-[1fr_120px] gap-2">
-        <div className="relative">
-          <MapPin className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+    <div ref={containerRef} className="space-y-3">
+      <div className="grid grid-cols-[1fr_120px] gap-3">
+        <div>
+          <label className="block text-xs font-medium text-slate-600 mb-1">Street Address</label>
+          <div className="relative">
+            <MapPin className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+            <input
+              type="text"
+              value={street}
+              onChange={(e) => {
+                setStreet(e.target.value);
+                if (confirmed) onSelect("");
+              }}
+              placeholder="e.g., 123 Main Street"
+              maxLength={150}
+              autoComplete="off"
+              className={`w-full rounded-md border px-2.5 py-1.5 pl-8 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary ${
+                isConfirmed ? "border-green-300 bg-green-50/50" : "border-slate-200"
+              }`}
+            />
+          </div>
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-slate-600 mb-1">Postal Code</label>
           <input
             type="text"
-            value={street}
+            value={postal}
             onChange={(e) => {
-              setStreet(e.target.value);
+              setPostal(e.target.value);
               if (confirmed) onSelect("");
             }}
-            placeholder="Street address"
-            maxLength={150}
+            placeholder="e.g., 10001"
+            maxLength={20}
             autoComplete="off"
-            className={`w-full rounded-md border px-2.5 py-1.5 pl-8 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary ${
+            className={`w-full rounded-md border px-2.5 py-1.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary ${
               isConfirmed ? "border-green-300 bg-green-50/50" : "border-slate-200"
             }`}
           />
         </div>
-        <input
-          type="text"
-          value={postal}
-          onChange={(e) => {
-            setPostal(e.target.value);
-            if (confirmed) onSelect("");
-          }}
-          placeholder="Postal code"
-          maxLength={20}
-          autoComplete="off"
-          className={`w-full rounded-md border px-2.5 py-1.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary ${
-            isConfirmed ? "border-green-300 bg-green-50/50" : "border-slate-200"
-          }`}
-        />
       </div>
 
       {isConfirmed && (
@@ -352,6 +364,14 @@ export default function StructuredAddressInput({ confirmedAddress, onSelect }: S
   const [mapsReady, setMapsReady] = useState(
     typeof window !== "undefined" && typeof window.google !== "undefined"
   );
+  const [manualMode, setManualMode] = useState(false);
+  const [manualAddress, setManualAddress] = useState({
+    street: "",
+    city: "",
+    state: "",
+    postal: "",
+  });
+  const [confirmedCoords, setConfirmedCoords] = useState<{ lat: number; lng: number } | null>(null);
 
   useEffect(() => {
     if (mapsReady) return;
@@ -362,36 +382,183 @@ export default function StructuredAddressInput({ confirmedAddress, onSelect }: S
     return () => { clearInterval(id); clearTimeout(timeout); };
   }, [mapsReady]);
 
-  /** Show static map after a confirmed address is selected if Google Maps is ready */
-  const [confirmedCoords, setConfirmedCoords] = useState<{ lat: number; lng: number } | null>(null);
+  // Reset state when parent clears the confirmed address
+  useEffect(() => {
+    if (!confirmedAddress) {
+      setConfirmedCoords(null);
+      setManualAddress({ street: "", city: "", state: "", postal: "" });
+      setManualMode(false);
+    }
+  }, [confirmedAddress]);
 
   function handleSelect(address: string, coords?: { lat: number; lng: number }) {
     onSelect(address, coords);
     setConfirmedCoords(coords ?? null);
   }
 
-  // Clear coords when parent resets the address
-  useEffect(() => {
-    if (!confirmedAddress) setConfirmedCoords(null);
-  }, [confirmedAddress]);
+  function handleManualConfirm() {
+    const { street, postal } = manualAddress;
+    // Validate required fields
+    if (!street.trim() || !postal.trim()) {
+      alert("Please enter at least a street address and postal code.");
+      return;
+    }
+
+    // Build formatted address
+    const parts = [street, manualAddress.city, manualAddress.state, postal].filter(
+      (part) => part.trim()
+    );
+    const fullAddress = parts.join(", ");
+
+    // Call parent callback
+    onSelect(fullAddress);
+
+    // Reset manual mode state
+    setManualAddress({ street: "", city: "", state: "", postal: "" });
+  }
+
+  function toggleManualMode(enable: boolean) {
+    setManualMode(enable);
+    // Clear manual address when switching away from manual mode
+    if (!enable) {
+      setManualAddress({ street: "", city: "", state: "", postal: "" });
+    }
+  }
+
+  const isAddressConfirmed = !!confirmedAddress;
 
   return (
-    <div className="space-y-2">
-      {mapsReady ? (
-        <GoogleStructuredInput
-          street=""
-          postal=""
-          onSelect={handleSelect}
-          confirmed={confirmedAddress}
-        />
-      ) : (
-        <NominatimStructuredInput
-          street=""
-          postal=""
-          onSelect={handleSelect}
-          confirmed={confirmedAddress}
-        />
+    <div className="space-y-4">
+      {/* Toggle between manual and autocomplete modes */}
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => toggleManualMode(false)}
+          disabled={isAddressConfirmed}
+          className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+            !manualMode && !isAddressConfirmed
+              ? "bg-primary text-white"
+              : isAddressConfirmed
+                ? "bg-slate-100 text-slate-400 cursor-not-allowed"
+                : "bg-slate-200 text-slate-700 hover:bg-slate-300"
+          }`}
+        >
+          Use Autocomplete
+        </button>
+        <button
+          type="button"
+          onClick={() => toggleManualMode(true)}
+          disabled={isAddressConfirmed}
+          className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+            manualMode && !isAddressConfirmed
+              ? "bg-primary text-white"
+              : isAddressConfirmed
+                ? "bg-slate-100 text-slate-400 cursor-not-allowed"
+                : "bg-slate-200 text-slate-700 hover:bg-slate-300"
+          }`}
+        >
+          Enter Manually
+        </button>
+      </div>
+
+      {/* Address confirmed display */}
+      {isAddressConfirmed && (
+        <div className="flex items-start gap-1.5 rounded-md bg-green-50 border border-green-200 px-2.5 py-2">
+          <CheckCircle2 className="h-3.5 w-3.5 text-green-500 mt-0.5 flex-shrink-0" />
+          <p className="text-xs text-green-800 leading-snug">{confirmedAddress}</p>
+        </div>
       )}
+
+      {manualMode && !isAddressConfirmed ? (
+        <div className="space-y-3 border border-slate-200 rounded-lg p-4 bg-slate-50/30">
+          {/* Manual Address Input Fields */}
+          <div>
+            <label className="block text-xs font-medium text-slate-600 mb-1">
+              Street Address <span className="text-red-500">*</span>
+            </label>
+            <div className="relative">
+              <MapPin className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+              <input
+                type="text"
+                value={manualAddress.street}
+                onChange={(e) => setManualAddress({ ...manualAddress, street: e.target.value })}
+                placeholder="e.g., 123 Main Street"
+                maxLength={150}
+                className="w-full rounded-md border border-slate-200 px-2.5 py-1.5 pl-8 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1">
+                City
+              </label>
+              <input
+                type="text"
+                value={manualAddress.city}
+                onChange={(e) => setManualAddress({ ...manualAddress, city: e.target.value })}
+                placeholder="e.g., New York"
+                maxLength={100}
+                className="w-full rounded-md border border-slate-200 px-2.5 py-1.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1">
+                State / Province
+              </label>
+              <input
+                type="text"
+                value={manualAddress.state}
+                onChange={(e) => setManualAddress({ ...manualAddress, state: e.target.value })}
+                placeholder="e.g., NY or ON"
+                maxLength={100}
+                className="w-full rounded-md border border-slate-200 px-2.5 py-1.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-slate-600 mb-1">
+              Postal Code <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              value={manualAddress.postal}
+              onChange={(e) => setManualAddress({ ...manualAddress, postal: e.target.value })}
+              placeholder="e.g., 10001"
+              maxLength={20}
+              className="w-full rounded-md border border-slate-200 px-2.5 py-1.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+            />
+          </div>
+
+          <button
+            type="button"
+            onClick={handleManualConfirm}
+            className="w-full mt-4 px-4 py-2.5 bg-primary text-white rounded-md text-sm font-medium hover:bg-primary/90 transition-colors"
+          >
+            Confirm Address
+          </button>
+        </div>
+      ) : !isAddressConfirmed ? (
+        <>
+          {mapsReady ? (
+            <GoogleStructuredInput
+              street=""
+              postal=""
+              onSelect={handleSelect}
+              confirmed={confirmedAddress}
+            />
+          ) : (
+            <NominatimStructuredInput
+              street=""
+              postal=""
+              onSelect={handleSelect}
+              confirmed={confirmedAddress}
+            />
+          )}
+        </>
+      ) : null}
 
       {/* Static map preview */}
       {confirmedCoords && process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY && (

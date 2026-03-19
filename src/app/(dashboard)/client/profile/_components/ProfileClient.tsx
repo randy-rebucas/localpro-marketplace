@@ -59,10 +59,14 @@ export default function ProfileClient({ initialUser, initialJobCount }: Props) {
   const [confirmPassword, setConfirmPassword]   = useState("");
   const [savingPassword, setSavingPassword]     = useState(false);
 
+  // Predefined address labels
+  const addressLabelOptions = ["Home", "Work", "Office", "Apartment", "Shop", "Warehouse", "Studio", "Other"];
+
   // Saved addresses
   const [addresses, setAddresses]                           = useState<IAddress[]>(initialUser.addresses);
   const [addingAddress, setAddingAddress]                   = useState(false);
   const [newLabel, setNewLabel]                             = useState("Home");
+  const [customLabel, setCustomLabel]                       = useState("");
   const [newAddressText, setNewAddressText]                 = useState("");
   const [newAddressCoords, setNewAddressCoords]             = useState<{ lat: number; lng: number } | null>(null);
   const [savingAddress, setSavingAddress]                   = useState(false);
@@ -245,13 +249,20 @@ export default function ProfileClient({ initialUser, initialJobCount }: Props) {
   async function handleAddAddress() {
     const trimmedAddress = newAddressText.trim();
     if (!trimmedAddress) return;
+    
+    // Determine final label
+    let finalLabel = newLabel;
+    if (newLabel === "Other" && customLabel.trim()) {
+      finalLabel = customLabel.trim();
+    }
+    
     setSavingAddress(true);
     try {
       const res = await apiFetch("/api/auth/me/addresses", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          label:       newLabel.trim() || "Home",
+          label:       finalLabel || "Home",
           address:     trimmedAddress,
           coordinates: newAddressCoords ?? undefined,
         }),
@@ -262,6 +273,7 @@ export default function ProfileClient({ initialUser, initialJobCount }: Props) {
       setNewAddressText("");
       setNewAddressCoords(null);
       setNewLabel("Home");
+      setCustomLabel("");
       setAddingAddress(false);
       toast.success("Address saved!");
     } finally {
@@ -646,15 +658,32 @@ export default function ProfileClient({ initialUser, initialJobCount }: Props) {
           {addingAddress ? (
             <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-3 space-y-2.5">
               <div className="grid grid-cols-1 sm:grid-cols-[120px_1fr] gap-2">
-                <div>
-                  <label className="block text-xs font-medium text-slate-600 mb-1">Label</label>
-                  <input
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-medium text-slate-600">Label</label>
+                  <select
                     value={newLabel}
-                    onChange={(e) => setNewLabel(e.target.value)}
-                    placeholder="Home"
-                    maxLength={50}
-                    className="w-full rounded-md border border-slate-200 px-2.5 py-1.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
-                  />
+                    onChange={(e) => {
+                      setNewLabel(e.target.value);
+                      if (e.target.value !== "Other") setCustomLabel("");
+                    }}
+                    className="w-full rounded-md border border-slate-200 px-2.5 py-1.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                  >
+                    {addressLabelOptions.map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
+                  {newLabel === "Other" && (
+                    <input
+                      type="text"
+                      value={customLabel}
+                      onChange={(e) => setCustomLabel(e.target.value)}
+                      placeholder="Enter custom label"
+                      maxLength={50}
+                      className="w-full rounded-md border border-slate-200 px-2.5 py-1.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                    />
+                  )}
                 </div>
                 <div>
                   <div className="flex items-center justify-between mb-1">
@@ -684,7 +713,7 @@ export default function ProfileClient({ initialUser, initialJobCount }: Props) {
               <div className="flex items-center gap-2 justify-end">
                 <button
                   type="button"
-                  onClick={() => { setAddingAddress(false); setNewAddressText(""); setNewAddressCoords(null); setNewLabel("Home"); }}
+                  onClick={() => { setAddingAddress(false); setNewAddressText(""); setNewAddressCoords(null); setNewLabel("Home"); setCustomLabel(""); }}
                   className="text-xs text-slate-500 hover:text-slate-700 px-2 py-1 rounded"
                 >
                   Cancel

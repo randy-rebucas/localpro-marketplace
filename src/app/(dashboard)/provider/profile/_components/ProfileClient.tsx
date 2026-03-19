@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import Image from "next/image";
 import Link from "next/link";
@@ -10,7 +10,6 @@ import { DEFAULT_SCHEDULE } from "@/types";
 import Card, { CardBody, CardFooter, CardHeader } from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import { useAuthStore } from "@/stores/authStore";
-import SkillsInput from "@/components/shared/SkillsInput";
 import PhoneInput, { isValidPhoneNumber } from "@/components/shared/PhoneInput";
 import KycUpload from "@/components/shared/KycUpload";
 import { Star, Camera, BadgeCheck, AlertCircle, MapPin, Trash2, Plus, LocateFixed, Loader2, Sparkles, Lock, Share2, Check, ExternalLink } from "lucide-react";
@@ -45,9 +44,41 @@ type ProfileData = Partial<
   >
 >;
 
+interface Skill {
+  skill: string;
+  yearsExperience: number;
+  hourlyRate: string;
+}
+
 interface Props {
   initialProfile: ProfileData;
 }
+
+// Common skills for autocomplete while typing
+const COMMON_SKILLS = [
+  "Web Design", "Web Development", "Mobile App Development", "UI/UX Design",
+  "Graphic Design", "Logo Design", "Branding", "Copywriting",
+  "Content Writing", "Technical Writing", "SEO Optimization", "Social Media Management",
+  "Digital Marketing", "Email Marketing", "Video Editing", "Photography",
+  "Photo Editing", "Illustration", "Animation", "3D Modeling",
+  "Frontend Development", "Backend Development", "Full Stack Development", "Database Design",
+  "DevOps", "System Administration", "Cloud Computing", "AWS",
+  "Project Management", "Business Consulting", "Financial Planning", "Accounting",
+  "Tax Preparation", "Legal Consulting", "Virtual Assistant", "Data Entry",
+  "Data Analysis", "Machine Learning", "Artificial Intelligence", "Python",
+  "JavaScript", "TypeScript", "React", "Node.js", "Vue.js", "Angular",
+  "Java", "C++", "PHP", "SQL", "MongoDB", "Firebase",
+  "WordPress Development", "Shopify Development", "E-commerce Setup", "SEO",
+  "Google Ads", "Facebook Ads", "Paid Advertising", "Influencer Marketing",
+  "Brand Strategy", "Market Research", "Translation", "Localization",
+  "Customer Support", "Sales", "Lead Generation", "Recruitment",
+  "Training Delivery", "Curriculum Development", "Online Teaching", "Tutoring",
+  "Music Production", "Sound Design", "Voice Over", "Podcast Editing",
+  "Video Production", "Streaming Setup", "Fitness Coaching", "Nutrition Planning",
+  "Interior Design", "Architecture", "CAD Design", "AutoCAD",
+  "Electrical Work", "Plumbing", "HVAC", "Carpentry",
+  "Landscaping", "Cleaning Services", "Handyman Services", "Home Maintenance"
+];
 
 const AVAILABILITY_CONFIG: Record<
   AvailabilityStatus,
@@ -138,11 +169,67 @@ export default function ProfileClient({ initialProfile }: Props) {
 
   // Form state — initialised from server-fetched profile
   const [bio, setBio] = useState(initialProfile.bio ?? "");
-  const [skills, setSkills] = useState<string[]>(initialProfile.skills ?? []);
+  
+  // Helper function to safely convert skills from any format to Skill[]
+  const initializeSkills = (): Skill[] => {
+    if (!Array.isArray(initialProfile.skills)) return [];
+    
+    return initialProfile.skills
+      .map((skill: unknown) => {
+        // Already in correct Skill object format
+        if (typeof skill === "object" && skill !== null && "skill" in skill) {
+          return {
+            skill: String((skill as Record<string, unknown>).skill || ""),
+            yearsExperience: Number((skill as Record<string, unknown>).yearsExperience ?? 0),
+            hourlyRate: String((skill as Record<string, unknown>).hourlyRate ?? ""),
+          };
+        }
+        // Old format: string - convert to Skill object
+        if (typeof skill === "string") {
+          return {
+            skill: skill.trim(),
+            yearsExperience: 0,
+            hourlyRate: "",
+          };
+        }
+        return null;
+      })
+      .filter((s): s is Skill => s !== null);
+  };
+  
+  const [skills, setSkills] = useState<Skill[]>(initializeSkills());
+  const [newSkillInput, setNewSkillInput] = useState("");
   const [yearsExperience, setYearsExperience] = useState(initialProfile.yearsExperience ?? 0);
   const [hourlyRate, setHourlyRate] = useState(initialProfile.hourlyRate?.toString() ?? "");
   const [availability, setAvailability] = useState<AvailabilityStatus>(initialProfile.availabilityStatus ?? "available");
   const [schedule, setSchedule] = useState<WeeklySchedule>(initialProfile.schedule ?? DEFAULT_SCHEDULE);
+
+  // ── Auto-suggest skills when bio is sufficient ────────────────────────────────
+  // Compute tier here for auto-suggest check
+  const autoSuggestTier = useMemo(
+    () => getProviderTier(profile.completedJobCount ?? 0, profile.avgRating ?? 0, profile.completionRate ?? 0),
+    [profile.completedJobCount, profile.avgRating, profile.completionRate]
+  );
+
+  useEffect(() => {
+    // Only auto-suggest if user has AI access AND bio meeting minimum length
+    if (!autoSuggestTier.hasAIAccess) return;
+
+    const debounceTimer = setTimeout(() => {
+      const bioTrimmed = bio.trim();
+      // Auto-suggest only if: bio is adequate, no existing suggestions, not already fetching
+      if (
+        bioTrimmed.length >= 50 &&
+        skillSuggestions.length === 0 &&
+        !suggestingSkills &&
+        skills.length < 10 // Don't suggest if user already has many skills
+      ) {
+        suggestSkills();
+      }
+    }, 1500); // Wait 1.5s after user stops typing before auto-suggesting
+
+    return () => clearTimeout(debounceTimer);
+  }, [bio, autoSuggestTier.hasAIAccess, skillSuggestions.length, suggestingSkills, skills.length]);
 
   async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -186,13 +273,20 @@ export default function ProfileClient({ initialProfile }: Props) {
     }
     setSaving(true);
     try {
+      // Ensure skills are properly formatted as Skill objects
+      const formattedSkills = skills.map((skill) => ({
+        skill: String(skill.skill || "").trim(),
+        yearsExperience: Number(skill.yearsExperience ?? 0),
+        hourlyRate: String(skill.hourlyRate ?? "").trim(),
+      }));
+
       const [res, phoneRes] = await Promise.all([
         apiFetch("/api/providers/profile", {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             bio,
-            skills,
+            skills: formattedSkills,
             yearsExperience: Number(yearsExperience),
             hourlyRate: hourlyRate ? Number(hourlyRate) : undefined,
             availabilityStatus: availability,
@@ -245,17 +339,26 @@ export default function ProfileClient({ initialProfile }: Props) {
   }
 
   async function suggestSkills() {
+    // Check tier access and bio length
+    if (!autoSuggestTier.hasAIAccess) {
+      toast.error(`Skill suggestions require Gold tier. ${autoSuggestTier.nextMsg}`);
+      return;
+    }
+    if (bio.trim().length < 50) {
+      toast.error("Write at least 50 characters in your bio to get skill suggestions.");
+      return;
+    }
+
     setSuggestingSkills(true);
-    setSkillSuggestions([]);
     try {
       const res = await apiFetch("/api/ai/suggest-skills", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ bio, existingSkills: skills }),
+        body: JSON.stringify({ bio, existingSkills: skills.map((s) => s.skill) }),
       });
       const data = await res.json();
       if (!res.ok) { toast.error(data.error ?? "Failed to get skill suggestions"); return; }
-      const existingSet = new Set(skills.map((x) => x.toLowerCase()));
+      const existingSet = new Set(skills.map((s) => s.skill.toLowerCase()));
       const newSuggestions = (data.skills as string[]).filter(
         (s) => !existingSet.has(s.toLowerCase())
       );
@@ -267,6 +370,27 @@ export default function ProfileClient({ initialProfile }: Props) {
     } finally {
       setSuggestingSkills(false);
     }
+  }
+
+  function handleAddSkill(skillName: string) {
+    const trimmed = skillName.trim();
+    if (!trimmed || skills.some((s) => s.skill.toLowerCase() === trimmed.toLowerCase())) return;
+    setSkills([
+      ...skills,
+      { skill: trimmed, yearsExperience: yearsExperience || 0, hourlyRate: hourlyRate || "" },
+    ]);
+    setNewSkillInput("");
+    setSkillSuggestions((prev) => prev.filter((s) => s.toLowerCase() !== trimmed.toLowerCase()));
+  }
+
+  function handleRemoveSkill(index: number) {
+    setSkills(skills.filter((_, i) => i !== index));
+  }
+
+  function handleUpdateSkill(index: number, updates: Partial<Skill>) {
+    const updated = [...skills];
+    updated[index] = { ...updated[index], ...updates };
+    setSkills(updated);
   }
 
   async function detectCurrentLocation() {
@@ -510,8 +634,8 @@ export default function ProfileClient({ initialProfile }: Props) {
 
   // ── Memoised derived values ────────────────────────────────────────────────
   const tier = useMemo(
-    () => getProviderTier(profile.completedJobCount ?? 0, profile.avgRating ?? 0, profile.completionRate ?? 0),
-    [profile.completedJobCount, profile.avgRating, profile.completionRate]
+    () => autoSuggestTier,
+    [autoSuggestTier]
   );
 
   const completeness = useMemo(() => {
@@ -733,7 +857,7 @@ export default function ProfileClient({ initialProfile }: Props) {
                   )}
                 </div>
 
-                {/* Skills */}
+                {/* Skills with details */}
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
                     <label className="block text-sm font-medium text-slate-700">Skills</label>
@@ -761,46 +885,180 @@ export default function ProfileClient({ initialProfile }: Props) {
                       </button>
                     </div>
                   </div>
-                  <SkillsInput value={skills} onChange={setSkills} externalSuggestions={skillSuggestions} />
+
+                  {/* Added skills list */}
+                  <div className="space-y-2 mb-3">
+                    {skills.map((skill, index) => (
+                      <div
+                        key={index}
+                        className="flex items-end gap-2 rounded-lg border border-slate-200 bg-slate-50/50 p-3"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <label className="block text-xs font-medium text-slate-600 mb-1">Skill</label>
+                          <input
+                            type="text"
+                            value={skill.skill}
+                            onChange={(e) => handleUpdateSkill(index, { skill: e.target.value })}
+                            placeholder="e.g., Web Design"
+                            className="w-full rounded-md border border-slate-200 px-2.5 py-1.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                          />
+                        </div>
+                        <div className="w-28">
+                          <label className="block text-xs font-medium text-slate-600 mb-1">Experience (years)</label>
+                          <input
+                            type="number"
+                            min={0}
+                            max={50}
+                            value={skill.yearsExperience}
+                            onChange={(e) => handleUpdateSkill(index, { yearsExperience: Number(e.target.value) })}
+                            placeholder="0"
+                            className="w-full rounded-md border border-slate-200 px-2.5 py-1.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                          />
+                        </div>
+                        <div className="w-28">
+                          <label className="block text-xs font-medium text-slate-600 mb-1">Rate (₱) [hourly]</label>
+                          <div className="relative">
+                            <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-400">₱</span>
+                            <input
+                              type="number"
+                              min={0}
+                              value={skill.hourlyRate}
+                              onChange={(e) => handleUpdateSkill(index, { hourlyRate: e.target.value })}
+                              placeholder="0"
+                              className="w-full rounded-md border border-slate-200 pl-6 pr-2.5 py-1.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                            />
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveSkill(index)}
+                          className="p-2 text-slate-400 hover:text-red-500 transition-colors rounded flex-shrink-0"
+                          title="Remove skill"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Add new skill with autocomplete */}
+                  <div className="relative">
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={newSkillInput}
+                        onChange={(e) => setNewSkillInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            handleAddSkill(newSkillInput);
+                          }
+                        }}
+                        placeholder="Add a new skill..."
+                        maxLength={100}
+                        autoComplete="off"
+                        className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleAddSkill(newSkillInput)}
+                        disabled={!newSkillInput.trim()}
+                        className="px-4 py-2 rounded-lg border border-primary text-primary text-sm font-medium hover:bg-primary/5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        Add skill
+                      </button>
+                    </div>
+
+                    {/* Autocomplete dropdown - shows on typing with common skills + AI suggestions */}
+                    {newSkillInput.trim().length > 0 && (
+                      <div className="absolute top-full left-0 right-0 mt-1 z-10 rounded-lg border border-slate-200 bg-white shadow-md">
+                        <ul className="max-h-48 overflow-y-auto">
+                          {(() => {
+                            const input = newSkillInput.toLowerCase();
+                            const addedSkills = new Set(skills.map((s) => s.skill.toLowerCase()));
+                            
+                            // Combine common skills + AI suggestions
+                            const allSuggestions = Array.from(
+                              new Set([...COMMON_SKILLS, ...skillSuggestions])
+                            );
+                            
+                            // Filter matches
+                            const matches = allSuggestions
+                              .filter(
+                                (s) =>
+                                  s.toLowerCase().includes(input) &&
+                                  !addedSkills.has(s.toLowerCase())
+                              )
+                              .sort((a, b) => {
+                                // Prioritize exact prefix matches
+                                const aStartsWith = a.toLowerCase().startsWith(input);
+                                const bStartsWith = b.toLowerCase().startsWith(input);
+                                if (aStartsWith && !bStartsWith) return -1;
+                                if (!aStartsWith && bStartsWith) return 1;
+                                return a.localeCompare(b);
+                              })
+                              .slice(0, 8);
+                            
+                            return matches.map((suggestion) => (
+                              <li key={suggestion}>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    handleAddSkill(suggestion);
+                                    setNewSkillInput("");
+                                  }}
+                                  className="w-full text-left px-3 py-2 text-sm text-slate-900 hover:bg-primary/10 transition-colors border-b border-slate-100 last:border-b-0 flex items-center justify-between"
+                                >
+                                  <span>{suggestion}</span>
+                                  <Plus className="h-3.5 w-3.5 text-primary opacity-50" />
+                                </button>
+                              </li>
+                            ));
+                          })()}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* All AI suggestions (non-inline) */}
+                  {skillSuggestions.length > 0 && newSkillInput.trim().length === 0 && (
+                    <div className="mt-3 space-y-1.5">
+                      <p className="text-xs font-medium text-slate-600">Suggested skills:</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {skillSuggestions.filter((s) => !skills.some((sk) => sk.skill.toLowerCase() === s.toLowerCase())).map((suggestion) => (
+                          <button
+                            key={suggestion}
+                            type="button"
+                            onClick={() => handleAddSkill(suggestion)}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border border-primary/30 bg-primary/5 text-primary hover:bg-primary/10 transition-colors"
+                          >
+                            <Plus className="h-3 w-3" />
+                            {suggestion}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   {skills.length === 0 && skillSuggestions.length === 0 && (
-                    <p className="text-xs text-slate-400 mt-1.5">Add skills so clients can find you when filtering by service type.</p>
+                    <p className="text-xs text-slate-400 mt-1.5">Add skills with their experience level and rate so clients can find you.</p>
                   )}
                 </div>
 
-                {/* Years of experience + hourly rate */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                      Years of experience
-                    </label>
-                    <input
-                      type="number"
-                      min={0}
-                      max={50}
-                      value={yearsExperience}
-                      onChange={(e) => setYearsExperience(Number(e.target.value))}
-                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
-                    />
-                    <p className="text-xs text-slate-400 mt-1">How long you&apos;ve been working professionally.</p>
-                  </div>
-                  <div>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <label className="block text-sm font-medium text-slate-700">Hourly rate (₱)</label>
-                      <span className="text-xs text-slate-400">optional</span>
-                    </div>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400">₱</span>
-                      <input
-                        type="number"
-                        min={0}
-                        value={hourlyRate}
-                        onChange={(e) => setHourlyRate(e.target.value)}
-                        placeholder="500"
-                        className="w-full rounded-lg border border-slate-200 pl-7 pr-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
-                      />
-                    </div>
-                    <p className="text-xs text-slate-400 mt-1">Shown as a guide to clients on your profile.</p>
-                  </div>
+                {/* Years of experience */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                    Years of experience
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={50}
+                    value={yearsExperience}
+                    onChange={(e) => setYearsExperience(Number(e.target.value))}
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                  />
+                  <p className="text-xs text-slate-400 mt-1">Overall professional experience. Skill-specific rates are set individually above.</p>
                 </div>
 
                 {/* Availability */}

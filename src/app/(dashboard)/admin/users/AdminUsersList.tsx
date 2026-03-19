@@ -60,7 +60,7 @@ interface Props {
   /** Distinct skill values for the skill dropdown (populated only on Providers tab). */
   skillOptions: string[];
   /** Provider profile data (skills, workExperiences, yearsExperience, availabilityStatus) keyed by userId string. */
-  providerProfiles: Record<string, { skills: string[]; workExperiences: string[]; yearsExperience: number; availabilityStatus: string }>;
+  providerProfiles: Record<string, { skills: Array<{ skill: string; yearsExperience: number; hourlyRate: string }>; workExperiences: string[]; yearsExperience: number; availabilityStatus: string }>;
 }
 
 // ─── Completeness helpers ─────────────────────────────────────────────────────
@@ -765,7 +765,7 @@ export default function AdminUsersList({
                           {hasSkills && (
                             <div className="flex flex-wrap gap-1">
                               {skills.slice(0, 4).map((s) => (
-                                <span key={s} className="inline-block px-1.5 py-0.5 rounded-md bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 text-[10px] font-medium">{s}</span>
+                                <span key={s.skill} className="inline-block px-1.5 py-0.5 rounded-md bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 text-[10px] font-medium">{s.skill}</span>
                               ))}
                               {skills.length > 4 && (
                                 <span className="inline-block px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 text-[10px] font-medium">+{skills.length - 4}</span>

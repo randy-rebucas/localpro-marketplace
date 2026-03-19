@@ -15,9 +15,15 @@ const WorkSlotSchema = z.object({
 
 const DAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
 
+const SkillSchema = z.object({
+  skill: z.string().min(1).max(100),
+  yearsExperience: z.number().int().min(0).max(50).default(0),
+  hourlyRate: z.string().max(20).default(""),
+});
+
 const UpdateProfileSchema = z.object({
   bio: z.string().max(1000).optional(),
-  skills: z.array(z.string().max(50)).max(20).optional(),
+  skills: z.array(SkillSchema).max(20).optional(),
   yearsExperience: z.number().int().min(0).max(50).optional(),
   hourlyRate: z.number().positive().optional(),
   availabilityStatus: z.enum(["available", "busy", "unavailable"]).optional(),

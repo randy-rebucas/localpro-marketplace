@@ -179,7 +179,7 @@ function ProviderListRow({
 
       <div className="hidden xl:flex flex-wrap gap-1.5 max-w-[200px] justify-end">
         {profile?.skills?.slice(0, 3).map((s) => (
-          <span key={s} className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">{s}</span>
+          <span key={s.skill} className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">{s.skill}</span>
         ))}
         {(profile?.skills?.length ?? 0) > 3 && (
           <span className="text-xs text-slate-400">+{(profile?.skills?.length ?? 0) - 3}</span>
@@ -294,7 +294,7 @@ function ProviderCard({
       {(profile?.skills?.length ?? 0) > 0 && (
         <div className="flex flex-wrap gap-1.5">
           {profile?.skills?.slice(0, 4).map((s) => (
-            <span key={s} className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">{s}</span>
+            <span key={s.skill} className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">{s.skill}</span>
           ))}
           {(profile?.skills?.length ?? 0) > 4 && (
             <span className="text-xs text-slate-400">+{(profile?.skills?.length ?? 0) - 4} more</span>
