@@ -11,6 +11,9 @@
  */
 
 import twilio from "twilio";
+import { createLogger } from "@/lib/logger";
+
+const log = createLogger("sms");
 
 const SID     = process.env.TWILIO_ACCOUNT_SID;
 const TOKEN   = process.env.TWILIO_AUTH_TOKEN;
@@ -66,11 +69,11 @@ export async function checkOtp(toPhone: string, code: string): Promise<boolean> 
  */
 export async function sendSms(toPhone: string, body: string): Promise<void> {
   if (!SID || !TOKEN) {
-    console.warn("[SMS] Twilio credentials not configured — skipping SMS.");
+    log.warn("Twilio credentials not configured — skipping SMS.");
     return;
   }
   if (!FROM) {
-    console.warn("[SMS] TWILIO_PHONE_NUMBER not set — skipping SMS.");
+    log.warn("TWILIO_PHONE_NUMBER not set — skipping SMS.");
     return;
   }
   try {
@@ -80,8 +83,8 @@ export async function sendSms(toPhone: string, body: string): Promise<void> {
       from: FROM,
       to:   toPhone,
     });
-    console.log(`[SMS] Sent to ${toPhone} — SID: ${message.sid}`);
+    log.info({ to: toPhone, sid: message.sid }, "SMS sent");
   } catch (err) {
-    console.error("[SMS] Failed to send SMS:", err);
+    log.error({ err, to: toPhone }, "Failed to send SMS");
   }
 }

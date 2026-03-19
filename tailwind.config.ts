@@ -2,6 +2,7 @@ import type { Config } from "tailwindcss";
 import typography from "@tailwindcss/typography";
 
 const config: Config = {
+  darkMode: "class",
   content: [
     "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
@@ -56,6 +57,8 @@ const config: Config = {
       animation: {
         marquee: "marquee 20s linear infinite",
         "fade-in": "fade-in 0.18s ease-out both",
+        "reveal-up": "reveal-up 0.7s ease-out both",
+        "reveal-scale": "reveal-scale 0.6s ease-out both",
       },
       keyframes: {
         marquee: {
@@ -65,6 +68,14 @@ const config: Config = {
         "fade-in": {
           "0%":   { opacity: "0", transform: "translateY(4px)" },
           "100%": { opacity: "1", transform: "translateY(0)" },
+        },
+        "reveal-up": {
+          "0%":   { opacity: "0", transform: "translateY(24px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
+        },
+        "reveal-scale": {
+          "0%":   { opacity: "0", transform: "scale(0.95)" },
+          "100%": { opacity: "1", transform: "scale(1)" },
         },
       },
     },

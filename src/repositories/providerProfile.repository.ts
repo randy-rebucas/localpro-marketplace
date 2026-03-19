@@ -2,6 +2,7 @@ import ProviderProfile from "@/models/ProviderProfile";
 import type { ProviderProfileDocument } from "@/models/ProviderProfile";
 import { UpdateQuery } from "mongoose";
 import { BaseRepository } from "./base.repository";
+import { cacheGet, cacheSet, cacheInvalidate } from "@/lib/cache";
 
 export class ProviderProfileRepository extends BaseRepository<ProviderProfileDocument> {
   constructor() {
@@ -13,10 +14,19 @@ export class ProviderProfileRepository extends BaseRepository<ProviderProfileDoc
   }
 
   async findByUserIdPopulated(userId: string): Promise<ProviderProfileDocument | null> {
+    const cacheKey = `cache:provider:${userId}`;
+    const cached = await cacheGet<ProviderProfileDocument>(cacheKey);
+    if (cached) return cached;
+
     await this.connect();
-    return ProviderProfile.findOne({ userId })
+    const result = await ProviderProfile.findOne({ userId })
       .populate("userId", "name email isVerified avatar kycStatus")
       .lean() as unknown as ProviderProfileDocument | null;
+
+    if (result) {
+      await cacheSet(cacheKey, result, 3600); // 1 hour
+    }
+    return result;
   }
 
   async upsert(
@@ -29,6 +39,10 @@ export class ProviderProfileRepository extends BaseRepository<ProviderProfileDoc
       { $set: data },
       { new: true, upsert: true }
     ).lean();
+
+    // Invalidate cached profile so next read picks up changes
+    await cacheInvalidate(`cache:provider:${userId}`);
+
     return doc as unknown as ProviderProfileDocument;
   }
 

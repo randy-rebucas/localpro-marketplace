@@ -38,6 +38,12 @@ export class ConflictError extends AppError {
   }
 }
 
+export class LockedError extends AppError {
+  constructor(message = "Resource is locked") {
+    super(message, 423);
+  }
+}
+
 export class UnprocessableError extends AppError {
   constructor(message: string) {
     super(message, 422);

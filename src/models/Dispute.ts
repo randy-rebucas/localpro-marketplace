@@ -51,6 +51,14 @@ const DisputeSchema = new Schema<DisputeDocument>(
     handlingFeeAmount: { type: Number, default: 0 },
     /** True if the wallet deduction succeeded for the handling fee. */
     handlingFeePaid: { type: Boolean, default: false },
+    /** Timestamp of the last escalation action. */
+    disputeEscalatedAt: { type: Date, default: null },
+    /** Current escalation tier: provider → admin → peso. */
+    disputeEscalationLevel: {
+      type: String,
+      enum: ["provider", "admin", "peso"],
+      default: "provider",
+    },
   },
   { timestamps: true }
 );

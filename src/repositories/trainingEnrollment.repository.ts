@@ -54,7 +54,7 @@ export class TrainingEnrollmentRepository {
   async findById(id: string): Promise<TrainingEnrollmentDocument | null> {
     await connectDB();
     return TrainingEnrollment.findById(id)
-      .populate("courseId")
+      .populate("courseId", "title slug category badgeSlug durationMinutes lessons")
       .lean() as unknown as TrainingEnrollmentDocument | null;
   }
 

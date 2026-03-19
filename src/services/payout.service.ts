@@ -1,5 +1,6 @@
 import { payoutRepository } from "@/repositories/payout.repository";
 import { transactionRepository, activityRepository } from "@/repositories";
+import { providerProfileRepository } from "@/repositories/providerProfile.repository";
 import { ledgerService } from "@/services/ledger.service";
 import { getAppSetting } from "@/lib/appSettings";
 import { calculateWithdrawalFee } from "@/lib/commission";
@@ -92,6 +93,39 @@ export class PayoutService {
       { withdrawalFee }
     );
 
+    // ── Auto-approval check for qualified providers ───────────────────────────
+    // Providers with 10+ completed jobs, 4.0+ average rating, and at least one
+    // prior completed payout skip admin review and go straight to "processing".
+    let autoApproved = false;
+    try {
+      const [profile, completedPayoutCount] = await Promise.all([
+        providerProfileRepository.findByUserId(user.userId),
+        payoutRepository.countCompletedByProvider(user.userId),
+      ]);
+
+      if (
+        profile &&
+        (profile as unknown as { completedJobCount: number }).completedJobCount >= 10 &&
+        (profile as unknown as { avgRating: number }).avgRating >= 4.0 &&
+        completedPayoutCount >= 1
+      ) {
+        autoApproved = true;
+        await payoutRepository.updateById(
+          payout._id?.toString() ?? "",
+          { status: "processing", autoApproved: true, processedAt: new Date() }
+        );
+        console.log(
+          `[PayoutService] Auto-approved payout ${payout._id?.toString()} for provider ${user.userId} ` +
+          `(completedJobs=${(profile as unknown as { completedJobCount: number }).completedJobCount}, ` +
+          `avgRating=${(profile as unknown as { avgRating: number }).avgRating}, ` +
+          `priorPayouts=${completedPayoutCount})`
+        );
+      }
+    } catch (err) {
+      // Non-critical — if auto-approval check fails, payout stays in "pending" for admin review
+      console.error("[PayoutService] Auto-approval check failed:", err);
+    }
+
     // Post ledger entries (non-critical)
     try {
       await ledgerService.postPayoutRequested(
@@ -126,15 +160,18 @@ export class PayoutService {
     await activityRepository.log({
       userId: user.userId,
       eventType: "payout_requested",
-      metadata: { payoutId: payout._id?.toString(), amount, withdrawalFee },
+      metadata: { payoutId: payout._id?.toString(), amount, withdrawalFee, autoApproved },
     });
 
     const { notificationService } = await import("@/services/notification.service");
+    const statusNote = autoApproved
+      ? " Your payout has been auto-approved and is now processing."
+      : "";
     await notificationService.push({
       userId: user.userId,
       type: "payout_requested",
-      title: "Payout request submitted",
-      message: `Your payout of ₱${amount.toLocaleString()} has been submitted. A withdrawal fee of ₱${withdrawalFee} applies — you will receive ₱${netAmount.toLocaleString()}.`,
+      title: autoApproved ? "Payout auto-approved" : "Payout request submitted",
+      message: `Your payout of ₱${amount.toLocaleString()} has been submitted. A withdrawal fee of ₱${withdrawalFee} applies — you will receive ₱${netAmount.toLocaleString()}.${statusNote}`,
       data: { payoutId: payout._id?.toString() },
     });
 

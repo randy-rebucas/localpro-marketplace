@@ -128,12 +128,15 @@ export class CronService {
   /**
    * Releases escrow for completed jobs older than `days` where payment hasn't been manually released.
    * Runs daily. Default threshold: 7 days (configurable via limits.escrowAutoReleaseDays).
+   * Processes up to 50 jobs per run. Per-job errors are caught so one failure doesn't stop the batch.
    */
-  async releaseStaleEscrow(days?: number): Promise<{ released: number }> {
+  async releaseStaleEscrow(days?: number): Promise<{ released: number; errors: number }> {
     const threshold = days ?? (await getAppSetting<number>("limits.escrowAutoReleaseDays", 7));
-    const cutoff = daysAgo(threshold);
-    const jobs = await jobRepository.findCompletedPendingRelease(cutoff);
-    if (jobs.length === 0) return { released: 0 };
+    const jobs = await jobRepository.findStaleCompletedJobs(threshold);
+    if (jobs.length === 0) return { released: 0, errors: 0 };
+
+    let released = 0;
+    let errors = 0;
 
     for (const job of jobs) {
       const j = job as unknown as JobDocument & {
@@ -144,44 +147,105 @@ export class CronService {
         budget: number;
       };
 
-      // Release escrow + mark transaction completed
-      await jobRepository.updateMany({ _id: j._id } as never, { escrowStatus: "released" });
-      await transactionRepository.setPending(j._id.toString(), "completed");
+      try {
+        // Atomically transition escrowStatus to prevent double-release
+        const Job = (await import("@/models/Job")).default;
+        const updated = await Job.findOneAndUpdate(
+          { _id: j._id, escrowStatus: "funded", status: { $ne: "disputed" } },
+          { $set: { escrowStatus: "released" } },
+          { new: true }
+        );
+        if (!updated) continue; // Already released or disputed — skip
 
-      await activityRepository.log({
-        userId: "system",
-        eventType: "escrow_released",
-        jobId: j._id.toString(),
-        metadata: { autoReleased: true, daysAfterCompletion: threshold },
-      });
+        await transactionRepository.setPending(j._id.toString(), "completed");
 
-      // Notify provider
-      if (j.providerId) {
+        // ── Ledger entry for auto-release ───────────────────────────────────
+        try {
+          const { ledgerService } = await import("@/services/ledger.service");
+          const tx = await transactionRepository.findOneByJobId(j._id.toString());
+          if (tx) {
+            const t = tx as unknown as { _id: { toString(): string }; amount: number; commission: number; netAmount: number };
+            if (t.amount > 0 && t.commission >= 0 && t.netAmount >= 0) {
+              const releaseJournalId = `escrow-autorelease-${j._id.toString()}`;
+              await ledgerService.postEscrowReleased(
+                {
+                  journalId: releaseJournalId,
+                  entityType: "job",
+                  entityId: j._id.toString(),
+                  clientId: j.clientId.toString(),
+                  providerId: j.providerId?.toString(),
+                  initiatedBy: "system",
+                },
+                t.amount, t.commission, t.netAmount
+              );
+              await transactionRepository.updateById(t._id.toString(), { ledgerJournalId: releaseJournalId });
+            }
+          }
+        } catch (err) {
+          console.error(`[cron] releaseStaleEscrow: ledger post failed for job ${j._id.toString()}:`, err);
+        }
+
+        // ── Provider performance metrics ────────────────────────────────────
+        if (j.providerId) {
+          try {
+            const [completedCount, totalCount] = await Promise.all([
+              jobRepository.countByProvider(j.providerId.toString(), ["completed"]),
+              jobRepository.countByProvider(j.providerId.toString(), ["completed", "cancelled", "refunded"]),
+            ]);
+            const completionRate = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 100;
+            await providerProfileRepository.updateCompletionStats(j.providerId.toString(), completedCount, completionRate);
+          } catch {
+            // Non-critical
+          }
+        }
+
+        // ── Loyalty points for client ───────────────────────────────────────
+        try {
+          const { loyaltyService } = await import("@/services/loyalty.service");
+          await loyaltyService.awardJobPoints(j.clientId.toString(), j.budget, j._id.toString());
+        } catch {
+          // Non-critical
+        }
+
+        await activityRepository.log({
+          userId: "system",
+          eventType: "escrow_released",
+          jobId: j._id.toString(),
+          metadata: { autoReleased: true, daysAfterCompletion: threshold },
+        });
+
+        // Notify both client and provider
+        if (j.providerId) {
+          await notificationService.push({
+            userId: j.providerId.toString(),
+            type: "escrow_auto_released",
+            title: "Payment auto-released",
+            message: `Escrow auto-released after ${threshold} days — ₱${j.budget.toLocaleString()} for "${j.title}" has been released to your account.`,
+            data: { jobId: j._id.toString() },
+          });
+        }
+
         await notificationService.push({
-          userId: j.providerId.toString(),
+          userId: j.clientId.toString(),
           type: "escrow_auto_released",
-          title: "Payment released",
-          message: `₱${j.budget.toLocaleString()} has been automatically released to your account for "${j.title}".`,
+          title: "Escrow auto-released",
+          message: `Escrow auto-released after ${threshold} days — payment for "${j.title}" was automatically released to the provider.`,
           data: { jobId: j._id.toString() },
         });
+
+        pushStatusUpdateMany(
+          [j.clientId.toString(), j.providerId?.toString()].filter(Boolean) as string[],
+          { entity: "job", id: j._id.toString(), escrowStatus: "released" }
+        );
+
+        released++;
+      } catch (err) {
+        errors++;
+        console.error(`[cron] releaseStaleEscrow: failed for job ${j._id.toString()}:`, err);
       }
-
-      // Notify client
-      await notificationService.push({
-        userId: j.clientId.toString(),
-        type: "escrow_auto_released",
-        title: "Escrow auto-released",
-        message: `Payment for "${j.title}" was automatically released to the provider after ${threshold} days.`,
-        data: { jobId: j._id.toString() },
-      });
-
-      pushStatusUpdateMany(
-        [j.clientId.toString(), j.providerId?.toString()].filter(Boolean) as string[],
-        { entity: "job", id: j._id.toString(), escrowStatus: "released" }
-      );
     }
 
-    return { released: jobs.length };
+    return { released, errors };
   }
 
   /**
@@ -649,6 +713,103 @@ export class CronService {
   async spawnRecurringJobs(): Promise<{ spawned: number; errors: string[] }> {
     const { recurringScheduleService } = await import("@/services/recurringSchedule.service");
     return recurringScheduleService.spawnDue();
+  }
+  /**
+   * Auto-escalates disputes that have been in "open" status for more than 48 hours
+   * without any action. Transitions them to "investigating" and notifies all parties.
+   *
+   * Runs alongside the dispute-overdue cron.
+   */
+  async autoEscalateStaleDisputes(hoursThreshold = 48): Promise<{ escalated: number }> {
+    const cutoff = hoursAgo(hoursThreshold);
+
+    // Find open disputes older than the threshold
+    const { default: Dispute } = await import("@/models/Dispute");
+    const staleDisputes = await Dispute.find({
+      status: "open",
+      createdAt: { $lt: cutoff },
+    })
+      .populate("jobId", "title clientId providerId")
+      .lean();
+
+    if (staleDisputes.length === 0) return { escalated: 0 };
+
+    let escalated = 0;
+
+    for (const dispute of staleDisputes) {
+      const d = dispute as unknown as {
+        _id: { toString(): string };
+        raisedBy: { toString(): string };
+        reason: string;
+        jobId: {
+          _id: { toString(): string };
+          title: string;
+          clientId: { toString(): string };
+          providerId?: { toString(): string } | null;
+        } | null;
+      };
+
+      try {
+        // Escalate to investigating
+        await Dispute.findByIdAndUpdate(d._id, {
+          status: "investigating",
+          wasEscalated: true,
+        });
+
+        const jobTitle = d.jobId?.title ?? "Unknown job";
+        const disputeId = d._id.toString();
+
+        // Log the escalation
+        await activityRepository.log({
+          userId: "system",
+          eventType: "dispute_opened", // closest existing event type
+          jobId: d.jobId?._id?.toString(),
+          metadata: {
+            automated: true,
+            action: "auto_escalated",
+            hoursThreshold,
+            disputeId,
+          },
+        });
+
+        // Notify admins
+        await notificationService.notifyAdmins(
+          "dispute_opened",
+          "Dispute auto-escalated",
+          `Dispute for "${jobTitle}" auto-escalated after ${hoursThreshold}h without action.`,
+          { disputeId, jobId: d.jobId?._id?.toString() }
+        );
+
+        // Notify both parties
+        const partyIds = [
+          d.jobId?.clientId?.toString(),
+          d.jobId?.providerId?.toString(),
+        ].filter(Boolean) as string[];
+
+        for (const userId of partyIds) {
+          await notificationService.push({
+            userId,
+            type: "dispute_opened",
+            title: "Your dispute has been escalated",
+            message: `Your dispute for "${jobTitle}" has been escalated for review after ${hoursThreshold} hours.`,
+            data: { disputeId, jobId: d.jobId?._id?.toString() },
+          });
+        }
+
+        // Push real-time status update
+        pushStatusUpdateMany(partyIds, {
+          entity: "dispute",
+          id: disputeId,
+          status: "investigating",
+        });
+
+        escalated++;
+      } catch {
+        console.error(`[cron] autoEscalateStaleDisputes: failed for dispute ${d._id.toString()}`);
+      }
+    }
+
+    return { escalated };
   }
 }
 

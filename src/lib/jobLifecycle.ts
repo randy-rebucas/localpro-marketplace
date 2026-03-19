@@ -11,7 +11,7 @@ const VALID_TRANSITIONS: StatusTransitionMap = {
   pending_validation: ["open", "rejected"],
   open: ["assigned", "rejected", "expired", "cancelled"],
   assigned: ["in_progress", "completed", "disputed", "open", "cancelled"],
-  in_progress: ["completed", "disputed"],
+  in_progress: ["completed", "disputed", "cancelled"],
   completed: [],
   disputed: ["completed", "refunded"],
   rejected: [],

@@ -46,6 +46,11 @@ const ReviewSchema = new Schema<ReviewDocument>(
       minlength: [10, "Feedback must be at least 10 characters"],
       maxlength: [500, "Feedback cannot exceed 500 characters"],
     },
+    providerResponse: { type: String, maxlength: 500, default: null },
+    providerRespondedAt: { type: Date, default: null },
+    isHidden: { type: Boolean, default: false },
+    hiddenReason: { type: String, default: null },
+    hiddenBy: { type: Schema.Types.ObjectId, ref: "User", default: null },
   },
   { timestamps: { createdAt: true, updatedAt: false } }
 );

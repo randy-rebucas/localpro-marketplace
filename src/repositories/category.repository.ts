@@ -1,6 +1,7 @@
 import Category, { DEFAULT_CATEGORIES } from "@/models/Category";
 import type { CategoryDocument } from "@/models/Category";
 import { BaseRepository } from "./base.repository";
+import { cacheGet, cacheSet, cacheInvalidatePattern } from "@/lib/cache";
 
 export class CategoryRepository extends BaseRepository<CategoryDocument> {
   constructor() {
@@ -9,21 +10,35 @@ export class CategoryRepository extends BaseRepository<CategoryDocument> {
 
   /** All active categories sorted by order then name (lean, selected fields). Capped at 500 rows. */
   async findActive(): Promise<CategoryDocument[]> {
+    const cacheKey = "cache:categories:active";
+    const cached = await cacheGet<CategoryDocument[]>(cacheKey);
+    if (cached) return cached;
+
     await this.connect();
-    return Category.find({ isActive: true })
+    const result = await Category.find({ isActive: true })
       .sort({ order: 1, name: 1 })
       .limit(500)
       .select("_id name slug icon description order")
       .lean() as unknown as CategoryDocument[];
+
+    await cacheSet(cacheKey, result, 86400); // 24 hours
+    return result;
   }
 
   /** All categories (active + inactive) sorted by order then name. Capped at 500 rows. */
   async findAll(): Promise<CategoryDocument[]> {
+    const cacheKey = "cache:categories:all";
+    const cached = await cacheGet<CategoryDocument[]>(cacheKey);
+    if (cached) return cached;
+
     await this.connect();
-    return Category.find()
+    const result = await Category.find()
       .sort({ order: 1, name: 1 })
       .limit(500)
       .lean() as unknown as CategoryDocument[];
+
+    await cacheSet(cacheKey, result, 86400); // 24 hours
+    return result;
   }
 
   /** Seed default categories if the collection is empty. */
@@ -37,6 +52,7 @@ export class CategoryRepository extends BaseRepository<CategoryDocument> {
         isActive: true,
       }));
       await Category.insertMany(docs);
+      await cacheInvalidatePattern("cache:categories:");
     }
   }
 
@@ -59,7 +75,30 @@ export class CategoryRepository extends BaseRepository<CategoryDocument> {
   /** Hard-delete a category by id. Returns the deleted document or null if not found. */
   async deleteById(id: string): Promise<CategoryDocument | null> {
     await this.connect();
-    return Category.findByIdAndDelete(id).lean() as unknown as CategoryDocument | null;
+    const doc = await Category.findByIdAndDelete(id).lean() as unknown as CategoryDocument | null;
+    if (doc) {
+      await cacheInvalidatePattern("cache:categories:");
+    }
+    return doc;
+  }
+
+  /** Override base create to invalidate category caches. */
+  async create(data: Partial<CategoryDocument> | Record<string, unknown>): Promise<CategoryDocument> {
+    const doc = await super.create(data);
+    await cacheInvalidatePattern("cache:categories:");
+    return doc;
+  }
+
+  /** Override base updateById to invalidate category caches. */
+  async updateById(
+    id: string,
+    update: import("mongoose").UpdateQuery<CategoryDocument>
+  ): Promise<CategoryDocument | null> {
+    const doc = await super.updateById(id, update);
+    if (doc) {
+      await cacheInvalidatePattern("cache:categories:");
+    }
+    return doc;
   }
 }
 

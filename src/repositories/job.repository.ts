@@ -4,6 +4,7 @@ import Message from "@/models/Message";
 import type { JobDocument } from "@/models/Job";
 import type { JobStatus, EscrowStatus } from "@/types";
 import { BaseRepository } from "./base.repository";
+import { cacheGet, cacheSet } from "@/lib/cache";
 
 export type JobSortOption = "newest" | "oldest" | "budget_desc" | "budget_asc";
 
@@ -73,10 +74,16 @@ export class JobRepository extends BaseRepository<JobDocument> {
       .lean() as unknown as JobDocument | null;
   }
 
-  /** Aggregate jobs grouped by status. */
+  /** Aggregate jobs grouped by status. Cached for 5 minutes. */
   async countByStatus(): Promise<Array<{ _id: string; count: number }>> {
+    const cacheKey = "cache:jobstats:byStatus";
+    const cached = await cacheGet<Array<{ _id: string; count: number }>>(cacheKey);
+    if (cached) return cached;
+
     await this.connect();
-    return Job.aggregate([{ $group: { _id: "$status", count: { $sum: 1 } } }]);
+    const result = await Job.aggregate([{ $group: { _id: "$status", count: { $sum: 1 } } }]);
+    await cacheSet(cacheKey, result, 300); // 5 minutes
+    return result;
   }
 
   /** Returns jobs with funded escrow (budget field only). */
@@ -95,6 +102,16 @@ export class JobRepository extends BaseRepository<JobDocument> {
   async findCompletedPendingRelease(cutoffDate: Date): Promise<JobDocument[]> {
     await this.connect();
     return Job.find({ status: "completed", escrowStatus: "funded", updatedAt: { $lt: cutoffDate } }).lean() as unknown as JobDocument[];
+  }
+
+  /** Stale completed jobs with funded escrow older than N days. Capped at 50 per run. */
+  async findStaleCompletedJobs(olderThanDays: number = 7): Promise<JobDocument[]> {
+    await this.connect();
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - olderThanDays);
+    return Job.find({ status: "completed", escrowStatus: "funded", updatedAt: { $lt: cutoff } })
+      .limit(50)
+      .lean() as unknown as JobDocument[];
   }
 
   /** Assigned jobs with unfunded escrow updated before cutoffDate (for reminders). */
@@ -144,14 +161,15 @@ export class JobRepository extends BaseRepository<JobDocument> {
       .lean() as unknown as JobDocument[];
   }
 
-  /** Distinct provider user-IDs for jobs currently in an active state (assigned or in_progress). */
+  /** Distinct provider user-IDs for jobs currently in an active state (assigned or in_progress).
+   *  Uses aggregation to deduplicate in MongoDB instead of loading all documents into memory. */
   async findActiveProviderIds(): Promise<string[]> {
     await this.connect();
-    const docs = await Job.find(
-      { status: { $in: ["assigned", "in_progress"] }, providerId: { $ne: null } },
-      { providerId: 1 }
-    ).lean();
-    return [...new Set(docs.map((d) => (d.providerId as { toString(): string }).toString()))];
+    const result = await Job.aggregate([
+      { $match: { status: { $in: ["assigned", "in_progress"] }, providerId: { $ne: null } } },
+      { $group: { _id: "$providerId" } },
+    ]);
+    return result.map((d) => d._id.toString());
   }
 
   /** All jobs for a client, newest first, with populated provider. For "My Jobs" list page. */

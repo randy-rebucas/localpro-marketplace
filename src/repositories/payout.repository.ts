@@ -114,6 +114,14 @@ export class PayoutRepository extends BaseRepository<PayoutDocument> {
       pendingCount:    (byStatus.pending?.count ?? 0) + (byStatus.processing?.count ?? 0),
     };
   }
+  /** Count completed payouts for a provider (used for auto-approval eligibility). */
+  async countCompletedByProvider(providerId: string): Promise<number> {
+    await this.connect();
+    return Payout.countDocuments({
+      providerId: new (require("mongoose").Types.ObjectId)(providerId),
+      status: "completed",
+    });
+  }
 }
 
 export const payoutRepository = new PayoutRepository();

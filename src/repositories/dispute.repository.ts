@@ -23,7 +23,7 @@ export class DisputeRepository extends BaseRepository<DisputeDocument> {
   async findByIdPopulated(id: string): Promise<DisputeDocument | null> {
     await this.connect();
     return Dispute.findById(id)
-      .populate("jobId")
+      .populate("jobId", "title status budget escrowStatus clientId providerId")
       .populate("raisedBy", "name email role")
       .lean() as unknown as DisputeDocument | null;
   }

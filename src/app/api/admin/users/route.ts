@@ -6,6 +6,7 @@ import { withHandler } from "@/lib/utils";
 import { ValidationError, ConflictError } from "@/lib/errors";
 import { userRepository } from "@/repositories/user.repository";
 import { providerProfileRepository } from "@/repositories/providerProfile.repository";
+import { SkillEntrySchema } from "@/lib/validation";
 
 export const GET = withHandler(async (req: NextRequest) => {
   const user = await requireUser();
@@ -29,11 +30,7 @@ const CreateUserSchema = z.object({
   isVerified:      z.boolean().optional().default(false),
   // Provider-only optional fields
   phone:           z.string().max(30).optional(),
-  skills:          z.array(z.object({
-    skill: z.string().min(1).max(100),
-    yearsExperience: z.number().int().min(0).max(50).default(0),
-    hourlyRate: z.string().max(20).default(""),
-  })).max(20).optional(),
+  skills:          z.array(SkillEntrySchema).max(20).optional(),
   yearsExperience: z.number().int().min(0).max(60).optional(),
   // PESO-only: office details (required when role = peso)
   pesoOffice: z.object({

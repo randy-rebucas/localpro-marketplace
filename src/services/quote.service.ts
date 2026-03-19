@@ -264,6 +264,82 @@ export class QuoteService {
     return quote;
   }
 
+  async reviseQuote(
+    user: TokenPayload,
+    quoteId: string,
+    input: {
+      proposedAmount?: number;
+      timeline?: string;
+      message?: string;
+      milestones?: { description: string; amount: number }[];
+      laborCost?: number | null;
+      materialsCost?: number | null;
+    }
+  ) {
+    assertObjectId(quoteId, "quoteId");
+    const quote = await quoteRepository.getDocById(quoteId);
+    if (!quote) throw new NotFoundError("Quote");
+
+    const q = quote as unknown as {
+      status: string;
+      providerId: { toString(): string };
+      jobId: { toString(): string };
+      revisionCount: number;
+      _id: { toString(): string };
+      save(): Promise<unknown>;
+    };
+
+    // Only the original provider can revise
+    if (q.providerId.toString() !== user.userId) throw new ForbiddenError();
+
+    // Only pending quotes can be revised
+    if (q.status !== "pending") {
+      throw new UnprocessableError("Only pending quotes can be revised");
+    }
+
+    // Apply updates
+    const updates: Record<string, unknown> = { revisedAt: new Date() };
+    if (input.proposedAmount !== undefined) updates.proposedAmount = input.proposedAmount;
+    if (input.timeline !== undefined) updates.timeline = input.timeline;
+    if (input.message !== undefined) updates.message = input.message;
+    if (input.milestones !== undefined) updates.milestones = input.milestones;
+    if (input.laborCost !== undefined) updates.laborCost = input.laborCost;
+    if (input.materialsCost !== undefined) updates.materialsCost = input.materialsCost;
+
+    await connectDB();
+    const Quote = mongoose.model("Quote");
+    const updated = await Quote.findOneAndUpdate(
+      { _id: q._id.toString(), status: "pending" },
+      { $set: updates, $inc: { revisionCount: 1 } },
+      { new: true }
+    );
+    if (!updated) throw new ConflictError("Quote was modified by a concurrent request");
+
+    await activityRepository.log({
+      userId: user.userId,
+      eventType: "quote_revised" as never,
+      jobId: q.jobId.toString(),
+      metadata: { quoteId: q._id.toString(), revisionCount: (q.revisionCount ?? 0) + 1 },
+    });
+
+    // Notify the client
+    const job = await jobRepository.findById(q.jobId.toString());
+    if (job) {
+      const j = job as unknown as { clientId: { toString(): string }; title: string };
+      const { notificationService } = await import("@/services/notification.service");
+      await notificationService.push({
+        userId: j.clientId.toString(),
+        type: "quote_revised" as never,
+        title: "Provider revised their quote",
+        message: `A provider revised their quote for "${j.title}". Check the updated details.`,
+        data: { jobId: q.jobId.toString(), quoteId: q._id.toString() },
+      });
+      pushStatusUpdate(j.clientId.toString(), { entity: "job", id: q.jobId.toString() });
+    }
+
+    return updated;
+  }
+
   async getQuotesForJob(user: TokenPayload, jobId: string) {
     const job = await jobRepository.findById(jobId);
     if (!job) throw new NotFoundError("Job");

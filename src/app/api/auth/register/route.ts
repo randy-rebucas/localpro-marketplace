@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { z } from "zod";
 import { authService } from "@/services";
 import { setAuthCookies } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
@@ -9,20 +8,7 @@ import { checkRateLimit } from "@/lib/rateLimit";
 import { loyaltyRepository } from "@/repositories/loyalty.repository";
 import { sendReferralRegistrationEmail } from "@/lib/email";
 import User from "@/models/User";
-
-const RegisterSchema = z.object({
-  name: z.string().min(2, "Name must be at least 2 characters").max(100),
-  email: z.string().email("Invalid email address"),
-  password: z
-    .string()
-    .min(8, "Password must be at least 8 characters")
-    .regex(
-      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
-      "Password must contain uppercase, lowercase, and a number"
-    ),
-  role: z.enum(["client", "provider"]),
-  referralCode: z.string().max(12).optional(),
-});
+import { RegisterSchema } from "@/lib/validation";
 
 // 5 registrations per 15 minutes per IP
 const REGISTER_LIMIT = { windowMs: 15 * 60_000, max: 5 };

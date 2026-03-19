@@ -9,6 +9,9 @@
 import { Resend } from "resend";
 import type { NotificationType } from "@/types";
 import { generateUnsubscribeUrl } from "@/lib/unsubscribe";
+import { createLogger } from "@/lib/logger";
+
+const log = createLogger("email");
 
 // ─── HTML encoding ────────────────────────────────────────────────────────────
 
@@ -800,7 +803,7 @@ export async function sendEmail(
     const { error } = await resend.emails.send(payload);
     if (error) throw new Error(error.message);
   } catch (err) {
-    console.error("[EMAIL]", err);
+    log.error({ err }, "Failed to send email");
   }
 }
 

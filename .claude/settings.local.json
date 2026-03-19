@@ -98,7 +98,16 @@
       "Bash(grep -L \"requireUser\\\\|requireRole\\\\|requireCapability\\\\|verifyCron\\\\|withHandler\" /c/Users/rrebucas/localpro-marketplace/src/app/api/*/route.ts)",
       "Bash(node -e \"require.resolve\\(''mongodb''\\)\")",
       "Bash(node --check scripts/migrate-skills.mjs)",
-      "Bash(pnpm test:*)"
+      "Bash(pnpm test:*)",
+      "Bash(npm install:*)",
+      "Bash(npm -v)",
+      "Bash(mkdir -p \"c:/Users/rrebucas/localpro-marketplace/src/app/api/reviews/[id]/respond\")",
+      "Bash(mkdir -p \"c:/Users/rrebucas/localpro-marketplace/src/app/api/reviews/[id]/moderate\")",
+      "Bash(npm cache:*)",
+      "Bash(npm run:*)",
+      "Bash(node -e \"require\\(''''pino''''\\)\")",
+      "Bash(npx vitest:*)",
+      "Bash(npx js-yaml:*)"
     ]
   }
 }
