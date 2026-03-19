@@ -56,7 +56,7 @@ export async function GET(req: NextRequest) {
     // Check they haven't posted any job yet
     const hasJob = await Job.exists({ clientId: client._id });
     if (hasJob) continue;
-    await sendDripDay3ClientEmail(client.email, client.name ?? "there");
+    await sendDripDay3ClientEmail(client.email, client.name ?? "there", String(client._id));
     day3ClientCount++;
   }
 
@@ -80,7 +80,7 @@ export async function GET(req: NextRequest) {
       .select("skills")
       .lean();
     if (profile && (profile as { skills?: unknown[] }).skills?.length) continue;
-    await sendDripDay3ProviderEmail(provider.email, provider.name ?? "there");
+    await sendDripDay3ProviderEmail(provider.email, provider.name ?? "there", String(provider._id));
     day3ProviderCount++;
   }
 
@@ -103,7 +103,7 @@ export async function GET(req: NextRequest) {
     if (!client.email) continue;
     const jobCount = await Job.countDocuments({ clientId: client._id });
     if (jobCount > 0) continue; // already active
-    await sendDripDay7ClientEmail(client.email, client.name ?? "there", openJobCount, "your area");
+    await sendDripDay7ClientEmail(client.email, client.name ?? "there", openJobCount, "your area", String(client._id));
     day7ClientCount++;
   }
 
@@ -125,7 +125,7 @@ export async function GET(req: NextRequest) {
     if (!provider.email) continue;
     const hasQuote = await Quote.exists({ providerId: provider._id });
     if (hasQuote) continue;
-    await sendDripDay7ProviderEmail(provider.email, provider.name ?? "there", openJobCount);
+    await sendDripDay7ProviderEmail(provider.email, provider.name ?? "there", openJobCount, String(provider._id));
     day7ProviderCount++;
   }
 

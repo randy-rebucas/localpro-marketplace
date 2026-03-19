@@ -42,12 +42,35 @@ export const GET = withHandler(async (req: NextRequest) => {
     ? rawStatus
     : undefined;
 
+  // ── Geo-proximity params ────────────────────────────────────────────────
+  const rawLat = searchParams.get("lat");
+  const rawLng = searchParams.get("lng");
+  const rawMaxDist = searchParams.get("maxDistanceKm");
+
+  const lat = rawLat !== null ? parseFloat(rawLat) : undefined;
+  const lng = rawLng !== null ? parseFloat(rawLng) : undefined;
+  const maxDistanceKm = rawMaxDist !== null ? parseFloat(rawMaxDist) : undefined;
+
+  // Validate coordinate bounds when provided
+  if (lat !== undefined && (isNaN(lat) || lat < -90 || lat > 90)) {
+    return NextResponse.json({ error: "lat must be a number between -90 and 90" }, { status: 400 });
+  }
+  if (lng !== undefined && (isNaN(lng) || lng < -180 || lng > 180)) {
+    return NextResponse.json({ error: "lng must be a number between -180 and 180" }, { status: 400 });
+  }
+  if (maxDistanceKm !== undefined && (isNaN(maxDistanceKm) || maxDistanceKm <= 0)) {
+    return NextResponse.json({ error: "maxDistanceKm must be a positive number" }, { status: 400 });
+  }
+
   const result = await jobService.listJobs(user, {
     status,
     category: searchParams.get("category") ?? undefined,
     page:  Math.max(1, parseInt(searchParams.get("page")  ?? "1",  10) || 1),
     limit: Math.max(1, Math.min(100, parseInt(searchParams.get("limit") ?? "20", 10) || 20)),
     aiRank: searchParams.get("aiRank") === "true",
+    lat,
+    lng,
+    maxDistanceKm,
   });
 
   return NextResponse.json(result);

@@ -4,9 +4,9 @@ import { withHandler } from "@/lib/utils";
 import { requireUser, requireRole, requireCapability } from "@/lib/auth";
 import { userRepository } from "@/repositories/user.repository";
 import { notificationService } from "@/services";
-import { sendEmail } from "@/lib/email";
+import { sendEmail, baseMarketingTemplate } from "@/lib/email";
 import { sendSms } from "@/lib/twilio";
-import { baseMarketingTemplate } from "@/lib/email";
+import { generateUnsubscribeUrl } from "@/lib/unsubscribe";
 
 const CHANNELS = ["email", "sms", "in_app"] as const;
 
@@ -41,8 +41,9 @@ export const POST = withHandler(async (
   // ── Email ────────────────────────────────────────────────────────────────
   if (channels.includes("email")) {
     if (target.email) {
-      const html = baseMarketingTemplate(subject, target.name, body);
-      await sendEmail(target.email, subject, html);
+      const unsubUrl = generateUnsubscribeUrl(id);
+      const html = baseMarketingTemplate(subject, target.name, body, unsubUrl);
+      await sendEmail(target.email, subject, html, id);
       results.email = "sent";
     } else {
       results.email = "skipped"; // no email on record

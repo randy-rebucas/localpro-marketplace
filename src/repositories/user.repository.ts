@@ -55,11 +55,17 @@ export class UserRepository extends BaseRepository<UserDocument> {
       .lean() as unknown as UserDocument[];
   }
 
+  /**
+   * @deprecated Prefer findPaginated() for large result sets.
+   * Kept for internal small-set lookups (e.g. fetching a handful of users by ID).
+   * Capped at 100 rows as a safety measure.
+   */
   async findAll(filter: Record<string, unknown> = {}): Promise<UserDocument[]> {
     await this.connect();
     return User.find(filter)
       .select("-password")
       .sort({ createdAt: -1 })
+      .limit(100)
       .lean() as unknown as UserDocument[];
   }
 

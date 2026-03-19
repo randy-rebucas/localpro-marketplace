@@ -81,7 +81,24 @@
       "Bash(npx next:*)",
       "Bash(./node_modules/.bin/tsc --noEmit)",
       "Bash(node ./node_modules/typescript/bin/tsc --noEmit)",
-      "Bash(find ./src -type f \\\\\\(-name *.ts -o -name *.tsx -o -name *.js -o -name *.jsx \\\\\\))"
+      "Bash(find ./src -type f \\\\\\(-name *.ts -o -name *.tsx -o -name *.js -o -name *.jsx \\\\\\))",
+      "Bash(grep -E \"\\(package\\\\.json|tsconfig|\\\\.ts$|\\\\.js$\\)\")",
+      "Bash(xargs grep:*)",
+      "Bash(grep -E \"\\\\.\\(ts|prisma\\)$\")",
+      "Bash(find /c/Users/rrebucas/localpro-marketplace/src -type f \\\\\\(-name *.test.ts -o -name *.test.tsx -o -name *.spec.ts -o -name *.spec.tsx \\\\\\))",
+      "Bash(ls -la /c/Users/rrebucas/localpro-marketplace/src/models/*.ts)",
+      "Read(//c/Users/rrebucas/localpro-marketplace/**)",
+      "Bash(xargs -I {} basename {})",
+      "Bash(ls /c/Users/rrebucas/localpro-marketplace/src/app/api/admin/users/[id]/)",
+      "Bash(xargs ls:*)",
+      "Bash(grep -r \"$where\\\\|mapReduce\\\\|function\\\\\\(\" /c/Users/rrebucas/localpro-marketplace/src/repositories --include=\"*.ts\")",
+      "Bash(grep -r \"TODO\\\\|FIXME\\\\|BUG\\\\|HACK\" /c/Users/rrebucas/localpro-marketplace/src --include=*.ts --include=*.tsx)",
+      "Bash(grep -r '\\\\${.*}' /c/Users/rrebucas/localpro-marketplace/src/repositories --include=\"*.ts\")",
+      "Bash(grep -c \"console.log\\\\|console.warn\\\\|console.error\" /c/Users/rrebucas/localpro-marketplace/src/app/api/**/*.ts)",
+      "Bash(grep -L \"requireUser\\\\|requireRole\\\\|requireCapability\\\\|verifyCron\\\\|withHandler\" /c/Users/rrebucas/localpro-marketplace/src/app/api/*/route.ts)",
+      "Bash(node -e \"require.resolve\\(''mongodb''\\)\")",
+      "Bash(node --check scripts/migrate-skills.mjs)",
+      "Bash(pnpm test:*)"
     ]
   }
 }

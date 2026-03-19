@@ -46,7 +46,7 @@ export const GET = withHandler(async (req: NextRequest) => {
     .filter((u) => u.role === "provider")
     .map((u) => u._id.toString());
 
-  const profileMap = new Map<string, { skills: Array<{ skill: string }>; workExperiences: string[]; yearsExperience: number }>();
+  const profileMap = new Map<string, { skills: string[]; workExperiences: string[]; yearsExperience: number }>();
   if (providerIds.length > 0) {
     const profiles = await providerProfileRepository.findForExport(providerIds);
     for (const p of profiles) {

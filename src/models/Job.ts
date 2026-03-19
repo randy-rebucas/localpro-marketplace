@@ -173,6 +173,10 @@ JobSchema.index({ coordinates: "2dsphere" }, { sparse: true });
 JobSchema.index({ jobSource: 1, status: 1 });
 JobSchema.index({ pesoPostedBy: 1, status: 1 }, { sparse: true });
 JobSchema.index({ isPriority: -1, status: 1, createdAt: -1 });
+JobSchema.index({ escrowStatus: 1 });
+JobSchema.index({ invitedProviderId: 1 }, { sparse: true });
+JobSchema.index({ scheduleDate: 1 });
+JobSchema.index({ status: 1, escrowStatus: 1 });
 
 // Always delete the cached model so hot-reloads pick up schema changes
 // (no-op in production where the module is loaded once)

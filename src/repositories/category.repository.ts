@@ -7,20 +7,22 @@ export class CategoryRepository extends BaseRepository<CategoryDocument> {
     super(Category);
   }
 
-  /** All active categories sorted by order then name (lean, selected fields). */
+  /** All active categories sorted by order then name (lean, selected fields). Capped at 500 rows. */
   async findActive(): Promise<CategoryDocument[]> {
     await this.connect();
     return Category.find({ isActive: true })
       .sort({ order: 1, name: 1 })
+      .limit(500)
       .select("_id name slug icon description order")
       .lean() as unknown as CategoryDocument[];
   }
 
-  /** All categories (active + inactive) sorted by order then name. */
+  /** All categories (active + inactive) sorted by order then name. Capped at 500 rows. */
   async findAll(): Promise<CategoryDocument[]> {
     await this.connect();
     return Category.find()
       .sort({ order: 1, name: 1 })
+      .limit(500)
       .lean() as unknown as CategoryDocument[];
   }
 

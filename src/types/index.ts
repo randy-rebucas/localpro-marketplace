@@ -636,6 +636,8 @@ export interface IProviderProfile {
   accountSubtype?: "standard" | "youth" | "cooperative";
   /** LocalPro-issued certification badges earned by completing training courses */
   earnedBadges?: IProviderEarnedBadge[];
+  /** Maximum number of concurrent active jobs (assigned + in_progress) this provider can handle */
+  maxConcurrentJobs: number;
   createdAt: Date;
   updatedAt: Date;
 }

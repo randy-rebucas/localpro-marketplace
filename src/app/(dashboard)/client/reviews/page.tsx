@@ -10,8 +10,8 @@ export default async function ClientReviewsPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
-  const [allJobs, existingReviews] = await Promise.all([
-    jobRepository.findAllForClient(user.userId),
+  const [allJobsResult, existingReviews] = await Promise.all([
+    jobRepository.findAllForClient(user.userId, { page: 1, limit: 100 }),
     reviewRepository.findWithPopulation({ clientId: user.userId }),
   ]);
 
@@ -25,7 +25,7 @@ export default async function ClientReviewsPage() {
     })
   );
 
-  const initialJobs: PopulatedJob[] = (allJobs as JobDocument[])
+  const initialJobs: PopulatedJob[] = (allJobsResult.data as JobDocument[])
     .filter((j) => j.status === "completed" && j.escrowStatus === "released" && !reviewedJobIds.has(j._id.toString()))
     .map((j) => {
       const provider = j.providerId as unknown;

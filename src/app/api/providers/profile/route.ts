@@ -46,6 +46,7 @@ const UpdateProfileSchema = z.object({
     )
     .max(10)
     .optional(),
+  maxConcurrentJobs: z.number().int().min(1).max(20).optional(),
 });
 
 export const GET = withHandler(async () => {

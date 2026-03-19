@@ -62,8 +62,18 @@ export class AdminService {
 
     // Direct invite: skip open marketplace and assign to the invited provider
     if (j.invitedProviderId) {
-      j.status = "assigned";
-      j.providerId = j.invitedProviderId;
+      // Capacity check — if provider is at capacity, fall back to open marketplace
+      const { checkCapacity } = await import("@/lib/scheduleConflict");
+      const capacity = await checkCapacity(j.invitedProviderId.toString());
+      if (capacity.atCapacity) {
+        console.warn(
+          `[CapacityFallback] Provider ${j.invitedProviderId.toString()} is at capacity (${capacity.current}/${capacity.max}). Job ${j._id.toString()} falling back to open marketplace.`
+        );
+        j.status = "open";
+      } else {
+        j.status = "assigned";
+        j.providerId = j.invitedProviderId;
+      }
     } else {
       j.status = "open";
     }

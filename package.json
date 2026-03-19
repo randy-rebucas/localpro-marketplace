@@ -18,8 +18,12 @@
     "db:seed-skills": "node --env-file=.env.local scripts/seed-skills.mjs",
     "db:seed-skills:force": "node --env-file=.env.local scripts/seed-skills.mjs --force",
     "db:seed-skills:wipe": "node --env-file=.env.local scripts/seed-skills.mjs --wipe",
+    "db:migrate-skills": "node --env-file=.env.local scripts/migrate-skills.mjs",
     "icons:generate": "node scripts/generate-icons.mjs",
-    "og:generate": "node scripts/generate-og-image.mjs"
+    "og:generate": "node scripts/generate-og-image.mjs",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@sentry/nextjs": "^10.43.0",
@@ -64,10 +68,12 @@
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@types/web-push": "^3.6.4",
+    "@vitest/coverage-v8": "^3.0.0",
     "autoprefixer": "^10.0.1",
     "postcss": "^8",
     "sharp": "^0.34.5",
     "tailwindcss": "^3.4.1",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^3.0.0"
   }
 }

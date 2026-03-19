@@ -50,12 +50,13 @@ export default async function AdminPayoutsPage() {
   const user = await getCurrentUser();
   if (!user || (user.role !== "admin" && user.role !== "staff")) return null;
 
-  const [allPayouts, releaseJobs] = await Promise.all([
-    payoutService.listAllPayouts() as Promise<unknown>,
-    jobRepository.findAwaitingPaymentRelease(),
+  const [payoutResult, releaseResult] = await Promise.all([
+    payoutService.listAllPayouts(1, 100) as Promise<{ data: unknown[] }>,
+    jobRepository.findAwaitingPaymentRelease({ page: 1, limit: 100 }),
   ]);
 
-  const typedPayouts = allPayouts as unknown as PopulatedPayout[];
+  const typedPayouts = payoutResult.data as unknown as PopulatedPayout[];
+  const releaseJobs = releaseResult.data;
 
   const pending = typedPayouts.filter((p) => p.status === "pending");
   const processing = typedPayouts.filter((p) => p.status === "processing");

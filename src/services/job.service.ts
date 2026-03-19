@@ -59,11 +59,16 @@ export interface JobFilters {
   limit?: number;
   /** When true and user is a provider, use AI to rank open jobs by relevance */
   aiRank?: boolean;
+  /** Geographic proximity filters — when all three are provided, results are sorted by distance */
+  lat?: number;
+  lng?: number;
+  /** Maximum search radius in kilometres (default 50) */
+  maxDistanceKm?: number;
 }
 
 export class JobService {
   async listJobs(user: TokenPayload, filters: JobFilters): Promise<PaginatedJobs & { ranked?: boolean }> {
-    const { status, category, page = 1, limit = 20, aiRank = false } = filters;
+    const { status, category, page = 1, limit = 20, aiRank = false, lat, lng, maxDistanceKm = 50 } = filters;
     const filter: Record<string, unknown> = {};
 
     if (user.role === "client") {
@@ -83,6 +88,25 @@ export class JobService {
       filter.category = { $regex: escaped, $options: "i" };
     }
 
+    // ── Geo-proximity path ──────────────────────────────────────────────────
+    const useGeo =
+      lat !== undefined &&
+      lng !== undefined &&
+      lat >= -90 && lat <= 90 &&
+      lng >= -180 && lng <= 180;
+
+    if (useGeo) {
+      const maxDistanceMeters = Math.max(1, maxDistanceKm) * 1000;
+      const result = await jobRepository.findNearby(
+        [lng!, lat!],
+        maxDistanceMeters,
+        filter,
+        { page: Math.max(1, page), limit: Math.min(50, limit) }
+      );
+      return result;
+    }
+
+    // ── Standard (non-geo) path ─────────────────────────────────────────────
     // Priority jobs float to top when providers browse the open marketplace
     const priorityFirst = user.role === "provider" && (status === "open" || !status);
 

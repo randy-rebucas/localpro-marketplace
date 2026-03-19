@@ -7,7 +7,7 @@ import type { IJob } from "@/types";
 import ClientJobsList from "./ClientJobsList";
 
 export async function JobsData({ userId }: { userId: string }) {
-  const jobs = await jobRepository.findAllForClient(userId);
+  const { data: jobs } = await jobRepository.findAllForClient(userId, { page: 1, limit: 100 });
   const jobIds = jobs.map((j) => j._id);
 
   const [quoteCounts, fundedMap] = await Promise.all([

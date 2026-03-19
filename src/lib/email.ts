@@ -8,6 +8,7 @@
 
 import { Resend } from "resend";
 import type { NotificationType } from "@/types";
+import { generateUnsubscribeUrl } from "@/lib/unsubscribe";
 
 // ─── HTML encoding ────────────────────────────────────────────────────────────
 
@@ -34,8 +35,11 @@ const FROM = process.env.SMTP_FROM ?? "LocalPro <no-reply@localpro.app>";
 
 // ─── Base layout ──────────────────────────────────────────────────────────────
 
-function baseTemplate(title: string, bodyHtml: string, ctaUrl?: string, ctaLabel?: string) {
+function baseTemplate(title: string, bodyHtml: string, ctaUrl?: string, ctaLabel?: string, unsubscribeUrl?: string) {
   const safeTitle = escHtml(title);
+  const unsubFooter = unsubscribeUrl
+    ? `<p style="margin:8px 0 0;color:#94a3b8;font-size:11px">Don&rsquo;t want these emails? <a href="${unsubscribeUrl}" style="color:#64748b;text-decoration:underline">Unsubscribe</a></p>`
+    : "";
   return `<!DOCTYPE html>
 <html>
 <head>
@@ -69,6 +73,7 @@ function baseTemplate(title: string, bodyHtml: string, ctaUrl?: string, ctaLabel
         <tr>
           <td style="padding:20px 32px;background:#f8fafc;border-top:1px solid #e2e8f0">
             <p style="margin:0;color:#64748b;font-size:12px">You received this because you have an account on LocalPro. <a href="${APP_URL}" style="color:#1e3a5f">Visit your dashboard</a></p>
+            ${unsubFooter}
           </td>
         </tr>
       </table>
@@ -107,16 +112,21 @@ function callout(content: string, tone: "info" | "success" | "warning" | "danger
  * Marketing / admin-message email template.
  * Use this for direct messages sent by admins to users — not transactional events.
  */
-export function baseMarketingTemplate(subject: string, recipientName: string, bodyText: string): string {
+export function baseMarketingTemplate(subject: string, recipientName: string, bodyText: string, unsubscribeUrl?: string): string {
   const paragraphs = bodyText
     .split("\n")
     .filter(Boolean)
     .map((line) => `<p style="color:#334155;font-size:15px;line-height:1.7;margin:0 0 12px">${escHtml(line)}</p>`)
     .join("");
 
+  const body = `${greeting(recipientName)}${paragraphs}`;
+
   return baseTemplate(
     subject,
-    `${greeting(recipientName)}${paragraphs}`,
+    body,
+    undefined,
+    undefined,
+    unsubscribeUrl,
   );
 }
 
@@ -754,17 +764,40 @@ export async function sendBusinessJobInviteEmail(
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 
-/** Send a single transactional email. Non-blocking — errors are swallowed and logged. */
+/**
+ * Send a single email. Non-blocking — errors are swallowed and logged.
+ *
+ * When `unsubscribeUserId` is provided the email is treated as marketing:
+ *   - `List-Unsubscribe` and `List-Unsubscribe-Post` headers are added
+ *     (RFC 8058 one-click unsubscribe support for Gmail / Apple Mail).
+ */
 export async function sendEmail(
   to: string,
   subject: string,
-  html: string
+  html: string,
+  unsubscribeUserId?: string,
 ): Promise<void> {
   if (!process.env.RESEND_API_KEY) return; // silently skip if not configured
 
   try {
     const resend = getResend();
-    const { error } = await resend.emails.send({ from: FROM, to, subject, html });
+
+    const payload: Parameters<typeof resend.emails.send>[0] = {
+      from: FROM,
+      to,
+      subject,
+      html,
+    };
+
+    if (unsubscribeUserId) {
+      const unsubUrl = generateUnsubscribeUrl(unsubscribeUserId);
+      payload.headers = {
+        "List-Unsubscribe": `<${unsubUrl}>`,
+        "List-Unsubscribe-Post": "List-Unsubscribe=One-Click-Unsubscribe",
+      };
+    }
+
+    const { error } = await resend.emails.send(payload);
     if (error) throw new Error(error.message);
   } catch (err) {
     console.error("[EMAIL]", err);
@@ -827,7 +860,8 @@ export async function sendReferralBonusAwardedEmail(
 // ─── Drip / onboarding emails ─────────────────────────────────────────────────
 
 /** Day-3 onboarding nudge for clients who haven't posted a job yet. */
-export async function sendDripDay3ClientEmail(to: string, name: string): Promise<void> {
+export async function sendDripDay3ClientEmail(to: string, name: string, userId?: string): Promise<void> {
+  const unsubUrl = userId ? generateUnsubscribeUrl(userId) : undefined;
   const html = baseTemplate(
     "Ready to post your first job?",
     greeting(name)
@@ -838,13 +872,15 @@ export async function sendDripDay3ClientEmail(to: string, name: string): Promise
         )
       + p("Payments are protected by escrow — you only pay when the work is done."),
     `${APP_URL}/client/dashboard`,
-    "Post Your First Job"
+    "Post Your First Job",
+    unsubUrl,
   );
-  await sendEmail(to, "Ready to post your first job on LocalPro?", html);
+  await sendEmail(to, "Ready to post your first job on LocalPro?", html, userId);
 }
 
 /** Day-3 onboarding nudge for providers who haven't completed their profile yet. */
-export async function sendDripDay3ProviderEmail(to: string, name: string): Promise<void> {
+export async function sendDripDay3ProviderEmail(to: string, name: string, userId?: string): Promise<void> {
+  const unsubUrl = userId ? generateUnsubscribeUrl(userId) : undefined;
   const html = baseTemplate(
     "Complete your profile to get hired faster",
     greeting(name)
@@ -855,9 +891,10 @@ export async function sendDripDay3ProviderEmail(to: string, name: string): Promi
         )
       + p("It takes less than 5 minutes and it's completely free."),
     `${APP_URL}/provider/profile`,
-    "Complete My Profile"
+    "Complete My Profile",
+    unsubUrl,
   );
-  await sendEmail(to, "Complete your LocalPro profile — get hired faster", html);
+  await sendEmail(to, "Complete your LocalPro profile — get hired faster", html, userId);
 }
 
 /** Day-7 re-engagement email for clients with open jobs in their area. */
@@ -865,17 +902,20 @@ export async function sendDripDay7ClientEmail(
   to: string,
   name: string,
   jobCount: number,
-  city: string
+  city: string,
+  userId?: string,
 ): Promise<void> {
+  const unsubUrl = userId ? generateUnsubscribeUrl(userId) : undefined;
   const html = baseTemplate(
     "Jobs are waiting near you",
     greeting(name)
       + p(`There are currently <strong>${jobCount} open job${jobCount !== 1 ? "s" : ""}</strong> in ${escHtml(city)} and surrounding areas on LocalPro.`)
       + p("Need help around the house, office, or property? Post a job for free and get quotes from verified professionals today."),
     `${APP_URL}/jobs`,
-    "Browse Open Jobs"
+    "Browse Open Jobs",
+    unsubUrl,
   );
-  await sendEmail(to, `${jobCount} jobs near you on LocalPro`, html);
+  await sendEmail(to, `${jobCount} jobs near you on LocalPro`, html, userId);
 }
 
 /** Day-7 re-engagement email for providers who have not yet submitted a quote. */
@@ -883,7 +923,9 @@ export async function sendDripDay7ProviderEmail(
   to: string,
   name: string,
   jobCount: number,
+  userId?: string,
 ): Promise<void> {
+  const unsubUrl = userId ? generateUnsubscribeUrl(userId) : undefined;
   const html = baseTemplate(
     "New jobs are available near you",
     greeting(name)
@@ -893,7 +935,8 @@ export async function sendDripDay7ProviderEmail(
           "success"
         ),
     `${APP_URL}/provider/marketplace`,
-    "Browse the Marketplace"
+    "Browse the Marketplace",
+    unsubUrl,
   );
-  await sendEmail(to, `${jobCount} new jobs available on LocalPro`, html);
+  await sendEmail(to, `${jobCount} new jobs available on LocalPro`, html, userId);
 }

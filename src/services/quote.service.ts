@@ -137,6 +137,7 @@ export class QuoteService {
       status: string;
       title: string;
       providerId: unknown;
+      scheduleDate?: Date;
       _id: { toString(): string };
     };
 
@@ -148,6 +149,26 @@ export class QuoteService {
       const approvalStatus = (provider as { approvalStatus?: string } | null)?.approvalStatus;
       if (!provider || approvalStatus !== "approved") {
         throw new UnprocessableError("This provider is no longer eligible to accept jobs");
+      }
+
+      // ── Capacity check (hard block) ──────────────────────────────────────
+      const { checkCapacity, checkScheduleConflict } = await import("@/lib/scheduleConflict");
+      const capacity = await checkCapacity(q.providerId.toString());
+      if (capacity.atCapacity) {
+        throw new UnprocessableError(
+          `Provider has reached their maximum of ${capacity.max} concurrent jobs`
+        );
+      }
+
+      // ── Schedule conflict check (warning — logged but not blocking) ─────
+      if (j.scheduleDate) {
+        const conflict = await checkScheduleConflict(q.providerId.toString(), new Date(j.scheduleDate));
+        if (conflict.hasConflict) {
+          const titles = conflict.conflictingJobs.map((c) => c.title).join(", ");
+          console.warn(
+            `[ScheduleConflict] Provider ${q.providerId.toString()} has overlapping jobs on ${new Date(j.scheduleDate).toLocaleDateString()}: ${titles}`
+          );
+        }
       }
     }
 

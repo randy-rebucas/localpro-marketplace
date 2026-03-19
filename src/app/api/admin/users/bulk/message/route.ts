@@ -6,6 +6,7 @@ import { userRepository } from "@/repositories/user.repository";
 import { notificationService } from "@/services";
 import { sendEmail, baseMarketingTemplate } from "@/lib/email";
 import { sendSms } from "@/lib/twilio";
+import { generateUnsubscribeUrl } from "@/lib/unsubscribe";
 
 const CHANNELS = ["email", "sms", "in_app"] as const;
 
@@ -45,8 +46,9 @@ export const POST = withHandler(async (req: NextRequest) => {
       }
 
       if (channels.includes("email") && target.email) {
-        const html = baseMarketingTemplate(subject, target.name, body);
-        await sendEmail(target.email, subject, html);
+        const unsubUrl = generateUnsubscribeUrl(tid);
+        const html = baseMarketingTemplate(subject, target.name, body, unsubUrl);
+        await sendEmail(target.email, subject, html, tid);
         dispatched++;
       }
 

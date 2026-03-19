@@ -160,9 +160,9 @@ export class PayoutService {
     };
   }
 
-  /** Admin: list all payout requests. */
-  async listAllPayouts() {
-    return payoutRepository.findAllWithProvider();
+  /** Admin: list all payout requests (paginated). */
+  async listAllPayouts(page = 1, limit = 20) {
+    return payoutRepository.findAllWithProvider(page, limit);
   }
 
   /** Admin: approve, mark processing, complete, or reject a payout. */

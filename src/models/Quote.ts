@@ -60,6 +60,7 @@ const QuoteSchema = new Schema<QuoteDocument>(
 
 // One quote per provider per job
 QuoteSchema.index({ jobId: 1, providerId: 1 }, { unique: true });
+QuoteSchema.index({ status: 1 });
 
 const Quote: Model<QuoteDocument> =
   mongoose.models.Quote ?? mongoose.model<QuoteDocument>("Quote", QuoteSchema);

@@ -172,13 +172,35 @@ export class WalletRepository {
     return WalletWithdrawal.findByIdAndUpdate(id, update, { new: true }).lean() as unknown as WalletWithdrawalDocument | null;
   }
 
-  // Admin: all pending withdrawal requests
-  async listAllWithdrawals(): Promise<WalletWithdrawalDocument[]> {
+  // Admin: all withdrawal requests (paginated)
+  async listAllWithdrawals(
+    page = 1,
+    limit = 20
+  ): Promise<{
+    data: WalletWithdrawalDocument[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  }> {
     await connectDB();
-    return WalletWithdrawal.find({})
-      .sort({ createdAt: -1 })
-      .populate("userId", "name email")
-      .lean() as unknown as WalletWithdrawalDocument[];
+    const skip = (page - 1) * limit;
+    const [data, total] = await Promise.all([
+      WalletWithdrawal.find({})
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .populate("userId", "name email")
+        .lean(),
+      WalletWithdrawal.countDocuments({}),
+    ]);
+    return {
+      data: data as unknown as WalletWithdrawalDocument[],
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 
   async setWithdrawalLedgerJournalId(id: string, journalId: string): Promise<void> {

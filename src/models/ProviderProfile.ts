@@ -114,6 +114,8 @@ const ProviderProfileSchema = new Schema<ProviderProfileDocument>(
       enum: ["standard", "youth", "cooperative"],
       default: "standard",
     },
+    /** Maximum concurrent active jobs this provider can handle */
+    maxConcurrentJobs: { type: Number, default: 5, min: 1, max: 20 },
     /** LocalPro-issued certification badges earned by completing training courses */
     earnedBadges: {
       type: [
@@ -131,6 +133,8 @@ const ProviderProfileSchema = new Schema<ProviderProfileDocument>(
   },
   { timestamps: true }
 );
+
+ProviderProfileSchema.index({ "skills.skill": 1 });
 
 const ProviderProfile: Model<ProviderProfileDocument> =
   mongoose.models.ProviderProfile ??

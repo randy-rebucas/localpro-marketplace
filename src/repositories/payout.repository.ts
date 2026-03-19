@@ -2,6 +2,14 @@ import Payout from "@/models/Payout";
 import type { PayoutDocument } from "@/models/Payout";
 import { BaseRepository } from "./base.repository";
 
+export interface PaginatedPayouts {
+  data: PayoutDocument[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
 export class PayoutRepository extends BaseRepository<PayoutDocument> {
   constructor() {
     super(Payout);
@@ -14,12 +22,28 @@ export class PayoutRepository extends BaseRepository<PayoutDocument> {
       .lean() as unknown as PayoutDocument[];
   }
 
-  async findAllWithProvider(): Promise<PayoutDocument[]> {
+  async findAllWithProvider(
+    page = 1,
+    limit = 20
+  ): Promise<PaginatedPayouts> {
     await this.connect();
-    return Payout.find({})
-      .sort({ createdAt: -1 })
-      .populate("providerId", "name email")
-      .lean() as unknown as PayoutDocument[];
+    const skip = (page - 1) * limit;
+    const [data, total] = await Promise.all([
+      Payout.find({})
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .populate("providerId", "name email")
+        .lean(),
+      Payout.countDocuments({}),
+    ]);
+    return {
+      data: data as unknown as PayoutDocument[],
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 
   /** Sum of approved/processing payouts for a provider (already paid or in-flight) */

@@ -1,4 +1,4 @@
-import { FilterQuery, Types } from "mongoose";
+import { FilterQuery, Types, PipelineStage } from "mongoose";
 import Job from "@/models/Job";
 import Message from "@/models/Message";
 import type { JobDocument } from "@/models/Job";
@@ -155,12 +155,29 @@ export class JobRepository extends BaseRepository<JobDocument> {
   }
 
   /** All jobs for a client, newest first, with populated provider. For "My Jobs" list page. */
-  async findAllForClient(clientId: string): Promise<JobDocument[]> {
+  async findAllForClient(
+    clientId: string,
+    { page = 1, limit = 20 }: { page?: number; limit?: number } = {}
+  ): Promise<PaginatedJobs> {
     await this.connect();
-    return Job.find({ clientId: new Types.ObjectId(clientId) })
-      .sort({ createdAt: -1 })
-      .populate("providerId", "name email isVerified")
-      .lean() as unknown as JobDocument[];
+    const filter = { clientId: new Types.ObjectId(clientId) };
+    const skip = (page - 1) * limit;
+    const [data, total] = await Promise.all([
+      Job.find(filter)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .populate("providerId", "name email isVerified")
+        .lean(),
+      Job.countDocuments(filter),
+    ]);
+    return {
+      data: data as unknown as JobDocument[],
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 
   /** Single job verified to belong to this client, with client + provider populated. */
@@ -420,21 +437,43 @@ export class JobRepository extends BaseRepository<JobDocument> {
   }
 
   /** Completed jobs with funded escrow awaiting admin payment release (all, no date filter). */
-  async findAwaitingPaymentRelease(): Promise<Array<{
-    _id: { toString(): string };
-    title: string;
-    category: string;
-    budget: number;
-    updatedAt: Date;
-    clientId: { name: string; email: string };
-    providerId: { _id: { toString(): string }; name: string; email: string } | null;
-  }>> {
+  async findAwaitingPaymentRelease(
+    { page = 1, limit = 20 }: { page?: number; limit?: number } = {}
+  ): Promise<{
+    data: Array<{
+      _id: { toString(): string };
+      title: string;
+      category: string;
+      budget: number;
+      updatedAt: Date;
+      clientId: { name: string; email: string };
+      providerId: { _id: { toString(): string }; name: string; email: string } | null;
+    }>;
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  }> {
     await this.connect();
-    return Job.find({ status: "completed", escrowStatus: "funded" })
-      .sort({ updatedAt: -1 })
-      .populate("clientId", "name email")
-      .populate("providerId", "name email")
-      .lean() as never;
+    const filter = { status: "completed", escrowStatus: "funded" };
+    const skip = (page - 1) * limit;
+    const [data, total] = await Promise.all([
+      Job.find(filter)
+        .sort({ updatedAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .populate("clientId", "name email")
+        .populate("providerId", "name email")
+        .lean(),
+      Job.countDocuments(filter),
+    ]);
+    return {
+      data: data as never,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 
   /** Unique providers a client has previously hired (completed jobs). Used for the preferred-provider picker. */
@@ -621,6 +660,103 @@ export class JobRepository extends BaseRepository<JobDocument> {
       .populate("clientId", "name email")
       .select("title category budget status riskScore fraudFlags clientId createdAt")
       .lean() as never;
+  }
+  // ─── Geo-proximity search ─────────────────────────────────────────────────
+
+  /**
+   * Find jobs near a geographic point using the `coordinates` 2dsphere index.
+   * Returns results sorted by distance (closest first) with a `distance` field in meters.
+   *
+   * @param coordinates - [longitude, latitude]
+   * @param maxDistanceMeters - maximum search radius in meters
+   * @param filter - additional match criteria (status, category, etc.)
+   * @param options - pagination options
+   */
+  async findNearby(
+    coordinates: [number, number],
+    maxDistanceMeters: number,
+    filter?: Record<string, unknown>,
+    options?: { page?: number; limit?: number }
+  ): Promise<PaginatedJobs> {
+    await this.connect();
+
+    const page = options?.page ?? 1;
+    const limit = options?.limit ?? 20;
+    const skip = (page - 1) * limit;
+
+    const pipeline: PipelineStage[] = [
+      {
+        $geoNear: {
+          near: { type: "Point", coordinates },
+          distanceField: "distance",
+          maxDistance: maxDistanceMeters,
+          spherical: true,
+          query: {
+            "coordinates.coordinates": { $ne: null },
+            ...filter,
+          },
+        },
+      },
+    ];
+
+    // Count total matching documents (before pagination)
+    const countPipeline: PipelineStage[] = [
+      ...pipeline,
+      { $count: "total" },
+    ];
+
+    // Data pipeline with pagination and population via $lookup
+    const dataPipeline: PipelineStage[] = [
+      ...pipeline,
+      { $skip: skip },
+      { $limit: limit },
+      {
+        $lookup: {
+          from: "users",
+          localField: "clientId",
+          foreignField: "_id",
+          pipeline: [{ $project: { name: 1, email: 1 } }],
+          as: "_clientArr",
+        },
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "providerId",
+          foreignField: "_id",
+          pipeline: [{ $project: { name: 1, email: 1 } }],
+          as: "_providerArr",
+        },
+      },
+      {
+        $addFields: {
+          clientId: { $arrayElemAt: ["$_clientArr", 0] },
+          providerId: {
+            $cond: {
+              if: { $gt: [{ $size: "$_providerArr" }, 0] },
+              then: { $arrayElemAt: ["$_providerArr", 0] },
+              else: null,
+            },
+          },
+        },
+      },
+      { $unset: ["_clientArr", "_providerArr"] },
+    ];
+
+    const [countResult, data] = await Promise.all([
+      Job.aggregate(countPipeline),
+      Job.aggregate(dataPipeline),
+    ]);
+
+    const total = countResult[0]?.total ?? 0;
+
+    return {
+      data: data as unknown as JobDocument[],
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 }
 

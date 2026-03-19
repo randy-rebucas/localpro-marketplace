@@ -49,7 +49,7 @@ export default async function AdminWalletPage() {
   const user = await getCurrentUser();
   if (!user || (user.role !== "admin" && user.role !== "staff")) redirect("/dashboard");
 
-  const raw = await walletRepository.listAllWithdrawals();
+  const { data: raw } = await walletRepository.listAllWithdrawals(1, 100);
   const all = JSON.parse(JSON.stringify(raw)) as PopulatedWithdrawal[];
 
   const active = all.filter((w) => w.status === "pending" || w.status === "processing");

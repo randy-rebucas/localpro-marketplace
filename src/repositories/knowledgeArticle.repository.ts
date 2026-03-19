@@ -3,7 +3,7 @@ import KnowledgeArticle from "@/models/KnowledgeArticle";
 import type { KnowledgeAudience } from "@/types";
 
 export const knowledgeArticleRepository = {
-  /** Published articles visible to a role (audience = role or "both"). */
+  /** Published articles visible to a role (audience = role or "both"). Capped at 500 rows. */
   async findPublishedForAudience(role: "client" | "provider" | "business" | "agency" | "peso") {
     await connectDB();
     return KnowledgeArticle.find({
@@ -11,6 +11,7 @@ export const knowledgeArticleRepository = {
       audience: { $in: [role, "both"] },
     })
       .sort({ group: 1, order: 1, createdAt: 1 })
+      .limit(500)
       .lean();
   },
 
@@ -19,11 +20,12 @@ export const knowledgeArticleRepository = {
     return KnowledgeArticle.findById(id).lean();
   },
 
-  /** All articles (admin view). */
+  /** All articles (admin view). Capped at 500 rows. */
   async findAll() {
     await connectDB();
     return KnowledgeArticle.find()
       .sort({ audience: 1, group: 1, order: 1 })
+      .limit(500)
       .lean();
   },
 

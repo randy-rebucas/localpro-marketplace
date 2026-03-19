@@ -1,6 +1,7 @@
 import { notificationRepository, userRepository } from "@/repositories";
 import { pushNotification } from "@/lib/events";
 import { sendNotificationEmail } from "@/lib/email";
+import { sendPushToUser } from "@/app/push/actions";
 import type { NotificationType, INotification } from "@/types";
 
 // All notification types that should also send an email.
@@ -65,6 +66,52 @@ const PAYMENT_AMOUNT_TYPES: Set<NotificationType> = new Set([
   "escrow_auto_released",
 ]);
 
+// Important notification types that should trigger a web-push notification.
+const PUSH_TYPES: Set<NotificationType> = new Set([
+  "quote_received",
+  "quote_accepted",
+  "escrow_funded",
+  "escrow_released",
+  "job_completed",
+  "dispute_opened",
+  "dispute_resolved",
+  "payment_confirmed",
+  "job_direct_invite",
+  "new_message",
+]);
+
+/** Build an in-app URL for a push notification based on its type and data. */
+function buildNotificationUrl(
+  type: NotificationType,
+  data?: INotification["data"]
+): string | undefined {
+  const d = data ?? {};
+  switch (type) {
+    case "quote_received":
+    case "quote_accepted":
+      return d.jobId ? `/homeowner/jobs/${d.jobId}` : "/homeowner/jobs";
+    case "escrow_funded":
+    case "payment_confirmed":
+      return d.jobId ? `/homeowner/jobs/${d.jobId}` : "/homeowner/jobs";
+    case "escrow_released":
+    case "job_completed":
+      return d.jobId ? `/provider/jobs/${d.jobId}` : "/provider/jobs";
+    case "dispute_opened":
+    case "dispute_resolved":
+      return d.disputeId
+        ? `/disputes/${d.disputeId}`
+        : d.jobId
+          ? `/provider/jobs/${d.jobId}`
+          : "/dashboard";
+    case "job_direct_invite":
+      return d.jobId ? `/provider/jobs/${d.jobId}` : "/provider/jobs";
+    case "new_message":
+      return d.jobId ? `/messages/${d.jobId}` : "/messages";
+    default:
+      return "/dashboard";
+  }
+}
+
 export interface PushNotificationInput {
   userId: string;
   type: NotificationType;
@@ -74,17 +121,31 @@ export interface PushNotificationInput {
 }
 
 export class NotificationService {
-  /** Create a notification for a single user, push it to their SSE stream, and optionally email. */
+  /** Create a notification for a single user, push it to their SSE stream, and optionally email/push. */
   async push(input: PushNotificationInput): Promise<void> {
     const notification = await notificationRepository.create(input);
     pushNotification(input.userId, notification);
 
-    if (EMAIL_ALWAYS.has(input.type)) {
+    const needsEmail = EMAIL_ALWAYS.has(input.type);
+    const needsPush = PUSH_TYPES.has(input.type);
+
+    if (needsEmail || needsPush) {
       const user = await userRepository.findById(input.userId);
-      if (user?.email) {
+
+      if (needsEmail && user?.email) {
         // Enrich email context asynchronously (fire-and-forget)
         this.buildAndSendEmail(user, input).catch((err) =>
           console.error("[EMAIL] Failed to send notification email:", err)
+        );
+      }
+
+      if (needsPush && user?.preferences?.pushNotifications !== false) {
+        sendPushToUser(input.userId, {
+          title: input.title,
+          body: input.message,
+          url: buildNotificationUrl(input.type, input.data),
+        }).catch((err) =>
+          console.error("[PUSH] Failed to send push notification:", err)
         );
       }
     }

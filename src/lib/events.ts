@@ -1,10 +1,16 @@
 /**
- * In-process event bus for Server-Sent Events (SSE).
+ * Event bus for Server-Sent Events (SSE).
  *
- * Works for single-instance (Node.js / Docker) deployments.
- * For multi-instance production, replace with a Redis pub/sub adapter.
+ * When UPSTASH_REDIS_REST_URL is configured, uses Redis Streams to distribute
+ * events across multiple Vercel Function instances. Otherwise falls back to an
+ * in-process EventEmitter for local development.
  */
 import { EventEmitter } from "events";
+import { RedisBus } from "./events-redis";
+
+/* ------------------------------------------------------------------ */
+/*  Bus factory                                                        */
+/* ------------------------------------------------------------------ */
 
 class SSEBus extends EventEmitter {
   constructor() {
@@ -13,11 +19,32 @@ class SSEBus extends EventEmitter {
   }
 }
 
+function createBus(): EventEmitter {
+  if (process.env.UPSTASH_REDIS_REST_URL) {
+    return new RedisBus();
+  }
+  return new SSEBus();
+}
+
+/* ------------------------------------------------------------------ */
+/*  Shared bus instances                                                */
+/* ------------------------------------------------------------------ */
+
 /** Emit and subscribe to user-scoped notification events. */
-export const notificationBus = new SSEBus();
+export const notificationBus = createBus();
 
 /** Emit and subscribe to job-scoped message events. */
-export const messageBus = new SSEBus();
+export const messageBus = createBus();
+
+/** Emit and subscribe to support-chat events. */
+export const supportBus = createBus();
+
+/** Emit and subscribe to app-settings change events (board / kiosk listeners). */
+export const settingsBus = createBus();
+
+/* ------------------------------------------------------------------ */
+/*  Convenience push helpers                                           */
+/* ------------------------------------------------------------------ */
 
 /** Push a notification to a specific user's SSE stream. */
 export function pushNotification(userId: string, payload: unknown): void {
@@ -55,14 +82,6 @@ export function pushStatusUpdateMany(
 }
 
 // ─── Support Channel ──────────────────────────────────────────────────────────
-
-/** Emit and subscribe to support-chat events. */
-export const supportBus = new SSEBus();
-
-// ─── Settings Channel ─────────────────────────────────────────────────────────
-
-/** Emit and subscribe to app-settings change events (board / kiosk listeners). */
-export const settingsBus = new SSEBus();
 
 /** Notify all board listeners that settings have changed. */
 export function pushSettingsUpdate(payload: Record<string, unknown> = {}): void {
