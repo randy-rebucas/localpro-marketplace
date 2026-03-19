@@ -17,6 +17,8 @@ import PublicFooter from "@/components/layout/PublicFooter";
 import ScrollReveal from "@/components/homepage/ScrollReveal";
 import ServiceSearch from "@/components/homepage/ServiceSearch";
 import MarketplaceTabs from "@/components/homepage/MarketplaceTabs";
+import HeroIllustration from "@/components/homepage/HeroIllustration";
+import { PostJobIllustration, GetQuotesIllustration, PaySafelyIllustration } from "@/components/homepage/StepIllustrations";
 
 // ── Async data sections (deferred behind Suspense) ────────────────────────────
 
@@ -347,14 +349,15 @@ async function StatsStrip() {
       : "500+";
 
   return (
-    <div className="relative -mt-8 z-10 max-w-4xl mx-auto px-4">
+    <div className="relative -mt-10 z-10 max-w-4xl mx-auto px-4">
       <div className="grid grid-cols-3 gap-3 sm:gap-4">
         {[
-          { value: displayCount, label: "Jobs completed" },
-          { value: "500+", label: "Verified providers" },
-          { value: "4.8", label: "Average rating" },
+          { value: displayCount, label: "Jobs completed", icon: <TrendingUp className="h-5 w-5 text-primary" />, accent: "border-t-primary" },
+          { value: "500+", label: "Verified providers", icon: <Users className="h-5 w-5 text-brand" />, accent: "border-t-brand" },
+          { value: "4.8", label: "Average rating", icon: <Star className="h-5 w-5 fill-amber-400 text-amber-400" />, accent: "border-t-amber-400" },
         ].map((s) => (
-          <div key={s.label} className="bg-white dark:bg-slate-800 rounded-2xl shadow-lg border border-slate-100 dark:border-slate-700 p-4 sm:p-6 text-center">
+          <div key={s.label} className={`bg-white dark:bg-slate-800 rounded-2xl shadow-lg border border-slate-100 dark:border-slate-700 border-t-[3px] ${s.accent} p-4 sm:p-6 text-center`}>
+            <div className="flex justify-center mb-2">{s.icon}</div>
             <p className="text-2xl sm:text-4xl font-extrabold text-slate-900 dark:text-white">{s.value}</p>
             <p className="text-[10px] sm:text-xs text-slate-400 uppercase tracking-wide mt-1">{s.label}</p>
           </div>
@@ -581,65 +584,92 @@ export default async function RootPage() {
       {/* ── Nav ── */}
       <PublicHeader />
 
-      {/* ── Hero — asymmetric layout with search ── */}
-      <section className="bg-white dark:bg-slate-950 pt-16 pb-20 sm:pt-24 sm:pb-28 px-4 border-b border-slate-100 dark:border-slate-800">
-        <div className="max-w-6xl mx-auto grid lg:grid-cols-[1.2fr_1fr] gap-10 lg:gap-16 items-center">
+      {/* ── Hero — asymmetric layout with illustration + search ── */}
+      <section className="relative overflow-hidden bg-gradient-to-b from-slate-50 via-white to-white dark:from-slate-900 dark:via-slate-950 dark:to-slate-950 pt-16 pb-24 sm:pt-20 sm:pb-32 px-4">
+        {/* Subtle geometric accents */}
+        <div className="pointer-events-none absolute top-0 right-0 w-[600px] h-[600px] opacity-[0.04]">
+          <svg viewBox="0 0 600 600" fill="none"><circle cx="300" cy="300" r="280" stroke="#1a5fa8" strokeWidth="1" /><circle cx="300" cy="300" r="200" stroke="#1a5fa8" strokeWidth="0.5" /><circle cx="300" cy="300" r="120" stroke="#3ea53e" strokeWidth="0.5" /></svg>
+        </div>
+
+        <div className="relative max-w-6xl mx-auto grid lg:grid-cols-[1.15fr_1fr] gap-10 lg:gap-14 items-center">
           {/* Left: text */}
           <div className="text-center lg:text-left">
-            <div className="inline-flex items-center gap-2 text-xs font-semibold text-primary bg-primary/8 border border-primary/20 rounded-full px-4 py-1.5 mb-6">
+            <div className="inline-flex items-center gap-2 text-xs font-semibold text-primary bg-primary/8 border border-primary/15 rounded-full px-4 py-1.5 mb-6 backdrop-blur-sm">
               <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
               Trusted by Filipinos across the country
             </div>
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-slate-900 dark:text-white leading-[1.08] tracking-tight mb-5">
+            <h1 className="text-4xl sm:text-5xl lg:text-[3.5rem] xl:text-6xl font-extrabold text-slate-900 dark:text-white leading-[1.08] tracking-tight mb-5">
               Hire{" "}
-              <span className="decoration-brand decoration-[3px] underline underline-offset-[6px]">
-                Trusted Local
+              <span className="relative inline-block">
+                <span className="relative z-10">Trusted Local</span>
+                <span className="absolute bottom-1 left-0 right-0 h-3 bg-brand/15 dark:bg-brand/20 rounded-sm -z-0" />
               </span>{" "}
-              Pros
+              <br className="hidden sm:block" />
+              Service Pros
             </h1>
             <p className="text-base sm:text-lg text-slate-500 dark:text-slate-400 mb-8 max-w-lg leading-relaxed mx-auto lg:mx-0">
-              Post a job, receive quotes from verified providers, and pay with full escrow protection. Plumbing, electrical, cleaning, and more.
+              Post a job, receive quotes from verified providers, and pay with full escrow protection. Plumbing, electrical, cleaning &mdash; and{" "}
+              <span className="font-medium text-slate-700 dark:text-slate-300">50+ service categories</span>.
             </p>
-            <div className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start mb-8">
-              <Link
-                href="/register?role=client"
-                className="btn-primary text-sm sm:text-base px-6 sm:px-8 py-3 rounded-xl shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all"
-              >
-                Post a Job &mdash; It&apos;s Free
-              </Link>
-            </div>
-            <div className="flex flex-wrap items-center justify-center lg:justify-start gap-x-5 gap-y-2 text-xs text-slate-400">
-              <span className="flex items-center gap-1.5"><CheckCircle className="h-3.5 w-3.5 text-brand" /> Free to post</span>
-              <span className="flex items-center gap-1.5"><Lock className="h-3.5 w-3.5 text-primary" /> Escrow protection</span>
-              <span className="flex items-center gap-1.5"><Users className="h-3.5 w-3.5 text-brand" /> 500+ verified providers</span>
-            </div>
-            <p className="mt-4 text-xs text-slate-400">
-              Are you a service provider?{" "}
-              <Link href="/register?role=provider" className="text-primary hover:underline font-medium">
-                Join LocalPro <ArrowRight className="inline h-3 w-3" />
-              </Link>
-            </p>
-          </div>
 
-          {/* Right: search */}
-          <div className="flex flex-col items-center lg:items-start gap-6">
-            <div className="w-full max-w-md">
-              <p className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-3 text-center lg:text-left">What do you need help with?</p>
+            {/* Search bar — primary interaction */}
+            <div className="mb-6 max-w-md mx-auto lg:mx-0">
               <ServiceSearch categories={heroCategories} />
             </div>
+
             {/* Quick category pills */}
-            <div className="flex flex-wrap gap-2 justify-center lg:justify-start max-w-md">
+            <div className="flex flex-wrap gap-2 justify-center lg:justify-start max-w-md mx-auto lg:mx-0 mb-6">
               {heroCategories.slice(0, 5).map((cat) => (
                 <Link
                   key={cat.slug}
                   href={`/register?role=client&category=${cat.slug}`}
-                  className="inline-flex items-center gap-1.5 text-xs bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full px-3 py-1.5 transition-colors"
+                  className="inline-flex items-center gap-1.5 text-xs bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 rounded-full px-3 py-1.5 transition-colors shadow-sm"
                 >
                   <span>{cat.icon}</span> {cat.name}
                 </Link>
               ))}
             </div>
+
+            <div className="flex flex-wrap items-center justify-center lg:justify-start gap-x-5 gap-y-2 text-xs text-slate-400">
+              <span className="flex items-center gap-1.5"><CheckCircle className="h-3.5 w-3.5 text-brand" /> Free to post</span>
+              <span className="flex items-center gap-1.5"><Lock className="h-3.5 w-3.5 text-primary" /> Escrow protection</span>
+              <span className="flex items-center gap-1.5"><Users className="h-3.5 w-3.5 text-brand" /> 500+ verified providers</span>
+            </div>
           </div>
+
+          {/* Right: illustration + floating cards */}
+          <div className="relative hidden lg:flex items-center justify-center">
+            <HeroIllustration className="w-full max-w-[420px] h-auto drop-shadow-sm" />
+            {/* Floating mini-card: recent completion */}
+            <div className="absolute -bottom-2 -left-4 bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 px-4 py-3 flex items-center gap-3 animate-fade-in">
+              <div className="w-8 h-8 rounded-full bg-brand/10 flex items-center justify-center shrink-0">
+                <CheckCircle className="h-4 w-4 text-brand" />
+              </div>
+              <div>
+                <p className="text-[11px] font-semibold text-slate-700 dark:text-slate-200">Job Completed</p>
+                <p className="text-[10px] text-slate-400">Plumbing repair &middot; 2h ago</p>
+              </div>
+            </div>
+            {/* Floating mini-card: rating */}
+            <div className="absolute top-4 -right-2 bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 px-4 py-3 flex items-center gap-2.5 animate-fade-in">
+              <div className="flex gap-0.5">
+                {[...Array(5)].map((_, i) => (
+                  <Star key={i} className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+                ))}
+              </div>
+              <span className="text-xs font-bold text-slate-700 dark:text-slate-200">5.0</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Provider CTA — subtle, below the fold */}
+        <div className="max-w-6xl mx-auto mt-10 text-center lg:text-left">
+          <p className="text-xs text-slate-400">
+            Are you a service provider?{" "}
+            <Link href="/register?role=provider" className="text-primary hover:underline font-medium">
+              Join LocalPro <ArrowRight className="inline h-3 w-3" />
+            </Link>
+          </p>
         </div>
       </section>
 
@@ -653,21 +683,47 @@ export default async function RootPage() {
         <MarketplaceTabsSection />
       </Suspense>
 
-      {/* ── Testimonial ── */}
+      {/* ── Testimonials ── */}
       <ScrollReveal>
-        <section className="bg-slate-50 dark:bg-slate-900 py-16 sm:py-20 px-4">
-          <div className="max-w-3xl mx-auto text-center">
-            <p className="text-5xl sm:text-6xl text-primary/15 font-serif leading-none mb-4">&ldquo;</p>
-            <blockquote className="text-lg sm:text-2xl font-medium text-slate-700 dark:text-slate-200 leading-relaxed italic mb-6">
-              LocalPro made it so easy to find a reliable electrician. The escrow protection gave me complete peace of mind &mdash; I knew my money was safe until the job was done right.
-            </blockquote>
-            <div className="flex items-center justify-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary/20 to-brand/20 flex items-center justify-center">
-                <span className="text-xs font-bold text-primary">MS</span>
+        <section className="bg-slate-50 dark:bg-slate-900 py-16 sm:py-24 px-4">
+          <div className="max-w-5xl mx-auto">
+            <p className="text-[11px] text-slate-400 uppercase tracking-[0.2em] text-center mb-10">What people are saying</p>
+            <div className="grid md:grid-cols-2 gap-6">
+              {/* Testimonial 1 — client */}
+              <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-6 sm:p-8 shadow-card flex flex-col">
+                <div className="flex gap-0.5 mb-4">
+                  {[...Array(5)].map((_, i) => <Star key={i} className="h-4 w-4 fill-amber-400 text-amber-400" />)}
+                </div>
+                <blockquote className="text-sm sm:text-base text-slate-700 dark:text-slate-200 leading-relaxed mb-6 flex-1">
+                  &ldquo;LocalPro made it so easy to find a reliable electrician. The escrow protection gave me complete peace of mind &mdash; I knew my money was safe until the job was done right.&rdquo;
+                </blockquote>
+                <div className="flex items-center gap-3 pt-4 border-t border-slate-100 dark:border-slate-700">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary/20 to-brand/20 flex items-center justify-center shrink-0">
+                    <span className="text-xs font-bold text-primary">MS</span>
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">Maria Santos</p>
+                    <p className="text-xs text-slate-400">Homeowner &middot; Ormoc City</p>
+                  </div>
+                </div>
               </div>
-              <div className="text-left">
-                <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">Maria Santos</p>
-                <p className="text-xs text-slate-400">Homeowner, Ormoc City</p>
+              {/* Testimonial 2 — provider */}
+              <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-6 sm:p-8 shadow-card flex flex-col">
+                <div className="flex gap-0.5 mb-4">
+                  {[...Array(5)].map((_, i) => <Star key={i} className="h-4 w-4 fill-amber-400 text-amber-400" />)}
+                </div>
+                <blockquote className="text-sm sm:text-base text-slate-700 dark:text-slate-200 leading-relaxed mb-6 flex-1">
+                  &ldquo;Since joining LocalPro, I&apos;ve doubled my monthly clients. The platform handles payments automatically and clients trust me more with the verified badge. Best decision I made.&rdquo;
+                </blockquote>
+                <div className="flex items-center gap-3 pt-4 border-t border-slate-100 dark:border-slate-700">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-brand/20 to-amber-100 flex items-center justify-center shrink-0">
+                    <span className="text-xs font-bold text-brand">JR</span>
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">Juan Reyes</p>
+                    <p className="text-xs text-slate-400">Electrician &middot; Gold-tier Provider</p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -684,32 +740,33 @@ export default async function RootPage() {
         <section className="bg-white dark:bg-slate-950 py-16 sm:py-24 px-4">
           <div className="max-w-5xl mx-auto">
             <div className="text-center mb-12 sm:mb-16">
-              <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white mb-3">How LocalPro Works</h2>
-              <p className="text-slate-500 dark:text-slate-400 text-sm max-w-md mx-auto">Three simple steps to get the job done safely.</p>
+              <p className="text-[11px] text-primary font-semibold uppercase tracking-[0.2em] mb-3">How it works</p>
+              <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white mb-3">Three steps to get the job done</h2>
+              <p className="text-slate-500 dark:text-slate-400 text-sm max-w-md mx-auto">Post, compare, and pay safely &mdash; all in one place.</p>
             </div>
             <div className="grid sm:grid-cols-3 gap-6 relative">
               {/* Connector line */}
-              <div className="hidden sm:block absolute top-12 left-[calc(16.66%+1.5rem)] right-[calc(16.66%+1.5rem)] h-px bg-gradient-to-r from-primary/20 via-primary/40 to-primary/20" />
+              <div className="hidden sm:block absolute top-[88px] left-[calc(16.66%+1.5rem)] right-[calc(16.66%+1.5rem)] h-px bg-gradient-to-r from-primary/15 via-primary/30 to-primary/15" />
 
               {[
                 {
-                  icon: <Briefcase className="h-6 w-6 text-primary" />,
+                  illustration: <PostJobIllustration className="w-24 h-24" />,
                   title: "Post a Job",
-                  desc: "Describe what you need, set your budget, and pick a schedule.",
-                  trust: "Free to post",
+                  desc: "Describe what you need, set your budget, and pick a schedule. Takes under 2 minutes.",
+                  trust: "Free to post — no hidden fees",
                   trustIcon: <CheckCircle className="h-3.5 w-3.5 text-brand" />,
                   num: "01",
                 },
                 {
-                  icon: <Star className="h-6 w-6 text-primary" />,
+                  illustration: <GetQuotesIllustration className="w-24 h-24" />,
                   title: "Get Quotes",
-                  desc: "Receive competitive quotes from verified, rated providers — usually within hours.",
-                  trust: "KYC-verified providers",
+                  desc: "Receive competitive quotes from verified, rated providers &mdash; usually within hours.",
+                  trust: "KYC-verified providers only",
                   trustIcon: <Shield className="h-3.5 w-3.5 text-primary" />,
                   num: "02",
                 },
                 {
-                  icon: <Shield className="h-6 w-6 text-primary" />,
+                  illustration: <PaySafelyIllustration className="w-24 h-24" />,
                   title: "Pay Safely",
                   desc: "Funds are held in escrow and only released after you approve the completed work.",
                   trust: "Full escrow protection",
@@ -717,17 +774,16 @@ export default async function RootPage() {
                   num: "03",
                 },
               ].map((step) => (
-                <div key={step.title} className="relative bg-slate-50 dark:bg-slate-900 rounded-3xl p-8 flex flex-col gap-4">
+                <div key={step.title} className="relative bg-slate-50 dark:bg-slate-900 rounded-3xl p-8 flex flex-col gap-4 group hover:shadow-card-hover transition-shadow">
                   {/* Watermark number */}
                   <span className="absolute top-4 right-6 text-6xl font-extrabold text-slate-100 dark:text-slate-800 select-none pointer-events-none">{step.num}</span>
-                  <div className="relative">
-                    <div className="w-14 h-14 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-card flex items-center justify-center">
-                      {step.icon}
-                    </div>
+                  {/* Illustration */}
+                  <div className="relative flex justify-center sm:justify-start mb-2 group-hover:scale-[1.03] transition-transform">
+                    {step.illustration}
                   </div>
                   <h3 className="font-bold text-slate-900 dark:text-white text-lg">{step.title}</h3>
                   <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">{step.desc}</p>
-                  <div className="flex items-center gap-1.5 mt-auto pt-2 border-t border-slate-200 dark:border-slate-700">
+                  <div className="flex items-center gap-1.5 mt-auto pt-3 border-t border-slate-200 dark:border-slate-700">
                     {step.trustIcon}
                     <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{step.trust}</span>
                   </div>
@@ -738,73 +794,114 @@ export default async function RootPage() {
         </section>
       </ScrollReveal>
 
-      {/* ── Provider promotion strip (replaces full tiers section) ── */}
+      {/* ── Provider promotion strip ── */}
       <ScrollReveal>
         <section className="max-w-5xl mx-auto px-4 pb-12 sm:pb-16">
-          <div className="bg-gradient-to-r from-violet-50 to-amber-50 dark:from-violet-950/30 dark:to-amber-950/30 rounded-2xl border border-slate-200 dark:border-slate-700 px-6 sm:px-8 py-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <span className="text-3xl">&#x1F3C6;</span>
-              <div>
-                <p className="font-bold text-slate-900 dark:text-white text-sm sm:text-base">Grow your business with LocalPro</p>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Earn badges, lower commission fees, and unlock premium client access.</p>
+          <div className="relative overflow-hidden bg-gradient-to-r from-violet-50 via-white to-amber-50 dark:from-violet-950/30 dark:via-slate-900 dark:to-amber-950/30 rounded-3xl border border-slate-200 dark:border-slate-700 px-6 sm:px-10 py-8 sm:py-10">
+            {/* Decorative circles */}
+            <div className="pointer-events-none absolute -top-10 -right-10 w-40 h-40 rounded-full bg-amber-200/20 dark:bg-amber-500/5 blur-2xl" />
+            <div className="pointer-events-none absolute -bottom-10 -left-10 w-32 h-32 rounded-full bg-violet-200/20 dark:bg-violet-500/5 blur-2xl" />
+
+            <div className="relative flex flex-col sm:flex-row items-center justify-between gap-6">
+              <div className="flex items-center gap-5">
+                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-100 to-violet-100 dark:from-amber-900/30 dark:to-violet-900/30 border border-amber-200/60 dark:border-amber-700/30 flex items-center justify-center shrink-0">
+                  <span className="text-3xl">&#x1F3C6;</span>
+                </div>
+                <div>
+                  <p className="font-bold text-slate-900 dark:text-white text-base sm:text-lg">Grow your business with LocalPro</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 max-w-md">Earn badges, lower your commission from 15% to 6%, and unlock premium client access as you level up.</p>
+                </div>
               </div>
+              <Link
+                href="/register?role=provider"
+                className="btn-primary text-sm px-6 py-2.5 rounded-xl shadow-sm shrink-0"
+              >
+                Start as a provider <ArrowRight className="inline h-3.5 w-3.5 ml-1" />
+              </Link>
             </div>
-            <Link
-              href="/register?role=provider"
-              className="btn-primary text-sm px-5 py-2 rounded-xl shadow-sm shrink-0"
-            >
-              Start as a provider <ArrowRight className="inline h-3.5 w-3.5 ml-1" />
-            </Link>
           </div>
         </section>
       </ScrollReveal>
 
-      {/* ── Partners — minimal trust strip ── */}
-      <section className="py-8 px-4">
-        <div className="max-w-4xl mx-auto flex items-center justify-center gap-6">
-          <p className="text-[11px] text-slate-400 uppercase tracking-[0.15em]">Trusted by</p>
-          <div className="flex items-center gap-3 group">
-            <div className="w-[52px] h-[52px] rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex items-center justify-center overflow-hidden p-1.5">
-              <Image
-                src="/official_seal_ormoc.png"
-                alt="Ormoc City official seal"
-                className="w-full h-full object-contain"
-                width={52}
-                height={52}
-                priority
-              />
+      {/* ── Partners & Trust ── */}
+      <section className="py-10 sm:py-14 px-4 border-t border-slate-100 dark:border-slate-800">
+        <div className="max-w-4xl mx-auto">
+          <p className="text-[11px] text-slate-400 uppercase tracking-[0.2em] text-center mb-8">Official partners &amp; recognitions</p>
+          <div className="flex flex-wrap items-center justify-center gap-8 sm:gap-12">
+            {/* Ormoc LGU */}
+            <div className="flex items-center gap-3 group">
+              <div className="w-14 h-14 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex items-center justify-center overflow-hidden p-2 group-hover:shadow-card-hover transition-shadow">
+                <Image
+                  src="/official_seal_ormoc.png"
+                  alt="Ormoc City official seal"
+                  className="w-full h-full object-contain"
+                  width={56}
+                  height={56}
+                  priority
+                />
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-slate-700 dark:text-slate-300 leading-tight">Ormoc City LGU</p>
+                <p className="text-[10px] text-slate-400">Official Government Partner</p>
+              </div>
             </div>
-            <div>
-              <p className="text-xs font-semibold text-slate-700 dark:text-slate-300 leading-tight">Ormoc City LGU</p>
-              <p className="text-[10px] text-slate-400">Official Partner</p>
+            {/* PESO badge */}
+            <div className="flex items-center gap-3 group">
+              <div className="w-14 h-14 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex items-center justify-center group-hover:shadow-card-hover transition-shadow">
+                <Briefcase className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-slate-700 dark:text-slate-300 leading-tight">PESO Ormoc</p>
+                <p className="text-[10px] text-slate-400">Employment Partnership</p>
+              </div>
+            </div>
+            {/* Security badge */}
+            <div className="flex items-center gap-3 group">
+              <div className="w-14 h-14 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex items-center justify-center group-hover:shadow-card-hover transition-shadow">
+                <Shield className="h-6 w-6 text-brand" />
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-slate-700 dark:text-slate-300 leading-tight">Escrow Protected</p>
+                <p className="text-[10px] text-slate-400">Secure payments</p>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
       {/* ── CTA Banner ── */}
-      <section className="bg-primary py-20 sm:py-28 px-4">
-        <div className="max-w-3xl mx-auto text-center text-white">
-          <h2 className="text-3xl sm:text-4xl md:text-5xl font-extrabold mb-5 leading-tight">
-            Ready to get started?
-          </h2>
-          <p className="text-white/70 mb-10 text-sm sm:text-base leading-relaxed max-w-lg mx-auto">
-            Join thousands of clients and providers on LocalPro. Post your first job completely free.
-          </p>
-          <Link
-            href="/register?role=client"
-            className="bg-white text-primary font-semibold text-sm sm:text-base px-8 py-3.5 rounded-xl hover:bg-slate-50 hover:-translate-y-0.5 transition-all shadow-md inline-block"
-          >
-            I need a service
-          </Link>
-          <p className="mt-5 text-xs text-white/50">
-            Offer services?{" "}
-            <Link href="/register?role=provider" className="text-white/80 hover:text-white underline">
-              Join as a provider
-            </Link>
-          </p>
-        </div>
-      </section>
+      <ScrollReveal>
+        <section className="relative overflow-hidden bg-gradient-to-br from-primary via-primary-700 to-primary-900 py-20 sm:py-28 px-4">
+          {/* Subtle dot pattern */}
+          <div className="pointer-events-none absolute inset-0 opacity-[0.06]" style={{ backgroundImage: "radial-gradient(circle, white 1px, transparent 1px)", backgroundSize: "24px 24px" }} />
+          {/* Accent glow */}
+          <div className="pointer-events-none absolute -top-32 -right-32 w-96 h-96 rounded-full bg-brand/10 blur-3xl" />
+          <div className="pointer-events-none absolute -bottom-32 -left-32 w-80 h-80 rounded-full bg-white/5 blur-3xl" />
+
+          <div className="relative max-w-3xl mx-auto text-center text-white">
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-extrabold mb-5 leading-tight">
+              Ready to get started?
+            </h2>
+            <p className="text-white/65 mb-10 text-sm sm:text-base leading-relaxed max-w-lg mx-auto">
+              Join thousands of clients and providers on LocalPro. Post your first job completely free.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <Link
+                href="/register?role=client"
+                className="bg-white text-primary font-semibold text-sm sm:text-base px-8 py-3.5 rounded-xl hover:bg-slate-50 hover:-translate-y-0.5 transition-all shadow-lg inline-flex items-center justify-center gap-2"
+              >
+                I need a service <ArrowRight className="h-4 w-4" />
+              </Link>
+              <Link
+                href="/register?role=provider"
+                className="bg-white/10 border border-white/25 text-white font-semibold text-sm sm:text-base px-8 py-3.5 rounded-xl hover:bg-white/20 hover:-translate-y-0.5 transition-all backdrop-blur-sm inline-flex items-center justify-center"
+              >
+                I offer services
+              </Link>
+            </div>
+          </div>
+        </section>
+      </ScrollReveal>
 
       {/* ── Footer ── */}
       <PublicFooter />
