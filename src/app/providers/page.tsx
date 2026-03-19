@@ -43,7 +43,7 @@ async function getProviders(
 
     // Build provider profile filter
     const profileFilter: Record<string, unknown> = {};
-    if (skill) profileFilter.skills = skill;
+    if (skill) profileFilter["skills.skill"] = skill;
 
     const providersQuery = await ProviderProfile.find(profileFilter)
       .sort({ updatedAt: -1 })
