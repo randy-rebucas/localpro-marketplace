@@ -201,38 +201,38 @@ export default async function JobDetailPage(
   };
 
   return (
-    <div className="min-h-screen bg-[#0e1f33] text-white">
+    <div className="min-h-screen bg-white text-slate-900">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jobSchema) }}
       />
 
       {/* ── Header ──────────────────────────────────────────────────────────── */}
-      <header className="bg-[#1e3a5f] border-b border-white/10 px-4 sm:px-6 lg:px-10 py-3 flex items-center justify-between">
+      <header className="bg-white border-b border-slate-200 px-4 sm:px-6 lg:px-10 py-3 flex items-center justify-between">
         <Link
           href={BOARD_URL}
-          className="flex items-center gap-1.5 text-sm text-blue-300 hover:text-white transition-colors"
+          className="flex items-center gap-1.5 text-sm text-primary hover:text-primary/80 transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
           <span className="hidden sm:inline">Back to Board</span>
         </Link>
 
         <Link href={APP_URL} className="flex items-center gap-1.5">
-          <span className="text-lg font-extrabold text-white tracking-tight">LocalPro</span>
-          <span className="text-xs text-blue-300 font-medium hidden sm:inline">Marketplace</span>
+          <span className="text-lg font-extrabold text-slate-900 tracking-tight">LocalPro</span>
+          <span className="text-xs text-slate-500 font-medium hidden sm:inline">Marketplace</span>
         </Link>
 
         {isProvider ? (
           <a
             href={applyUrl}
-            className="text-sm font-semibold px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 transition-colors text-white"
+            className="text-sm font-semibold px-4 py-1.5 rounded-lg bg-primary hover:bg-primary/90 transition-colors text-white"
           >
             {ctaLabel}
           </a>
         ) : (
           <a
             href={PROVIDER_REGISTER_URL}
-            className="text-sm font-semibold px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 transition-colors text-white"
+            className="text-sm font-semibold px-4 py-1.5 rounded-lg bg-primary hover:bg-primary/90 transition-colors text-white"
           >
             Register as Provider
           </a>
@@ -247,17 +247,17 @@ export default async function JobDetailPage(
 
           {/* Badges row */}
           <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center px-3 py-1 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30 text-xs font-bold uppercase tracking-wider">
+            <span className="inline-flex items-center px-3 py-1 rounded-full bg-primary/10 text-primary border border-primary/20 text-xs font-bold uppercase tracking-wider">
               <Briefcase className="h-3 w-3 mr-1.5" />
               {job.category}
             </span>
             {job.jobSource === "peso" && (
-              <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-sky-500/20 text-sky-300 border border-sky-500/30 text-xs font-bold uppercase tracking-wider">
+              <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-sky-100 text-sky-700 border border-sky-200 text-xs font-bold uppercase tracking-wider">
                 🏛️ PESO
               </span>
             )}
             {job.jobSource === "lgu" && (
-              <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-teal-500/20 text-teal-300 border border-teal-500/30 text-xs font-bold uppercase tracking-wider">
+              <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-teal-100 text-teal-700 border border-teal-200 text-xs font-bold uppercase tracking-wider">
                 🏛️ LGU
               </span>
             )}
@@ -273,58 +273,58 @@ export default async function JobDetailPage(
           </div>
 
           {/* Title */}
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-white leading-tight">
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 leading-tight">
             {job.title}
           </h1>
 
           {/* Key info grid */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="flex items-start gap-3 bg-white/[0.05] border border-white/10 rounded-xl p-4">
-              <MapPin className="h-5 w-5 text-blue-400 mt-0.5 flex-shrink-0" />
+            <div className="flex items-start gap-3 bg-slate-50 border border-slate-200 rounded-xl p-4">
+              <MapPin className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
               <div>
                 <p className="text-[11px] text-slate-500 font-semibold uppercase tracking-wider mb-0.5">Location</p>
-                <p className="text-sm font-semibold text-white">{job.location}</p>
+                <p className="text-sm font-semibold text-slate-900">{job.location}</p>
               </div>
             </div>
 
-            <div className="flex items-start gap-3 bg-white/[0.05] border border-white/10 rounded-xl p-4">
-              <PhilippinePeso className="h-5 w-5 text-emerald-400 mt-0.5 flex-shrink-0" />
+            <div className="flex items-start gap-3 bg-slate-50 border border-slate-200 rounded-xl p-4">
+              <PhilippinePeso className="h-5 w-5 text-emerald-600 mt-0.5 flex-shrink-0" />
               <div>
                 <p className="text-[11px] text-slate-500 font-semibold uppercase tracking-wider mb-0.5">Budget</p>
-                <p className="text-lg font-extrabold text-emerald-300">{formatPeso(job.budget)}</p>
+                <p className="text-lg font-extrabold text-emerald-600">{formatPeso(job.budget)}</p>
               </div>
             </div>
 
-            <div className="flex items-start gap-3 bg-white/[0.05] border border-white/10 rounded-xl p-4">
-              <CalendarDays className="h-5 w-5 text-amber-400 mt-0.5 flex-shrink-0" />
+            <div className="flex items-start gap-3 bg-slate-50 border border-slate-200 rounded-xl p-4">
+              <CalendarDays className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
               <div>
                 <p className="text-[11px] text-slate-500 font-semibold uppercase tracking-wider mb-0.5">Schedule</p>
-                <p className="text-sm font-semibold text-white">{formatDate(job.scheduleDate)}</p>
+                <p className="text-sm font-semibold text-slate-900">{formatDate(job.scheduleDate)}</p>
               </div>
             </div>
           </div>
 
           {/* Description */}
-          <section className="bg-white/[0.04] border border-white/[0.08] rounded-2xl p-5 sm:p-6">
-            <h2 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+          <section className="bg-slate-50 border border-slate-200 rounded-2xl p-5 sm:p-6">
+            <h2 className="text-sm font-bold text-slate-700 uppercase tracking-wider mb-3 flex items-center gap-2">
               <Briefcase className="h-4 w-4" />
               About this Job
             </h2>
             <div
-              className="prose prose-sm prose-invert max-w-none text-slate-200 leading-relaxed"
+              className="prose prose-sm max-w-none text-slate-600 leading-relaxed"
               dangerouslySetInnerHTML={{ __html: marked(job.description ?? "") as string }}
             />
           </section>
 
           {/* Special instructions */}
           {job.specialInstructions && job.specialInstructions.trim().length > 0 && (
-            <section className="bg-amber-500/[0.07] border border-amber-500/20 rounded-2xl p-5">
-              <h2 className="text-sm font-bold text-amber-400 uppercase tracking-wider mb-2 flex items-center gap-2">
+            <section className="bg-amber-50 border border-amber-200 rounded-2xl p-5">
+              <h2 className="text-sm font-bold text-amber-900 uppercase tracking-wider mb-2 flex items-center gap-2">
                 <Clock className="h-4 w-4" />
                 Special Instructions
               </h2>
               <div
-                className="prose prose-sm prose-invert max-w-none text-amber-100/80 leading-relaxed"
+                className="prose prose-sm max-w-none text-amber-800 leading-relaxed"
                 dangerouslySetInnerHTML={{ __html: marked(job.specialInstructions ?? "") as string }}
               />
             </section>
@@ -332,13 +332,13 @@ export default async function JobDetailPage(
 
           {/* Gov source notice */}
           {isGovJob && (
-            <section className="bg-sky-500/[0.08] border border-sky-500/20 rounded-2xl p-5 flex items-start gap-3">
+            <section className="bg-sky-50 border border-sky-200 rounded-2xl p-5 flex items-start gap-3">
               <span className="text-2xl leading-none mt-0.5">🏛️</span>
               <div>
-                <p className="text-sm font-bold text-sky-300 mb-1">
+                <p className="text-sm font-bold text-sky-900 mb-1">
                   {job.jobSource === "peso" ? "PESO — Public Employment Service Office" : "LGU — Local Government Unit"} Posted Job
                 </p>
-                <p className="text-xs text-sky-200/70 leading-relaxed">
+                <p className="text-xs text-sky-700 leading-relaxed">
                   This job was posted by a government office through LocalPro's official integration.
                   Applicants are evaluated directly by the posting office.
                   No fees are charged to apply.
@@ -349,8 +349,8 @@ export default async function JobDetailPage(
 
           {/* Milestones */}
           {job.milestones && job.milestones.length > 0 && (
-            <section className="bg-white/[0.04] border border-white/[0.08] rounded-2xl p-5 sm:p-6">
-              <h2 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+            <section className="bg-slate-50 border border-slate-200 rounded-2xl p-5 sm:p-6">
+              <h2 className="text-sm font-bold text-slate-700 uppercase tracking-wider mb-4 flex items-center gap-2">
                 <ListChecks className="h-4 w-4" />
                 Payment Milestones
               </h2>
@@ -358,25 +358,25 @@ export default async function JobDetailPage(
                 {job.milestones.map((m, i) => (
                   <div
                     key={m._id ?? i}
-                    className="flex items-center justify-between gap-4 bg-white/[0.04] border border-white/[0.07] rounded-xl px-4 py-3"
+                    className="flex items-center justify-between gap-4 bg-white border border-slate-200 rounded-xl px-4 py-3"
                   >
                     <div className="flex items-center gap-3 min-w-0">
-                      <span className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-500/20 text-blue-300 text-xs font-bold flex items-center justify-center">
+                      <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-bold flex items-center justify-center">
                         {i + 1}
                       </span>
                       <div className="min-w-0">
-                        <p className="text-sm font-semibold text-white truncate">{m.title}</p>
+                        <p className="text-sm font-semibold text-slate-900 truncate">{m.title}</p>
                         {m.description && (
-                          <p className="text-xs text-slate-400 mt-0.5 line-clamp-1">{m.description}</p>
+                          <p className="text-xs text-slate-500 mt-0.5 line-clamp-1">{m.description}</p>
                         )}
                       </div>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
-                      <span className="text-base font-bold text-emerald-300 whitespace-nowrap">
+                      <span className="text-base font-bold text-emerald-600 whitespace-nowrap">
                         {formatPeso(m.amount)}
                       </span>
                       {m.status === "released" && (
-                        <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                        <CheckCircle2 className="h-4 w-4 text-emerald-600" />
                       )}
                     </div>
                   </div>
@@ -389,7 +389,7 @@ export default async function JobDetailPage(
           )}
 
           {/* Mobile-only share (below description on small screens) */}
-          <div className="bg-white/[0.04] border border-white/[0.08] rounded-2xl p-5 lg:hidden">
+          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 lg:hidden">
             <ShareButtons url={pageUrl} text={shareText} />
           </div>
         </article>
@@ -398,14 +398,14 @@ export default async function JobDetailPage(
         <aside className="w-full lg:w-72 xl:w-80 flex-shrink-0 flex flex-col gap-4">
 
           {/* Apply card */}
-          <div className="bg-[#1e3a5f] border border-white/10 rounded-2xl p-5 flex flex-col gap-4">
+          <div className="bg-white border border-slate-200 rounded-2xl p-5 flex flex-col gap-4 shadow-sm">
             <div>
-              <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-1">Budget</p>
-              <p className="text-3xl font-extrabold text-emerald-300 tracking-tight">
+              <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-1">Budget</p>
+              <p className="text-3xl font-extrabold text-emerald-600 tracking-tight">
                 {formatPeso(job.budget)}
               </p>
               {isGovJob && (
-                <p className="text-[11px] text-sky-400 font-medium mt-1 flex items-center gap-1">
+                <p className="text-[11px] text-sky-600 font-medium mt-1 flex items-center gap-1">
                   🏛️ {job.jobSource === "peso" ? "PESO" : "LGU"} Government Job
                 </p>
               )}
@@ -416,7 +416,7 @@ export default async function JobDetailPage(
                 {isProvider ? (
                   <a
                     href={applyUrl}
-                    className="block w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-center font-bold text-white text-sm transition-colors"
+                    className="block w-full py-3 rounded-xl bg-primary hover:bg-primary/90 text-center font-bold text-white text-sm transition-colors"
                   >
                     {ctaLabel}
                   </a>
@@ -424,13 +424,13 @@ export default async function JobDetailPage(
                   <>
                     <a
                       href={PROVIDER_REGISTER_URL}
-                      className="block w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-center font-bold text-white text-sm transition-colors"
+                      className="block w-full py-3 rounded-xl bg-primary hover:bg-primary/90 text-center font-bold text-white text-sm transition-colors"
                     >
                       {registerLabel}
                     </a>
                     <a
                       href={`${LOGIN_URL}?redirect=/jobs/${job._id}`}
-                      className="block w-full py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-center font-semibold text-slate-300 text-sm transition-colors"
+                      className="block w-full py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-center font-semibold text-slate-700 text-sm transition-colors"
                     >
                       Log in to Apply
                     </a>
@@ -438,12 +438,12 @@ export default async function JobDetailPage(
                 )}
               </>
             ) : (
-              <div className="py-3 rounded-xl bg-slate-500/20 border border-slate-500/30 text-center text-sm font-semibold text-slate-400">
+              <div className="py-3 rounded-xl bg-slate-100 border border-slate-200 text-center text-sm font-semibold text-slate-600">
                 This job is no longer accepting applications
               </div>
             )}
 
-            <p className="text-[11px] text-slate-500 text-center leading-relaxed">
+            <p className="text-[11px] text-slate-600 text-center leading-relaxed">
               {isGovJob
                 ? "This is a government-posted job. Applications are reviewed by the PESO/LGU office."
                 : "All payments are protected by LocalPro escrow. You only get paid when the client confirms completion."
@@ -452,8 +452,8 @@ export default async function JobDetailPage(
           </div>
 
           {/* QR code card */}
-          <div className="bg-white/[0.04] border border-white/[0.08] rounded-2xl p-5 flex flex-col items-center gap-3">
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 flex flex-col items-center gap-3">
+            <p className="text-xs font-bold text-slate-700 uppercase tracking-wider">
               {isGovJob ? "Scan to Apply" : "Scan to Quote"}
             </p>
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -462,15 +462,15 @@ export default async function JobDetailPage(
               alt="Scan QR code to apply"
               width={160}
               height={160}
-              className="rounded-xl border border-white/10 bg-white p-2"
+              className="rounded-xl border border-slate-200 bg-white p-2"
             />
-            <p className="text-[11px] text-slate-500 text-center">
+            <p className="text-[11px] text-slate-600 text-center">
               Scan with your phone camera to open this job on LocalPro
             </p>
           </div>
 
           {/* Desktop share */}
-          <div className="bg-white/[0.04] border border-white/[0.08] rounded-2xl p-5 hidden lg:block">
+          <div className="bg-white border border-slate-200 rounded-2xl p-5 hidden lg:block">
             <ShareButtons url={pageUrl} text={shareText} />
           </div>
 
@@ -482,22 +482,22 @@ export default async function JobDetailPage(
       </main>
 
       {/* ── Footer ───────────────────────────────────────────────────────────── */}
-      <footer className="border-t border-white/[0.08] py-6 mt-8 px-4 sm:px-6">
-        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
+      <footer className="border-t border-slate-200 py-6 mt-8 px-4 sm:px-6 bg-white">
+        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-600">
           <span>
             Powered by{" "}
-            <Link href={APP_URL} className="text-blue-400 hover:text-blue-300 font-semibold">
+            <Link href={APP_URL} className="text-primary hover:text-primary/80 font-semibold">
               LocalPro Marketplace
             </Link>
           </span>
           <div className="flex items-center gap-4">
-            <Link href={BOARD_URL} className="hover:text-slate-300 transition-colors">
+            <Link href={BOARD_URL} className="hover:text-slate-900 transition-colors">
               View All Jobs
             </Link>
-            <Link href={PROVIDER_REGISTER_URL} className="hover:text-slate-300 transition-colors">
+            <Link href={PROVIDER_REGISTER_URL} className="hover:text-slate-900 transition-colors">
               Become a Provider
             </Link>
-            <Link href="/privacy" className="hover:text-slate-300 transition-colors">
+            <Link href="/privacy" className="hover:text-slate-900 transition-colors">
               Privacy
             </Link>
           </div>
