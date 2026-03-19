@@ -59,7 +59,7 @@ the provider's skills and experience. Return ONLY a JSON array with this shape:
 No other text.`;
 
   const userPrompt = `Provider profile:
-- Skills: ${profile.skills.join(", ") || "not specified"}
+- Skills: ${profile.skills.map((s) => s.skill).join(", ") || "not specified"}
 - Years of experience: ${profile.yearsExperience}
 - Bio: ${profile.bio.slice(0, 200)}
 

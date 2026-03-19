@@ -629,7 +629,7 @@ export default function UserDetailView({ user, providerProfile, currentUserRole 
                   <p className="text-xs text-slate-400 mb-2">Skills</p>
                   <div className="flex flex-wrap gap-1.5">
                     {providerProfile.skills.map((s) => (
-                      <span key={s} className="badge bg-blue-50 text-blue-700 text-[11px]">{s}</span>
+                      <span key={s.skill} className="badge bg-blue-50 text-blue-700 text-[11px]">{s.skill}</span>
                     ))}
                   </div>
                 </div>

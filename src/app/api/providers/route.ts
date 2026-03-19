@@ -87,7 +87,7 @@ export const GET = withHandler(async (req: NextRequest) => {
       (p) =>
         p.userId?.name?.toLowerCase().includes(q) ||
         p.bio?.toLowerCase().includes(q) ||
-        p.skills?.some((s) => s.toLowerCase().includes(q))
+        p.skills?.some((s) => s.skill.toLowerCase().includes(q))
     );
   }
 

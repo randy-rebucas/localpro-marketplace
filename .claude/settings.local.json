@@ -80,7 +80,8 @@
       "Bash(ls \"C:/Users/corew/localpro-marketplace/src/app/\\(dashboard\\)/provider/business/analytics/_components/\")",
       "Bash(npx next:*)",
       "Bash(./node_modules/.bin/tsc --noEmit)",
-      "Bash(node ./node_modules/typescript/bin/tsc --noEmit)"
+      "Bash(node ./node_modules/typescript/bin/tsc --noEmit)",
+      "Bash(find ./src -type f \\\\\\(-name *.ts -o -name *.tsx -o -name *.js -o -name *.jsx \\\\\\))"
     ]
   }
 }
