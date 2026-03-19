@@ -32,11 +32,11 @@ export class ReviewRepository extends BaseRepository<ReviewDocument> {
     return this.exists(filter);
   }
 
-  /** Aggregated avg rating + review count for a provider. Single DB round-trip. */
+  /** Aggregated avg rating + review count for a provider. Excludes hidden reviews. Single DB round-trip. */
   async getProviderRatingSummary(providerId: string): Promise<{ avgRating: number; count: number }> {
     await this.connect();
     const [result] = await Review.aggregate<{ avgRating: number; count: number }>([
-      { $match: { providerId: new Types.ObjectId(providerId) } },
+      { $match: { providerId: new Types.ObjectId(providerId), isHidden: { $ne: true } } },
       { $group: { _id: null, avgRating: { $avg: "$rating" }, count: { $sum: 1 } } },
     ]);
     return result ?? { avgRating: 0, count: 0 };

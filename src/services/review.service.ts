@@ -11,6 +11,7 @@ import {
   ConflictError,
   UnprocessableError,
 } from "@/lib/errors";
+import { requireCapability } from "@/lib/auth";
 import type { TokenPayload } from "@/lib/auth";
 import type { IJob } from "@/types";
 
@@ -32,10 +33,16 @@ export interface ReviewFilters {
 
 export class ReviewService {
   async listReviews(user: TokenPayload, filters: ReviewFilters) {
-    const filter: Record<string, string> = {};
+    const filter: Record<string, unknown> = {};
     if (user.role === "client") filter.clientId = user.userId;
     else if (user.role === "provider") filter.providerId = user.userId;
     else if (filters.providerId) filter.providerId = filters.providerId;
+
+    // Exclude hidden reviews from public display (admins/staff see all)
+    if (user.role !== "admin" && !user.capabilities?.includes("manage_disputes")) {
+      filter.isHidden = { $ne: true };
+    }
+
     return reviewRepository.findWithPopulation(filter as never);
   }
 
@@ -100,6 +107,98 @@ export class ReviewService {
     pushNotification(j.providerId.toString(), notification);
 
     return review;
+  }
+  async respondToReview(user: TokenPayload, reviewId: string, response: string) {
+    const review = await reviewRepository.getDocById(reviewId);
+    if (!review) throw new NotFoundError("Review");
+
+    const r = review as unknown as {
+      _id: { toString(): string };
+      providerId: { toString(): string };
+      clientId: { toString(): string };
+      providerResponse?: string | null;
+      jobId: { toString(): string };
+      save(): Promise<unknown>;
+    };
+
+    // Only the reviewed provider can respond
+    if (r.providerId.toString() !== user.userId) throw new ForbiddenError();
+
+    // One response per review — cannot edit once submitted
+    if (r.providerResponse) {
+      throw new ConflictError("You have already responded to this review");
+    }
+
+    // Use atomic update to guard against concurrent writes
+    const Review = (await import("@/models/Review")).default;
+    const updated = await Review.findOneAndUpdate(
+      { _id: r._id.toString(), providerResponse: null },
+      { $set: { providerResponse: response, providerRespondedAt: new Date() } },
+      { new: true }
+    );
+    if (!updated) throw new ConflictError("Response was already submitted");
+
+    await activityRepository.log({
+      userId: user.userId,
+      eventType: "review_responded" as never,
+      jobId: r.jobId.toString(),
+      metadata: { reviewId: r._id.toString() },
+    });
+
+    // Notify the client
+    const notification = await notificationRepository.create({
+      userId: r.clientId.toString(),
+      type: "review_response" as never,
+      title: "Provider responded to your review",
+      message: `The provider replied to your review: "${response.slice(0, 80)}${response.length > 80 ? "..." : ""}"`,
+      data: { reviewId: r._id.toString(), jobId: r.jobId.toString() },
+    });
+    pushNotification(r.clientId.toString(), notification);
+
+    return updated;
+  }
+
+  async moderateReview(
+    user: TokenPayload,
+    reviewId: string,
+    action: { hide: boolean; reason?: string }
+  ) {
+    // Admin only — requires manage_disputes or manage_users capability
+    requireCapability(user, "manage_disputes");
+
+    const review = await reviewRepository.getDocById(reviewId);
+    if (!review) throw new NotFoundError("Review");
+
+    const r = review as unknown as {
+      _id: { toString(): string };
+      providerId: { toString(): string };
+      clientId: { toString(): string };
+      jobId: { toString(): string };
+    };
+
+    const Review = (await import("@/models/Review")).default;
+    const updates: Record<string, unknown> = {
+      isHidden: action.hide,
+    };
+
+    if (action.hide) {
+      updates.hiddenReason = action.reason ?? null;
+      updates.hiddenBy = user.userId;
+    } else {
+      updates.hiddenReason = null;
+      updates.hiddenBy = null;
+    }
+
+    const updated = await Review.findByIdAndUpdate(r._id.toString(), { $set: updates }, { new: true });
+
+    await activityRepository.log({
+      userId: user.userId,
+      eventType: action.hide ? "review_hidden" as never : "review_unhidden" as never,
+      jobId: r.jobId.toString(),
+      metadata: { reviewId: r._id.toString(), reason: action.reason },
+    });
+
+    return updated;
   }
 }
 

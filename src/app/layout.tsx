@@ -8,6 +8,7 @@ import CookieConsent from "@/components/shared/CookieConsent";
 import JsonLd from "@/components/shared/JsonLd";
 import PwaSetup from "@/components/pwa/PwaSetup";
 import MetaPixelNoscript from "@/components/analytics/MetaPixel";
+import ThemeProvider from "@/components/theme/ThemeProvider";
 import "./globals.css";
 
 const inter = Inter({
@@ -127,11 +128,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en-PH" className={`${inter.variable} h-full`}>
+    <html lang="en-PH" className={`${inter.variable} h-full`} suppressHydrationWarning>
       <head>
         <JsonLd />
       </head>
-      <body className="font-sans h-full">
+      <body className="font-sans h-full bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">
+        <ThemeProvider>
+        <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[100] focus:px-4 focus:py-2 focus:bg-primary focus:text-white focus:rounded-lg focus:outline-none">
+          Skip to main content
+        </a>
         {process.env.NEXT_PUBLIC_GTM_ID && (
           <noscript>
             <iframe
@@ -173,6 +178,7 @@ export default function RootLayout({
             },
           }}
         />
+        </ThemeProvider>
       </body>
     </html>
   );

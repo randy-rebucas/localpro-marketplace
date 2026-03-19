@@ -26,19 +26,56 @@
   animation: msgFadeIn 0.18s ease-out both;
 }
 
+/* ─── Scroll-reveal animations ────────────────────────────────────────────── */
+.reveal {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.7s ease-out, transform 0.7s ease-out;
+}
+.reveal[data-visible="true"] {
+  opacity: 1;
+  transform: translateY(0);
+}
+.reveal-stagger > * {
+  opacity: 0;
+  transform: translateY(16px);
+  transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+}
+.reveal-stagger[data-visible="true"] > *:nth-child(1) { transition-delay: 0ms; opacity: 1; transform: translateY(0); }
+.reveal-stagger[data-visible="true"] > *:nth-child(2) { transition-delay: 80ms; opacity: 1; transform: translateY(0); }
+.reveal-stagger[data-visible="true"] > *:nth-child(3) { transition-delay: 160ms; opacity: 1; transform: translateY(0); }
+.reveal-stagger[data-visible="true"] > *:nth-child(4) { transition-delay: 240ms; opacity: 1; transform: translateY(0); }
+.reveal-stagger[data-visible="true"] > *:nth-child(5) { transition-delay: 320ms; opacity: 1; transform: translateY(0); }
+.reveal-stagger[data-visible="true"] > *:nth-child(6) { transition-delay: 400ms; opacity: 1; transform: translateY(0); }
+.reveal-stagger[data-visible="true"] > *:nth-child(n+7) { transition-delay: 480ms; opacity: 1; transform: translateY(0); }
+
 @layer base {
   :root {
     --primary: 26 95 168;   /* #1a5fa8 — logo blue  */
     --brand:   62 165 62;   /* #3ea53e — logo green */
     --surface: 248 250 252;
+    --background: 255 255 255;
+    --foreground: 15 23 42;
+    --card: 255 255 255;
+    --border: 226 232 240;
+  }
+
+  .dark {
+    --primary: 69 137 204;  /* lighter blue for dark bg */
+    --brand:   82 185 82;   /* lighter green for dark bg */
+    --surface: 30 41 59;
+    --background: 15 23 42;
+    --foreground: 241 245 249;
+    --card: 30 41 59;
+    --border: 51 65 85;
   }
 
   * {
-    @apply border-slate-200;
+    @apply border-slate-200 dark:border-slate-700;
   }
 
   body {
-    @apply bg-surface text-slate-900 antialiased;
+    @apply bg-surface text-slate-900 dark:text-slate-100 antialiased;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 
@@ -49,7 +86,7 @@
 
 @layer components {
   .card {
-    @apply bg-white rounded-xl border border-slate-200 shadow-card;
+    @apply bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-card;
   }
 
   .badge {
@@ -65,19 +102,19 @@
   }
 
   .btn-secondary {
-    @apply btn bg-slate-100 text-slate-700 hover:bg-slate-200 px-4 py-2 text-sm;
+    @apply btn bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-600 px-4 py-2 text-sm;
   }
 
   .btn-ghost {
-    @apply btn text-slate-600 hover:bg-slate-100 px-3 py-2 text-sm;
+    @apply btn text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 px-3 py-2 text-sm;
   }
 
   .input {
-    @apply flex h-10 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:border-transparent disabled:cursor-not-allowed disabled:opacity-50 transition-colors;
+    @apply flex h-10 w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:border-transparent disabled:cursor-not-allowed disabled:opacity-50 transition-colors;
   }
 
   .label {
-    @apply text-sm font-medium text-slate-700;
+    @apply text-sm font-medium text-slate-700 dark:text-slate-300;
   }
 }
 

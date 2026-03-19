@@ -11,6 +11,9 @@
 
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
+import { createLogger } from "@/lib/logger";
+
+const log = createLogger("rateLimit");
 
 export interface RateLimitOptions {
   /** Window size in milliseconds */
@@ -124,7 +127,7 @@ export async function checkRateLimit(
     const { success, remaining, reset } = await limiter.limit(key);
     return { ok: success, remaining, resetAt: reset };
   } catch (err) {
-    console.error("[RateLimit] Redis error:", err);
+    log.error({ err }, "Redis error");
     if (!failOpen) {
       // Hard-fail: treat Redis unavailability as rate-limited on sensitive routes
       return { ok: false, remaining: 0, resetAt: Date.now() + options.windowMs };

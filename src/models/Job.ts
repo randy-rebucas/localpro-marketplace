@@ -156,6 +156,10 @@ const JobSchema = new Schema<JobDocument>(
     processingFee: { type: Number, default: 0 },
     /** Client-side platform service fee (5%) snapshot locked in at escrow funding (PHP) */
     platformServiceFee: { type: Number, default: 0 },
+    // ── Admin cancellation fields ─────────────────────────────────
+    cancelledBy: { type: Schema.Types.ObjectId, ref: "User", default: null },
+    cancellationReason: { type: String, default: null },
+    adminCancelled: { type: Boolean, default: false },
   },
   {
     timestamps: true,

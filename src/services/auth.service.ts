@@ -14,6 +14,7 @@ import {
   NotFoundError,
   UnauthorizedError,
   ForbiddenError,
+  LockedError,
   ValidationError,
 } from "@/lib/errors";
 import {
@@ -139,8 +140,35 @@ export class AuthService {
       throw new ForbiddenError("Your account has been suspended. Please contact support.");
     }
 
+    // ── Account lockout check ───────────────────────────────────────────────
+    const lockedUntil = (user as { lockedUntil?: Date | null }).lockedUntil;
+    if (lockedUntil && new Date(lockedUntil) > new Date()) {
+      const minutesLeft = Math.ceil((new Date(lockedUntil).getTime() - Date.now()) / 60_000);
+      throw new LockedError(
+        `Account temporarily locked. Try again after ${minutesLeft} minute${minutesLeft === 1 ? "" : "s"}.`
+      );
+    }
+
     const isValid = await (user as { comparePassword: (p: string) => Promise<boolean> }).comparePassword(input.password);
-    if (!isValid) throw new UnauthorizedError("Invalid email or password");
+    if (!isValid) {
+      // Increment failed attempts and lock if threshold reached
+      const attempts = ((user as { failedLoginAttempts?: number }).failedLoginAttempts ?? 0) + 1;
+      const update: Record<string, unknown> = { failedLoginAttempts: attempts };
+      if (attempts >= 5) {
+        update.lockedUntil = new Date(Date.now() + 15 * 60_000); // 15 minutes
+      }
+      await userRepository.updateById(user._id.toString(), update);
+      throw new UnauthorizedError("Invalid email or password");
+    }
+
+    // ── Successful login — reset lockout counters ───────────────────────────
+    const hadFailures = ((user as { failedLoginAttempts?: number }).failedLoginAttempts ?? 0) > 0;
+    if (hadFailures || lockedUntil) {
+      await userRepository.updateById(user._id.toString(), {
+        failedLoginAttempts: 0,
+        lockedUntil: null,
+      });
+    }
 
     const capabilities = user.role === "staff"
       ? ((user as { capabilities?: string[] }).capabilities ?? [])

@@ -17,6 +17,8 @@ export interface UserDocument extends Omit<IUser, "_id">, Document {
   resetPasswordTokenExpiry?: Date;
   otpCode?: string;
   otpExpiry?: Date;
+  failedLoginAttempts?: number;
+  lockedUntil?: Date | null;
   isDeleted?: boolean;
   deletedAt?: Date | null;
   pushSubscriptions?: PushSubscriptionRecord[];
@@ -148,6 +150,20 @@ const UserSchema = new Schema<UserDocument>(
         marketingEmails:      { type: Boolean, default: false },
         messageNotifications: { type: Boolean, default: true },
         profileVisible:       { type: Boolean, default: true },
+        // Granular per-category email notification preferences
+        emailCategories: {
+          type: new Schema({
+            jobUpdates:     { type: Boolean, default: true },
+            quoteAlerts:    { type: Boolean, default: true },
+            paymentAlerts:  { type: Boolean, default: true },
+            disputeAlerts:  { type: Boolean, default: true },
+            reminders:      { type: Boolean, default: true },
+            messages:       { type: Boolean, default: true },
+            consultations:  { type: Boolean, default: true },
+            reviews:        { type: Boolean, default: true },
+          }, { _id: false }),
+          default: () => ({}),
+        },
         // provider-only
         newJobAlerts:         { type: Boolean, default: true },
         quoteExpiryReminders: { type: Boolean, default: true },
@@ -158,6 +174,9 @@ const UserSchema = new Schema<UserDocument>(
       }, { _id: false }),
       default: () => ({}),
     },
+    // Account lockout after failed login attempts
+    failedLoginAttempts: { type: Number, default: 0 },
+    lockedUntil: { type: Date, default: null },
     // Activity tracking — stamped on every authenticated request (throttled).
     lastSeenAt: { type: Date, default: null, index: true },
   },

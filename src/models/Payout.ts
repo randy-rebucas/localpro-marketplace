@@ -51,6 +51,8 @@ const PayoutSchema = new Schema<PayoutDocument>(
     rejectionJournalId: { type: String, default: null },
     /** Flat withdrawal fee deducted at payout request time (PHP). */
     withdrawalFee:   { type: Number, default: 0 },
+    /** Whether this payout was auto-approved based on provider qualifications. */
+    autoApproved:    { type: Boolean, default: false },
   },
   { timestamps: true }
 );

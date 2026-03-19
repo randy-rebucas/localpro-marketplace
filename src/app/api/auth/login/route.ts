@@ -1,20 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { z } from "zod";
 import { authService } from "@/services";
 import { setAuthCookies } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { ValidationError } from "@/lib/errors";
 import { checkRateLimit } from "@/lib/rateLimit";
-
-const LoginSchema = z.object({
-  email: z.string().email("Invalid email address"),
-  password: z.string().min(1, "Password is required"),
-});
+import { LoginSchema } from "@/lib/validation";
 
 // 10 attempts per 15 minutes per email address
 const LOGIN_LIMIT = { windowMs: 15 * 60_000, max: 10 };
-// 30 attempts per 15 minutes per IP (looser — allows multiple accounts from same IP)
-const LOGIN_IP_LIMIT = { windowMs: 15 * 60_000, max: 30 };
+// 5 attempts per minute per IP (separate from account-level lockout)
+const LOGIN_IP_LIMIT = { windowMs: 60_000, max: 5 };
 
 export const POST = withHandler(async (req: NextRequest) => {
   const ip = req.headers.get("x-real-ip") ?? req.headers.get("x-forwarded-for")?.split(",").at(-1)?.trim() ?? "unknown";

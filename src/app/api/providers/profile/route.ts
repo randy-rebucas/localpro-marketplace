@@ -4,6 +4,7 @@ import { providerProfileService } from "@/services";
 import { requireUser, requireRole } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { ValidationError } from "@/lib/errors";
+import { SkillEntrySchema } from "@/lib/validation";
 
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
 
@@ -13,17 +14,9 @@ const WorkSlotSchema = z.object({
   to:   z.string().regex(TIME_RE, "Invalid time format, expected HH:MM"),
 });
 
-const DAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
-
-const SkillSchema = z.object({
-  skill: z.string().min(1).max(100),
-  yearsExperience: z.number().int().min(0).max(50).default(0),
-  hourlyRate: z.string().max(20).default(""),
-});
-
 const UpdateProfileSchema = z.object({
   bio: z.string().max(1000).optional(),
-  skills: z.array(SkillSchema).max(20).optional(),
+  skills: z.array(SkillEntrySchema).max(20).optional(),
   yearsExperience: z.number().int().min(0).max(50).optional(),
   hourlyRate: z.number().positive().optional(),
   availabilityStatus: z.enum(["available", "busy", "unavailable"]).optional(),

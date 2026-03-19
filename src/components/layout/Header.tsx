@@ -9,6 +9,7 @@ import { ChevronDown, LogOut, User, Shield, Briefcase, UserCog, Menu, Settings, 
 import { useAuthStore } from "@/stores/authStore";
 import NotificationBell from "@/components/shared/NotificationBell";
 import GlobalSearch from "@/components/shared/GlobalSearch";
+import ThemeToggle from "@/components/theme/ThemeToggle";
 
 interface HeaderProps {
   title?: string;
@@ -84,18 +85,18 @@ export default function Header({ title, onMenuClick }: HeaderProps) {
     null;
 
   return (
-    <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 sm:px-6 flex-shrink-0 shadow-sm">
+    <header className="h-16 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between px-4 sm:px-6 flex-shrink-0 shadow-sm">
       {/* Left: hamburger (mobile) + page title */}
       <div className="flex items-center gap-3">
         <button
           onClick={onMenuClick}
-          className="md:hidden p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 transition-colors flex-shrink-0"
+          className="md:hidden p-1.5 rounded-lg text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors flex-shrink-0"
           aria-label="Open navigation menu"
         >
           <Menu className="h-5 w-5" />
         </button>
         {title && (
-          <h1 className="text-base font-semibold text-slate-800 tracking-tight">{title}</h1>
+          <h1 className="text-base font-semibold text-slate-800 dark:text-slate-100 tracking-tight">{title}</h1>
         )}
 
         {/* Knowledge Base */}
@@ -103,7 +104,7 @@ export default function Header({ title, onMenuClick }: HeaderProps) {
           href={knowledgeHref}
           aria-label="Knowledge Base"
           title="Knowledge Base"
-          className="hidden md:flex p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-colors"
+          className="hidden md:flex p-1.5 rounded-lg text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
         >
           <BookOpen className="h-4.5 w-4.5" />
         </Link>
@@ -119,7 +120,7 @@ export default function Header({ title, onMenuClick }: HeaderProps) {
           <Link
             href={messagesHref}
             aria-label="Messages"
-            className="p-2 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-colors"
+            className="p-2 rounded-lg text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
           >
             <MessageSquare className="h-5 w-5" />
           </Link>
@@ -128,8 +129,11 @@ export default function Header({ title, onMenuClick }: HeaderProps) {
         {/* Notification bell */}
         <NotificationBell />
 
+        {/* Theme toggle */}
+        <ThemeToggle />
+
         {/* Divider */}
-        <div className="w-px h-6 bg-slate-200 mx-1.5 flex-shrink-0" />
+        <div className="w-px h-6 bg-slate-200 dark:bg-slate-600 mx-1.5 flex-shrink-0" />
 
         {/* User menu */}
         <div className="relative">
@@ -138,7 +142,7 @@ export default function Header({ title, onMenuClick }: HeaderProps) {
             aria-expanded={menuOpen}
             aria-haspopup="menu"
             aria-label="Open user menu"
-            className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-slate-100 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           >
             {/* Avatar */}
             <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 ring-2 ring-slate-100">
@@ -159,7 +163,7 @@ export default function Header({ title, onMenuClick }: HeaderProps) {
 
             {/* Name + role badge (desktop only) */}
             <div className="hidden sm:block text-left">
-              <p className="text-sm font-medium text-slate-900 leading-tight">{user?.name}</p>
+              <p className="text-sm font-medium text-slate-900 dark:text-slate-100 leading-tight">{user?.name}</p>
               {roleConfig && (
                 <p className={`text-[10px] font-semibold px-1.5 py-px rounded-full inline-block leading-tight mt-0.5 ${roleConfig.badgeColor}`}>
                   {roleConfig.label}
@@ -178,10 +182,10 @@ export default function Header({ title, onMenuClick }: HeaderProps) {
               {/* Dropdown */}
               <div
                 role="menu"
-                className="absolute right-0 top-full mt-2 w-60 bg-white rounded-xl border border-slate-200 shadow-lg z-20 overflow-hidden"
+                className="absolute right-0 top-full mt-2 w-60 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-lg z-20 overflow-hidden"
               >
                 {/* User card header */}
-                <div className="px-4 py-4 bg-slate-50 border-b border-slate-100 flex items-center gap-3">
+                <div className="px-4 py-4 bg-slate-50 dark:bg-slate-700/50 border-b border-slate-100 dark:border-slate-700 flex items-center gap-3">
                   <div className="flex-shrink-0">
                     {user?.avatar ? (
                       <Image
@@ -198,8 +202,8 @@ export default function Header({ title, onMenuClick }: HeaderProps) {
                     )}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-slate-900 truncate leading-tight">{user?.name}</p>
-                    <p className="text-xs text-slate-500 truncate leading-tight mt-0.5">{user?.email}</p>
+                    <p className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate leading-tight">{user?.name}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 truncate leading-tight mt-0.5">{user?.email}</p>
                     {roleConfig && (
                       <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-px rounded-full mt-1.5 ${roleConfig.badgeColor}`}>
                         <RoleIcon className="h-2.5 w-2.5" />
@@ -230,7 +234,7 @@ export default function Header({ title, onMenuClick }: HeaderProps) {
                       href={profileHref}
                       role="menuitem"
                       onClick={() => setMenuOpen(false)}
-                      className="flex items-center gap-2.5 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
+                      className="flex items-center gap-2.5 px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
                     >
                       <User className="h-4 w-4 text-slate-400 flex-shrink-0" />
                       My Profile
@@ -242,7 +246,7 @@ export default function Header({ title, onMenuClick }: HeaderProps) {
                       href={rewardsHref}
                       role="menuitem"
                       onClick={() => setMenuOpen(false)}
-                      className="flex items-center gap-2.5 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
+                      className="flex items-center gap-2.5 px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
                     >
                       <Gift className="h-4 w-4 text-slate-400 flex-shrink-0" />
                       Rewards
@@ -254,7 +258,7 @@ export default function Header({ title, onMenuClick }: HeaderProps) {
                       href={notificationsHref}
                       role="menuitem"
                       onClick={() => setMenuOpen(false)}
-                      className="flex items-center gap-2.5 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
+                      className="flex items-center gap-2.5 px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
                     >
                       <Bell className="h-4 w-4 text-slate-400 flex-shrink-0" />
                       Notifications
@@ -266,7 +270,7 @@ export default function Header({ title, onMenuClick }: HeaderProps) {
                       href={settingsHref}
                       role="menuitem"
                       onClick={() => setMenuOpen(false)}
-                      className="flex items-center gap-2.5 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
+                      className="flex items-center gap-2.5 px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
                     >
                       <Settings className="h-4 w-4 text-slate-400 flex-shrink-0" />
                       Settings
@@ -275,11 +279,11 @@ export default function Header({ title, onMenuClick }: HeaderProps) {
                 </div>
 
                 {/* Sign out */}
-                <div className="border-t border-slate-100 py-1">
+                <div className="border-t border-slate-100 dark:border-slate-700 py-1">
                   <button
                     role="menuitem"
                     onClick={handleLogout}
-                    className="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                    className="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                   >
                     <LogOut className="h-4 w-4 flex-shrink-0" />
                     Sign out

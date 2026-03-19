@@ -28,6 +28,26 @@ export interface IAddress {
   coordinates?: { lat: number; lng: number };
 }
 
+/** Per-category email notification preferences. All default to true. */
+export interface IEmailCategories {
+  /** job_approved, job_rejected, job_expired, job_direct_invite, job_submitted, recurring_job_spawned */
+  jobUpdates: boolean;
+  /** quote_received, quote_accepted, quote_rejected, quote_expired */
+  quoteAlerts: boolean;
+  /** escrow_funded, payment_confirmed, payment_failed, payment_reminder, job_completed, escrow_released, escrow_auto_released, payout_requested, payout_status_update */
+  paymentAlerts: boolean;
+  /** dispute_opened, dispute_resolved */
+  disputeAlerts: boolean;
+  /** All reminder_* notification types */
+  reminders: boolean;
+  /** new_message */
+  messages: boolean;
+  /** consultation_request, consultation_accepted, estimate_provided, consultation_stale, consultation_expired */
+  consultations: boolean;
+  /** review_received */
+  reviews: boolean;
+}
+
 export interface IUserPreferences {
   /** Receive email notifications for job/quote updates */
   emailNotifications: boolean;
@@ -41,6 +61,8 @@ export interface IUserPreferences {
   messageNotifications: boolean;
   /** For providers: show profile in search results */
   profileVisible: boolean;
+  /** Granular per-category email notification preferences */
+  emailCategories?: IEmailCategories;
   // ── Provider-only ──────────────────────────────────────────────
   /** Alert when new jobs matching skills are posted */
   newJobAlerts: boolean;
@@ -92,6 +114,10 @@ export interface IUser {
   savedPaymentMethodLast4?: string | null;
   savedPaymentMethodBrand?: string | null;
   preferences?: IUserPreferences;
+  /** Number of consecutive failed login attempts */
+  failedLoginAttempts?: number;
+  /** Account locked until this date after too many failed login attempts */
+  lockedUntil?: Date | string | null;
   /** Last time the user made an authenticated request — used for online indicator. */
   lastSeenAt?: Date | string | null;
   createdAt: Date;
@@ -177,6 +203,12 @@ export interface IJob {
   processingFee?: number;
   /** Client-side platform service fee (5%) snapshot locked in at escrow funding (PHP) */
   platformServiceFee?: number;
+  /** User ID of the admin/PESO officer who cancelled the job */
+  cancelledBy?: Types.ObjectId | string | null;
+  /** Reason provided when an admin cancels the job */
+  cancellationReason?: string | null;
+  /** True when the job was cancelled by an admin rather than the client */
+  adminCancelled?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -213,6 +245,10 @@ export interface IQuote {
   status: QuoteStatus;
   /** Timestamp after which the quote is considered expired (set from platform limits.quoteValidityDays). */
   expiresAt?: Date | null;
+  /** Number of times this quote has been revised by the provider */
+  revisionCount: number;
+  /** Timestamp of the last revision */
+  revisedAt?: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -269,12 +305,21 @@ export interface IReview {
   rating: 1 | 2 | 3 | 4 | 5;
   breakdown?: IReviewBreakdown;
   feedback: string;
+  /** Provider's reply to this review */
+  providerResponse?: string | null;
+  providerRespondedAt?: Date | null;
+  /** Admin moderation flag — hidden reviews are excluded from public display */
+  isHidden?: boolean;
+  hiddenReason?: string | null;
+  hiddenBy?: Types.ObjectId | string | null;
   createdAt: Date;
 }
 
 // ─── Dispute ──────────────────────────────────────────────────────────────────
 
 export type DisputeStatus = "open" | "investigating" | "resolved";
+
+export type DisputeEscalationLevel = "provider" | "admin" | "peso";
 
 export interface IDispute {
   _id: Types.ObjectId | string;
@@ -292,6 +337,10 @@ export interface IDispute {
   handlingFeeAmount?: number;
   /** True if the wallet deduction for the handling fee succeeded. */
   handlingFeePaid?: boolean;
+  /** Timestamp of the last escalation action (null if not yet escalated). */
+  disputeEscalatedAt?: Date | null;
+  /** Current escalation tier: provider → admin → peso. */
+  disputeEscalationLevel?: DisputeEscalationLevel;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -763,6 +812,8 @@ export interface IPayout {
   rejectionJournalId?: string | null;
   /** Flat withdrawal fee deducted from the payout amount (PHP). Net to provider = amount − withdrawalFee. */
   withdrawalFee?: number;
+  /** Whether this payout was auto-approved (skipped admin review) based on provider qualifications. */
+  autoApproved?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }

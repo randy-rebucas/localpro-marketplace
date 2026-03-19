@@ -54,6 +54,8 @@ const QuoteSchema = new Schema<QuoteDocument>(
       default: "pending",
     },
     expiresAt: { type: Date, default: null, index: true },
+    revisionCount: { type: Number, default: 0 },
+    revisedAt: { type: Date, default: null },
   },
   { timestamps: true }
 );

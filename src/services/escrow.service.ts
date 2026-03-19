@@ -13,6 +13,7 @@ import {
   NotFoundError,
   ForbiddenError,
   UnprocessableError,
+  ValidationError,
 } from "@/lib/errors";
 import type { TokenPayload } from "@/lib/auth";
 import type { IJob } from "@/types";
@@ -75,9 +76,14 @@ export class EscrowService {
     const check = canTransition(job as unknown as IJob, "completed");
     if (!check.allowed) throw new UnprocessableError(check.reason!);
 
-    // Use native-driver path in repository to bypass Mongoose schema casting
+    // Completion photo requirement for jobs >= ₱500
     const existing = Array.isArray(job.afterPhoto) ? job.afterPhoto : [];
     const merged = [...existing, ...photos].slice(0, 3);
+    if (job.budget >= 500 && merged.length === 0) {
+      throw new ValidationError("At least one completion photo is required for jobs ₱500 and above");
+    }
+
+    // Use native-driver path in repository to bypass Mongoose schema casting
     await jobRepository.updateStatusAndPhoto(jobDoc._id.toString(), "completed", "afterPhoto", merged);
 
     await activityRepository.log({

@@ -43,20 +43,20 @@ export default function DashboardShell({ children, role, capabilities, pageTitle
   // Show loader until auth is resolved and user is confirmed
   if (!initialized || isLoading || !user) {
     return (
-      <div className="h-screen flex items-center justify-center bg-surface">
+      <div className="h-screen flex items-center justify-center bg-surface dark:bg-slate-900">
         <PageLoader />
       </div>
     );
   }
 
   return (
-    <div className="flex h-screen bg-surface overflow-hidden">
+    <div className="flex h-screen bg-surface dark:bg-slate-900 overflow-hidden">
       {impersonatedName && <ImpersonationBanner userName={impersonatedName} />}
       <Sidebar role={role} capabilities={capabilities} isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className={`flex-1 flex flex-col overflow-hidden min-w-0 ${impersonatedName ? "pt-10" : ""}`}>
         <Header title={pageTitle} onMenuClick={() => setSidebarOpen(true)} />
         <AnnouncementBanner />
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6">{children}</main>
+        <main id="main-content" role="main" className="flex-1 overflow-y-auto p-4 sm:p-6">{children}</main>
       </div>
     </div>
   );

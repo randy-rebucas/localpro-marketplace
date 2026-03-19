@@ -26,6 +26,13 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # Check for known vulnerabilities in dependencies.
+      # Fails only on high/critical severity. continue-on-error is set to true
+      # so existing unfixed vulnerabilities do not block PRs while we triage them.
+      - name: Security audit
+        run: pnpm audit --audit-level=high
+        continue-on-error: true
+
       - name: Lint
         run: pnpm lint
 
@@ -34,3 +41,56 @@ jobs:
 
       - name: Test
         run: pnpm test
+
+  security-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - name: Run npm audit
+        run: npm audit --audit-level=high
+        continue-on-error: true
+      - name: Check for critical vulnerabilities
+        run: |
+          CRITICAL=$(npm audit --json 2>/dev/null | jq '.metadata.vulnerabilities.critical // 0')
+          HIGH=$(npm audit --json 2>/dev/null | jq '.metadata.vulnerabilities.high // 0')
+          if [ "$CRITICAL" -gt 0 ]; then
+            echo "::error::Found $CRITICAL critical vulnerabilities"
+            exit 1
+          fi
+          if [ "$HIGH" -gt 0 ]; then
+            echo "::warning::Found $HIGH high vulnerabilities"
+          fi
+
+  bundle-size:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - name: Build and measure bundle
+        run: |
+          npx next build 2>&1 | tee build-output.txt
+          echo "## Bundle Size Report" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          grep -A 50 "Route (app)" build-output.txt >> $GITHUB_STEP_SUMMARY || true
+          echo '```' >> $GITHUB_STEP_SUMMARY
+        env:
+          MONGODB_URI: ${{ secrets.MONGODB_URI || 'mongodb://localhost:27017/test' }}
+          NEXTAUTH_SECRET: test-secret
+          NEXTAUTH_URL: http://localhost:3000
+      - name: Check total bundle size
+        run: |
+          # Fail if .next directory exceeds 50MB (sanity check)
+          TOTAL_SIZE=$(du -sm .next | cut -f1)
+          echo "Total .next size: ${TOTAL_SIZE}MB"
+          if [ "$TOTAL_SIZE" -gt 50 ]; then
+            echo "::warning::Bundle size ${TOTAL_SIZE}MB exceeds 50MB threshold"
+          fi
