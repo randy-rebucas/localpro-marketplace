@@ -113,7 +113,7 @@ async function TopProvidersSection() {
             completedJobCount: number;
             completionRate: number;
             avgResponseTimeHours: number;
-            skills: string[];
+            skills: Array<{ skill: string; yearsExperience: number; hourlyRate: string }>;
             hourlyRate?: number;
             isLocalProCertified?: boolean;
           };
@@ -190,7 +190,7 @@ async function TopProvidersSection() {
                 {profile.skills.length > 0 && (
                   <div className="flex flex-wrap gap-1">
                     {profile.skills.slice(0, 2).map((s) => (
-                      <span key={s} className="badge bg-slate-100 text-slate-600 text-xs">{s}</span>
+                      <span key={s.skill} className="badge bg-slate-100 text-slate-600 text-xs">{s.skill}</span>
                     ))}
                     {profile.skills.length > 2 && (
                       <span className="badge bg-slate-100 text-slate-400 text-xs">+{profile.skills.length - 2}</span>
@@ -287,7 +287,7 @@ async function HomepageHighlightStrip() {
             bio: string;
             avgRating: number;
             completedJobCount: number;
-            skills: string[];
+            skills: Array<{ skill: string; yearsExperience: number; hourlyRate: string }>;
             hourlyRate?: number;
             isLocalProCertified?: boolean;
           };
@@ -334,7 +334,7 @@ async function HomepageHighlightStrip() {
               {profile.skills.length > 0 && (
                 <div className="flex flex-wrap gap-1 mt-auto">
                   {profile.skills.slice(0, 2).map((s) => (
-                    <span key={s} className="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded-full">{s}</span>
+                    <span key={s.skill} className="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded-full">{s.skill}</span>
                   ))}
                 </div>
               )}

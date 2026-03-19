@@ -98,7 +98,16 @@ export class ProviderProfileService {
       const skillNames = input.skills.map((s) => s.skill);
       await skillRepository.upsertMany(skillNames);
     }
-    return providerProfileRepository.upsert(user.userId, input);
+    const dataToUpsert: Omit<Partial<UpdateProfileInput>, 'skills'> & { skills?: string[] } = {
+      bio: input.bio,
+      yearsExperience: input.yearsExperience,
+      hourlyRate: input.hourlyRate,
+      portfolioItems: input.portfolioItems,
+      availabilityStatus: input.availabilityStatus,
+      schedule: input.schedule,
+      skills: input.skills?.length ? input.skills.map((s) => s.skill) : undefined,
+    };
+    return providerProfileRepository.upsert(user.userId, dataToUpsert as Parameters<typeof providerProfileRepository.upsert>[1]);
   }
 
   /**

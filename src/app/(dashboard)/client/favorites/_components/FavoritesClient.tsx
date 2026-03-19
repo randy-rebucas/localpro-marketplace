@@ -42,7 +42,7 @@ export interface FavoriteEntry {
   };
   profile: {
     bio?: string;
-    skills?: string[];
+    skills: Array<{ skill: string; yearsExperience: number; hourlyRate: string }>;
     yearsExperience?: number;
     hourlyRate?: number | null;
     avgRating?: number;
@@ -711,7 +711,7 @@ export default function FavoritesClient({
                     isVerified={p.userId.isVerified}
                     profile={{
                       bio: p.bio,
-                      skills: p.skills,
+                      skills: (p.skills ?? []).map((skill) => ({ skill, yearsExperience: 0, hourlyRate: "" })),
                       yearsExperience: p.yearsExperience,
                       hourlyRate: p.hourlyRate,
                       avgRating: p.avgRating,

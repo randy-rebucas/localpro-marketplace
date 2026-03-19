@@ -46,14 +46,14 @@ export default async function PublicProviderProfilePage({
   // Fetch profile for server-side structured data
   let providerName = "Provider";
   let providerBio = "";
-  let providerSkills: string[] = [];
+  let providerSkills: Array<{ skill: string; yearsExperience: number; hourlyRate: string }> = [];
   let providerCity = "Philippines";
   try {
     const profile = await providerProfileService.getProfile(id);
     const userInfo = profile?.userId as { name?: string } | string | null | undefined;
     providerName = typeof userInfo === "object" && userInfo !== null ? (userInfo.name ?? "Provider") : "Provider";
     providerBio = (profile as { bio?: string })?.bio ?? "";
-    providerSkills = (profile as { skills?: string[] })?.skills ?? [];
+    providerSkills = (profile as unknown as { skills?: Array<{ skill: string; yearsExperience: number; hourlyRate: string }> })?.skills ?? [];
     const areas = (profile as { serviceAreas?: { address?: string }[] })?.serviceAreas;
     providerCity = areas?.[0]?.address ?? "Philippines";
   } catch { /* non-critical */ }
@@ -68,12 +68,12 @@ export default async function PublicProviderProfilePage({
     name: providerName,
     description: providerBio || `Hire ${providerName} on LocalPro`,
     url: pageUrl,
-    ...(providerSkills.length > 0 && { knowsAbout: providerSkills }),
+    ...(providerSkills.length > 0 && { knowsAbout: providerSkills.map((s) => s.skill) }),
     areaServed: {
       "@type": "Place",
       name: providerCity,
     },
-    serviceType: providerSkills[0] ?? "Local Service Professional",
+    serviceType: providerSkills[0]?.skill ?? "Local Service Professional",
     provider: {
       "@type": "Organization",
       name: "LocalPro",

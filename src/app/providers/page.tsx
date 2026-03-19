@@ -26,7 +26,7 @@ interface ProviderCard {
   name: string;
   avatar: string | null;
   bio: string;
-  skills: string[];
+  skills: Array<{ skill: string; yearsExperience: number; hourlyRate: string }>;
   city: string;
   yearsExperience: number;
   hourlyRate: number | null;
@@ -72,7 +72,7 @@ async function getProviders(
     const topSkills = (
       await ProviderProfile.aggregate([
         { $unwind: "$skills" },
-        { $group: { _id: "$skills", count: { $sum: 1 } } },
+        { $group: { _id: "$skills.skill", count: { $sum: 1 } } },
         { $sort: { count: -1 } },
         { $limit: 20 },
       ])
@@ -81,12 +81,13 @@ async function getProviders(
     const providers: ProviderCard[] = valid.map((p) => {
       const user = p.userId as { _id?: unknown; name?: string; avatar?: string | null } | null;
       const areas = (p as { serviceAreas?: { address?: string }[] }).serviceAreas;
+      const skillsArray = Array.isArray(p.skills) ? (p.skills as unknown as Array<{ skill: string; yearsExperience: number; hourlyRate: string }>) : [];
       return {
         _id: String(user?._id ?? (p as { _id: unknown })._id),
         name: user?.name ?? "Provider",
         avatar: user?.avatar ?? null,
         bio: p.bio ?? "",
-        skills: p.skills ?? [],
+        skills: skillsArray,
         city: areas?.[0]?.address ?? "Philippines",
         yearsExperience: p.yearsExperience ?? 0,
         hourlyRate: p.hourlyRate ?? null,
@@ -277,10 +278,10 @@ export default async function PublicProvidersPage({
                     <div className="flex flex-wrap gap-1.5">
                       {p.skills.slice(0, 3).map((sk) => (
                         <span
-                          key={sk}
+                          key={sk.skill}
                           className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-600"
                         >
-                          {sk}
+                          {sk.skill}
                         </span>
                       ))}
                       {p.skills.length > 3 && (

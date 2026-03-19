@@ -53,7 +53,7 @@ export const GET = withHandler(async (req: NextRequest) => {
       profileMap.set(
         p.userId.toString(),
         {
-          skills:          Array.isArray(p.skills)          ? p.skills          : [],
+          skills:          Array.isArray(p.skills)          ? p.skills.map(s => s.skill)          : [],
           workExperiences: Array.isArray(p.workExperiences) ? p.workExperiences : [],
           yearsExperience: p.yearsExperience ?? 0,
         }
