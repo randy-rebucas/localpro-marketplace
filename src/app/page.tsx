@@ -57,7 +57,7 @@ async function LatestJobsData() {
   await connectDB();
   const jobs = await Job.find({ status: "open" })
     .sort({ createdAt: -1 })
-    .limit(6)
+    .limit(8)
     .select("title category location budget scheduleDate createdAt")
     .lean();
 
@@ -371,7 +371,7 @@ async function StatsStrip() {
 
 async function MarketplaceTabsSection() {
   await connectDB();
-  const cats = await Category.find().sort({ order: 1 }).limit(12).lean();
+  const cats = await Category.find().sort({ order: 1 }).limit(14).lean();
   const categories = cats.map((cat) => {
     const c = cat as unknown as { _id: string; name: string; icon: string; slug: string };
     return { id: String(c._id), name: c.name, icon: c.icon, slug: c.slug };
@@ -379,7 +379,7 @@ async function MarketplaceTabsSection() {
 
   const jobs = await Job.find({ status: "open" })
     .sort({ createdAt: -1 })
-    .limit(6)
+    .limit(8)
     .select("title category location budget scheduleDate createdAt")
     .lean();
 
@@ -619,7 +619,7 @@ export default async function RootPage() {
 
             {/* Quick category pills */}
             <div className="flex flex-wrap gap-2 justify-center lg:justify-start max-w-md mx-auto lg:mx-0 mb-6">
-              {heroCategories.slice(0, 5).map((cat) => (
+              {heroCategories.slice(0, 8).map((cat) => (
                 <Link
                   key={cat.slug}
                   href={`/register?role=client&category=${cat.slug}`}
