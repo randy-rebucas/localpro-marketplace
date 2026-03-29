@@ -74,6 +74,8 @@ function fmt(dateStr: string) {
 export default function PesoJobsPage() {
   const [jobs, setJobs] = useState<PesoJob[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [search, setSearch] = useState("");
   const [preview, setPreview] = useState<PesoJob | null>(null);
@@ -83,15 +85,38 @@ export default function PesoJobsPage() {
   const [closeJobId, setCloseJobId] = useState<string | null>(null);
   const [closingJobId, setClosingJobId] = useState<string | null>(null);
   const drawerRef = useRef<HTMLDivElement>(null);
+  const limit = 20;
 
+  const loadJobs = async (pageNum: number, isLoadMore: boolean = false) => {
+    if (isLoadMore) {
+      setLoadingMore(true);
+    } else {
+      setLoading(true);
+    }
+    try {
+      const res = await apiFetch(`/api/peso/jobs?page=${pageNum}&limit=${limit}`);
+      const data = await res.json();
+      if (isLoadMore) {
+        setJobs((prev) => [...prev, ...(data.data ?? [])]);
+      } else {
+        setJobs(data.data ?? []);
+      }
+      setTotal(data.total ?? 0);
+      setPage(pageNum);
+    } catch (err) {
+      console.error("Failed to load jobs:", err);
+    } finally {
+      if (isLoadMore) {
+        setLoadingMore(false);
+      } else {
+        setLoading(false);
+      }
+    }
+  };
+
+  // Load initial jobs
   useEffect(() => {
-    apiFetch("/api/peso/jobs")
-      .then((r) => r.json())
-      .then((d) => {
-        setJobs(d.data ?? []);
-        setTotal(d.total ?? 0);
-      })
-      .finally(() => setLoading(false));
+    loadJobs(1);
   }, []);
 
   const fetchApplicants = useCallback((jobId: string) => {
@@ -299,6 +324,25 @@ export default function PesoJobsPage() {
               </div>
             </button>
           ))}
+          {/* Load More Button */}
+          {jobs.length < total && (
+            <div className="flex justify-center pt-4">
+              <button
+                onClick={() => loadJobs(page + 1, true)}
+                disabled={loadingMore}
+                className="px-6 py-2.5 text-sm font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 disabled:bg-slate-100 disabled:text-slate-400 rounded-lg transition-colors flex items-center gap-2"
+              >
+                {loadingMore ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Loading…
+                  </>
+                ) : (
+                  `Load More (${jobs.length} of ${total})`
+                )}
+              </button>
+            </div>
+          )}
         </div>
       )}
 
