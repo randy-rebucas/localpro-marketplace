@@ -1,4 +1,4 @@
-import { CheckCircle, ShieldCheck, Zap, Lock } from "lucide-react";
+import { CheckCircle, Clock, ShieldCheck, Zap, Lock } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { jobRepository } from "@/repositories/job.repository";
 import { paymentService } from "@/services";
@@ -34,8 +34,9 @@ export async function EscrowContent({
           paymentConfirmed = result.status === "paid";
         }
       }
-    } catch {
-      // silently ignore
+    } catch (err) {
+      console.warn("[EscrowContent] Payment poll error:", err);
+      // paymentConfirmed stays false — show pending banner below
     }
   }
 
@@ -105,6 +106,20 @@ export async function EscrowContent({
             <p className="text-sm font-semibold text-green-800">Payment confirmed!</p>
             <p className="text-xs text-green-700 mt-0.5">
               Escrow has been funded. The provider can now begin work.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Payment pending banner — shown when redirect succeeds but webhook hasn't arrived yet */}
+      {paymentSuccess && !paymentConfirmed && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-5 py-4 flex items-center gap-3">
+          <Clock className="h-5 w-5 text-amber-500 flex-shrink-0" />
+          <div>
+            <p className="text-sm font-semibold text-amber-800">Payment processing…</p>
+            <p className="text-xs text-amber-700 mt-0.5">
+              Your payment was received. Escrow confirmation may take a moment — refresh this
+              page shortly or check back in a minute.
             </p>
           </div>
         </div>

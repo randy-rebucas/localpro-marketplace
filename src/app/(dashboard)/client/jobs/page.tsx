@@ -10,7 +10,11 @@ import { JobsSkeleton } from "./_components/skeletons";
 
 export const metadata: Metadata = { title: "My Jobs" };
 
-export default async function ClientJobsPage() {
+export default async function ClientJobsPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | undefined>>;
+}) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
@@ -43,7 +47,7 @@ export default async function ClientJobsPage() {
 
       {/* List streams in once DB queries resolve */}
       <Suspense fallback={<JobsSkeleton />}>
-        <JobsData userId={user.userId} />
+        <JobsData userId={user.userId} searchParams={searchParams} />
       </Suspense>
     </div>
   );

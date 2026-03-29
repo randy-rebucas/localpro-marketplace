@@ -51,9 +51,9 @@ export default function WorkforceRegistryPage() {
   const load = useCallback(() => {
     setLoading(true);
     const params = new URLSearchParams();
-    if (debouncedFilters.barangay) params.set("barangay", debouncedFilters.barangay);
-    if (debouncedFilters.skill) params.set("skill", debouncedFilters.skill);
-    if (debouncedFilters.verificationTag) params.set("verificationTag", debouncedFilters.verificationTag);
+    if (debouncedFilters.barangay) params.set("barangay", debouncedFilters.barangay.slice(0, 100));
+    if (debouncedFilters.skill) params.set("skill", debouncedFilters.skill.slice(0, 100));
+    if (debouncedFilters.verificationTag) params.set("verificationTag", debouncedFilters.verificationTag.slice(0, 50));
     params.set("page", String(debouncedFilters.page));
 
     apiFetch(`/api/peso/workforce?${params}`)

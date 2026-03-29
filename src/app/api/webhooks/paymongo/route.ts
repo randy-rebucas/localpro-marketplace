@@ -253,6 +253,14 @@ export async function POST(req: NextRequest) {
 
     // ── Legacy Payment Intent succeeded ─────────────────────────────────────
     if (eventType === "payment_intent.succeeded") {
+      if (webhookEventId) {
+        await connectDB();
+        const alreadyProcessed = await Payment.findOne({ webhookEventId }).lean();
+        if (alreadyProcessed) {
+          log.info({ webhookEventId }, "Duplicate payment_intent.succeeded event — skipping");
+          return NextResponse.json({ received: true, duplicate: true });
+        }
+      }
       const intentId = resourceData.id;
       const payments = resourceData.attributes.payments ?? [];
       const successfulPayment = payments.find((p) => p.attributes.status === "paid");
@@ -261,19 +269,44 @@ export async function POST(req: NextRequest) {
         successfulPayment?.id ?? "",
         successfulPayment?.attributes.source?.type ?? "unknown"
       );
+      if (webhookEventId) {
+        await Payment.findOneAndUpdate({ paymentIntentId: intentId }, { webhookEventId });
+      }
     }
 
     // ── Payment failed ───────────────────────────────────────────────────────
     if (eventType === "payment.failed") {
+      if (webhookEventId) {
+        await connectDB();
+        const alreadyProcessed = await Payment.findOne({ webhookEventId }).lean();
+        if (alreadyProcessed) {
+          log.info({ webhookEventId }, "Duplicate payment.failed event — skipping");
+          return NextResponse.json({ received: true, duplicate: true });
+        }
+      }
       const intentId: string =
         (resourceData.attributes as Record<string, unknown>).payment_intent_id as string ?? resourceData.id;
       await paymentService.handlePaymentFailed(intentId);
+      if (webhookEventId) {
+        await Payment.findOneAndUpdate({ paymentIntentId: intentId }, { webhookEventId });
+      }
     }
 
     // ── Checkout session expired without payment ─────────────────────────────
     if (eventType === "checkout_session.payment.expired") {
+      if (webhookEventId) {
+        await connectDB();
+        const alreadyProcessed = await Payment.findOne({ webhookEventId }).lean();
+        if (alreadyProcessed) {
+          log.info({ webhookEventId }, "Duplicate checkout_session.payment.expired event — skipping");
+          return NextResponse.json({ received: true, duplicate: true });
+        }
+      }
       const intentId = resourceData.attributes.payment_intent?.id ?? resourceData.id;
       await paymentService.handlePaymentFailed(intentId);
+      if (webhookEventId) {
+        await Payment.findOneAndUpdate({ paymentIntentId: intentId }, { webhookEventId });
+      }
     }
   } catch (err) {
     log.error({ err }, "Webhook processing error");

@@ -107,7 +107,8 @@
       "Bash(npm run:*)",
       "Bash(node -e \"require\\(''''pino''''\\)\")",
       "Bash(npx vitest:*)",
-      "Bash(npx js-yaml:*)"
+      "Bash(npx js-yaml:*)",
+      "Bash(pnpm add:*)"
     ]
   }
 }

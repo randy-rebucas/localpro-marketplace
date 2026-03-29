@@ -108,7 +108,7 @@ export default function EmergencyPage() {
         setRecent(all.filter((j) => j.title?.startsWith("[EMERGENCY]")));
       })
       .finally(() => setLoadingRecent(false));
-  }, [broadcast]); // refresh after new broadcast
+  }, [broadcast?._id]); // refresh after new broadcast
 
   async function doSubmit() {
     setConfirmOpen(false);

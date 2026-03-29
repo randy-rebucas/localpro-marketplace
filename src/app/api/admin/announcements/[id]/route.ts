@@ -3,7 +3,7 @@ import { z } from "zod";
 import { withHandler } from "@/lib/utils";
 import { requireUser, requireRole } from "@/lib/auth";
 import { announcementRepository } from "@/repositories/announcement.repository";
-import { ValidationError, NotFoundError } from "@/lib/errors";
+import { ValidationError, NotFoundError, assertObjectId } from "@/lib/errors";
 
 const TARGETS = ["all", "client", "provider", "admin", "staff"] as const;
 const TYPES   = ["info", "warning", "success", "danger"] as const;
@@ -24,6 +24,7 @@ export const PUT = withHandler(async (req: NextRequest, ctx: RouteContext) => {
   requireRole(user, "admin");
 
   const { id } = await ctx.params;
+  assertObjectId(id, "announcementId");
   const body = await req.json();
   const parsed = UpdateSchema.safeParse(body);
   if (!parsed.success) throw new ValidationError(parsed.error.errors[0].message);
@@ -54,6 +55,7 @@ export const DELETE = withHandler(async (_req: NextRequest, ctx: RouteContext) =
   requireRole(user, "admin");
 
   const { id } = await ctx.params;
+  assertObjectId(id, "announcementId");
   const doc = await announcementRepository.delete(id);
   if (!doc) throw new NotFoundError("Announcement not found");
 

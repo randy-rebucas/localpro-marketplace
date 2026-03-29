@@ -110,15 +110,15 @@ export default async function JobDetailPage({
           </p>
         </div>
         <div className="flex flex-wrap justify-end gap-2 flex-shrink-0 pt-1">
-          {/* Post Similar Job */}
+          {/* Post Similar Job — values are truncated to prevent URL length abuse */}
           <Link
             href={`/client/post-job?${new URLSearchParams({
-              title: job.title,
-              category: job.category,
-              description: job.description,
-              budget: String(job.budget),
-              location: job.location,
-              ...(job.specialInstructions ? { specialInstructions: job.specialInstructions } : {}),
+              title:       job.title.slice(0, 200),
+              category:    job.category.slice(0, 100),
+              description: job.description.slice(0, 2000),
+              budget:      String(job.budget),
+              location:    job.location.slice(0, 300),
+              ...(job.specialInstructions ? { specialInstructions: job.specialInstructions.slice(0, 500) } : {}),
             }).toString()}`}
             className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 shadow-sm hover:bg-slate-50 transition-colors"
           >

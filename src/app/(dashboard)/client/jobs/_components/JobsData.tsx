@@ -6,8 +6,18 @@ import { paymentRepository } from "@/repositories/payment.repository";
 import type { IJob } from "@/types";
 import ClientJobsList from "./ClientJobsList";
 
-export async function JobsData({ userId }: { userId: string }) {
-  const { data: jobs } = await jobRepository.findAllForClient(userId, { page: 1, limit: 100 });
+const PAGE_SIZE = 20;
+
+export async function JobsData({
+  userId,
+  searchParams,
+}: {
+  userId: string;
+  searchParams?: Promise<Record<string, string | undefined>>;
+}) {
+  const params = await searchParams;
+  const page = Math.max(1, parseInt(params?.page ?? "1", 10) || 1);
+  const { data: jobs, total, totalPages } = await jobRepository.findAllForClient(userId, { page, limit: PAGE_SIZE });
   const jobIds = jobs.map((j) => j._id);
 
   const [quoteCounts, fundedMap] = await Promise.all([
@@ -48,6 +58,7 @@ export async function JobsData({ userId }: { userId: string }) {
       jobs={jobsForClient}
       quoteCountMap={quoteCountObj}
       fundedAmounts={fundedAmounts}
+      pagination={{ page, total, totalPages, pageSize: PAGE_SIZE }}
     />
   );
 }

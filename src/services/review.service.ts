@@ -10,6 +10,7 @@ import {
   ForbiddenError,
   ConflictError,
   UnprocessableError,
+  assertObjectId,
 } from "@/lib/errors";
 import { requireCapability } from "@/lib/auth";
 import type { TokenPayload } from "@/lib/auth";
@@ -47,6 +48,7 @@ export class ReviewService {
   }
 
   async submitReview(user: TokenPayload, input: CreateReviewInput) {
+    assertObjectId(input.jobId, "jobId");
     const job = await jobRepository.findById(input.jobId);
     if (!job) throw new NotFoundError("Job");
 
@@ -64,9 +66,12 @@ export class ReviewService {
     let review;
     try {
       review = await reviewRepository.create({
-        ...input,
-        clientId: user.userId,
-        providerId: j.providerId,
+        jobId:       input.jobId,
+        rating:      input.rating,
+        feedback:    input.feedback,
+        breakdown:   input.breakdown,
+        clientId:    user.userId,
+        providerId:  j.providerId,
       });
     } catch (err: unknown) {
       // Mongo E11000 — compound unique (jobId + clientId) violated
@@ -109,6 +114,7 @@ export class ReviewService {
     return review;
   }
   async respondToReview(user: TokenPayload, reviewId: string, response: string) {
+    assertObjectId(reviewId, "reviewId");
     const review = await reviewRepository.getDocById(reviewId);
     if (!review) throw new NotFoundError("Review");
 
@@ -130,12 +136,7 @@ export class ReviewService {
     }
 
     // Use atomic update to guard against concurrent writes
-    const Review = (await import("@/models/Review")).default;
-    const updated = await Review.findOneAndUpdate(
-      { _id: r._id.toString(), providerResponse: null },
-      { $set: { providerResponse: response, providerRespondedAt: new Date() } },
-      { new: true }
-    );
+    const updated = await reviewRepository.atomicSetResponse(r._id.toString(), response);
     if (!updated) throw new ConflictError("Response was already submitted");
 
     await activityRepository.log({
@@ -165,31 +166,23 @@ export class ReviewService {
   ) {
     // Admin only — requires manage_disputes or manage_users capability
     requireCapability(user, "manage_disputes");
+    assertObjectId(reviewId, "reviewId");
 
     const review = await reviewRepository.getDocById(reviewId);
     if (!review) throw new NotFoundError("Review");
 
     const r = review as unknown as {
       _id: { toString(): string };
-      providerId: { toString(): string };
-      clientId: { toString(): string };
       jobId: { toString(): string };
     };
 
-    const Review = (await import("@/models/Review")).default;
-    const updates: Record<string, unknown> = {
-      isHidden: action.hide,
+    const moderationUpdates = {
+      isHidden:     action.hide,
+      hiddenReason: action.hide ? (action.reason ?? null) : null,
+      hiddenBy:     action.hide ? user.userId : null,
     };
 
-    if (action.hide) {
-      updates.hiddenReason = action.reason ?? null;
-      updates.hiddenBy = user.userId;
-    } else {
-      updates.hiddenReason = null;
-      updates.hiddenBy = null;
-    }
-
-    const updated = await Review.findByIdAndUpdate(r._id.toString(), { $set: updates }, { new: true });
+    const updated = await reviewRepository.moderateById(r._id.toString(), moderationUpdates);
 
     await activityRepository.log({
       userId: user.userId,

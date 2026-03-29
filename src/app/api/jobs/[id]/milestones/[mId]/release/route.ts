@@ -8,7 +8,7 @@ import ProviderProfile from "@/models/ProviderProfile";
 import { calculateCommission, getCommissionRate } from "@/lib/commission";
 import { pushStatusUpdateMany } from "@/lib/events";
 import { activityRepository, transactionRepository } from "@/repositories";
-import { NotFoundError, ForbiddenError, UnprocessableError } from "@/lib/errors";
+import { NotFoundError, ForbiddenError, UnprocessableError, assertObjectId } from "@/lib/errors";
 import { ledgerService } from "@/services/ledger.service";
 import type { IJob, IMilestone } from "@/types";
 
@@ -26,6 +26,8 @@ export const POST = withHandler(async (
   { params }: Ctx
 ) => {
   const { id, mId } = await params;
+  assertObjectId(id, "jobId");
+  assertObjectId(mId, "milestoneId");
   const user = await requireUser();
   requireRole(user, "client");
 

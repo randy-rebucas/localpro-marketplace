@@ -5,33 +5,35 @@
  * Returns non-sensitive job fields for the public job detail page.
  */
 
-import { NextResponse } from "next/server";
-import { connectDB } from "@/lib/db";
-import Job from "@/models/Job";
+import { NextRequest, NextResponse } from "next/server";
+import { withHandler } from "@/lib/utils";
+import { assertObjectId, NotFoundError } from "@/lib/errors";
+import { jobRepository } from "@/repositories";
 
 export const dynamic = "force-dynamic";
 
-export async function GET(
-  _req: Request,
+export const GET = withHandler(async (
+  _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
-) {
+) => {
   const { id } = await params;
+  assertObjectId(id, "jobId");
 
-  try {
-    await connectDB();
+  const job = await jobRepository.getDocById(id);
+  if (!job) throw new NotFoundError("Job");
 
-    const job = await Job.findById(id)
-      .select(
-        "_id title category location budget scheduleDate description specialInstructions status milestones createdAt"
-      )
-      .lean();
-
-    if (!job) {
-      return NextResponse.json({ error: "Job not found" }, { status: 404 });
-    }
-
-    return NextResponse.json(job);
-  } catch {
-    return NextResponse.json({ error: "Server error" }, { status: 500 });
-  }
-}
+  const j = job as unknown as Record<string, unknown>;
+  return NextResponse.json({
+    _id:                 j._id,
+    title:               j.title,
+    category:            j.category,
+    location:            j.location,
+    budget:              j.budget,
+    scheduleDate:        j.scheduleDate,
+    description:         j.description,
+    specialInstructions: j.specialInstructions,
+    status:              j.status,
+    milestones:          j.milestones,
+    createdAt:           j.createdAt,
+  });
+});

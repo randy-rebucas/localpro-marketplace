@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, use, useRef } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { marked } from "marked";
+import DOMPurify from "dompurify";
 import {
   ArrowLeft,
   BookOpen,
@@ -49,7 +50,8 @@ interface Course {
 }
 
 function renderMarkdown(src: string): string {
-  return marked.parse(src, { async: false }) as string;
+  const raw = marked.parse(src, { async: false }) as string;
+  return DOMPurify.sanitize(raw);
 }
 
 function ProgressBar({ done, total }: { done: number; total: number }) {
@@ -125,6 +127,7 @@ export default function TrainingCoursePage({ params }: { params: Promise<{ id: s
       setAwaitingActivation(true);
 
       const storedSessionId = sessionStorage.getItem(`training_session_${id}`);
+      let cancelled = false;
 
       void (async () => {
         // Try to activate immediately using the stored session ID
@@ -137,7 +140,7 @@ export default function TrainingCoursePage({ params }: { params: Promise<{ id: s
               body: JSON.stringify({ sessionId: storedSessionId }),
             });
             const activateData = await activateRes.json() as { activated?: boolean; error?: string };
-            if (activateRes.ok && activateData.activated) {
+            if (!cancelled && activateRes.ok && activateData.activated) {
               const courseData = await fetchCourse();
               setAwaitingActivation(false);
               if (courseData?.enrollment) {
@@ -150,9 +153,16 @@ export default function TrainingCoursePage({ params }: { params: Promise<{ id: s
           }
         }
 
+        if (cancelled) return;
+
         // Fallback: poll every 3s up to 8 times (24s) waiting for webhook to activate enrollment
         let attempts = 0;
         pollRef.current = setInterval(async () => {
+          if (cancelled) {
+            clearInterval(pollRef.current!);
+            pollRef.current = null;
+            return;
+          }
           attempts += 1;
           try {
             const res = await fetch(`/api/provider/training/${id}`);
@@ -176,11 +186,12 @@ export default function TrainingCoursePage({ params }: { params: Promise<{ id: s
           }
         }, 3000);
       })();
-    }
 
-    return () => {
-      if (pollRef.current) clearInterval(pollRef.current);
-    };
+      return () => {
+        cancelled = true;
+        if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
+      };
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);  // Run once on mount only
 

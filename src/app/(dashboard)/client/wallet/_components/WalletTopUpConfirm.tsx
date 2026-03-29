@@ -21,14 +21,29 @@ export default function WalletTopUpConfirm() {
     if (calledRef.current) return;
     calledRef.current = true;
 
-    const sessionId = sessionStorage.getItem(STORAGE_KEY);
+    const raw = sessionStorage.getItem(STORAGE_KEY);
+    sessionStorage.removeItem(STORAGE_KEY);
+
+    // Parse stored value — supports both legacy plain string and new {sessionId, createdAt} format
+    let sessionId: string | null = null;
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw) as { sessionId?: string; createdAt?: number };
+        const TTL_MS = 60 * 60 * 1000; // 1 hour
+        if (parsed.sessionId && parsed.createdAt && Date.now() - parsed.createdAt < TTL_MS) {
+          sessionId = parsed.sessionId;
+        }
+      } catch {
+        // Legacy plain-string format
+        sessionId = raw;
+      }
+    }
+
     if (!sessionId) {
-      // No session ID — webhook may have already credited it, just refresh
+      // No valid session ID — webhook may have already credited it, just refresh
       router.refresh();
       return;
     }
-
-    sessionStorage.removeItem(STORAGE_KEY);
 
     apiFetch("/api/wallet/topup/verify", {
       method: "POST",

@@ -3,7 +3,7 @@ import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { jobRepository, paymentRepository } from "@/repositories";
-import { NotFoundError, ForbiddenError, UnprocessableError, ValidationError } from "@/lib/errors";
+import { NotFoundError, ForbiddenError, UnprocessableError, ValidationError, assertObjectId } from "@/lib/errors";
 import type { IJob, IMilestone } from "@/types";
 
 const AddMilestoneSchema = z.object({
@@ -20,6 +20,7 @@ type Ctx = { params: Promise<{ id: string }> };
  */
 export const GET = withHandler(async (_req: NextRequest, { params }: Ctx) => {
   const { id } = await params;
+  assertObjectId(id, "jobId");
   const user = await requireUser();
 
   const jobDoc = await jobRepository.getDocById(id);
@@ -45,6 +46,7 @@ export const GET = withHandler(async (_req: NextRequest, { params }: Ctx) => {
  */
 export const POST = withHandler(async (req: NextRequest, { params }: Ctx) => {
   const { id } = await params;
+  assertObjectId(id, "jobId");
   const user = await requireUser();
 
   const body = await req.json();

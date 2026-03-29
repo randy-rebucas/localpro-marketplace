@@ -4,6 +4,7 @@ import { requireUser, requireRole } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { connectDB } from "@/lib/db";
 import { providerProfileRepository } from "@/repositories";
+import { assertObjectId } from "@/lib/errors";
 
 const Schema = z.object({
   certified: z.boolean(),
@@ -21,6 +22,7 @@ export const PATCH = withHandler(async (req: NextRequest, { params }: Ctx) => {
   requireRole(user, "admin", "staff");
 
   const { userId } = await params;
+  assertObjectId(userId, "userId");
   const body = await req.json();
   const parsed = Schema.safeParse(body);
   if (!parsed.success) {

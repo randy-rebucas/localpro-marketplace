@@ -11,9 +11,15 @@ interface Props {
   available: number;
 }
 
+function maskAccountNumber(num: string): string {
+  if (num.length <= 4) return num;
+  return "•".repeat(num.length - 4) + num.slice(-4);
+}
+
 export default function WalletWithdrawForm({ available }: Props) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [accountFocused, setAccountFocused] = useState(false);
   const [form, setForm] = useState({
     bankName: "",
     accountNumber: "",
@@ -38,6 +44,10 @@ export default function WalletWithdrawForm({ available }: Props) {
     }
     if (!form.bankName.trim() || !form.accountNumber.trim() || !form.accountName.trim()) {
       toast.error("Please fill in all bank details");
+      return;
+    }
+    if (!/^\d{8,20}$/.test(form.accountNumber)) {
+      toast.error("Account number must be 8–20 digits");
       return;
     }
     setLoading(true);
@@ -76,11 +86,20 @@ export default function WalletWithdrawForm({ available }: Props) {
           <label className="label block mb-1">Account Number</label>
           <input
             className="input w-full"
-            placeholder="Your bank account number"
-            value={form.accountNumber}
-            onChange={(e) => update("accountNumber", e.target.value)}
+            placeholder="8–20 digit account number"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            minLength={8}
+            maxLength={20}
+            value={accountFocused ? form.accountNumber : maskAccountNumber(form.accountNumber)}
+            onFocus={() => setAccountFocused(true)}
+            onBlur={() => setAccountFocused(false)}
+            onChange={(e) => update("accountNumber", e.target.value.replace(/\D/g, ""))}
             required
           />
+          {!accountFocused && form.accountNumber.length > 4 && (
+            <p className="text-[11px] text-slate-400 mt-0.5">Last 4 digits shown for security</p>
+          )}
         </div>
         <div className="sm:col-span-2">
           <label className="label block mb-1">Account Name</label>

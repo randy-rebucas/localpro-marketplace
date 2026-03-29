@@ -1,6 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+
+// Third-party geolocation endpoints — centralised for easy update
+const NOMINATIM_REVERSE_URL = "https://nominatim.openstreetmap.org/reverse";
+const IPAPI_URL = "https://ipapi.co/json/";
 import toast from "react-hot-toast";
 import Image from "next/image";
 import dynamic from "next/dynamic";
@@ -71,14 +75,18 @@ export default function ProfileClient({ initialUser, initialJobCount }: Props) {
   const [newAddressCoords, setNewAddressCoords]             = useState<{ lat: number; lng: number } | null>(null);
   const [savingAddress, setSavingAddress]                   = useState(false);
   const [detectingLocation, setDetectingLocation]           = useState(false);
-  const [deletingAddressId, setDeletingAddressId]           = useState<string | null>(null);
+  const [deletingAddressIds, setDeletingAddressIds]         = useState<Set<string>>(new Set());
   const [settingDefaultId, setSettingDefaultId]             = useState<string | null>(null);
+
+  // Keep a stable ref to `user` so the addresses sync effect doesn't
+  // need to re-run whenever the rest of the user object changes.
+  const userRef = useRef(user);
+  useEffect(() => { userRef.current = user; });
 
   // Keep auth store in sync when addresses change on the client
   useEffect(() => {
-    if (user) setUser({ ...user, addresses });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [addresses]);
+    if (userRef.current) setUser({ ...userRef.current, addresses });
+  }, [addresses, setUser]);
 
   async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -210,7 +218,7 @@ export default function ProfileClient({ initialUser, initialJobCount }: Props) {
         if (!resolved) {
           try {
             const r = await fetch(
-              `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=jsonv2&addressdetails=1&zoom=18`,
+              `${NOMINATIM_REVERSE_URL}?lat=${lat}&lon=${lng}&format=jsonv2&addressdetails=1&zoom=18`,
               { headers: { "Accept-Language": "en", "User-Agent": "LocalPro/1.0" } }
             );
             if (r.ok) resolved = ((await r.json()) as { display_name?: string }).display_name ?? "";
@@ -221,7 +229,7 @@ export default function ProfileClient({ initialUser, initialJobCount }: Props) {
         toast.success("Location detected!");
       } else {
         try {
-          const r = await fetch("https://ipapi.co/json/");
+          const r = await fetch(IPAPI_URL);
           if (r.ok) {
             const d = await r.json() as { city?: string; region?: string; country_name?: string };
             const parts = [d.city, d.region, d.country_name].filter(Boolean);
@@ -282,8 +290,8 @@ export default function ProfileClient({ initialUser, initialJobCount }: Props) {
   }
 
   async function handleDeleteAddress(id: string) {
-    if (deletingAddressId) return;
-    setDeletingAddressId(id);
+    if (deletingAddressIds.has(id)) return;
+    setDeletingAddressIds((prev) => new Set(prev).add(id));
     try {
       const res = await apiFetch(`/api/auth/me/addresses/${id}`, { method: "DELETE" });
       const data = await res.json() as IAddress[] & { error?: string };
@@ -291,7 +299,7 @@ export default function ProfileClient({ initialUser, initialJobCount }: Props) {
       setAddresses(data);
       toast.success("Address removed");
     } finally {
-      setDeletingAddressId(null);
+      setDeletingAddressIds((prev) => { const s = new Set(prev); s.delete(id); return s; });
     }
   }
 
@@ -635,7 +643,7 @@ export default function ProfileClient({ initialUser, initialJobCount }: Props) {
                   <button
                     type="button"
                     onClick={() => handleSetDefault(addr._id)}
-                    disabled={!!settingDefaultId || !!deletingAddressId}
+                    disabled={!!settingDefaultId || deletingAddressIds.size > 0}
                     className="text-[11px] font-medium text-slate-500 hover:text-primary disabled:opacity-40 transition-colors px-1.5 py-0.5 rounded"
                     title="Set as default"
                   >
@@ -645,7 +653,7 @@ export default function ProfileClient({ initialUser, initialJobCount }: Props) {
                 <button
                   type="button"
                   onClick={() => handleDeleteAddress(addr._id)}
-                  disabled={!!deletingAddressId || !!settingDefaultId}
+                  disabled={deletingAddressIds.size > 0 || !!settingDefaultId}
                   className="p-1 text-slate-400 hover:text-red-500 disabled:opacity-40 transition-colors rounded"
                   title="Remove address"
                 >

@@ -25,7 +25,7 @@ export const GET = withHandler(async (req: NextRequest) => {
   const filter: Record<string, unknown> = {};
   if (plan)       filter.plan       = plan;
   if (planStatus) filter.planStatus = planStatus;
-  if (search)     filter.name       = { $regex: search, $options: "i" };
+  if (search)     filter.name       = { $regex: search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), $options: "i" };
 
   const [agencies, total] = await Promise.all([
     AgencyProfile.find(filter, "name type logo plan planStatus providerId staff defaultWorkerSharePct createdAt")

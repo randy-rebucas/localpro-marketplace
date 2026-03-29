@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { adminService } from "@/services";
 import { requireUser, requireCapability } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
+import { assertObjectId } from "@/lib/errors";
 
 export const PATCH = withHandler(async (
   _req: NextRequest,
@@ -11,6 +12,7 @@ export const PATCH = withHandler(async (
   requireCapability(user, "manage_jobs");
 
   const { id } = await params;
+  assertObjectId(id, "jobId");
   const job = await adminService.rejectJob(user.userId, id);
   return NextResponse.json({ job, message: "Job rejected" });
 });

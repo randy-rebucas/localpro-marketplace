@@ -80,6 +80,28 @@ export class ReviewRepository extends BaseRepository<ReviewDocument> {
     }
     return streak;
   }
+
+  /**
+   * Atomically set a provider response on a review only if no response exists yet (CAS guard).
+   * Returns null if another request already submitted a response concurrently.
+   */
+  async atomicSetResponse(reviewId: string, response: string): Promise<ReviewDocument | null> {
+    await this.connect();
+    return Review.findOneAndUpdate(
+      { _id: reviewId, providerResponse: null },
+      { $set: { providerResponse: response, providerRespondedAt: new Date() } },
+      { new: true }
+    ).lean() as unknown as ReviewDocument | null;
+  }
+
+  /** Update moderation fields (isHidden, hiddenReason, hiddenBy) on a review. */
+  async moderateById(
+    reviewId: string,
+    updates: { isHidden: boolean; hiddenReason?: string | null; hiddenBy?: string | null }
+  ): Promise<ReviewDocument | null> {
+    await this.connect();
+    return Review.findByIdAndUpdate(reviewId, { $set: updates }, { new: true }).lean() as unknown as ReviewDocument | null;
+  }
 }
 
 export const reviewRepository = new ReviewRepository();

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { escrowService } from "@/services";
 import { requireUser, requireRole } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
-import { UnprocessableError } from "@/lib/errors";
+import { UnprocessableError, assertObjectId } from "@/lib/errors";
 
 export const PATCH = withHandler(async (
   req: NextRequest,
@@ -12,6 +12,7 @@ export const PATCH = withHandler(async (
   requireRole(user, "provider");
 
   const { id } = await params;
+  assertObjectId(id, "jobId");
   const body = await req.json().catch(() => ({}));
   const raw = (body as { beforePhotos?: string[] }).beforePhotos;
   const photos = Array.isArray(raw) ? raw.filter(Boolean) : [];

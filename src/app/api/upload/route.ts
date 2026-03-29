@@ -6,6 +6,7 @@ import { withHandler } from "@/lib/utils";
 import { ValidationError } from "@/lib/errors";
 
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
+const ALLOWED_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp", ".pdf"];
 const MAX_BYTES = 10 * 1024 * 1024; // 10 MB
 const ALLOWED_FOLDERS: UploadFolder[] = ["jobs/before", "jobs/after", "avatars", "kyc", "misc", "resumes"];
 
@@ -40,6 +41,8 @@ export const POST = withHandler(async (req: NextRequest) => {
 
   if (!file) throw new ValidationError("No file provided");
   if (!ALLOWED_TYPES.includes(file.type)) throw new ValidationError("Only JPEG, PNG, WEBP, and PDF files are allowed");
+  const ext = file.name.toLowerCase().match(/\.[^.]+$/)?.[0] ?? "";
+  if (!ALLOWED_EXTENSIONS.includes(ext)) throw new ValidationError("File extension not allowed");
   if (file.size > MAX_BYTES) throw new ValidationError("File exceeds the 10 MB limit");
   if (!ALLOWED_FOLDERS.includes(folderParam as UploadFolder)) throw new ValidationError("Invalid upload folder");
 

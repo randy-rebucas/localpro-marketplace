@@ -27,6 +27,7 @@ export default function JobActionButtons({ jobId, status, escrowStatus, budget, 
   const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
   const [walletBalance, setWalletBalance] = useState<number | null>(null);
+  const [walletLoading, setWalletLoading] = useState(true);
   const [showFundModal, setShowFundModal] = useState(false);
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [showReleaseModal, setShowReleaseModal] = useState(false);
@@ -63,10 +64,12 @@ export default function JobActionButtons({ jobId, status, escrowStatus, budget, 
   );
 
   useEffect(() => {
+    setWalletLoading(true);
     apiFetch("/api/wallet")
       .then((r) => r.json())
       .then((d) => setWalletBalance(d.balance ?? 0))
-      .catch(() => setWalletBalance(0));
+      .catch(() => setWalletBalance(0))
+      .finally(() => setWalletLoading(false));
   }, []);
 
   function openFundModal() {
@@ -179,7 +182,9 @@ export default function JobActionButtons({ jobId, status, escrowStatus, budget, 
             >
               Fund Escrow
             </Button>
-            {walletBalance !== null && walletBalance >= (acceptedAmount ?? budget) && (
+            {walletLoading ? (
+              <div className="h-9 w-44 rounded-lg bg-slate-100 animate-pulse" />
+            ) : walletBalance !== null && walletBalance >= (acceptedAmount ?? budget) && (
               <Button
                 variant="secondary"
                 isLoading={loading === "wallet"}
@@ -279,7 +284,11 @@ export default function JobActionButtons({ jobId, status, escrowStatus, budget, 
           <div className="flex items-center gap-2.5 rounded-lg bg-violet-50 border border-violet-200 px-4 py-3">
             <Wallet className="h-5 w-5 text-violet-600 flex-shrink-0" />
             <div className="text-sm font-medium text-violet-800">
-              <p>Your wallet balance: <span className="font-bold">{formatCurrency(walletBalance ?? 0)}</span></p>
+              <p>Your wallet balance:{" "}
+                {walletLoading
+                  ? <span className="inline-block w-16 h-4 bg-violet-200 animate-pulse rounded align-middle" />
+                  : <span className="font-bold">{formatCurrency(walletBalance ?? 0)}</span>}
+              </p>
               <p className="text-xs font-normal text-violet-600 mt-0.5">
                 {formatCurrency(acceptedAmount ?? budget)} will be deducted to fund escrow for this job.
               </p>

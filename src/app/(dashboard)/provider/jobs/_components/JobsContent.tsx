@@ -16,8 +16,8 @@ export async function JobsContent({ userId }: { userId: string }) {
 
   // Normalize legacy docs where the field may be a string instead of an array
   for (const j of serialized) {
-    if (!Array.isArray(j.beforePhoto)) j.beforePhoto = j.beforePhoto ? [j.beforePhoto as unknown as string] : [];
-    if (!Array.isArray(j.afterPhoto))  j.afterPhoto  = j.afterPhoto  ? [j.afterPhoto  as unknown as string] : [];
+    if (!Array.isArray(j.beforePhoto)) j.beforePhoto = typeof j.beforePhoto === "string" ? [j.beforePhoto] : [];
+    if (!Array.isArray(j.afterPhoto))  j.afterPhoto  = typeof j.afterPhoto  === "string" ? [j.afterPhoto]  : [];
   }
 
   // Fetch paid payment amounts keyed by jobId

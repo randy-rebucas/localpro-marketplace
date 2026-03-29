@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
-import { NotFoundError, ValidationError } from "@/lib/errors";
+import { NotFoundError, ValidationError, assertObjectId } from "@/lib/errors";
 import User from "@/models/User";
 import { connectDB } from "@/lib/db";
 
@@ -24,6 +24,7 @@ type Ctx = { params: Promise<{ id: string }> };
 export const PATCH = withHandler(async (req: NextRequest, ctx: Ctx) => {
   const tokenUser = await requireUser();
   const { id } = await ctx.params;
+  assertObjectId(id, "addressId");
   const body = await req.json();
   const parsed = UpdateAddressSchema.safeParse(body);
   if (!parsed.success) throw new ValidationError(parsed.error.errors[0].message);
@@ -56,6 +57,7 @@ export const PATCH = withHandler(async (req: NextRequest, ctx: Ctx) => {
 export const DELETE = withHandler(async (_req: NextRequest, ctx: Ctx) => {
   const tokenUser = await requireUser();
   const { id } = await ctx.params;
+  assertObjectId(id, "addressId");
 
   await connectDB();
   const user = await User.findById(tokenUser.userId);

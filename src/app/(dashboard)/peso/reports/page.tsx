@@ -80,24 +80,25 @@ function StatCard({
 function BarList({
   items, valueKey, labelKey,
 }: {
-  items: Record<string, unknown>[];
+  items: object[];
   valueKey: string;
   labelKey: string;
 }) {
-  const max = Math.max(...items.map((i) => Number(i[valueKey]) || 0), 1);
+  const get = (item: object, key: string) => (item as Record<string, unknown>)[key];
+  const max = Math.max(...items.map((i) => Number(get(i, valueKey)) || 0), 1);
   return (
     <ul className="space-y-2.5">
       {items.map((item, idx) => (
         <li key={idx} className="flex items-center gap-3">
-          <span className="text-xs text-slate-600 w-36 shrink-0 truncate">{String(item[labelKey])}</span>
+          <span className="text-xs text-slate-600 w-36 shrink-0 truncate">{String(get(item, labelKey))}</span>
           <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
             <div
               className="h-1.5 bg-blue-500 rounded-full transition-all duration-700"
-              style={{ width: `${(Number(item[valueKey]) / max) * 100}%` }}
+              style={{ width: `${(Number(get(item, valueKey)) / max) * 100}%` }}
             />
           </div>
           <span className="text-xs font-semibold text-slate-500 w-6 text-right tabular-nums">
-            {Number(item[valueKey])}
+            {Number(get(item, valueKey))}
           </span>
         </li>
       ))}
@@ -301,7 +302,7 @@ export default function ReportsPage() {
             <p className="text-sm text-slate-400 italic">No data yet.</p>
           ) : (
             <BarList
-              items={topSkills as unknown as Record<string, unknown>[]}
+              items={topSkills }
               labelKey="skill"
               valueKey="count"
             />
@@ -314,7 +315,7 @@ export default function ReportsPage() {
             <p className="text-sm text-slate-400 italic">No data yet.</p>
           ) : (
             <BarList
-              items={topCategories as unknown as Record<string, unknown>[]}
+              items={topCategories }
               labelKey="category"
               valueKey="count"
             />

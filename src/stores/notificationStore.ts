@@ -13,6 +13,7 @@ import { create } from "zustand";
 import toast from "react-hot-toast";
 import type { INotification } from "@/types";
 import { apiFetch } from "@/lib/fetchClient";
+import { playNotificationSound } from "@/lib/notificationSound";
 
 export type { INotification as Notification };
 
@@ -251,6 +252,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
       unreadCount: state.unreadCount + (n.readAt ? 0 : 1),
     }));
     if (!silent && !n.readAt) {
+      playNotificationSound();
       const emoji = TOAST_EMOJI[n.type] ?? "🔔";
       const body = n.message ? n.message.slice(0, 100) : n.title;
       toast(body, {

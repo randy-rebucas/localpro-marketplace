@@ -776,6 +776,34 @@ export class JobRepository extends BaseRepository<JobDocument> {
       totalPages: Math.ceil(total / limit),
     };
   }
+
+  /** Open jobs for the provider marketplace with client info populated. */
+  async findOpenForMarketplace(limit = 100): Promise<JobDocument[]> {
+    await this.connect();
+    return Job.find({ status: "open" })
+      .populate("clientId", "name isVerified avatar")
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .lean() as unknown as JobDocument[];
+  }
+
+  /**
+   * Atomically assign a provider to an open job (CAS guard: status must be "open").
+   * Updates status → "assigned" and sets budget to the accepted quote amount.
+   * Returns null if the job was concurrently modified.
+   */
+  async atomicAssignProvider(
+    jobId: string,
+    providerId: string,
+    proposedAmount: number
+  ): Promise<JobDocument | null> {
+    await this.connect();
+    return Job.findOneAndUpdate(
+      { _id: jobId, status: "open" },
+      { $set: { providerId, status: "assigned", budget: proposedAmount } },
+      { new: true }
+    ).lean() as unknown as JobDocument | null;
+  }
 }
 
 export const jobRepository = new JobRepository();

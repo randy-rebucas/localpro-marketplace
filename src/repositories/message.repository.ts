@@ -128,6 +128,15 @@ export class MessageRepository extends BaseRepository<MessageDocument> {
       readAt: null,
     });
   }
+
+  /** Fetch a single message by ID with senderId and receiverId populated. */
+  async findByIdPopulated(messageId: string): Promise<MessageDocument | null> {
+    await this.connect();
+    return Message.findById(messageId)
+      .populate("senderId", "name role")
+      .populate("receiverId", "name role")
+      .lean() as unknown as MessageDocument | null;
+  }
 }
 
 export const messageRepository = new MessageRepository();

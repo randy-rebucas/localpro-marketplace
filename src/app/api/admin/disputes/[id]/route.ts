@@ -3,7 +3,7 @@ import { z } from "zod";
 import { disputeService } from "@/services";
 import { requireUser, requireCapability } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
-import { ValidationError } from "@/lib/errors";
+import { ValidationError, assertObjectId } from "@/lib/errors";
 
 const UpdateDisputeSchema = z.object({
   status: z.enum(["investigating", "resolved"]),
@@ -23,6 +23,7 @@ export const GET = withHandler(async (
   requireCapability(user, "manage_disputes");
 
   const { id } = await params;
+  assertObjectId(id, "disputeId");
   const dispute = await disputeService.getDispute(id);
   return NextResponse.json(dispute);
 });
@@ -35,6 +36,7 @@ export const PATCH = withHandler(async (
   requireCapability(user, "manage_disputes");
 
   const { id } = await params;
+  assertObjectId(id, "disputeId");
   const body = await req.json();
   const parsed = UpdateDisputeSchema.safeParse(body);
   if (!parsed.success) throw new ValidationError(parsed.error.errors[0].message);

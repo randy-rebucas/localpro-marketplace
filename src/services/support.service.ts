@@ -7,7 +7,6 @@ import {
 import { maskContactInfo } from "@/lib/contactFilter";
 import { NotFoundError } from "@/lib/errors";
 import type { TokenPayload } from "@/lib/auth";
-import Message from "@/models/Message";
 
 export class SupportService {
   // ─── User side ────────────────────────────────────────────────────────────
@@ -35,10 +34,9 @@ export class SupportService {
     });
 
     // Populate before pushing so real-time listeners receive name/role on senderId
-    const populated = await Message.findById(message._id)
-      .populate("senderId", "name role")
-      .populate("receiverId", "name role")
-      .lean();
+    const populated = await messageRepository.findByIdPopulated(
+      (message._id as { toString(): string }).toString()
+    );
 
     const payload = { ...(populated ?? message), __support: true };
     pushSupportToAdmin({ userId: user.userId, message: payload });
@@ -72,10 +70,9 @@ export class SupportService {
     });
 
     // Populate before pushing so real-time listeners receive name/role on senderId
-    const populated = await Message.findById(message._id)
-      .populate("senderId", "name role")
-      .populate("receiverId", "name role")
-      .lean();
+    const populated = await messageRepository.findByIdPopulated(
+      (message._id as { toString(): string }).toString()
+    );
 
     const payload = { ...(populated ?? message), __support: true };
     // User sees the reply in their support chat

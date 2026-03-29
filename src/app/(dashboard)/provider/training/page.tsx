@@ -16,6 +16,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import toast from "react-hot-toast";
+import { isPayMongoCheckoutUrl } from "@/lib/utils";
 
 type CourseCategory = "basic" | "advanced" | "safety" | "custom" | "certification";
 
@@ -112,6 +113,10 @@ export default function ProviderTrainingPage() {
       const data = await res.json() as { checkoutUrl?: string; checkoutSessionId?: string; activated?: boolean; error?: string };
       if (!res.ok) { toast.error(data.error ?? "Could not initiate checkout."); return; }
       if (data.checkoutUrl) {
+        if (!isPayMongoCheckoutUrl(data.checkoutUrl)) {
+          toast.error("Invalid checkout URL.");
+          return;
+        }
         // Save session ID so the player page can activate enrollment immediately on return
         if (data.checkoutSessionId) {
           sessionStorage.setItem(`training_session_${courseId}`, data.checkoutSessionId);

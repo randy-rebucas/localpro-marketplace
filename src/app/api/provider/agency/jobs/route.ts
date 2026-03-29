@@ -27,7 +27,7 @@ export const GET = withHandler(async (req: NextRequest) => {
 
   const filter: Record<string, unknown> = { providerId: { $in: staffUserIds } };
   if (status) filter.status = status;
-  if (search) filter.title = { $regex: search, $options: "i" };
+  if (search) filter.title = { $regex: search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), $options: "i" };
 
   const [rawJobs, total] = await Promise.all([
     Job.find(filter)

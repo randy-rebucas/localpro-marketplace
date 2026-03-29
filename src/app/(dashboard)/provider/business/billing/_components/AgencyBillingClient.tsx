@@ -9,7 +9,7 @@ import {
   Loader2, AlertTriangle, Building2, Star,
 } from "lucide-react";
 import { fetchClient } from "@/lib/fetchClient";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, isPayMongoCheckoutUrl } from "@/lib/utils";
 import toast from "react-hot-toast";
 
 // ─── Plan definitions ─────────────────────────────────────────────────────────
@@ -268,8 +268,13 @@ export default function AgencyBillingClient() {
         return;
       }
 
-      // Live — redirect to PayPal approval page
+      // Live — redirect to PayMongo/PayPal approval page
       if (res.checkoutUrl) {
+        if (!isPayMongoCheckoutUrl(res.checkoutUrl)) {
+          toast.error("Invalid checkout URL.");
+          setPaying(null);
+          return;
+        }
         window.location.href = res.checkoutUrl;
       }
     } catch (err) {

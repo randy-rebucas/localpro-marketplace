@@ -64,6 +64,7 @@ const DisputeSchema = new Schema<DisputeDocument>(
 );
 
 DisputeSchema.index({ status: 1, createdAt: -1 });
+DisputeSchema.index({ raisedBy: 1, status: 1, createdAt: -1 });
 // Prevent duplicate open/investigating disputes for the same (job, user) pair.
 // partialFilterExpression excludes resolved disputes so historical records are kept.
 DisputeSchema.index(

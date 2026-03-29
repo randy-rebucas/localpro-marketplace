@@ -58,8 +58,8 @@ export const GET = withHandler(async (req: NextRequest) => {
   if (lng !== undefined && (isNaN(lng) || lng < -180 || lng > 180)) {
     return NextResponse.json({ error: "lng must be a number between -180 and 180" }, { status: 400 });
   }
-  if (maxDistanceKm !== undefined && (isNaN(maxDistanceKm) || maxDistanceKm <= 0)) {
-    return NextResponse.json({ error: "maxDistanceKm must be a positive number" }, { status: 400 });
+  if (maxDistanceKm !== undefined && (isNaN(maxDistanceKm) || maxDistanceKm <= 0 || maxDistanceKm > 10000)) {
+    return NextResponse.json({ error: "maxDistanceKm must be a number between 1 and 10000" }, { status: 400 });
   }
 
   const result = await jobService.listJobs(user, {

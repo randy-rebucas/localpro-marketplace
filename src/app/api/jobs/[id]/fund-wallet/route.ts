@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
-import { ValidationError } from "@/lib/errors";
+import { ValidationError, assertObjectId } from "@/lib/errors";
 import { walletService } from "@/services/wallet.service";
 
 const Schema = z.object({
@@ -19,6 +19,7 @@ export const POST = withHandler(async (
 ) => {
   const user = await requireUser();
   const { id } = await params;
+  assertObjectId(id, "jobId");
   const body = await req.json().catch(() => ({}));
   const parsed = Schema.safeParse(body);
   if (!parsed.success) throw new ValidationError(parsed.error.errors[0].message);

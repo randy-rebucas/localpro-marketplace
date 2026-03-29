@@ -35,7 +35,7 @@ export const GET = withHandler(async (req: NextRequest) => {
 
   const baseFilter: Record<string, unknown> = { providerId: { $in: staffOids } };
   if (ratingFilter) baseFilter.rating = parseInt(ratingFilter, 10);
-  if (searchParam)  baseFilter.feedback = { $regex: searchParam, $options: "i" };
+  if (searchParam)  baseFilter.feedback = { $regex: searchParam.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), $options: "i" };
 
   // Sort order
   const sortMap: Record<string, Record<string, 1 | -1>> = {

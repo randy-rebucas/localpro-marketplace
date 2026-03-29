@@ -3,7 +3,7 @@ import { z } from "zod";
 import { ConsultationService } from "@/services/consultation.service";
 import { requireUser } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
-import { ValidationError } from "@/lib/errors";
+import { ValidationError, assertObjectId } from "@/lib/errors";
 
 const ConvertToJobSchema = z.object({
   title: z.string().min(5).max(200).optional(),
@@ -20,6 +20,7 @@ export const POST = withHandler(
   async (req: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
     const user = await requireUser();
     const { id } = await params;
+    assertObjectId(id, "consultationId");
 
     const body = await req.json();
     const parsed = ConvertToJobSchema.safeParse(body);

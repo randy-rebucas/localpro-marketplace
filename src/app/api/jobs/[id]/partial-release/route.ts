@@ -15,6 +15,7 @@ import {
   ForbiddenError,
   UnprocessableError,
   ValidationError,
+  assertObjectId,
 } from "@/lib/errors";
 import { ledgerService } from "@/services/ledger.service";
 import type { IJob } from "@/types";
@@ -27,6 +28,7 @@ export const POST = withHandler(async (
   requireRole(user, "client");
 
   const { id } = await params;
+  assertObjectId(id, "jobId");
   const body = await req.json();
 
   // M-1: Strict Zod validation — prevents Infinity, NaN, and floating-point drift

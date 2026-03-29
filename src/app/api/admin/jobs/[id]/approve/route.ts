@@ -3,7 +3,7 @@ import { z } from "zod";
 import { adminService } from "@/services";
 import { requireUser, requireCapability } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
-import { ValidationError } from "@/lib/errors";
+import { ValidationError, assertObjectId } from "@/lib/errors";
 
 const ApproveSchema = z.object({
   riskScore: z.number().min(0).max(100).optional(),
@@ -17,6 +17,7 @@ export const PATCH = withHandler(async (
   requireCapability(user, "manage_jobs");
 
   const { id } = await params;
+  assertObjectId(id, "jobId");
   const body = await req.json().catch(() => ({}));
   const parsed = ApproveSchema.safeParse(body);
   if (!parsed.success) throw new ValidationError(parsed.error.errors[0].message);

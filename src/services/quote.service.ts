@@ -14,8 +14,6 @@ import {
   assertObjectId,
 } from "@/lib/errors";
 import type { TokenPayload } from "@/lib/auth";
-import { connectDB } from "@/lib/db";
-import mongoose from "mongoose";
 
 export interface CreateQuoteInput {
   jobId: string;
@@ -79,7 +77,20 @@ export class QuoteService {
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + (validityDays as number));
 
-    const quote = await quoteRepository.create({ ...input, providerId: user.userId, expiresAt });
+    const quote = await quoteRepository.create({
+      jobId:           input.jobId,
+      proposedAmount:  input.proposedAmount,
+      laborCost:       input.laborCost,
+      materialsCost:   input.materialsCost,
+      timeline:        input.timeline,
+      milestones:      input.milestones,
+      notes:           input.notes,
+      proposalDocUrl:  input.proposalDocUrl,
+      sitePhotos:      input.sitePhotos,
+      message:         input.message,
+      providerId:      user.userId,
+      expiresAt,
+    });
 
     await activityRepository.log({
       userId: user.userId,
@@ -105,9 +116,6 @@ export class QuoteService {
 
   async acceptQuote(user: TokenPayload, quoteId: string) {
     assertObjectId(quoteId, "quoteId");
-    await connectDB();
-    const Quote = mongoose.model("Quote");
-    const Job   = mongoose.model("Job");
 
     // ── 1. Load and pre-validate quote ────────────────────────────────────
     const quote = await quoteRepository.getDocById(quoteId);
@@ -173,11 +181,7 @@ export class QuoteService {
     }
 
     // ── 2. Atomically accept quote (CAS: status must still be "pending") ──
-    const acceptedQuote = await Quote.findOneAndUpdate(
-      { _id: quote._id, status: "pending" },
-      { $set: { status: "accepted" } },
-      { new: true }
-    );
+    const acceptedQuote = await quoteRepository.atomicAccept(quoteId);
     if (!acceptedQuote) {
       throw new ConflictError("Quote was already accepted or rejected by a concurrent request");
     }
@@ -185,14 +189,14 @@ export class QuoteService {
     await quoteRepository.rejectOthers(q.jobId.toString(), q._id.toString());
 
     // ── 3. Atomically assign job (also updates budget to accepted amount — H8) ──
-    const acceptedJob = await Job.findOneAndUpdate(
-      { _id: job._id, status: "open" },
-      { $set: { providerId: q.providerId, status: "assigned", budget: q.proposedAmount } },
-      { new: true }
+    const acceptedJob = await jobRepository.atomicAssignProvider(
+      j._id.toString(),
+      q.providerId?.toString() ?? "",
+      q.proposedAmount
     );
     if (!acceptedJob) {
       // Rollback quote acceptance — job was concurrently modified
-      await Quote.findByIdAndUpdate(quote._id, { $set: { status: "pending" } });
+      await quoteRepository.revertAccepted(quoteId);
       throw new ConflictError("Job is no longer available for assignment");
     }
 
@@ -306,13 +310,7 @@ export class QuoteService {
     if (input.laborCost !== undefined) updates.laborCost = input.laborCost;
     if (input.materialsCost !== undefined) updates.materialsCost = input.materialsCost;
 
-    await connectDB();
-    const Quote = mongoose.model("Quote");
-    const updated = await Quote.findOneAndUpdate(
-      { _id: q._id.toString(), status: "pending" },
-      { $set: updates, $inc: { revisionCount: 1 } },
-      { new: true }
-    );
+    const updated = await quoteRepository.atomicRevise(q._id.toString(), updates);
     if (!updated) throw new ConflictError("Quote was modified by a concurrent request");
 
     await activityRepository.log({

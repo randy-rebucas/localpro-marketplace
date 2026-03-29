@@ -70,6 +70,16 @@ export default function BulkOnboardingPage() {
       return;
     }
 
+    // Validate individual field lengths to prevent oversized payloads
+    for (let i = 0; i < parsedRows.length; i++) {
+      const row = parsedRows[i];
+      if ((row.name ?? "").length > 100)   { toast.error(`Row ${i + 2}: name too long (max 100 chars)`);   return; }
+      if ((row.email ?? "").length > 254)  { toast.error(`Row ${i + 2}: email too long (max 254 chars)`);  return; }
+      if ((row.phone ?? "").length > 20)   { toast.error(`Row ${i + 2}: phone too long (max 20 chars)`);   return; }
+      if ((row.skills ?? "").length > 500) { toast.error(`Row ${i + 2}: skills too long (max 500 chars)`); return; }
+      if ((row.barangay ?? "").length > 100) { toast.error(`Row ${i + 2}: barangay too long (max 100 chars)`); return; }
+    }
+
     setSubmitting(true);
     setResults(null);
 

@@ -41,13 +41,15 @@ export const GET = withHandler(async (
   // 2. Email local prefix (first 5 chars)
   const emailLocal = user.email.split("@")[0].slice(0, 5);
   if (emailLocal.length >= 3) {
-    orClauses.push({ email: { $regex: `^${emailLocal}`, $options: "i" } });
+    const escapedEmail = emailLocal.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    orClauses.push({ email: { $regex: `^${escapedEmail}`, $options: "i" } });
   }
 
   // 3. First word of name (case-insensitive) — only if at least 3 chars
   const firstNameWord = user.name.split(" ")[0];
   if (firstNameWord.length >= 3) {
-    orClauses.push({ name: { $regex: `^${firstNameWord}`, $options: "i" } });
+    const escapedName = firstNameWord.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    orClauses.push({ name: { $regex: `^${escapedName}`, $options: "i" } });
   }
 
   if (orClauses.length === 0) {

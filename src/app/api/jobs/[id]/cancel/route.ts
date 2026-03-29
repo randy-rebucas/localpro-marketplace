@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
-import { ForbiddenError, NotFoundError, UnprocessableError, ValidationError } from "@/lib/errors";
+import { ForbiddenError, NotFoundError, UnprocessableError, ValidationError, assertObjectId } from "@/lib/errors";
 import { canTransition } from "@/lib/jobLifecycle";
 import { getPaymentSettings } from "@/lib/appSettings";
 import { calculateCancellationFee } from "@/lib/commission";
@@ -39,6 +39,7 @@ export const POST = withHandler(async (
   const user = await requireUser();
 
   const { id } = await params;
+  assertObjectId(id, "jobId");
 
   const body = await req.json().catch(() => ({}));
   const parsed = CancelSchema.safeParse(body);

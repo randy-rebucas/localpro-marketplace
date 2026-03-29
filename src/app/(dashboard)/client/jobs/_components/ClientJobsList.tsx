@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useCallback } from "react";
 import Link from "next/link";
+import { usePathname, useSearchParams } from "next/navigation";
 import { JobStatusBadge, EscrowBadge } from "@/components/ui/Badge";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import {
@@ -25,10 +26,18 @@ const SORT_OPTIONS: { label: string; value: SortOption }[] = [
   { label: "Budget ↓",  value: "budget_low" },
 ];
 
+interface Pagination {
+  page: number;
+  total: number;
+  totalPages: number;
+  pageSize: number;
+}
+
 interface ClientJobsListProps {
   jobs: JobWithProvider[];
   quoteCountMap: Record<string, number>;
   fundedAmounts?: Record<string, number>;
+  pagination?: Pagination;
 }
 
 /* ─── Tab definitions ─────────────────────────────────────────── */
@@ -104,7 +113,17 @@ export default function ClientJobsList({
   jobs,
   quoteCountMap,
   fundedAmounts = {},
+  pagination,
 }: ClientJobsListProps) {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  function pageHref(p: number) {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("page", String(p));
+    return `${pathname}?${params.toString()}`;
+  }
+
   const [activeTab,   setActiveTab]   = useState<JobStatus | "all">("all");
   const [search,      setSearch]      = useState("");
   const [sortBy,      setSortBy]      = useState<SortOption>("date_desc");
@@ -486,6 +505,33 @@ export default function ClientJobsList({
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* ── Pagination controls ── */}
+      {pagination && pagination.totalPages > 1 && (
+        <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+          <p className="text-xs text-slate-400">
+            Page {pagination.page} of {pagination.totalPages} · {pagination.total} total job{pagination.total !== 1 ? "s" : ""}
+          </p>
+          <div className="flex gap-2">
+            {pagination.page > 1 && (
+              <Link
+                href={pageHref(pagination.page - 1)}
+                className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors"
+              >
+                ← Previous
+              </Link>
+            )}
+            {pagination.page < pagination.totalPages && (
+              <Link
+                href={pageHref(pagination.page + 1)}
+                className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors"
+              >
+                Next →
+              </Link>
+            )}
+          </div>
         </div>
       )}
     </div>

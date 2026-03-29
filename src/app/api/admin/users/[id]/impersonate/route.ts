@@ -3,6 +3,7 @@ import { requireUser, requireRole, signAccessToken } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { NotFoundError, assertObjectId } from "@/lib/errors";
 import { userRepository } from "@/repositories/user.repository";
+import { activityRepository } from "@/repositories/activity.repository";
 
 /**
  * POST /api/admin/users/[id]/impersonate
@@ -69,6 +70,13 @@ export const POST = withHandler(async (
     sameSite: "strict",
     maxAge: 60 * 60,
     path: "/",
+  });
+
+  // Audit log: record who impersonated whom for compliance
+  void activityRepository.log({
+    userId: admin.userId,
+    eventType: "admin_impersonation",
+    metadata: { impersonatedUserId: targetId, impersonatedUserRole: target.role },
   });
 
   return response;

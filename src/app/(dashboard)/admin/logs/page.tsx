@@ -38,6 +38,7 @@ export const EVENT_CONFIG: Record<ActivityEventType, { label: string; color: str
   recurring_job_spawned:         { label: "Recurring Job Spawned",      color: "bg-teal-100 text-teal-700 border-teal-200",         dot: "bg-teal-500" },
   job_cancelled:                 { label: "Job Cancelled",              color: "bg-slate-100 text-slate-600 border-slate-200",      dot: "bg-slate-500" },
   admin_ledger_entry:            { label: "Ledger Entry",               color: "bg-teal-100 text-teal-700 border-teal-200",          dot: "bg-teal-500" },
+  admin_impersonation:           { label: "Admin Impersonation",        color: "bg-rose-100 text-rose-700 border-rose-200",           dot: "bg-rose-500" },
 };
 
 export const ALL_EVENT_TYPES = Object.keys(EVENT_CONFIG) as ActivityEventType[];

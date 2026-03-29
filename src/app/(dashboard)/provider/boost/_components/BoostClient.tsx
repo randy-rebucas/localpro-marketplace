@@ -20,6 +20,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import type { FeaturedListingType } from "@/types";
+import { isPayMongoCheckoutUrl } from "@/lib/utils";
 import {
   FEATURED_LISTING_LABELS,
   FEATURED_LISTING_DESCRIPTIONS,
@@ -101,6 +102,10 @@ export default function BoostClient({
         return;
       }
       if (data.checkoutUrl) {
+        if (!isPayMongoCheckoutUrl(data.checkoutUrl)) {
+          toast.error("Invalid checkout URL.");
+          return;
+        }
         window.location.href = data.checkoutUrl;
         return;
       }

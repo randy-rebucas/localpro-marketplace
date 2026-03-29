@@ -77,7 +77,7 @@ export default function PesoJobsPage() {
   const [preview, setPreview] = useState<PesoJob | null>(null);
   const [applicants, setApplicants] = useState<Applicant[]>([]);
   const [applicantsLoading, setApplicantsLoading] = useState(false);
-  const [applicantUpdating, setApplicantUpdating] = useState<string | null>(null);
+  const [applicantUpdating, setApplicantUpdating] = useState<Set<string>>(new Set());
   const drawerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -101,7 +101,7 @@ export default function PesoJobsPage() {
   }, []);
 
   async function updateApplicantStatus(jobId: string, appId: string, status: Applicant["status"]) {
-    setApplicantUpdating(appId);
+    setApplicantUpdating((prev) => new Set(prev).add(appId));
     try {
       const res = await apiFetch(`/api/apply/${jobId}`, {
         method: "PATCH",
@@ -114,7 +114,7 @@ export default function PesoJobsPage() {
         );
       }
     } finally {
-      setApplicantUpdating(null);
+      setApplicantUpdating((prev) => { const s = new Set(prev); s.delete(appId); return s; });
     }
   }
 
@@ -438,19 +438,25 @@ export default function PesoJobsPage() {
                             <span className="font-semibold">Availability:</span> {app.availability}
                           </p>
 
-                          {/* Resume */}
-                          {app.resumeUrl && (
-                            <a
-                              href={app.resumeUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-blue-600 hover:text-blue-800 transition-colors"
-                            >
-                              <FileText className="h-3.5 w-3.5" />
-                              View Resume
-                              <ExternalLink className="h-3 w-3" />
-                            </a>
-                          )}
+                          {/* Resume — only render if URL uses http/https scheme */}
+                          {app.resumeUrl && (() => {
+                            try {
+                              const { protocol } = new URL(app.resumeUrl);
+                              if (protocol !== "https:" && protocol !== "http:") return null;
+                            } catch { return null; }
+                            return (
+                              <a
+                                href={app.resumeUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-blue-600 hover:text-blue-800 transition-colors"
+                              >
+                                <FileText className="h-3.5 w-3.5" />
+                                View Resume
+                                <ExternalLink className="h-3 w-3" />
+                              </a>
+                            );
+                          })()}
 
                           {/* Cover letter */}
                           <p className="text-xs text-slate-600 leading-relaxed line-clamp-3">
@@ -462,7 +468,7 @@ export default function PesoJobsPage() {
                             <div className="flex gap-1.5 flex-wrap pt-1">
                               {app.status !== "shortlisted" && (
                                 <button
-                                  disabled={applicantUpdating === app._id}
+                                  disabled={applicantUpdating.has(app._id)}
                                   onClick={() => updateApplicantStatus(preview._id, app._id, "shortlisted")}
                                   className="text-[11px] font-medium px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 disabled:opacity-50 transition-colors"
                                 >
@@ -470,7 +476,7 @@ export default function PesoJobsPage() {
                                 </button>
                               )}
                               <button
-                                disabled={applicantUpdating === app._id}
+                                disabled={applicantUpdating.has(app._id)}
                                 onClick={() => updateApplicantStatus(preview._id, app._id, "hired")}
                                 className="text-[11px] font-medium px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 disabled:opacity-50 transition-colors"
                               >
@@ -478,7 +484,7 @@ export default function PesoJobsPage() {
                               </button>
                               {app.status !== "rejected" && (
                                 <button
-                                  disabled={applicantUpdating === app._id}
+                                  disabled={applicantUpdating.has(app._id)}
                                   onClick={() => updateApplicantStatus(preview._id, app._id, "rejected")}
                                   className="text-[11px] font-medium px-2.5 py-1 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 disabled:opacity-50 transition-colors"
                                 >

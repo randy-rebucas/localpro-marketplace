@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireUser, requireCapability } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
-import { ValidationError, NotFoundError } from "@/lib/errors";
+import { ValidationError, NotFoundError, assertObjectId } from "@/lib/errors";
 import { userRepository, notificationRepository } from "@/repositories";
 import { pushNotification } from "@/lib/events";
 
@@ -20,6 +20,7 @@ export const PATCH = withHandler(async (
   requireCapability(adminUser, "manage_kyc");
 
   const { userId } = await params;
+  assertObjectId(userId, "userId");
   const body = await req.json().catch(() => ({}));
   const parsed = ReviewSchema.safeParse(body);
   if (!parsed.success) throw new ValidationError(parsed.error.errors[0].message);

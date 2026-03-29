@@ -1,30 +1,19 @@
+import { jobRepository } from "@/repositories/job.repository";
 import { quoteRepository } from "@/repositories/quote.repository";
-import { connectDB } from "@/lib/db";
-import Category from "@/models/Category";
-import Job from "@/models/Job";
-import Quote from "@/models/Quote";
+import { categoryRepository } from "@/repositories/category.repository";
 import MarketplaceClient from "../MarketplaceClient";
 import type { IJob } from "@/types";
 
 export async function MarketplaceContent({ userId, refJobId }: { userId: string; refJobId?: string }) {
-  await connectDB();
-
   const [rawJobs, categoryDocs, providerQuotes] = await Promise.all([
-    Job.find({ status: "open" })
-      .populate("clientId", "name isVerified avatar")
-      .sort({ createdAt: -1 })
-      .limit(100)
-      .lean(),
-    Category.find().sort({ order: 1 }).select("name").lean(),
+    jobRepository.findOpenForMarketplace(100),
+    categoryRepository.findAll(),
     quoteRepository.findByProvider(userId),
   ]);
 
   // Count active (non-rejected) quotes per job
   const jobIds = rawJobs.map((j) => j._id);
-  const quoteAgg = await Quote.aggregate<{ _id: string; count: number }>([
-    { $match: { jobId: { $in: jobIds }, status: { $ne: "rejected" } } },
-    { $group: { _id: "$jobId", count: { $sum: 1 } } },
-  ]);
+  const quoteAgg = await quoteRepository.countNonRejectedByJobIds(jobIds);
   const quoteCounts: Record<string, number> = {};
   quoteAgg.forEach((q) => { quoteCounts[q._id.toString()] = q.count; });
 

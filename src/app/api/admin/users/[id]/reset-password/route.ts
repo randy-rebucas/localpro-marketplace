@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireUser, requireCapability } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
-import { NotFoundError } from "@/lib/errors";
+import { NotFoundError, assertObjectId } from "@/lib/errors";
 import { userRepository } from "@/repositories/user.repository";
 import { sendPasswordResetEmail } from "@/lib/email";
 import crypto from "crypto";
@@ -20,6 +20,7 @@ export const POST = withHandler(async (
   requireCapability(admin, "manage_users");
 
   const { id } = await params;
+  assertObjectId(id, "userId");
   const user = await userRepository.findById(id);
   if (!user) throw new NotFoundError("User");
 

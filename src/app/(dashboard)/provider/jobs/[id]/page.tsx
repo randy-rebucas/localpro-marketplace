@@ -61,8 +61,8 @@ export default async function ProviderJobDetailPage({
   if (!job) notFound();
 
   // Normalize photo arrays
-  const beforePhoto = Array.isArray(job.beforePhoto) ? job.beforePhoto : job.beforePhoto ? [job.beforePhoto as unknown as string] : [];
-  const afterPhoto  = Array.isArray(job.afterPhoto)  ? job.afterPhoto  : job.afterPhoto  ? [job.afterPhoto  as unknown as string] : [];
+  const beforePhoto = Array.isArray(job.beforePhoto) ? job.beforePhoto : typeof job.beforePhoto === "string" ? [job.beforePhoto] : [];
+  const afterPhoto  = Array.isArray(job.afterPhoto)  ? job.afterPhoto  : typeof job.afterPhoto  === "string" ? [job.afterPhoto]  : [];
 
   // Payment / escrow amounts
   const paymentAmounts = await paymentRepository.findAmountsByJobIds([id]);

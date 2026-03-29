@@ -66,6 +66,21 @@ export function truncate(text: string, maxLength: number): string {
   return `${text.slice(0, maxLength)}...`;
 }
 
+const ALLOWED_CHECKOUT_HOSTNAMES = ["checkout.paymongo.com", "api.paymongo.com", "localhost"];
+
+/**
+ * Validates that a checkout URL returned by the API is a PayMongo-hosted URL.
+ * Prevents open-redirect attacks if the API response is tampered.
+ */
+export function isPayMongoCheckoutUrl(url: string): boolean {
+  try {
+    const { hostname } = new URL(url);
+    return ALLOWED_CHECKOUT_HOSTNAMES.some((h) => hostname === h || hostname.endsWith(`.${h}`));
+  } catch {
+    return false;
+  }
+}
+
 export function apiResponse<T>(data: T, status = 200) {
   return Response.json(data, { status });
 }

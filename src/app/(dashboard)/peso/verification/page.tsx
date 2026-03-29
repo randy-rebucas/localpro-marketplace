@@ -32,26 +32,30 @@ function getInitials(name: string) {
   return name.slice(0, 2).toUpperCase();
 }
 
+const PAGE_SIZE = 50;
+
 export default function VerificationPage() {
   const [providers, setProviders] = useState<Provider[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [saving, setSaving] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
 
-  function load() {
+  function load(p = page) {
     setLoading(true);
-    apiFetch("/api/peso/workforce?limit=100")
+    apiFetch(`/api/peso/workforce?limit=${PAGE_SIZE}&page=${p}`)
       .then(async (r) => {
         if (!r.ok) throw new Error("Failed to load providers");
         return r.json();
       })
-      .then((d) => setProviders(d.data ?? []))
-      .catch((e) => toast.error(e.message))
+      .then((d) => { setProviders(d.data ?? []); setTotal(d.total ?? 0); })
+      .catch((e: unknown) => toast.error(e instanceof Error ? e.message : "Failed to load"))
       .finally(() => setLoading(false));
   }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(page); }, [page]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function toggleTag(provider: Provider, tag: VerificationTag) {
     const current = provider.pesoVerificationTags ?? [];
@@ -281,6 +285,29 @@ export default function VerificationPage() {
           </ul>
         )}
       </div>
+
+      {/* Pagination */}
+      {total > PAGE_SIZE && (
+        <div className="flex items-center justify-between gap-4 text-sm text-slate-500">
+          <span>{((page - 1) * PAGE_SIZE) + 1}–{Math.min(page * PAGE_SIZE, total)} of {total}</span>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1 || loading}
+              className="px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              ← Prev
+            </button>
+            <button
+              onClick={() => setPage((p) => p + 1)}
+              disabled={page * PAGE_SIZE >= total || loading}
+              className="px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              Next →
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

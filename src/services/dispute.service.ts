@@ -117,6 +117,7 @@ export class DisputeService {
     disputeId: string,
     input: ResolveDisputeInput
   ) {
+    assertObjectId(disputeId, "disputeId");
     const disputeDoc = await disputeRepository.getDocById(disputeId);
     if (!disputeDoc) throw new NotFoundError("Dispute");
 

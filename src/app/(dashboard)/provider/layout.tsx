@@ -7,7 +7,7 @@ export default async function ProviderLayout({ children }: { children: React.Rea
   const currentUser = await getCurrentUser();
 
   if (currentUser) {
-    const userDoc = await userRepository.findById(currentUser.userId) as { approvalStatus?: string } | null;
+    const userDoc = await userRepository.findById(currentUser.userId);
     const approvalStatus = userDoc?.approvalStatus ?? "approved";
 
     if (approvalStatus === "pending_approval") {

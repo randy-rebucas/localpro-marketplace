@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireUser, requireCapability } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
-import { ValidationError } from "@/lib/errors";
+import { ValidationError, assertObjectId } from "@/lib/errors";
 import { payoutService } from "@/services/payout.service";
 
 const UpdatePayoutSchema = z.object({
@@ -18,6 +18,7 @@ export const PATCH = withHandler(async (
   requireCapability(user, "manage_payouts");
 
   const { id } = await params;
+  assertObjectId(id, "payoutId");
   const body = await req.json();
   const parsed = UpdatePayoutSchema.safeParse(body);
   if (!parsed.success) throw new ValidationError(parsed.error.errors[0].message);

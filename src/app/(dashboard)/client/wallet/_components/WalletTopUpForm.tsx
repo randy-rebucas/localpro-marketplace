@@ -74,8 +74,8 @@ export default function WalletTopUpForm({ currentBalance }: Props) {
         setStep("confirm");
         return;
       }
-      // Persist session ID so WalletTopUpConfirm can verify it on the success page
-      sessionStorage.setItem("wallet_topup_session", data.sessionId);
+      // Persist session ID (with TTL) so WalletTopUpConfirm can verify it on the success page
+      sessionStorage.setItem("wallet_topup_session", JSON.stringify({ sessionId: data.sessionId, createdAt: Date.now() }));
       // Hard redirect to PayMongo checkout page
       window.location.assign(data.checkoutUrl);
     } catch {

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import toast from "react-hot-toast";
 import { marked } from "marked";
+import DOMPurify from "dompurify";
 import {
   ArrowLeft, Loader2, Star, MapPin, CalendarDays, PhoneCall,
   Banknote, Tag, Briefcase, FileText, Gift, ClipboardList, Info,
@@ -49,7 +50,7 @@ const INPUT_CLS =
 const LABEL_CLS = "text-xs font-semibold text-slate-500 uppercase tracking-wide";
 
 function md(src: string) {
-  return src ? (marked(src) as string) : "";
+  return src ? DOMPurify.sanitize(marked(src) as string) : "";
 }
 
 function PreviewSection({

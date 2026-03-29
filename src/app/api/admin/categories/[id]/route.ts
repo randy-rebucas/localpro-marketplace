@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { withHandler } from "@/lib/utils";
 import { requireUser, requireCapability } from "@/lib/auth";
 import { categoryRepository } from "@/repositories";
-import { NotFoundError } from "@/lib/errors";
+import { NotFoundError, assertObjectId } from "@/lib/errors";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -12,16 +12,23 @@ export const PATCH = withHandler(async (req: NextRequest, ctx: Ctx) => {
   requireCapability(user, "manage_categories");
 
   const { id } = await ctx.params;
-  const updates = await req.json();
+  assertObjectId(id, "categoryId");
+  const body = await req.json();
+
+  // Allowlist accepted fields to prevent mass assignment
+  type UpdatePayload = { name?: string; slug?: string; isActive?: boolean; order?: number; description?: string };
+  const updates: UpdatePayload = {};
+  if (typeof body.name        === "string")  updates.name     = body.name.trim();
+  if (typeof body.isActive    === "boolean") updates.isActive = body.isActive;
+  if (typeof body.order       === "number")  updates.order    = body.order;
+  if (typeof body.description === "string")  updates.description = body.description.trim();
 
   // Rebuild slug if name changes
   if (updates.name) {
     updates.slug = updates.name
-      .trim()
       .toLowerCase()
       .replace(/\s+/g, "-")
       .replace(/[^a-z0-9-]/g, "");
-    updates.name = updates.name.trim();
   }
 
   const category = await categoryRepository.updateById(id, updates);
@@ -36,6 +43,7 @@ export const DELETE = withHandler(async (_req: NextRequest, ctx: Ctx) => {
   requireCapability(user, "manage_categories");
 
   const { id } = await ctx.params;
+  assertObjectId(id, "categoryId");
   const category = await categoryRepository.deleteById(id);
   if (!category) throw new NotFoundError("Category");
 

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireUser, requireRole } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
-import { ValidationError, NotFoundError, UnprocessableError } from "@/lib/errors";
+import { ValidationError, NotFoundError, UnprocessableError, assertObjectId } from "@/lib/errors";
 import { jobRepository, transactionRepository, activityRepository, notificationRepository, quoteRepository } from "@/repositories";
 import { calculateCommission, getCommissionRate } from "@/lib/commission";
 import { pushStatusUpdateMany, pushNotification } from "@/lib/events";
@@ -22,6 +22,7 @@ export const POST = withHandler(async (
   requireRole(user, "admin");
 
   const { id } = await params;
+  assertObjectId(id, "jobId");
 
   const body = await req.json().catch(() => ({}));
   const parsed = OverrideSchema.safeParse(body);

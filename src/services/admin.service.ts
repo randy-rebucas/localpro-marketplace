@@ -7,7 +7,7 @@ import {
   notificationRepository,
 } from "@/repositories";
 import { pushNotification, pushStatusUpdate } from "@/lib/events";
-import { NotFoundError, UnprocessableError } from "@/lib/errors";
+import { NotFoundError, UnprocessableError, assertObjectId } from "@/lib/errors";
 import { sendBusinessJobInviteEmail } from "@/lib/email";
 import type { JobStatus, AdminStats } from "@/types";
 
@@ -43,6 +43,7 @@ export class AdminService {
   }
 
   async approveJob(adminUserId: string, jobId: string, riskScore?: number) {
+    assertObjectId(jobId, "jobId");
     const jobDoc = await jobRepository.getDocById(jobId);
     if (!jobDoc) throw new NotFoundError("Job");
 
@@ -183,6 +184,7 @@ export class AdminService {
   }
 
   async rejectJob(adminUserId: string, jobId: string) {
+    assertObjectId(jobId, "jobId");
     const jobDoc = await jobRepository.getDocById(jobId);
     if (!jobDoc) throw new NotFoundError("Job");
 

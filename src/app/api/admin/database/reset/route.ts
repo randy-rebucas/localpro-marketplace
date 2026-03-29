@@ -7,7 +7,7 @@
  * - seed_only:        Inserts missing seed data without wiping existing records
  * - clear_collection: Clears a single named collection
  *
- * Requires confirmToken === process.env.DB_RESET_TOKEN (or falls back to NEXTAUTH_SECRET).
+ * Requires confirmToken === process.env.DB_RESET_TOKEN (must be set explicitly; no fallback).
  * Admin-only. Never available in production unless DB_RESET_ENABLED=true.
  */
 
@@ -479,8 +479,11 @@ export const POST = withHandler(async (req: NextRequest) => {
     confirmToken: string;
   };
 
-  const expectedToken = process.env.DB_RESET_TOKEN ?? process.env.NEXTAUTH_SECRET ?? "";
-  if (!expectedToken || body.confirmToken !== expectedToken) {
+  const expectedToken = process.env.DB_RESET_TOKEN;
+  if (!expectedToken) {
+    throw new ForbiddenError("DB_RESET_TOKEN is not configured. Set it explicitly in your environment.");
+  }
+  if (body.confirmToken !== expectedToken) {
     throw new ForbiddenError("Invalid confirmation token.");
   }
 

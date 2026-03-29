@@ -191,8 +191,8 @@ function PhotoUploadModal({
 export default function ProviderJobActions({ jobId, status, escrowStatus, beforePhoto: _beforePhoto, afterPhoto: _afterPhoto, currentUserId }: Props) {
   const router = useRouter();
   // Normalize: legacy docs may have stored a plain string before the array migration
-  const beforePhoto = Array.isArray(_beforePhoto) ? _beforePhoto : _beforePhoto ? [_beforePhoto as unknown as string] : [];
-  const afterPhoto  = Array.isArray(_afterPhoto)  ? _afterPhoto  : _afterPhoto  ? [_afterPhoto  as unknown as string] : [];
+  const beforePhoto = Array.isArray(_beforePhoto) ? _beforePhoto : typeof _beforePhoto === "string" ? [_beforePhoto] : [];
+  const afterPhoto  = Array.isArray(_afterPhoto)  ? _afterPhoto  : typeof _afterPhoto  === "string" ? [_afterPhoto]  : [];
   const [showStartModal, setShowStartModal] = useState(false);
   const [showCompleteModal, setShowCompleteModal] = useState(false);
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
@@ -201,8 +201,13 @@ export default function ProviderJobActions({ jobId, status, escrowStatus, before
   const [uploading, setUploading] = useState(false);
 
   async function withdrawJob() {
-    if (withdrawReason.trim().length < 5) {
+    const reason = withdrawReason.trim();
+    if (reason.length < 5) {
       toast.error("Please enter a reason (at least 5 characters)");
+      return;
+    }
+    if (reason.length > 500) {
+      toast.error("Reason must be 500 characters or fewer");
       return;
     }
     setWithdrawing(true);
@@ -210,7 +215,7 @@ export default function ProviderJobActions({ jobId, status, escrowStatus, before
       const res = await apiFetch(`/api/jobs/${jobId}/withdraw`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ reason: withdrawReason.trim() }),
+        body: JSON.stringify({ reason }),
       });
       const data = await res.json();
       if (!res.ok) { toast.error(data.error ?? "Failed to withdraw"); return; }

@@ -98,6 +98,50 @@ export class QuoteRepository extends BaseRepository<QuoteDocument> {
     await this.connect();
     return Quote.countDocuments({ jobId: new Types.ObjectId(jobId) });
   }
+
+  /** Non-rejected quote counts grouped by jobId (for marketplace display). */
+  async countNonRejectedByJobIds(jobIds: unknown[]): Promise<{ _id: string; count: number }[]> {
+    await this.connect();
+    return Quote.aggregate([
+      { $match: { jobId: { $in: jobIds }, status: { $ne: "rejected" } } },
+      { $group: { _id: "$jobId", count: { $sum: 1 } } },
+    ]);
+  }
+
+  /**
+   * Atomically accept a quote only if it is still "pending" (CAS guard).
+   * Returns null if another request already accepted/rejected it concurrently.
+   */
+  async atomicAccept(quoteId: string): Promise<QuoteDocument | null> {
+    await this.connect();
+    return Quote.findOneAndUpdate(
+      { _id: quoteId, status: "pending" },
+      { $set: { status: "accepted" } },
+      { new: true }
+    ).lean() as unknown as QuoteDocument | null;
+  }
+
+  /** Revert an accepted quote back to pending (rollback on concurrent job conflict). */
+  async revertAccepted(quoteId: string): Promise<void> {
+    await this.connect();
+    await Quote.findByIdAndUpdate(quoteId, { $set: { status: "pending" } });
+  }
+
+  /**
+   * Atomically revise a pending quote (CAS guard: status must be "pending").
+   * Increments revisionCount and applies the provided field updates.
+   */
+  async atomicRevise(
+    quoteId: string,
+    updates: Record<string, unknown>
+  ): Promise<QuoteDocument | null> {
+    await this.connect();
+    return Quote.findOneAndUpdate(
+      { _id: quoteId, status: "pending" },
+      { $set: updates, $inc: { revisionCount: 1 } },
+      { new: true }
+    ).lean() as unknown as QuoteDocument | null;
+  }
 }
 
 export const quoteRepository = new QuoteRepository();
