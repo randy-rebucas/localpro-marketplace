@@ -116,6 +116,39 @@ export class PesoService {
     );
   }
 
+  async closePesoJob(officerId: string, jobId: string) {
+    const job = await jobRepository.getDocById(jobId);
+    if (!job) throw new NotFoundError("Job");
+
+    // Verify the job was posted by this officer or their office
+    const office = await pesoRepository.findOfficeByOfficerId(officerId);
+    if (!office) throw new NotFoundError("PESO office");
+
+    const rawHead = office.headOfficerId as unknown as Record<string, unknown> | string | null;
+    const headId  = rawHead && typeof rawHead === "object" ? String(rawHead._id) : String(rawHead ?? "");
+    const staffIds = ((office.officerIds ?? []) as unknown[]).map((o) => {
+      if (o && typeof o === "object") return String((o as Record<string, unknown>)._id ?? o);
+      return String(o);
+    });
+    const officerIds = [...new Set([headId, ...staffIds].filter(Boolean))];
+
+    if (!officerIds.includes(String(job.pesoPostedBy))) {
+      throw new ForbiddenError("You can only close jobs posted by your office");
+    }
+
+    const updated = await jobRepository.updateById(jobId, { status: "completed" });
+    if (!updated) throw new NotFoundError("Job");
+
+    await activityRepository.log({
+      userId:    officerId,
+      eventType: "job_completed",
+      jobId:     jobId,
+      metadata:  { previousStatus: job.status },
+    });
+
+    return updated;
+  }
+
   async referProvider(officerId: string, dto: ReferProviderDto) {
     const existing = await userRepository.findByEmail(dto.email);
     if (existing) throw new ConflictError("A user with this email already exists");

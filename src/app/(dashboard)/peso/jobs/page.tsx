@@ -2,9 +2,11 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { PlusCircle, Star, Briefcase, Search, X, MapPin, CalendarDays, Tag, Zap, FileText, StickyNote, Clock, Users, CheckCircle2, XCircle, User, ExternalLink } from "lucide-react";
+import toast from "react-hot-toast";
+import { PlusCircle, Star, Briefcase, Search, X, MapPin, CalendarDays, Tag, Zap, FileText, StickyNote, Clock, Users, CheckCircle2, XCircle, User, ExternalLink, Archive, Loader2 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { apiFetch } from "@/lib/fetchClient";
+import Modal from "@/components/ui/Modal";
 
 interface PesoJob {
   _id: string;
@@ -78,6 +80,8 @@ export default function PesoJobsPage() {
   const [applicants, setApplicants] = useState<Applicant[]>([]);
   const [applicantsLoading, setApplicantsLoading] = useState(false);
   const [applicantUpdating, setApplicantUpdating] = useState<Set<string>>(new Set());
+  const [closeJobId, setCloseJobId] = useState<string | null>(null);
+  const [closingJobId, setClosingJobId] = useState<string | null>(null);
   const drawerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -115,6 +119,35 @@ export default function PesoJobsPage() {
       }
     } finally {
       setApplicantUpdating((prev) => { const s = new Set(prev); s.delete(appId); return s; });
+    }
+  }
+
+  async function handleCloseJob(jobId: string) {
+    setClosingJobId(jobId);
+    try {
+      const res = await apiFetch(`/api/peso/jobs/${jobId}/close`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setJobs((prev) =>
+          prev.map((j) => (j._id === jobId ? { ...j, status: updated.status } : j))
+        );
+        setCloseJobId(null);
+        if (preview?._id === jobId) {
+          setPreview({ ...preview, status: updated.status });
+        }
+        toast.success("Job archived successfully");
+      } else {
+        const error = await res.json();
+        toast.error(error.error || "Failed to close job");
+      }
+    } catch (err) {
+      toast.error("An error occurred");
+      console.error(err);
+    } finally {
+      setClosingJobId(null);
     }
   }
 
@@ -248,9 +281,20 @@ export default function PesoJobsPage() {
                 </p>
               </div>
               <div className="text-right shrink-0 space-y-1">
-                <span className={`inline-block text-xs px-2 py-0.5 rounded-full font-medium capitalize ${STATUS_META[job.status] ?? "bg-slate-100 text-slate-500"}`}>
-                  {job.status.replace(/_/g, " ")}
-                </span>
+                <div className="flex items-center justify-end gap-1.5">
+                  <span className={`inline-block text-xs px-2 py-0.5 rounded-full font-medium capitalize ${STATUS_META[job.status] ?? "bg-slate-100 text-slate-500"}`}>
+                    {job.status.replace(/_/g, " ")}
+                  </span>
+                  {job.status === "open" && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setCloseJobId(job._id); }}
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+                      title="Archive job"
+                    >
+                      <Archive className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
                 <p className="text-xs text-slate-400">{fmt(job.scheduleDate)}</p>
               </div>
             </button>
@@ -503,6 +547,42 @@ export default function PesoJobsPage() {
           </div>
         </>
       )}
+
+      {/* Close Job Modal */}
+      <Modal
+        isOpen={closeJobId !== null}
+        onClose={() => setCloseJobId(null)}
+        title="Archive Job"
+        size="sm"
+      >
+        <div className="space-y-4">
+          <p className="text-slate-600">
+            Are you sure you want to archive <strong>{jobs.find((j) => j._id === closeJobId)?.title}</strong>? This will be marked as completed and won't appear in the open jobs list.
+          </p>
+          <div className="flex gap-3 justify-end">
+            <button
+              onClick={() => setCloseJobId(null)}
+              className="px-4 py-2 text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => closeJobId && handleCloseJob(closeJobId)}
+              disabled={closingJobId !== null}
+              className="px-4 py-2 text-sm font-medium text-white bg-amber-600 hover:bg-amber-700 disabled:bg-amber-400 rounded-lg transition-colors flex items-center gap-2"
+            >
+              {closingJobId === closeJobId ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Archiving…
+                </>
+              ) : (
+                "Archive Job"
+              )}
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
