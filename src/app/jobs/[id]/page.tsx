@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { marked } from "marked";
+import { sanitizeMarkdown } from "@/lib/markdown";
 import {
   MapPin,
   CalendarDays,
@@ -312,7 +312,7 @@ export default async function JobDetailPage(
             </h2>
             <div
               className="prose prose-sm max-w-none text-slate-600 leading-relaxed"
-              dangerouslySetInnerHTML={{ __html: marked(job.description ?? "") as string }}
+              dangerouslySetInnerHTML={{ __html: sanitizeMarkdown(job.description ?? "") }}
             />
           </section>
 
@@ -325,7 +325,7 @@ export default async function JobDetailPage(
               </h2>
               <div
                 className="prose prose-sm max-w-none text-amber-800 leading-relaxed"
-                dangerouslySetInnerHTML={{ __html: marked(job.specialInstructions ?? "") as string }}
+                dangerouslySetInnerHTML={{ __html: sanitizeMarkdown(job.specialInstructions ?? "") }}
               />
             </section>
           )}

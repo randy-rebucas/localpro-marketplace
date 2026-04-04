@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import mongoose from "mongoose";
 import { userRepository } from "@/repositories";
-import { requireUser, revokeAllUserTokens } from "@/lib/auth";
+import { requireUser, revokeAllUserTokens, requireCsrfToken } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { connectDB } from "@/lib/db";
 import { ValidationError, NotFoundError } from "@/lib/errors";
@@ -22,6 +22,7 @@ const UpdateMeSchema = z.object({
 
 export const PUT = withHandler(async (req: NextRequest) => {
   const tokenUser = await requireUser();
+  requireCsrfToken(req, tokenUser);
   const body = await req.json();
   const parsed = UpdateMeSchema.safeParse(body);
   if (!parsed.success) throw new ValidationError(parsed.error.errors[0].message);

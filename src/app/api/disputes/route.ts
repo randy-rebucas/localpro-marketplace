@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { disputeService } from "@/services";
-import { requireUser } from "@/lib/auth";
+import { requireUser, requireCsrfToken } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { ValidationError } from "@/lib/errors";
 
@@ -19,6 +19,7 @@ export const GET = withHandler(async () => {
 
 export const POST = withHandler(async (req: NextRequest) => {
   const user = await requireUser();
+  requireCsrfToken(req, user);
 
   const body = await req.json();
   const parsed = CreateDisputeSchema.safeParse(body);

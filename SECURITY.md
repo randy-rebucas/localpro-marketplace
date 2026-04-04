@@ -2,15 +2,17 @@
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability, please report it confidentially by emailing the repository maintainers or using GitHub Security Advisories. Do **not** create public issues for security problems.
+If you discover a security vulnerability, please report it confidentially. **Do not create public issues for security problems.**
 
-- Email: [REPLACE_WITH_EMAIL]
-- GitHub Security Advisories: https://github.com/[REPO]/security/advisories
+- Email: security@localpromarketplace.com
+- GitHub Security Advisories: use the "Security" tab → "Report a vulnerability" on this repository
+
+We will acknowledge your report within 48 hours and aim to resolve confirmed vulnerabilities within 14 days.
 
 ## Sensitive Data Handling
 
 - **Never commit secrets** (API keys, credentials, tokens, etc.) to the repository.
-- All secrets must be stored in environment variables (e.g., `.env.local`).
+- All secrets must be stored in environment variables (see `.env.example` for the full list).
 - Ensure `.env.local` and other secret files are listed in `.gitignore`.
 - Rotate all secrets immediately if accidental exposure occurs.
 
@@ -24,28 +26,26 @@ If you discover a security vulnerability, please report it confidentially by ema
 
 - Use Vercel environment variables for production secrets.
 - Never share or expose `.env.local` or other sensitive files.
-- Review and update secrets regularly.
+- Review and rotate secrets regularly (recommended: every 90 days).
 
 ## Best Practices
 
-- Use strong passwords and enable 2FA on all accounts.
-- JWT tokens are short-lived and revocable; do not share tokens.
-- Rate limiting is enforced on sensitive endpoints.
-- Passwords are hashed with bcrypt-12.
-- Content Security Policy (CSP), HSTS, and other headers are enforced.
-- File uploads are validated and stored securely.
+- Use strong passwords and enable 2FA on all accounts (GitHub, Vercel, MongoDB Atlas, PayMongo).
+- JWT access tokens are short-lived (15 min); refresh tokens expire in 7 days and are rotatable.
+- Rate limiting is enforced on all sensitive endpoints (auth, payments, webhooks).
+- Passwords are hashed with bcrypt (cost factor 12).
+- Content Security Policy (CSP), HSTS (2-year), X-Frame-Options: DENY, and other security headers are enforced in production.
+- File uploads are validated for type and size before processing.
+- All markdown user content is sanitized with DOMPurify before rendering.
+- PayMongo webhook signatures are verified with HMAC-SHA256 and replay-attack protection (5-minute timestamp window).
 
 ## Incident Response
 
 If you suspect a breach or accidental leak:
-1. Immediately rotate all affected secrets.
-2. Notify the maintainers.
-3. Review access logs and revoke compromised credentials.
-4. Follow up with a post-incident review.
-
-## References
-- [Full Application Audit](docs/full-app-audit.md)
-- [Accounting Design](docs/accounting-design.md)
+1. Immediately rotate all affected secrets (JWT secrets, API keys, DB credentials).
+2. Notify the maintainers at security@localpromarketplace.com.
+3. Review access logs and revoke compromised tokens/sessions.
+4. Follow up with a post-incident review and document findings.
 
 ---
 

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { getCurrentUser } from "@/lib/auth";
 import { jobRepository } from "@/repositories/job.repository";
 import { quoteRepository } from "@/repositories/quote.repository";
-import { marked } from "marked";
+import { sanitizeMarkdown } from "@/lib/markdown";
 import { JobStatusBadge, EscrowBadge } from "@/components/ui/Badge";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import AdminJobActions from "../AdminJobActions";
@@ -153,7 +153,7 @@ export default async function AdminJobDetailPage({
             <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Description</p>
             <div
               className="text-slate-800 text-sm leading-relaxed bg-slate-50 rounded-lg p-3 prose prose-sm max-w-none"
-              dangerouslySetInnerHTML={{ __html: marked(j.description ?? "") as string }}
+              dangerouslySetInnerHTML={{ __html: sanitizeMarkdown(j.description ?? "") }}
             />
           </div>
 

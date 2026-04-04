@@ -108,7 +108,8 @@
       "Bash(node -e \"require\\(''''pino''''\\)\")",
       "Bash(npx vitest:*)",
       "Bash(npx js-yaml:*)",
-      "Bash(pnpm add:*)"
+      "Bash(pnpm add:*)",
+      "Bash(ls -la /c/Users/corew/localpro-marketplace/sentry*)"
     ]
   }
 }

@@ -1,9 +1,9 @@
 import jwt from "jsonwebtoken";
 import { cookies } from "next/headers";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import type { StaffCapability, UserRole } from "@/types";
 import { getRedis } from "@/lib/redis";
-import { randomUUID } from "crypto";
+import { randomUUID, createHmac, timingSafeEqual } from "crypto";
 
 const ACCESS_SECRET = process.env.JWT_SECRET as string;
 const REFRESH_SECRET = process.env.JWT_REFRESH_SECRET as string;
@@ -83,13 +83,6 @@ export function setAuthCookies(
   refreshToken: string
 ): void {
   const isProd = process.env.NODE_ENV === "production";
-
-  // SECURITY NOTE — JWT revocation gap:
-  // Access tokens are stateless and cannot be individually revoked before they
-  // expire (15 min). If a token must be invalidated immediately (e.g. account
-  // ban, password change), the only current mitigation is the short lifetime.
-  // TODO: implement a Redis-backed token deny-list checked in `requireUser`
-  // to enable instant revocation when needed.
 
   // L2: secure is always true in production. Set to false only in local dev
   //     over plain HTTP (e.g., http://localhost). In staging and prod, HTTPS
@@ -212,4 +205,49 @@ export function requireCapability(user: TokenPayload, capability: StaffCapabilit
   if (user.role === "admin") return;
   if (user.capabilities?.includes(capability)) return;
   throw new ForbiddenError();
+}
+
+// ─── CSRF Token Helpers ───────────────────────────────────────────────────────
+
+/**
+ * Generates an HMAC-based CSRF token for the given userId.
+ * The token encodes the current 1-hour window so it is naturally time-bounded.
+ * Two consecutive windows are accepted to avoid edge-case expiry at window boundaries.
+ */
+export function generateCsrfToken(userId: string): string {
+  const window = Math.floor(Date.now() / (60 * 60 * 1000)); // current 1-hour bucket
+  const mac = createHmac("sha256", ACCESS_SECRET)
+    .update(`${userId}:${window}`)
+    .digest("hex");
+  return `${window}.${mac}`;
+}
+
+/**
+ * Validates a CSRF token previously issued by generateCsrfToken.
+ * Accepts tokens from the current and previous 1-hour windows.
+ */
+export function verifyCsrfToken(token: string, userId: string): boolean {
+  if (!token) return false;
+  const currentWindow = Math.floor(Date.now() / (60 * 60 * 1000));
+
+  for (const w of [currentWindow, currentWindow - 1]) {
+    const expected = `${w}.${createHmac("sha256", ACCESS_SECRET).update(`${userId}:${w}`).digest("hex")}`;
+    try {
+      if (timingSafeEqual(Buffer.from(token), Buffer.from(expected))) return true;
+    } catch {
+      // Buffer lengths differ — not a match
+    }
+  }
+  return false;
+}
+
+/**
+ * Extracts and validates the X-CSRF-Token header for the authenticated user.
+ * Throws ForbiddenError if missing or invalid.
+ */
+export function requireCsrfToken(req: NextRequest, user: TokenPayload): void {
+  const token = req.headers.get("x-csrf-token") ?? "";
+  if (!verifyCsrfToken(token, user.userId)) {
+    throw new ForbiddenError("Invalid or missing CSRF token");
+  }
 }

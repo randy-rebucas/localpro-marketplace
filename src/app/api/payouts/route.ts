@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireUser } from "@/lib/auth";
+import { requireUser, requireCsrfToken } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { payoutService } from "@/services/payout.service";
 import { checkRateLimit } from "@/lib/rateLimit";
@@ -14,6 +14,7 @@ export const GET = withHandler(async (_req: NextRequest) => {
 /** POST /api/payouts — provider requests a payout */
 export const POST = withHandler(async (req: NextRequest) => {
   const user = await requireUser();
+  requireCsrfToken(req, user);
 
   // Rate limit: 3 payout requests per hour per user.
   // failOpen: false — hard-fail if Redis is down (don't allow unlimited payouts).

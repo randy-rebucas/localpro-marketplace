@@ -79,7 +79,7 @@ export default function RaiseDisputeButton({ jobId, status }: Props) {
 
     setLoading(true);
     try {
-      const res = await fetch("/api/disputes", {
+      const res = await apiFetch("/api/disputes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ jobId, reason: reason.trim(), evidence }),

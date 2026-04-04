@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import { marked } from "marked";
+import { sanitizeMarkdown } from "@/lib/markdown";
 
 export type KnowledgeFolder = "client" | "provider" | "business" | "agency" | "peso";
 
@@ -48,7 +48,7 @@ function parseFile(folder: KnowledgeFolder, filename: string): KnowledgeArticle 
   const { data, body } = parseFrontmatter(raw);
 
   const slug = filename.replace(/\.md$/, "");
-  const contentHtml = marked(body) as string;
+  const contentHtml = sanitizeMarkdown(body);
 
   return {
     slug,
