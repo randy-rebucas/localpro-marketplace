@@ -13,6 +13,7 @@ import User from "@/models/User";
 import Job from "@/models/Job";
 import Quote from "@/models/Quote";
 import ProviderProfile from "@/models/ProviderProfile";
+import BusinessOrganization from "@/models/BusinessOrganization";
 import { activityRepository } from "@/repositories";
 import { Types } from "mongoose";
 
@@ -72,7 +73,14 @@ export class CascadeService {
     );
     affected.profilesUpdated = profileUpdate.modifiedCount ?? 0;
 
-    // 5. Log the cascade action
+    // 5. Suspend any business organization owned by this user
+    const orgUpdate = await BusinessOrganization.updateMany(
+      { ownerId: userObjId },
+      { $set: { planStatus: "cancelled" } }
+    );
+    affected.businessOrgsUpdated = orgUpdate.modifiedCount ?? 0;
+
+    // 6. Log the cascade action
     try {
       await activityRepository.log({
         userId,

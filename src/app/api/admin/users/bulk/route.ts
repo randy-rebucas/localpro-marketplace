@@ -4,6 +4,7 @@ import { requireUser, requireCapability } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { ValidationError, ForbiddenError } from "@/lib/errors";
 import { userRepository } from "@/repositories";
+import { cascadeService } from "@/services/cascade.service";
 
 const BulkSchema = z.object({
   ids: z.array(z.string().min(1)).min(1).max(200),
@@ -42,8 +43,10 @@ export const POST = withHandler(async (req: NextRequest) => {
     case "delete":
       // Only admins can bulk soft-delete; also exclude other admins from deletion
       if (admin.role !== "admin") throw new ForbiddenError();
-      update = { isDeleted: true, deletedAt: new Date(), isSuspended: true };
-      break;
+      // Run cascade per user so business org cleanup, job cancellation, and
+      // quote rejection are applied consistently (same as single-user delete).
+      await Promise.all(ids.map((id) => cascadeService.cascadeSoftDelete(id)));
+      return NextResponse.json({ ok: true, affected: ids.length });
   }
 
   const result = await userRepository.updateMany(
