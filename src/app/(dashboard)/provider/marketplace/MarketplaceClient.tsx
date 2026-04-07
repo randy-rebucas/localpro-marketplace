@@ -210,8 +210,8 @@ export default function MarketplaceClient({
 
     if (filterVerified) {
       list = list.filter((j) => {
-        const client = j.clientId as { isVerified?: boolean } | string;
-        return typeof client === "object" && client.isVerified === true;
+        const client = j.clientId as { isVerified?: boolean } | string | null;
+        return client !== null && typeof client === "object" && client.isVerified === true;
       });
     }
 
@@ -732,8 +732,8 @@ export default function MarketplaceClient({
             const isUrgent = job.scheduleDate &&
               new Date(job.scheduleDate).getTime() <= Date.now() + URGENCY_HOURS * 60 * 60 * 1000 &&
               new Date(job.scheduleDate).getTime() >= Date.now();
-            const client = job.clientId as { isVerified?: boolean; name?: string } | string;
-            const isVerifiedClient = typeof client === "object" && client.isVerified === true;
+            const client = job.clientId as { isVerified?: boolean; name?: string } | string | null;
+            const isVerifiedClient = client !== null && typeof client === "object" && client.isVerified === true;
             const jobQuoteCount = quoteCounts[id] ?? 0;
 
             return (
