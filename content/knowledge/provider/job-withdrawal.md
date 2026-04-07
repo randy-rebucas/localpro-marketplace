@@ -1,3 +1,11 @@
+---
+title: Provider Job Withdrawal & Job Re-Opening
+excerpt: Learn how to withdraw from a job assignment and understand the process for job re-opening.
+group: Managing Jobs
+order: 7
+audience: provider
+---
+
 # Provider Job Withdrawal & Job Re-Opening
 
 ## Overview

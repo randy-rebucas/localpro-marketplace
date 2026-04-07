@@ -1,3 +1,11 @@
+---
+title: PESO Portal — Full Documentation
+excerpt: Learn about the Public Employment Service Office (PESO) integration and how to access government-sponsored job programs.
+group: PESO Program
+order: 10
+audience: provider
+---
+
 # PESO Portal — Full Documentation
 
 > **PESO** = Public Employment Service Office
