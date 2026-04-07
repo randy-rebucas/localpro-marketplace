@@ -85,6 +85,8 @@ export const GET = withHandler(async () => {
     isVerified: user.isVerified,
     isSuspended: user.isSuspended,
     avatar: user.avatar ?? null,
+    phone: (user as unknown as { phone?: string | null }).phone ?? null,
+    kycStatus: (user as unknown as { kycStatus?: string }).kycStatus ?? "none",
     addresses: user.addresses ?? [],
     accountType: user.accountType ?? "personal",
     agencyId,

@@ -109,7 +109,12 @@
       "Bash(npx vitest:*)",
       "Bash(npx js-yaml:*)",
       "Bash(pnpm add:*)",
+<<<<<<< Updated upstream
       "Bash(ls -la /c/Users/corew/localpro-marketplace/sentry*)"
+=======
+      "Bash(grep -v \"^\\\\s*$\")",
+      "Bash(npx tsc:*)"
+>>>>>>> Stashed changes
     ]
   }
 }

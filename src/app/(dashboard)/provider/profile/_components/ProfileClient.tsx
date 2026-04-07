@@ -1,5 +1,17 @@
 "use client";
 
+declare global {
+  interface Window {
+    google?: {
+      maps: {
+        Geocoder: new () => {
+          geocode: (request: { location: { lat: number; lng: number } }) => Promise<{ results: Array<{ formatted_address: string; types: string[] }> }>;
+        };
+      };
+    };
+  }
+}
+
 import { useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import Image from "next/image";
@@ -245,21 +257,12 @@ export default function ProfileClient({ initialProfile }: Props) {
     try {
       const form = new FormData();
       form.append("file", file);
-      form.append("folder", "avatars");
-      const uploadRes = await apiFetch("/api/upload", { method: "POST", body: form });
-      const uploadData = await uploadRes.json();
-      if (!uploadRes.ok) { toast.error(uploadData.error ?? "Upload failed"); return; }
+      const res = await apiFetch("/api/auth/me/avatar", { method: "POST", body: form });
+      const data = await res.json();
+      if (!res.ok) { toast.error(data.error ?? "Upload failed"); return; }
 
-      const saveRes = await apiFetch("/api/auth/me", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ avatar: uploadData.url }),
-      });
-      const saveData = await saveRes.json();
-      if (!saveRes.ok) { toast.error(saveData.error ?? "Failed to save avatar"); return; }
-
-      setAvatar(saveData.avatar);
-      if (user) setUser({ ...user, avatar: saveData.avatar });
+      setAvatar(data.avatar);
+      if (user) setUser({ ...user, avatar: data.avatar });
       toast.success("Profile picture updated!");
     } finally {
       setUploadingAvatar(false);
@@ -412,8 +415,8 @@ export default function ProfileClient({ initialProfile }: Props) {
       let resolved = "";
 
       if (isPrecise) {
-        if (typeof window !== "undefined" && window.google?.maps) {
-          const geocoder = new window.google.maps.Geocoder();
+      if (typeof window !== "undefined" && (window as any).google?.maps) {
+        const geocoder = new (window as any).google.maps.Geocoder();
           const { results } = await geocoder.geocode({ location: { lat, lng } });
           if (results && results.length > 0) {
             const PREFERRED = [
@@ -423,7 +426,7 @@ export default function ProfileClient({ initialProfile }: Props) {
             ];
             let best = results[0];
             for (const type of PREFERRED) {
-              const match = results.find((r) => r.types.includes(type));
+              const match = results.find((r: { types: string[] }) => r.types.includes(type));
               if (match) { best = match; break; }
             }
             resolved = best.formatted_address;
