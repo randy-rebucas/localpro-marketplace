@@ -19,6 +19,12 @@ const ROLE_PREFIXES: Record<string, string> = {
 
 const AUTH_PAGES = ["/login", "/register", "/forgot-password", "/verify-email", "/reset-password"];
 
+const CORS_HEADERS = {
+  "Access-Control-Allow-Methods": "GET, POST, PATCH, DELETE, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+  "Access-Control-Max-Age": "86400",
+};
+
 async function verifyToken(token: string): Promise<TokenPayload | null> {
   try {
     const { payload } = await jwtVerify(token, ACCESS_SECRET);
@@ -30,6 +36,34 @@ async function verifyToken(token: string): Promise<TokenPayload | null> {
 
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
+  const origin = req.headers.get("origin") ?? "";
+
+  // ── Handle Chrome extension CORS requests on /api routes ──
+  if (pathname.startsWith("/api")) {
+    // Only apply special CORS handling for Chrome extension origins
+    if (origin.startsWith("chrome-extension://")) {
+      // Handle OPTIONS preflight
+      if (req.method === "OPTIONS") {
+        return new NextResponse(null, {
+          status: 204,
+          headers: {
+            "Access-Control-Allow-Origin": origin,
+            ...CORS_HEADERS,
+          },
+        });
+      }
+
+      // Attach CORS headers to actual response
+      const res = NextResponse.next();
+      res.headers.set("Access-Control-Allow-Origin", origin);
+      Object.entries(CORS_HEADERS).forEach(([k, v]) => res.headers.set(k, v));
+      return res;
+    }
+
+    // Non-extension API calls pass through
+    return NextResponse.next();
+  }
+
   const accessToken = req.cookies.get("access_token")?.value;
   const refreshToken = req.cookies.get("refresh_token")?.value;
 
@@ -116,6 +150,7 @@ export async function proxy(req: NextRequest) {
 
 export const config = {
   matcher: [
+    "/api/:path*",
     "/client/:path*",
     "/provider/:path*",
     "/admin/:path*",
