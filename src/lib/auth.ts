@@ -1,5 +1,5 @@
 import jwt from "jsonwebtoken";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import type { StaffCapability, UserRole } from "@/types";
 import { getRedis } from "@/lib/redis";
@@ -49,8 +49,29 @@ export function signRefreshToken(userId: string): string {
   return jwt.sign({ userId, jti: randomUUID() }, REFRESH_SECRET, { expiresIn: "7d" });
 }
 
+/**
+ * Signs a short-lived token scoped for Chrome extension use.
+ * Carries `aud: "extension"` so it can be distinguished from web session tokens.
+ */
+export function signExtensionToken(userId: string, role: UserRole): string {
+  return jwt.sign(
+    { userId, role, jti: randomUUID(), aud: "extension" },
+    ACCESS_SECRET,
+    { expiresIn: "1h" }
+  );
+}
+
 export function verifyAccessToken(token: string): TokenPayload {
   return jwt.verify(token, ACCESS_SECRET) as TokenPayload;
+}
+
+/**
+ * Verifies a token issued by `signExtensionToken`.
+ * Rejects tokens that do not carry `aud: "extension"`.
+ */
+export function verifyExtensionToken(token: string): TokenPayload {
+  const payload = jwt.verify(token, ACCESS_SECRET, { audience: "extension" }) as TokenPayload;
+  return payload;
 }
 
 export function verifyRefreshToken(token: string): { userId: string; jti?: string } {
@@ -123,6 +144,27 @@ export async function getTokenFromCookies(): Promise<string | undefined> {
 
 export async function getCurrentUser(): Promise<TokenPayload | null> {
   try {
+    // ── Bearer token (Chrome extension) ──────────────────────────────────────
+    const headerStore = await headers();
+    const authHeader = headerStore.get("authorization");
+    if (authHeader?.startsWith("Bearer ")) {
+      const token = authHeader.slice(7);
+      try {
+        const payload = verifyExtensionToken(token);
+        // Extension tokens use jti deny-list only (no per-user revocation check
+        // needed here — logout clears storage on the extension side)
+        const redis = getRedis();
+        if (redis && payload.jti) {
+          const revoked = await redis.get(`jwt:denied:${payload.jti}`);
+          if (revoked) return null;
+        }
+        return payload;
+      } catch {
+        return null;
+      }
+    }
+
+    // ── Cookie-based (web session) ────────────────────────────────────────────
     const token = await getTokenFromCookies();
     if (!token) return null;
     const payload = verifyAccessToken(token);

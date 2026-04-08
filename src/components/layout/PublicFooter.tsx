@@ -14,6 +14,7 @@ const EXPLORE_LINKS = [
   { href: "/providers",     label: "Browse Providers" },
   { href: "/refer",         label: "Refer & Earn" },
   { href: "/peso-program",  label: "PESO Partnership" },
+  { href: "/support",       label: "Support & Help" },
 ];
 
 const LEGAL_LINKS = [
