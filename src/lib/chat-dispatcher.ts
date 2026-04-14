@@ -6,6 +6,7 @@
 import OpenAI from "openai";
 import { jobRepository, providerProfileRepository, userRepository } from "@/repositories";
 import { connectDB } from "@/lib/db";
+import { providerMatcherService } from "@/services/provider-matcher.service";
 import type { IJob, IProviderProfile, IUser } from "@/types";
 
 export interface JobCreationData {
@@ -67,40 +68,24 @@ export async function searchProvidersForJob(
   try {
     await connectDB();
 
-    // TODO: Implement actual provider search when raw collection access is available
-    // For now, return mock providers for demonstration
-    // In production, this would query providerProfileRepository with proper methods
-    
-    const mockProviders: ProviderMatch[] = [
+    // Use real provider matching with quality scoring
+    const matches = await providerMatcherService.findProvidersForJob(
       {
-        providerId: "provider-1",
-        profile: {
-          avgRating: 4.8,
-          completedJobCount: 150,
-        },
-        user: {
-          name: "John Provider",
-          email: "john@provider.com",
-        },
-        matchScore: 92,
-        reason: `Expert in ${jobData.category} with 150+ completed jobs`,
+        category: jobData.category,
+        location: jobData.location,
+        urgency: jobData.urgency,
       },
-      {
-        providerId: "provider-2",
-        profile: {
-          avgRating: 4.6,
-          completedJobCount: 87,
-        },
-        user: {
-          name: "Jane Professional",
-          email: "jane@pro.com",
-        },
-        matchScore: 85,
-        reason: `Experienced in ${jobData.category} with strong reviews`,
-      },
-    ];
+      maxResults
+    );
 
-    return mockProviders.slice(0, maxResults);
+    // Convert to ProviderMatch interface (mapper for legacy compatibility)
+    return matches.map((match) => ({
+      providerId: match.providerId,
+      profile: match.profile,
+      user: match.user,
+      matchScore: match.matchScore,
+      reason: match.reason,
+    }));
   } catch (err) {
     console.error("[searchProvidersForJob] error:", err);
     return [];

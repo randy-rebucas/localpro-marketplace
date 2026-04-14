@@ -6,6 +6,7 @@ import {
   quoteRepository,
 } from "@/repositories";
 import { ledgerService } from "@/services/ledger.service";
+import { statusNotifierService } from "@/services/status-notifier.service";
 import { canTransition, canTransitionEscrow } from "@/lib/jobLifecycle";
 import { pushStatusUpdateMany } from "@/lib/events";
 import { calculateCommission } from "@/lib/commission";
@@ -57,6 +58,16 @@ export class EscrowService {
       { entity: "job", id: job._id!.toString(), status: "in_progress" }
     );
 
+    // Send proactive status notification
+    await statusNotifierService.notifyStatusChange({
+      jobId: job._id!.toString(),
+      status: "in_progress",
+      clientId: job.clientId.toString(),
+      providerId: job.providerId?.toString() || undefined,
+      providerName: "Your provider",
+      jobTitle: job.title,
+    }).catch((err) => console.error("[EscrowService] status notification error:", err));
+
     return { job };
   }
 
@@ -106,6 +117,16 @@ export class EscrowService {
       { entity: "job", id: job._id!.toString(), status: "completed" }
     );
 
+    // Send proactive status notification
+    await statusNotifierService.notifyStatusChange({
+      jobId: job._id!.toString(),
+      status: "completed",
+      clientId: job.clientId.toString(),
+      providerId: job.providerId?.toString() || undefined,
+      jobTitle: job.title,
+      budget: job.budget,
+    }).catch((err) => console.error("[EscrowService] status notification error:", err));
+
     // Auto-lock the recurring schedule to this provider (first successful run only)
     const recurringId = (job as unknown as { recurringScheduleId?: { toString(): string } | null }).recurringScheduleId;
     if (recurringId && job.providerId) {
@@ -117,6 +138,37 @@ export class EscrowService {
             recurringId.toString(),
             job.providerId.toString()
           );
+        }
+
+        // Auto-release escrow if recurring schedule has autoPayEnabled
+        if (schedule && schedule.autoPayEnabled) {
+          try {
+            // Create a system token to perform auto-release
+            const autoReleaseToken: any = {
+              userId: job.clientId.toString(),
+              role: "client",
+            };
+
+            await this.releaseEscrow(autoReleaseToken, jobId);
+
+            // Log auto-release
+            await activityRepository.log({
+              userId: new (require("mongoose").Types.ObjectId)(job.clientId.toString()),
+              eventType: "admin_ledger_entry",
+              jobId: job._id.toString(),
+              metadata: {
+                action: "auto_escrow_release",
+                reason: "recurring_job_auto_pay",
+                recurringScheduleId: recurringId.toString(),
+              },
+            });
+          } catch (err) {
+            console.error(
+              "[EscrowService] Auto-release escrow failed for recurring job:",
+              err
+            );
+            // Don't fail job completion if auto-release fails
+          }
         }
       } catch {
         // Non-critical — don't fail job completion because of this

@@ -58,6 +58,21 @@ export class PaymentService {
     const check = canTransitionEscrow(job, "funded");
     if (!check.allowed) throw new UnprocessableError(check.reason!);
 
+    // ── Fraud action check before escrow funding ───────────────────────────
+    const { fraudActionsService } = await import("@/services/fraud-actions.service");
+    const fraudAssessment = await fraudActionsService.assessJob(jobId);
+    
+    if (fraudAssessment.action === "auto_reject" || fraudAssessment.action === "hold") {
+      // Execute fraud action (auto-reject or hold job)
+      await fraudActionsService.executeAction(fraudAssessment);
+      
+      throw new UnprocessableError(
+        fraudAssessment.action === "auto_reject"
+          ? "Your job was automatically rejected due to policy violations."
+          : "Your job is under review. Escrow funding is temporarily unavailable. Please check back later."
+      );
+    }
+
     const amount = overrideAmount ?? job.budget;
 
     // ── Client-side fees (escrow protection + payment processing) ───────────

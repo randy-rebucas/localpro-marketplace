@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withHandler } from "@/lib/utils";
 import { requireUser } from "@/lib/auth";
-import { jobRepository, userRepository } from "@/repositories";
+import { jobRepository, userRepository, notificationRepository } from "@/repositories";
 import { connectDB } from "@/lib/db";
 import { jobService } from "@/services";
+import { escalationService, EscalationReason } from "@/services/escalation.service";
+import { pushNotification } from "@/lib/events";
 import type { IJob } from "@/types";
 
 interface BookingRequest {
@@ -69,6 +71,64 @@ export const POST = withHandler(async (req: NextRequest) => {
     const jobResult = await jobRepository.create(newJob as any);
     const jobId = (jobResult as any)?._id || (jobResult as any)?.id;
 
+    // Evaluate job for escalation risks
+    const escalation = await escalationService.evaluateNewJob(jobId);
+
+    // Handle critical escalations (auto-reject)
+    if (escalation && escalation.reason === EscalationReason.HIGH_FRAUD_SCORE && escalation.severity === "critical") {
+      // Reject the job
+      await jobRepository.updateById(jobId, { status: "rejected" });
+
+      // Notify admin
+      const adminNotif = await notificationRepository.create({
+        userId: "admin", // TODO: Query for admin user ID
+        type: "job_rejected",
+        title: "Job Auto-Rejected - Critical Fraud Indicators",
+        message: escalation.action,
+        data: { jobId, escalationId: escalation.reason },
+      });
+
+      return NextResponse.json({
+        success: false,
+        jobId,
+        message: "Your job could not be posted due to policy violations. The team will contact you shortly.",
+        escalation: {
+          reason: escalation.reason,
+          severity: escalation.severity,
+          action: escalation.action,
+        },
+      }, { status: 400 });
+    }
+
+    // Handle moderate escalations (hold for review)
+    if (escalation && (escalation.severity === "high" || escalation.severity === "medium")) {
+      // Update job status to pending_validation for admin review
+      await jobRepository.updateById(jobId, { status: "pending_validation" });
+
+      // Notify client
+      const clientNotif = await notificationRepository.create({
+        userId: user.userId,
+        type: "job_pending_review",
+        title: "Your Job is Under Review",
+        message: "Your job posting is being reviewed by our team to ensure quality. You'll be notified once it's approved.",
+        data: { jobId },
+      });
+      pushNotification(user.userId, clientNotif);
+
+      return NextResponse.json({
+        success: true,
+        jobId,
+        message: "Booking created! Your job is under review and will be posted shortly.",
+        status: "pending_validation",
+        escalation: {
+          reason: escalation.reason,
+          severity: escalation.severity,
+          action: escalation.action,
+        },
+      });
+    }
+
+    // No escalation or low-severity → proceed normally
     return NextResponse.json({
       success: true,
       jobId,
