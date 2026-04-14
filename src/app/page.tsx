@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Script from "next/script";
 import { getCurrentUser } from "@/lib/auth";
 import { connectDB } from "@/lib/db";
 import Category from "@/models/Category";
@@ -486,8 +487,9 @@ export default async function RootPage() {
   return (
     <div className="min-h-screen bg-white dark:bg-slate-950">
       {/* JSON-LD: Organization + WebSite + FAQ structured data */}
-      <script
+      <Script
         type="application/ld+json"
+        strategy="afterInteractive"
         dangerouslySetInnerHTML={{
           __html: JSON.stringify([
             {

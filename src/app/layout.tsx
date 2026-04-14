@@ -9,6 +9,7 @@ import JsonLd from "@/components/shared/JsonLd";
 import PwaSetup from "@/components/pwa/PwaSetup";
 import MetaPixelNoscript from "@/components/analytics/MetaPixel";
 import ThemeProvider from "@/components/theme/ThemeProvider";
+import AIChatDispatcher from "@/components/chat/AIChatDispatcher";
 import "./globals.css";
 
 const inter = Inter({
@@ -178,6 +179,7 @@ export default function RootLayout({
             },
           }}
         />
+        <AIChatDispatcher />
         </ThemeProvider>
       </body>
     </html>
