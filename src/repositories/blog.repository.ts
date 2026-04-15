@@ -39,19 +39,16 @@ export class BlogRepository {
       query.author = new Types.ObjectId(author);
     }
 
+    // Use full-text search if search query provided (requires text index)
     if (search) {
-      query.$or = [
-        { title: { $regex: search, $options: "i" } },
-        { excerpt: { $regex: search, $options: "i" } },
-        { content: { $regex: search, $options: "i" } },
-      ];
+      query.$text = { $search: search };
     }
 
     const skip = (page - 1) * limit;
 
     const [blogs, total] = await Promise.all([
       Blog.find(query)
-        .sort({ createdAt: -1 })
+        .sort(search ? { score: { $meta: "textScore" } } : { createdAt: -1 })
         .skip(skip)
         .limit(limit)
         .populate("author", "name email")
@@ -272,18 +269,14 @@ export class BlogRepository {
       isDeleted: false,
     };
 
-    // Add search to query if provided
+    // Use full-text search if search query provided (requires text index)
     if (searchQuery) {
-      query.$or = [
-        { title: { $regex: searchQuery, $options: "i" } },
-        { excerpt: { $regex: searchQuery, $options: "i" } },
-        { content: { $regex: searchQuery, $options: "i" } },
-      ];
+      query.$text = { $search: searchQuery };
     }
 
     const [blogs, total] = await Promise.all([
       Blog.find(query)
-        .sort({ publishedAt: -1 })
+        .sort(searchQuery ? { score: { $meta: "textScore" } } : { publishedAt: -1 })
         .skip(skip)
         .limit(limit)
         .populate("author", "name email")
@@ -482,6 +475,49 @@ export class BlogRepository {
     ]);
 
     return { total, published, draft, scheduled, archived };
+  }
+
+  /**
+   * Find related articles by category and keywords
+   * Returns articles from the same category, or with similar keywords
+   */
+  async findRelated(
+    blogId: string,
+    category?: string,
+    keywords?: string[],
+    limit: number = 3
+  ): Promise<BlogDocument[]> {
+    const query: any = {
+      _id: { $ne: new Types.ObjectId(blogId) },
+      status: "published",
+      publishedAt: { $lte: new Date() },
+      isDeleted: false,
+    };
+
+    // Build query: prioritize same category, then by keywords
+    const filters: any[] = [];
+
+    if (category) {
+      filters.push({ category });
+    }
+
+    if (keywords && keywords.length > 0) {
+      filters.push({
+        keywords: { $in: keywords },
+      });
+    }
+
+    if (filters.length > 0) {
+      query.$or = filters;
+    }
+
+    const blogs = await Blog.find(query)
+      .sort({ publishedAt: -1 })
+      .limit(limit)
+      .populate("author", "name email")
+      .lean();
+
+    return blogs as unknown as BlogDocument[];
   }
 
   /**

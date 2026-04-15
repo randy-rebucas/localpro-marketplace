@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Metadata } from "next";
 import { Calendar, User, ArrowRight, Search, BookOpen, Tag } from "lucide-react";
 import { blogRepository } from "@/repositories";
+import { generateBlogCollectionSchema } from "@/lib/blog-schema";
 
 export const metadata: Metadata = {
   title: "Blog | LocalPro",
@@ -91,6 +92,15 @@ export default async function BlogPage({
 
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
+        {/* JSON-LD Schema Markup for Blog Collection */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(
+              generateBlogCollectionSchema(blogs, category || undefined, process.env.NEXT_PUBLIC_APP_URL || "https://localpro.com")
+            ),
+          }}
+        />
         {/* Hero Section */}
         <div className="relative py-20 px-4 sm:px-6 lg:px-8 banner-gradient">
           <div className="absolute inset-0 overflow-hidden">

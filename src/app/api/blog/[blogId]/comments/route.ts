@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { blogCommentRepository } from "@/repositories/blog-comment.repository";
+import { blogRepository } from "@/repositories";
+import { sendCommentPendingApprovalEmail } from "@/lib/blog-notifications";
 import { z } from "zod";
 
 /**
@@ -54,6 +56,15 @@ export async function POST(
     // Validate payload
     const validated = createCommentSchema.parse(body);
 
+    // Fetch blog to get author info
+    const blog = await blogRepository.findById(blogId);
+    if (!blog) {
+      return NextResponse.json(
+        { error: "Blog not found" },
+        { status: 404 }
+      );
+    }
+
     // Create comment
     const comment = await blogCommentRepository.create({
       blog: blogId,
@@ -62,6 +73,24 @@ export async function POST(
       content: validated.content,
       parentComment: validated.parentCommentId,
     });
+
+    // Send notification email to blog author
+    // This happens asynchronously so it doesn't block the response
+    (async () => {
+      try {
+        const populatedAuthor = blog.author as import("@/models/Blog").PopulatedAuthor;
+        const authorEmail = typeof blog.author === "object" && "email" in blog.author
+          ? populatedAuthor.email
+          : undefined;
+        
+        if (authorEmail) {
+          await sendCommentPendingApprovalEmail(blog, comment, authorEmail);
+        }
+      } catch (error) {
+        console.error("Error sending comment notification:", error);
+        // Don't fail the request if email fails
+      }
+    })();
 
     return NextResponse.json(
       {

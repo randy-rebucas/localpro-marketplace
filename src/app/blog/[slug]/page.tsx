@@ -5,6 +5,8 @@ import { Metadata } from "next";
 import { Calendar, User, Share2, Tag, ArrowRight } from "lucide-react";
 import { blogRepository } from "@/repositories";
 import { blogCommentRepository } from "@/repositories/blog-comment.repository";
+import { generateBlogArticleSchema } from "@/lib/blog-schema";
+import BlogFeaturedImage from "@/components/blog/BlogFeaturedImage";
 import BlogContent from "./BlogContent";
 import ShareSection from "./ShareSection";
 import BlogComments from "./BlogComments";
@@ -109,11 +111,12 @@ export default async function BlogArticlePage(props: PageProps) {
     );
 
     // Get related articles (same category/tags)
-    const relatedBlogs = await blogRepository.findPublished(1, 3);
-    const related = relatedBlogs.blogs
-      ?.filter((b) => b.slug !== slug)
-      .slice(0, 3) ||
-      [];
+    const related = await blogRepository.findRelated(
+      blog._id?.toString() || "",
+      blog.category,
+      blog.keywords,
+      3
+    );
 
     // Get comments for this blog
     const commentsResult = await blogCommentRepository.getApprovedComments(
@@ -127,6 +130,18 @@ export default async function BlogArticlePage(props: PageProps) {
 
     return (
       <div className="bg-gradient-to-br from-slate-50 via-white to-slate-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
+        {/* JSON-LD Schema Markup for SEO */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(
+              generateBlogArticleSchema(blog, process.env.NEXT_PUBLIC_APP_URL || "https://localpro.com")
+            )
+              .replace(/</g, "\\u003c")
+              .replace(/>/g, "\\u003e")
+              .replace(/\//g, "\\u002f"),
+          }}
+        />
         {/* Featured Image */}
         {blog.featuredImage && (
           <div className="relative h-96 md:h-[500px] lg:h-[600px] overflow-hidden bg-gradient-to-br from-slate-200 to-slate-300 dark:from-slate-800 dark:to-slate-900">

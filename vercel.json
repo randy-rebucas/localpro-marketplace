@@ -16,6 +16,7 @@
     { "path": "/api/cron/retention-cleanup",       "schedule": "0 2 1 * *" },
     { "path": "/api/cron/db-backup",               "schedule": "0 1 * * *" },
     { "path": "/api/cron/drip-emails",             "schedule": "0 9 * * *" },
-    { "path": "/api/cron/quote-digest",            "schedule": "*/15 * * * *" }
+    { "path": "/api/cron/quote-digest",            "schedule": "*/15 * * * *" },
+    { "path": "/api/cron/publish-scheduled-blogs",  "schedule": "*/5 * * * *" }
   ]
 }

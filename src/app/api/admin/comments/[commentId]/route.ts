@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { blogCommentRepository } from "@/repositories/blog-comment.repository";
+import { blogRepository } from "@/repositories";
+import { sendCommentApprovedEmail, sendCommentRejectedEmail } from "@/lib/blog-notifications";
+import { requireUser, requireCapability } from "@/lib/auth";
 import { z } from "zod";
 
 /**
@@ -15,7 +18,8 @@ export async function PATCH(
   { params }: { params: Promise<{ commentId: string }> }
 ) {
   try {
-    // TODO: Add authentication check for admin
+    const user = await requireUser();
+    requireCapability(user, "manage_blogs");
     const { commentId } = await params;
     const body = await req.json();
 
@@ -40,6 +44,26 @@ export async function PATCH(
         { status: 404 }
       );
     }
+
+    // Send notification email asynchronously
+    (async () => {
+      try {
+        // Fetch blog details
+        const blog = await blogRepository.findById(comment.blog?.toString() || "");
+        if (!blog || !comment.authorEmail) {
+          return; // Can't send notification
+        }
+
+        if (validated.action === "approve") {
+          await sendCommentApprovedEmail(blog, comment, comment.authorEmail);
+        } else if (validated.action === "reject") {
+          await sendCommentRejectedEmail(blog, comment, comment.authorEmail);
+        }
+      } catch (error) {
+        console.error("Error sending comment notification email:", error);
+        // Don't fail the request if email fails
+      }
+    })();
 
     return NextResponse.json({
       message: `Comment ${validated.action}ed`,
@@ -69,7 +93,8 @@ export async function DELETE(
   { params }: { params: Promise<{ commentId: string }> }
 ) {
   try {
-    // TODO: Add authentication check for admin
+    const user = await requireUser();
+    requireCapability(user, "manage_blogs");
     const { commentId } = await params;
 
     const comment = await blogCommentRepository.delete(commentId);

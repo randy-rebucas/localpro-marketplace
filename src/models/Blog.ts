@@ -183,6 +183,31 @@ BlogSchema.index({ author: 1, createdAt: -1 }); // For author's blogs
 // Compound index: slug + isDeleted to allow slug reuse for non-deleted blogs only
 BlogSchema.index({ slug: 1, isDeleted: 1 }, { unique: true, sparse: true }); // Lookup by slug, exclude deleted
 
+/**
+ * Full-text search indexes for fast text-based searching
+ * Allows $text queries for title, excerpt, content, and keywords
+ */
+BlogSchema.index(
+  {
+    title: "text",
+    excerpt: "text",
+    content: "text",
+    keywords: "text",
+  },
+  {
+    weights: {
+      title: 10,      // Title matches weighted highest
+      excerpt: 5,     // Excerpt matches weighted medium
+      content: 2,     // Content matches weighted lower
+      keywords: 8,    // Keywords weighted high for tag matching
+    },
+    name: "blog_fulltext_search",
+  }
+);
+
+// Index for scheduled publishing automation
+BlogSchema.index({ status: 1, scheduledFor: 1 }); // For auto-publish queries
+
 const Blog: Model<BlogDocument> =
   mongoose.models.Blog || mongoose.model<BlogDocument>("Blog", BlogSchema);
 
