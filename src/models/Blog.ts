@@ -60,12 +60,13 @@ const BlogSchema = new Schema<BlogDocument>(
     },
     slug: {
       type: String,
+      required: [true, "Blog slug is required"],
       unique: true,
-      sparse: true,
+      sparse: false,
       trim: true,
       lowercase: true,
       index: true,
-      description: "URL-friendly slug, auto-generated from title",
+      description: "URL-friendly slug for accessing this blog",
     },
     content: {
       type: String,
@@ -143,11 +144,13 @@ const BlogSchema = new Schema<BlogDocument>(
 
 /**
  * Auto-generate slug from title on creation/update
- * Slug is only regenerated if title is modified
- * Existing slugs are preserved during other field updates
+ * Slug is regenerated from title only if:
+ * - Blog is new (creation), OR
+ * - Title is modified AND slug is not explicitly provided
  */
 BlogSchema.pre<BlogDocument>("save", function (next) {
-  if (this.isModified("title")) {
+  // Generate slug from title if not explicitly set
+  if (!this.slug || (this.isModified("title") && !this.isModified("slug"))) {
     this.slug = this.title
       .toLowerCase()
       .trim()

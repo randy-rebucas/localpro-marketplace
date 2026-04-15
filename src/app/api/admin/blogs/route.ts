@@ -10,6 +10,7 @@ import { assertObjectId } from "@/lib/errors";
  */
 const CreateBlogSchema = z.object({
   title: z.string().min(3).max(200),
+  slug: z.string().min(1).max(200),
   content: z.string().min(10),
   excerpt: z.string().max(500).optional(),
   featuredImage: z.string().url().optional().nullable().or(z.literal("")),
@@ -20,6 +21,7 @@ const CreateBlogSchema = z.object({
 
 const UpdateBlogSchema = z.object({
   title: z.string().min(3).max(200).optional(),
+  slug: z.string().min(1).max(200).optional(),
   content: z.string().min(10).optional(),
   excerpt: z.string().max(500).optional(),
   featuredImage: z.string().url().optional().nullable().or(z.literal("")),

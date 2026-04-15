@@ -266,6 +266,7 @@ export class BlogRepository {
 
   /**
    * Update blog by ID
+   * Uses .save() to trigger pre-save hooks for slug generation
    */
   async updateById(id: string, data: Partial<IBlog>): Promise<BlogDocument | null> {
     // Allowlist to prevent mass-assignment
@@ -282,18 +283,20 @@ export class BlogRepository {
       "scheduledFor",
     ];
 
-    const updateData: any = {};
+    const blog = await Blog.findById(new Types.ObjectId(id));
+    if (!blog) return null;
+
+    // Apply updates
     for (const field of allowedFields) {
       if (field in data) {
-        updateData[field] = data[field as keyof IBlog];
+        (blog as any)[field] = data[field as keyof IBlog];
       }
     }
 
-    return Blog.findByIdAndUpdate(
-      new Types.ObjectId(id),
-      updateData,
-      { new: true }
-    ).populate("author", "name email");
+    // Save triggers pre-save hooks (including slug generation and publishedAt setting)
+    await blog.save();
+    await blog.populate("author", "name email");
+    return blog;
   }
 
   /**
