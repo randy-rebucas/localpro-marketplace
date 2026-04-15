@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Metadata } from "next";
 import { Calendar, User, Share2, Tag, ArrowRight } from "lucide-react";
+import { connectDB } from "@/lib/db";
 import { blogRepository } from "@/repositories";
 import { blogCommentRepository } from "@/repositories/blog-comment.repository";
 import { generateBlogArticleSchema } from "@/lib/blog-schema";
@@ -30,6 +31,7 @@ export const revalidate = 3600;
  */
 export async function generateStaticParams() {
   try {
+    await connectDB();
     // Fetch published blogs for static generation
     // Increased limit to cover more blogs at build time
     const result = await blogRepository.findPublished(1, 50);
