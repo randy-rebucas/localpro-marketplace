@@ -49,6 +49,7 @@ import {
   Zap,
   FileBarChart,
   Database,
+  MessageSquare,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/authStore";
@@ -194,6 +195,8 @@ const navGroups: Partial<Record<UserRole, NavGroup[]>> = {
         { label: "Ticket Queue",   href: "/admin/support/tickets", icon: <Ticket     className="h-4.5 w-4.5" />, capability: "manage_support" },
         { label: "Announcements",  href: "/admin/announcements",   icon: <Megaphone  className="h-4.5 w-4.5" />, capability: "__admin_only__" },
         { label: "Blogs",          href: "/admin/blogs",           icon: <BookOpen   className="h-4.5 w-4.5" />, capability: "manage_blogs" },
+        { label: "Blog Comments",  href: "/admin/comments",        icon: <MessageSquare className="h-4.5 w-4.5" />, capability: "manage_blogs" },
+        { label: "Blog Analytics", href: "/admin/analytics",       icon: <BarChart3    className="h-4.5 w-4.5" />, capability: "manage_blogs" },
         { label: "Knowledge Base", href: "/admin/knowledge",       icon: <BookOpen   className="h-4.5 w-4.5" />, capability: "__admin_only__" },
         { label: "Notifications",  href: "/admin/notifications",   icon: <Bell       className="h-4.5 w-4.5" />, capability: null },
       ],

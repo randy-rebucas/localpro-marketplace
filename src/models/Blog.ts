@@ -175,7 +175,6 @@ BlogSchema.pre<BlogDocument>("save", function (next) {
 BlogSchema.index({ status: 1, publishedAt: -1 }); // For listing published blogs
 BlogSchema.index({ category: 1, publishedAt: -1 }); // For category browsing
 BlogSchema.index({ author: 1, createdAt: -1 }); // For author's blogs
-BlogSchema.index({ isDeleted: 1 }); // Soft delete filtering
 BlogSchema.index({ slug: 1, isDeleted: 1 }); // Lookup by slug
 
 const Blog: Model<BlogDocument> =

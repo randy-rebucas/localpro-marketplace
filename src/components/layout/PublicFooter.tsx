@@ -12,6 +12,7 @@ const PLATFORM_LINKS = [
 const EXPLORE_LINKS = [
   { href: "/jobs",          label: "Browse Jobs" },
   { href: "/providers",     label: "Browse Providers" },
+  { href: "/blog",          label: "Blog" },
   { href: "/refer",         label: "Refer & Earn" },
   { href: "/peso-program",  label: "PESO Partnership" },
   { href: "/support",       label: "Support & Help" },

@@ -147,19 +147,22 @@ export default async function BlogArticlePage(props: PageProps) {
               {/* Meta Information */}
               <div className="flex flex-col sm:flex-row sm:items-center gap-8 pt-10 border-t border-slate-200 dark:border-slate-800">
                 {/* Author */}
-                <div className="flex items-center gap-4">
+                <Link
+                  href={blog.author && typeof blog.author === "object" && "_id" in blog.author ? `/authors/${blog.author._id}` : "/blog"}
+                  className="flex items-center gap-4 group hover:opacity-80 transition-opacity"
+                >
                   <div className="w-14 h-14 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center flex-shrink-0 shadow-md">
                     <User className="w-7 h-7 text-white" />
                   </div>
                   <div>
-                    <p className="font-bold text-slate-900 dark:text-white text-base">
+                    <p className="font-bold text-slate-900 dark:text-white text-base group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                       {blog.author && typeof blog.author === "object" && "name" in blog.author
                         ? blog.author.name 
                         : "LocalPro Staff"}
                     </p>
                     <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Author</p>
                   </div>
-                </div>
+                </Link>
 
                 {/* Date & Read Time */}
                 <div className="flex items-center gap-6 sm:ml-auto">

@@ -15,6 +15,7 @@ import {
   CircleDollarSign, BarChart3, Lock, AlertTriangle, ClipboardCheck,
   Users, ShieldAlert, ShieldCheck, TrendingUp, Activity,
   Briefcase, FileText, Flag, CreditCard, ChevronRight, LayoutDashboard,
+  MessageSquare, Eye,
 } from "lucide-react";
 import TourGuide from "@/components/shared/TourGuide";
 import type { JobStatus } from "@/types";
@@ -348,6 +349,8 @@ async function AdminDashboardContent({
             {(isAdmin || can("view_logs")) && <QuickAction href="/admin/activity"  icon={<Activity className="h-4 w-4" />}  label="Activity Log" />}
             {isAdmin                && <QuickAction href="/admin/fraud"     icon={<Flag className="h-4 w-4" />}        label="Fraud Monitor" />}
             {isAdmin                && <QuickAction href="/admin/announcements" icon={<FileText className="h-4 w-4" />} label="Announcements" />}
+            {can("manage_blogs")    && <QuickAction href="/admin/comments"  icon={<MessageSquare className="h-4 w-4" />} label="Comments" />}
+            {can("manage_blogs")    && <QuickAction href="/admin/analytics" icon={<Eye className="h-4 w-4" />}          label="Analytics" />}
           </div>
         </div>
       </div>

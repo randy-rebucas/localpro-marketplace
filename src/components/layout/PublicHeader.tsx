@@ -32,6 +32,12 @@ export default function PublicHeader() {
             Providers
           </Link>
           <Link
+            href="/blog"
+            className="hidden md:block text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors px-3 py-1.5 rounded-lg hover:bg-slate-100"
+          >
+            Blog
+          </Link>
+          <Link
             href="/peso-program"
             className="hidden md:block text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors px-3 py-1.5 rounded-lg hover:bg-slate-100"
           >

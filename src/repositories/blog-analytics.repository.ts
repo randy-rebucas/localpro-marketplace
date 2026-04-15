@@ -58,7 +58,10 @@ export class BlogAnalyticsRepository {
   /**
    * Get analytics for a specific blog
    */
-  async getBlogAnalytics(blogId: string): Promise<{
+  async getBlogAnalytics(
+    blogId: string,
+    dateRange?: { from: Date; to: Date }
+  ): Promise<{
     totalViews: number;
     avgReadTime: number;
     avgScrollDepth: number;
@@ -69,13 +72,14 @@ export class BlogAnalyticsRepository {
       avgReadTime: number;
     }>;
   }> {
-    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const dateFrom = dateRange?.from || new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const dateTo = dateRange?.to || new Date();
 
     const stats = await BlogAnalytic.aggregate([
       {
         $match: {
           blog: new Types.ObjectId(blogId),
-          createdAt: { $gte: sevenDaysAgo },
+          createdAt: { $gte: dateFrom, $lte: dateTo },
         },
       },
       {
@@ -93,7 +97,7 @@ export class BlogAnalyticsRepository {
       {
         $match: {
           blog: new Types.ObjectId(blogId),
-          createdAt: { $gte: sevenDaysAgo },
+          createdAt: { $gte: dateFrom, $lte: dateTo },
         },
       },
       {
@@ -122,25 +126,31 @@ export class BlogAnalyticsRepository {
   }
 
   /**
-   * Get top performing articles
+   * Get top performing articles with date range support
    */
   async getTopArticles(
-    limit: number = 10
+    limit: number = 10,
+    dateRange?: { from: Date; to: Date }
   ): Promise<
     Array<{
       blogId: string;
-      totalViews: number;
+      title: string;
+      slug: string;
+      views: number;
       avgReadTime: number;
       avgScrollDepth: number;
-      uniqueVisitors: number;
+      returnVisits: number;
+      latestView: string;
     }>
   > {
-    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    // Default to last 30 days if no date range provided
+    const dateFrom = dateRange?.from || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const dateTo = dateRange?.to || new Date();
 
     const results = await BlogAnalytic.aggregate([
       {
         $match: {
-          createdAt: { $gte: thirtyDaysAgo },
+          createdAt: { $gte: dateFrom, $lte: dateTo },
         },
       },
       {
@@ -149,33 +159,57 @@ export class BlogAnalyticsRepository {
           totalViews: { $sum: "$viewCount" },
           avgReadTime: { $avg: "$avgReadTime" },
           avgScrollDepth: { $avg: "$avgScrollDepth" },
-          uniqueVisitors: { $sum: 1 },
+          returnVisits: { $sum: "$returnVisits" },
+          latestView: { $max: "$lastViewedAt" },
         },
       },
       { $sort: { totalViews: -1 } },
       { $limit: limit },
+      {
+        $lookup: {
+          from: "blogs",
+          localField: "_id",
+          foreignField: "_id",
+          as: "blog",
+        },
+      },
+      { $unwind: { path: "$blog", preserveNullAndEmptyArrays: true } },
     ]);
 
     return results.map((r) => ({
       blogId: r._id.toString(),
-      totalViews: r.totalViews,
-      avgReadTime: Math.round(r.avgReadTime),
-      avgScrollDepth: Math.round(r.avgScrollDepth),
-      uniqueVisitors: r.uniqueVisitors,
+      title: r.blog?.title || "Untitled Article",
+      slug: r.blog?.slug || "",
+      views: r.totalViews || 0,
+      avgReadTime: r.avgReadTime ? Math.round(r.avgReadTime * 10) / 10 : 0,
+      avgScrollDepth: r.avgScrollDepth ? Math.round(r.avgScrollDepth) : 0,
+      returnVisits: r.returnVisits || 0,
+      latestView: r.latestView ? new Date(r.latestView).toISOString() : new Date().toISOString(),
     }));
   }
 
   /**
-   * Get referral traffic sources
+   * Get referral traffic sources for a specific blog
    */
-  async getTopReferrers(blogId: string, limit: number = 10) {
-    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  async getTopReferrers(
+    blogId: string,
+    limit: number = 10,
+    dateRange?: { from: Date; to: Date }
+  ): Promise<
+    Array<{
+      referrer: string;
+      count: number;
+      percentage: number;
+    }>
+  > {
+    const dateFrom = dateRange?.from || new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const dateTo = dateRange?.to || new Date();
 
     const results = await BlogAnalytic.aggregate([
       {
         $match: {
           blog: new Types.ObjectId(blogId),
-          createdAt: { $gte: sevenDaysAgo },
+          createdAt: { $gte: dateFrom, $lte: dateTo },
           referrer: { $exists: true, $ne: null },
         },
       },
@@ -189,9 +223,54 @@ export class BlogAnalyticsRepository {
       { $limit: limit },
     ]);
 
+    const total = results.reduce((sum, r) => sum + r.count, 0);
+
     return results.map((r) => ({
-      referrer: r._id,
+      referrer: r._id || "direct",
       count: r.count,
+      percentage: total > 0 ? (r.count / total) * 100 : 0,
+    }));
+  }
+
+  /**
+   * Get referral traffic sources globally (across all blogs)
+   */
+  async getAllTopReferrers(
+    limit: number = 10,
+    dateRange?: { from: Date; to: Date }
+  ): Promise<
+    Array<{
+      referrer: string;
+      count: number;
+      percentage: number;
+    }>
+  > {
+    const dateFrom = dateRange?.from || new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const dateTo = dateRange?.to || new Date();
+
+    const results = await BlogAnalytic.aggregate([
+      {
+        $match: {
+          createdAt: { $gte: dateFrom, $lte: dateTo },
+          referrer: { $exists: true, $ne: null },
+        },
+      },
+      {
+        $group: {
+          _id: "$referrer",
+          count: { $sum: 1 },
+        },
+      },
+      { $sort: { count: -1 } },
+      { $limit: limit },
+    ]);
+
+    const total = results.reduce((sum, r) => sum + r.count, 0);
+
+    return results.map((r) => ({
+      referrer: r._id || "direct",
+      count: r.count,
+      percentage: total > 0 ? (r.count / total) * 100 : 0,
     }));
   }
 }

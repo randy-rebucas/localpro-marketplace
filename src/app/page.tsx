@@ -8,8 +8,9 @@ import Review from "@/models/Review";
 import Job from "@/models/Job";
 import "@/models/User";
 import FeaturedListing from "@/models/FeaturedListing";
+import Blog from "@/models/Blog";
 import Link from "next/link";
-import { CheckCircle, Briefcase, Star, Shield, ArrowRight, MapPin, Users, TrendingUp, Lock, Zap } from "lucide-react";
+import { CheckCircle, Briefcase, Star, Shield, ArrowRight, MapPin, Users, TrendingUp, Lock, Zap, BookOpen } from "lucide-react";
 import Image from "next/image";
 import { Suspense } from "react";
 import { formatRelativeTime, formatPHP } from "@/lib/utils";
@@ -329,6 +330,102 @@ function TopProvidersSkeleton() {
             <div key={i} className="h-40 rounded-2xl bg-slate-900 border border-slate-800" />
           ))}
         </div>
+      </div>
+    </section>
+  );
+}
+
+async function FeaturedBlogsData() {
+  await connectDB();
+  const blogs = await Blog.find({ 
+    status: "published", 
+    isDeleted: false 
+  })
+    .sort({ publishedAt: -1 })
+    .limit(3)
+    .select("_id title excerpt slug category publishedAt featuredImage")
+    .lean();
+
+  if (!blogs.length) return null;
+
+  return (
+    <section className="max-w-6xl mx-auto px-4 py-16 sm:py-24">
+      <ScrollReveal>
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-10">
+          <div>
+            <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white mb-2">Learn from our blog</h2>
+            <p className="text-slate-500 dark:text-slate-400 text-sm">Tips, guides, and stories from our community.</p>
+          </div>
+          <Link href="/blog" className="text-sm font-medium text-primary hover:underline hidden sm:block shrink-0">
+            Read all articles &rarr;
+          </Link>
+        </div>
+      </ScrollReveal>
+
+      <ScrollReveal stagger>
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          {blogs.map((blog) => {
+            const article = blog as unknown as { 
+              _id: string; 
+              title: string; 
+              excerpt: string; 
+              slug: string;
+              category?: string;
+              publishedAt?: Date;
+              featuredImage?: string;
+            };
+            return (
+              <Link
+                key={String(article._id)}
+                href={`/blog/${article.slug}`}
+                className="group rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 overflow-hidden hover:shadow-card-hover transition-all flex flex-col"
+              >
+                {/* Featured image placeholder or actual image */}
+                {article.featuredImage ? (
+                  <div className="h-40 bg-gradient-to-br from-primary/20 to-primary/5 relative overflow-hidden">
+                    <Image
+                      src={article.featuredImage}
+                      alt={article.title}
+                      fill
+                      className="object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                  </div>
+                ) : (
+                  <div className="h-40 bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
+                    <BookOpen className="h-12 w-12 text-primary/30" />
+                  </div>
+                )}
+                
+                <div className="flex flex-col gap-3 p-5 flex-1">
+                  {article.category && (
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-primary/70">{article.category}</p>
+                  )}
+                  <h3 className="font-semibold text-slate-900 dark:text-white leading-snug group-hover:text-primary transition-colors line-clamp-2">
+                    {article.title}
+                  </h3>
+                  <p className="text-sm text-slate-600 dark:text-slate-300 line-clamp-2 flex-1">
+                    {article.excerpt}
+                  </p>
+                  {article.publishedAt && (
+                    <p className="text-[10px] text-slate-400 mt-auto">
+                      {new Date(article.publishedAt).toLocaleDateString("en-PH", {
+                        year: "numeric",
+                        month: "short",
+                        day: "numeric",
+                      })}
+                    </p>
+                  )}
+                </div>
+              </Link>
+            );
+          })}
+        </div>
+      </ScrollReveal>
+
+      <div className="mt-6 flex justify-center sm:hidden">
+        <Link href="/blog" className="text-sm font-medium text-primary hover:underline">
+          Read all articles &rarr;
+        </Link>
       </div>
     </section>
   );
@@ -818,6 +915,11 @@ export default async function RootPage() {
           </div>
         </section>
       </ScrollReveal>
+
+      {/* ── Featured Blog Articles ── */}
+      <Suspense fallback={null}>
+        <FeaturedBlogsData />
+      </Suspense>
 
       {/* ── Provider promotion strip ── */}
       <ScrollReveal>
