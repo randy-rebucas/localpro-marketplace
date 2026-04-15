@@ -3,6 +3,7 @@ import { recurringScheduleRepository } from "@/repositories/recurringSchedule.re
 import { userRepository } from "@/repositories/user.repository";
 import { activityRepository } from "@/repositories/activity.repository";
 import { notificationRepository } from "@/repositories/notification.repository";
+import { messageFormatterService } from "./message-formatter.service";
 import type { IJob, IRecurringSchedule } from "@/types";
 import { pushNotification } from "@/lib/events";
 import { sendNotificationEmail } from "@/lib/email";
@@ -211,7 +212,7 @@ class RecurringJobSpawnerService {
   }
 
   /**
-   * Notify client about spawned job
+   * Notify client about spawned recurring job
    */
   private async notifyClientJobSpawned(
     clientId: string,
@@ -223,43 +224,40 @@ class RecurringJobSpawnerService {
       const client = await userRepository.findById(clientId);
       if (!client) return;
 
-      const message = `Your recurring job "${jobTitle}" (₱${budget}) has been automatically spawned and is now active.`;
+      // Format message using persona-aware formatter
+      const message = messageFormatterService.formatMessage({
+        scenario: "job_spawned",
+        persona: "customer",
+        data: {
+          jobId,
+          jobTitle,
+          budget,
+          clientName: client.name || "Valued Client",
+          category: "recurring",
+        },
+      });
 
       // Push notification
       try {
         pushNotification(clientId, {
-          title: "Recurring Job Spawned",
-          body: message,
-          data: {
-            jobId,
-            type: "recurring_job_spawned",
-            jobTitle,
-          },
+          title: message.title,
+          body: message.body,
+          data: message.dataPayload || { jobId, type: "recurring_job_spawned" },
         });
       } catch (err) {
         console.error("[RecurringJobSpawner] Push notification error:", err);
       }
 
       // Email notification
-      const emailContext = {
-        type: "recurring_job_spawned" as any,
-        recipientName: client.name || "Client",
-        title: "Recurring Job Spawned",
-        message,
-        data: {
-          jobId,
-          jobTitle,
-        },
-      };
-
-      // Try email, but don't fail if it's not a valid type
       try {
-        // Use system_notice as fallback
         await sendNotificationEmail(client.email, {
-          ...emailContext,
           type: "system_notice" as any,
+          recipientName: client.name || "Client",
+          title: message.title,
+          message: message.body,
+          data: message.dataPayload || { jobId, jobTitle },
         }).catch(() => {
-          // Silently fail for invalid notification types
+          // Silently fail for email errors
         });
       } catch (err) {
         console.error("[RecurringJobSpawner] Email notification error:", err);
@@ -282,17 +280,28 @@ class RecurringJobSpawnerService {
       const provider = await userRepository.findById(providerId);
       if (!provider) return;
 
-      const message = `You've been assigned a recurring job "${jobTitle}" (₱${budget}). This is an automatic assignment from an ongoing recurring schedule.`;
+      // Format message using persona-aware formatter
+      const message = messageFormatterService.formatMessage({
+        scenario: "job_assigned",
+        persona: "provider",
+        data: {
+          jobId,
+          jobTitle,
+          budget,
+          providerName: provider.name || "Provider",
+          clientName: "Recurring Client",
+          location: "Your location",
+        },
+      });
 
       // Push notification
       try {
         pushNotification(providerId, {
-          title: "Recurring Job Assigned",
-          body: message,
-          data: {
+          title: message.title,
+          body: message.body,
+          data: message.dataPayload || {
             jobId,
             type: "recurring_job_assigned",
-            jobTitle,
           },
         });
       } catch (err) {
@@ -304,14 +313,11 @@ class RecurringJobSpawnerService {
         await sendNotificationEmail(provider.email, {
           type: "system_notice" as any,
           recipientName: provider.name || "Provider",
-          title: "Recurring Job Assigned",
-          message,
-          data: {
-            jobId,
-            jobTitle,
-          },
+          title: message.title,
+          message: message.body,
+          data: message.dataPayload || { jobId, jobTitle },
         }).catch(() => {
-          // Silently fail
+          // Silently fail for email errors
         });
       } catch (err) {
         console.error("[RecurringJobSpawner] Email notification error:", err);

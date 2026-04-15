@@ -485,7 +485,7 @@ export default async function RootPage() {
   const heroCategories = await HeroCategoriesData();
 
   return (
-    <div className="min-h-screen bg-white dark:bg-slate-950">
+    <div className="min-h-screen bg-white dark:bg-slate-950" suppressHydrationWarning>
       {/* JSON-LD: Organization + WebSite + FAQ structured data */}
       <Script
         type="application/ld+json"

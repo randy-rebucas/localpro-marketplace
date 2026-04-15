@@ -8,6 +8,7 @@ import { pushNotification } from "@/lib/events";
 import { sendNotificationEmail } from "@/lib/email";
 import { sendPushToUser } from "@/app/push/actions";
 import { connectDB } from "@/lib/db";
+import { messageFormatterService, type MessageScenario } from "./message-formatter.service";
 import type { IJob, INotification } from "@/types";
 
 export interface NotificationConfig {
@@ -31,19 +32,16 @@ export class StatusNotifierService {
 
       const { jobId, status, clientId, providerId, providerName, jobTitle, budget } = config;
 
-      // Determine notification type and recipients
-      const notification = this.generateNotification(status, {
-        jobId,
-        clientId,
-        providerId,
-        providerName,
-        jobTitle: jobTitle || "Your job",
-        budget: budget || 0,
-      });
-
-      if (!notification) {
+      // Map job status to message scenario
+      const scenario = this.mapStatusToScenario(status);
+      if (!scenario) {
         return false; // No notification needed for this status
       }
+
+      // Fetch full job details for message context
+      const job = jobId ? await jobRepository.getDocById(jobId) : null;
+      const clientUser = await userRepository.findById(clientId);
+      const providerUser = providerId ? await userRepository.findById(providerId) : null;
 
       // Check spam prevention: max 3 notifications per job in first 4 hours
       const spamBlocked = await this.isSpamBlocked(jobId);
@@ -52,52 +50,91 @@ export class StatusNotifierService {
         return false;
       }
 
+      // Format message for CUSTOMER (client)
+      const customerMessage = messageFormatterService.formatMessage({
+        scenario,
+        persona: "customer",
+        data: {
+          jobId,
+          jobTitle: jobTitle || job?.title || "Your job",
+          clientName: clientUser?.name || "Valued User",
+          providerName: providerName || providerUser?.name || "Your provider",
+          budget: budget || job?.budget || 0,
+          category: job?.category,
+          location: job?.location,
+          scheduleDate: job?.scheduleDate,
+          ...this.getStatusSpecificData(status, job),
+        },
+      });
+
       // Send to client
       const clientNotif = await notificationRepository.create({
         userId: clientId,
-        type: notification.type,
-        title: notification.clientTitle,
-        message: notification.clientMessage,
-        data: { jobId },
+        type: scenario as any,
+        title: customerMessage.title,
+        message: customerMessage.body,
+        data: customerMessage.dataPayload || { jobId },
       });
-      pushNotification(clientId, clientNotif);
+      pushNotification(clientId, {
+        title: customerMessage.title,
+        body: customerMessage.body,
+        data: customerMessage.dataPayload || { jobId },
+      });
 
       // Send email to client if opted in
-      const clientUser = await userRepository.findById(clientId);
-      if (clientUser && clientUser.email && this.shouldEmailNotify(notification.type)) {
+      if (clientUser && clientUser.email && this.shouldEmailNotify(scenario as any)) {
         await sendNotificationEmail(
           clientUser.email,
           {
-            type: notification.type as any,
+            type: scenario as any,
             recipientName: clientUser.name || "Valued User",
-            title: notification.clientTitle,
-            message: notification.clientMessage,
-            data: { jobId, jobTitle },
+            title: customerMessage.title,
+            message: customerMessage.body,
+            data: customerMessage.dataPayload || { jobId, jobTitle },
           }
         ).catch((err) => console.error("[StatusNotifier] email error:", err));
       }
 
       // Send to provider if applicable
-      if (providerId && notification.providerMessage) {
+      if (providerId && providerUser) {
+        const providerMessage = messageFormatterService.formatMessage({
+          scenario,
+          persona: "provider",
+          data: {
+            jobId,
+            jobTitle: jobTitle || job?.title || "Your job",
+            clientName: clientUser?.name || "Client",
+            providerName: providerUser.name || "You",
+            budget: budget || job?.budget || 0,
+            category: job?.category,
+            location: job?.location,
+            scheduleDate: job?.scheduleDate,
+            ...this.getStatusSpecificData(status, job),
+          },
+        });
+
         const providerNotif = await notificationRepository.create({
           userId: providerId,
-          type: notification.type,
-          title: notification.providerTitle || notification.clientTitle,
-          message: notification.providerMessage,
-          data: { jobId },
+          type: scenario as any,
+          title: providerMessage.title,
+          message: providerMessage.body,
+          data: providerMessage.dataPayload || { jobId },
         });
-        pushNotification(providerId, providerNotif);
+        pushNotification(providerId, {
+          title: providerMessage.title,
+          body: providerMessage.body,
+          data: providerMessage.dataPayload || { jobId },
+        });
 
-        const providerUser = await userRepository.findById(providerId);
-        if (providerUser && providerUser.email && this.shouldEmailNotify(notification.type)) {
+        if (providerUser.email && this.shouldEmailNotify(scenario as any)) {
           await sendNotificationEmail(
             providerUser.email,
             {
-              type: notification.type as any,
+              type: scenario as any,
               recipientName: providerUser.name || "Valued Provider",
-              title: notification.providerTitle || notification.clientTitle,
-              message: notification.providerMessage,
-              data: { jobId, jobTitle },
+              title: providerMessage.title,
+              message: providerMessage.body,
+              data: providerMessage.dataPayload || { jobId, jobTitle },
             }
           ).catch((err) => console.error("[StatusNotifier] email error:", err));
         }
@@ -111,7 +148,59 @@ export class StatusNotifierService {
   }
 
   /**
-   * Assign notification content based on job status
+   * Map job status to message formatter scenario
+   */
+  private mapStatusToScenario(status: IJob["status"]): MessageScenario | null {
+    const statusMap: Record<IJob["status"], MessageScenario | null> = {
+      pending_validation: null, // No notification for pending validation
+      open: "job_spawned",
+      assigned: "job_assigned",
+      in_progress: "job_started",
+      completed: "job_completed",
+      disputed: "escalation_alert",
+      rejected: null,
+      refunded: "escrow_released",
+      expired: null, // No notification for expired
+      cancelled: null,
+    };
+    return statusMap[status];
+  }
+
+  /**
+   * Get additional context data for specific job statuses
+   */
+  private getStatusSpecificData(status: IJob["status"], job: any) {
+    const data: any = {};
+
+    if (job) {
+      data.jobId = job._id?.toString();
+      data.clientId = job.clientId?.toString();
+      data.providerId = job.providerId?.toString();
+      data.riskScore = job.riskScore || 0;
+      data.autoPayEnabled = job.autoPayEnabled;
+    }
+
+    switch (status) {
+      case "assigned":
+        data.runNumber = job?.currentRun || 1;
+        data.maxRuns = job?.maxRuns || 1;
+        break;
+      case "completed":
+        data.autoRelease = job?.escrowStatus === "auto_released";
+        break;
+      case "disputed":
+        data.escalationId = job?._id?.toString();
+        data.reason = "Job under review";
+        data.severity = "MEDIUM";
+        break;
+    }
+
+    return data;
+  }
+
+  /**
+   * LEGACY: Assign notification content based on job status
+   * Used as fallback if formatter is unavailable
    */
   private generateNotification(
     status: IJob["status"],

@@ -7,7 +7,7 @@ import { isValidObjectId } from "mongoose";
 import { ForbiddenError, ValidationError, NotFoundError } from "@/lib/errors";
 
 /**
- * POST /api/jobs/[jobId]/geo-check-in
+ * POST /api/jobs/[id]/geo-check-in
  *
  * Provider check-in via GPS coordinates
  * - Validates GPS position against job location (100m geofence)
@@ -25,7 +25,7 @@ import { ForbiddenError, ValidationError, NotFoundError } from "@/lib/errors";
  */
 export async function POST(
   req: NextRequest,
-  context: { params: Promise<{ jobId: string }> }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     const token = await requireUser();
@@ -36,7 +36,7 @@ export async function POST(
       );
     }
 
-    const { jobId } = await context.params;
+    const { id: jobId } = await context.params;
 
     // Validate jobId format
     if (!isValidObjectId(jobId)) {

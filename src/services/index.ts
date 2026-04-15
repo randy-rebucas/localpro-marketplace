@@ -22,3 +22,4 @@ export { geoVerificationService } from "./geo-verification.service";
 export { providerReplacementService } from "./provider-replacement.service";
 export { recurringJobSpawnerService } from "./recurring-job-spawner.service";
 export { providerUpskillingService } from "./provider-upskilling.service";
+export { messageFormatterService } from "./message-formatter.service";
