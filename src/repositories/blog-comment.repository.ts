@@ -1,12 +1,17 @@
 import BlogComment, { type BlogCommentDocument } from "@/models/BlogComment";
 import { Types } from "mongoose";
+import { connectDB } from "@/lib/db";
 
 /**
  * Blog Comment Repository
- * 
+ *
  * Data access layer for blog comment operations
  */
 export class BlogCommentRepository {
+  private async connect(): Promise<void> {
+    await connectDB();
+  }
+
   /**
    * Get approved comments for a blog article (threaded view)
    */
@@ -20,6 +25,7 @@ export class BlogCommentRepository {
     page: number;
     limit: number;
   }> {
+    await this.connect();
     const skip = (page - 1) * limit;
 
     const [comments, total] = await Promise.all([
@@ -56,6 +62,7 @@ export class BlogCommentRepository {
   async getReplies(
     parentCommentId: string
   ): Promise<BlogCommentDocument[]> {
+    await this.connect();
     const replies = await BlogComment.find({
       parentComment: new Types.ObjectId(parentCommentId),
       status: "approved",
@@ -79,6 +86,7 @@ export class BlogCommentRepository {
     content: string;
     parentComment?: string;
   }): Promise<BlogCommentDocument> {
+    await this.connect();
     const comment = new BlogComment({
       blog: new Types.ObjectId(data.blog),
       ...(data.author && { author: new Types.ObjectId(data.author) }),
@@ -107,6 +115,7 @@ export class BlogCommentRepository {
     page: number;
     limit: number;
   }> {
+    await this.connect();
     const skip = (page - 1) * limit;
 
     const [comments, total] = await Promise.all([
@@ -138,6 +147,7 @@ export class BlogCommentRepository {
    * Approve comment
    */
   async approve(commentId: string): Promise<BlogCommentDocument | null> {
+    await this.connect();
     return BlogComment.findByIdAndUpdate(
       new Types.ObjectId(commentId),
       { status: "approved" },
@@ -149,6 +159,7 @@ export class BlogCommentRepository {
    * Reject comment
    */
   async reject(commentId: string): Promise<BlogCommentDocument | null> {
+    await this.connect();
     return BlogComment.findByIdAndUpdate(
       new Types.ObjectId(commentId),
       { status: "rejected" },
@@ -160,6 +171,7 @@ export class BlogCommentRepository {
    * Mark as spam
    */
   async markAsSpam(commentId: string): Promise<BlogCommentDocument | null> {
+    await this.connect();
     return BlogComment.findByIdAndUpdate(
       new Types.ObjectId(commentId),
       { status: "spam" },
@@ -171,6 +183,7 @@ export class BlogCommentRepository {
    * Delete comment (soft delete)
    */
   async delete(commentId: string): Promise<BlogCommentDocument | null> {
+    await this.connect();
     return BlogComment.findByIdAndUpdate(
       new Types.ObjectId(commentId),
       { isDeleted: true },
@@ -182,6 +195,7 @@ export class BlogCommentRepository {
    * Like comment
    */
   async like(commentId: string): Promise<BlogCommentDocument | null> {
+    await this.connect();
     return BlogComment.findByIdAndUpdate(
       new Types.ObjectId(commentId),
       { $inc: { likes: 1 } },
@@ -193,6 +207,7 @@ export class BlogCommentRepository {
    * Get comment count for blog
    */
   async getCommentCount(blogId: string): Promise<number> {
+    await this.connect();
     return BlogComment.countDocuments({
       blog: new Types.ObjectId(blogId),
       status: "approved",

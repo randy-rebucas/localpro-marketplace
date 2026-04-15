@@ -1,5 +1,6 @@
 import Blog, { type BlogDocument, type IBlog } from "@/models/Blog";
 import { Types } from "mongoose";
+import { connectDB } from "@/lib/db";
 
 /**
  * Blog Repository
@@ -8,6 +9,10 @@ import { Types } from "mongoose";
  * Handles all CRUD operations and domain-specific queries.
  */
 export class BlogRepository {
+  private async connect(): Promise<void> {
+    await connectDB();
+  }
+
   /**
    * Find all blogs (admin view) with pagination and filters
    */
@@ -20,6 +25,7 @@ export class BlogRepository {
       limit?: number;
     } = {}
   ): Promise<{ blogs: BlogDocument[]; total: number; page: number; limit: number }> {
+    await this.connect();
     const {
       status,
       author,
@@ -82,6 +88,7 @@ export class BlogRepository {
    * Find blog by ID
    */
   async findById(id: string): Promise<BlogDocument | null> {
+    await this.connect();
     const blog = await Blog.findOne({
       _id: new Types.ObjectId(id),
       isDeleted: false,
@@ -107,6 +114,7 @@ export class BlogRepository {
    * Find blog by slug (for public pages)
    */
   async findBySlug(slug: string): Promise<BlogDocument | null> {
+    await this.connect();
     // First try to find published blogs by exact slug match (production mode)
     let blog = await Blog.findOne({
       slug,
@@ -151,6 +159,7 @@ export class BlogRepository {
     limitOrUndefined?: number
   ): Promise<{ blogs: BlogDocument[]; total: number; page: number; limit: number }> {
     // Handle flexible parameters
+    await this.connect();
     let page = 1;
     let limit = 12;
 
@@ -198,6 +207,7 @@ export class BlogRepository {
   async getCategoryStats(): Promise<
     { category: string; count: number; label: string }[]
   > {
+    await this.connect();
     const stats = await Blog.aggregate([
       {
         $match: {
@@ -245,6 +255,7 @@ export class BlogRepository {
     search?: string
   ): Promise<{ blogs: BlogDocument[]; total: number; page: number; limit: number }> {
     // Handle flexible parameters: findPublished(page, limit, search) or findPublished(filters)
+    await this.connect();
     let page = 1;
     let limit = 10;
     let searchQuery = "";
