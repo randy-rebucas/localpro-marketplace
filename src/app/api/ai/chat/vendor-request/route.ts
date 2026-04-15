@@ -2,6 +2,25 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import { enqueueNotification } from "@/lib/notification-queue";
 
+// Enhancement library imports for analytics and proposal generation
+import {
+  analyzeScoringAccuracy,
+  recordLeadOutcome,
+} from "@/lib/lead-monitoring";
+import {
+  identifyWhiteLabelTargets,
+  generateCommissionStructure,
+} from "@/lib/white-label-expansion";
+import {
+  identifyLGUTargets,
+  generatePESOPartnershipProposal,
+} from "@/lib/peso-program";
+import {
+  identifyManagedServicesUpsellTargets,
+  generateManagedServicesPitch,
+} from "@/lib/managed-services";
+import { generateDashboardMetrics } from "@/lib/analytics-dashboard";
+
 // Type for vendor request
 interface VendorRequestData {
   businessName?: string;
@@ -275,6 +294,139 @@ function getIndustrySpecificMessage(industry?: string): string {
   }
 }
 
+/**
+ * Screen if lead is a strong white-label partnership candidate
+ */
+function screenWhiteLabelEligibility(
+  vendorType: string,
+  inquiryType: string,
+  message: string,
+  score: number
+): {
+  isCandidate: boolean;
+  reason: string;
+  recommendedModel: string;
+  estimatedValue: number;
+} {
+  const msgLower = message.toLowerCase();
+  const whiteLabelSignals = /white[\s-]?label|franchise|rebranding|api\s+access|scale|platform|integration/i;
+  const multiLocationSignals = /multiple|locations?|branches?|expand|scaling|nationwide|nationwide/i;
+  const volumeSignals = /high\s+volume|thousands?|scale|growth|rapid\s+expansion|multi/i;
+
+  const hasWhiteLabelSignal = whiteLabelSignals.test(msgLower);
+  const hasMultiLocationDemand = multiLocationSignals.test(msgLower);
+  const hasHighVolume = volumeSignals.test(msgLower) || score >= 75;
+  const isEnterpriseOrAgency = vendorType === "enterprise" || vendorType === "agency";
+  const isPartnershipOrAPIOrWhiteLabel =
+    inquiryType === "partnership" ||
+    inquiryType === "api_access" ||
+    inquiryType === "white_label";
+
+  const isCandidate =
+    (hasWhiteLabelSignal || hasMultiLocationDemand) &&
+    (isEnterpriseOrAgency || score >= 70) &&
+    isPartnershipOrAPIOrWhiteLabel;
+
+  let reason = "";
+  let recommendedModel = "60/40";
+  let estimatedValue = 0;
+
+  if (isCandidate) {
+    if (hasWhiteLabelSignal) reason = "Explicit white-label/franchise interest";
+    else if (hasMultiLocationDemand && hasHighVolume) reason = "Multi-location, high-volume demand";
+    else reason = "Strong partnership potential";
+
+    if (score >= 80) {
+      recommendedModel = "50/50";
+      estimatedValue = 150_000_000;
+    } else if (score >= 70) {
+      recommendedModel = "60/40";
+      estimatedValue = 85_000_000;
+    } else {
+      recommendedModel = "65/35";
+      estimatedValue = 45_000_000;
+    }
+  }
+
+  return { isCandidate, reason, recommendedModel, estimatedValue };
+}
+
+/**
+ * Screen if lead is PESO/LGU partnership eligible
+ */
+function screenPESOEligibility(
+  businessName: string,
+  message: string,
+  industry?: string
+): {
+  eligible: boolean;
+  reason?: string;
+  estimatedCoverage?: string;
+} {
+  const msgLower = message.toLowerCase();
+  const pesoSignals = /peso|government|lgu|dole|tesda|dict|department of labor|public employment|institution|agency|workforce|registry/i;
+  const governmentIndustries = [
+    "Construction & Infrastructure",
+    "Transportation & Logistics",
+  ];
+
+  const hasPESOSignal = pesoSignals.test(msgLower) || pesoSignals.test(businessName);
+  const isGovernmentIndustry = !!(industry && governmentIndustries.includes(industry));
+
+  const isEligible = hasPESOSignal || isGovernmentIndustry;
+
+  return {
+    eligible: isEligible,
+    reason: hasPESOSignal ? "Government partnership inquiry" : isGovernmentIndustry ? "Government-aligned industry" : undefined,
+    estimatedCoverage: isEligible ? "Regional to National" : undefined,
+  };
+}
+
+/**
+ * Screen if lead is a managed services upsell opportunity
+ */
+function screenManagedServicesOpportunity(
+  vendorType: string,
+  inquiryType: string,
+  message: string,
+  score: number
+): {
+  isBestFit: boolean;
+  reason?: string;
+  estimatedRevenue: number;
+} {
+  const msgLower = message.toLowerCase();
+  const staffingSignals = /staff|hire|team|recruitment|onboarding|turnover|shortage|urgent|shortage|expand/i;
+  const volumeSignals = /high\s+volume|scale|grow|multi|regions?/i;
+
+  const hasStaffingPain = staffingSignals.test(msgLower);
+  const hasVolumeDemand = volumeSignals.test(msgLower) || score >= 65;
+  const isMSME = vendorType === "sole_proprietor" || vendorType === "small_team";
+  const isVendorOrPartnership =
+    inquiryType === "vendor_account" || inquiryType === "partnership";
+
+  const isBestFit =
+    (hasStaffingPain || hasVolumeDemand) &&
+    isMSME &&
+    isVendorOrPartnership;
+
+  const estimatedRevenue = isBestFit
+    ? score >= 60
+      ? 15_000_000
+      : 8_000_000
+    : 0;
+
+  return {
+    isBestFit,
+    reason: isBestFit
+      ? hasStaffingPain
+        ? "Staffing challenges detected"
+        : "High-volume growth opportunity"
+      : undefined,
+    estimatedRevenue,
+  };
+}
+
 export async function POST(req: NextRequest) {
   try {
     await connectDB();
@@ -324,6 +476,29 @@ export async function POST(req: NextRequest) {
     // Generate unique request ID
     const requestId = `TR-${Date.now()}-${Math.random().toString(36).substring(2, 9).toUpperCase()}`;
 
+    // ==========================================
+    // ENHANCEMENT: Opportunity Screening
+    // ==========================================
+    const whiteLabelEligibility = screenWhiteLabelEligibility(
+      vendorType,
+      inquiryType,
+      message,
+      leadScore.qualificationScore
+    );
+
+    const pesoEligibility = screenPESOEligibility(
+      businessName || "",
+      message,
+      detectedIndustry
+    );
+
+    const managedServicesOpportunity = screenManagedServicesOpportunity(
+      vendorType,
+      inquiryType,
+      message,
+      leadScore.qualificationScore
+    );
+
     // Create vendor request record with lead qualification data
     const vendorRequest = {
       requestId,
@@ -342,6 +517,13 @@ export async function POST(req: NextRequest) {
         recommendedPlan: leadScore.recommendedPlan,
         upsellOpportunities: leadScore.upsellOpportunities,
       },
+      // Enhancement data embedded in vendor request
+      enhancements: {
+        whiteLabelCandidate: whiteLabelEligibility.isCandidate,
+        whiteLabelModel: whiteLabelEligibility.recommendedModel,
+        pesoProgram: pesoEligibility.eligible,
+        managedServices: managedServicesOpportunity.isBestFit,
+      },
     };
 
     try {
@@ -358,13 +540,31 @@ Recommended Plan: ${leadScore.recommendedPlan || "N/A"}
 Message: ${message}
 
 Upsell Opportunities:
-${leadScore.upsellOpportunities.map((opp) => `• ${opp}`).join("\n")}`,
+${leadScore.upsellOpportunities.map((opp) => `• ${opp}`).join("\n")}
+
+${whiteLabelEligibility.isCandidate ? `\n🎯 WHITE-LABEL CANDIDATE FLAGGED:\n• ${whiteLabelEligibility.reason}\n• Revenue Share Model: ${whiteLabelEligibility.recommendedModel}\n• Estimated Value: PHP ${(whiteLabelEligibility.estimatedValue / 1000000).toFixed(1)}M` : ""}
+
+${pesoEligibility.eligible ? `\n🏛️  PESO PROGRAM ELIGIBLE:\n• ${pesoEligibility.reason || "Government partnership potential"}\n• Potential Coverage: ${pesoEligibility.estimatedCoverage || "TBD"}` : ""}
+
+${managedServicesOpportunity.isBestFit ? `\n💼 MANAGED SERVICES UPSELL:\n• ${managedServicesOpportunity.reason || "Staffing opportunity"}\n• Estimated Annual Value: PHP ${(managedServicesOpportunity.estimatedRevenue / 1000000).toFixed(1)}M` : ""}`,
         immediate: priority === "high",
       });
     } catch (notificationErr) {
       console.error("[Vendor Request] Notification failed:", notificationErr);
       // Don't fail the whole request if notification fails
     }
+
+    // ==========================================
+    // ASYNC: Record lead outcome for monitoring (fire-and-forget)
+    // ==========================================
+    Promise.resolve().then(async () => {
+      try {
+        await recordLeadOutcome(requestId, "pending");
+      } catch (monitoringErr) {
+        console.warn("[Vendor Request] Lead outcome recording failed:", monitoringErr);
+        // Non-blocking - continue
+      }
+    });
 
     // Determine estimated response time based on priority
     const estimatedResponse =
@@ -405,7 +605,7 @@ ${industryMessage}
 **Recommended Plan:** ${leadScore.recommendedPlan || "N/A"}
 
 **Key Opportunities:**
-${leadScore.upsellOpportunities.map((opp) => `• ${opp}`).join("\n")}
+${leadScore.upsellOpportunities.map((opp) => `• ${opp}`).join("\n")}${whiteLabelEligibility.isCandidate ? `\n\n🎯 **White-Label Candidate:** We see high potential for franchise partnerships. Expert team will explore co-branding and revenue share models (starting at ${whiteLabelEligibility.recommendedModel}, scaling to 50/50+)` : ""}${pesoEligibility.eligible ? `\n\n🏛️  **PESO Program Eligibility:** Government partnership opportunities available. Potential for workforce registry integration and compliance frameworks.` : ""}${managedServicesOpportunity.isBestFit ? `\n\n💼 **Managed Services Opportunity:** We can offer done-for-you staffing services—our team handles recruitment, vetting, and payroll management. Estimated value: PHP ${(managedServicesOpportunity.estimatedRevenue / 1000000).toFixed(1)}M+ annually` : ""}
 
 **Timeline:** Our team will schedule a discovery call to discuss your specific needs and revenue potential`;
     } else if (inquiryType === "white_label") {
@@ -421,11 +621,14 @@ ${
     : ""
 }
 
-**Expected Commission Model:** 60/40 split (LocalPro/Partner) escalating to 50/50 at higher volumes
+${whiteLabelEligibility.isCandidate ? `\n📊 **Revenue Opportunity:** Based on business profile, recommended revenue share model is **${whiteLabelEligibility.recommendedModel}**. At projected volumes, we estimate potential of PHP ${(whiteLabelEligibility.estimatedValue / 1000000).toFixed(0)}M annually.` : ""}
+
+**Expected Commission Model:** ${whiteLabelEligibility.recommendedModel || "60/40 split"} (LocalPro/Partner) escalating to 50/50 at higher volumes
 **Next Step:** Expect white-label partnership proposal within 4-6 hours`;
     }
 
-    return NextResponse.json({
+    // Enhanced response with opportunity flags
+    const response = {
       message: `Thank you for your interest, ${businessName || "partner"}! We're excited to learn more about your business.
 
 **Request ID:** ${requestId}
@@ -445,7 +648,18 @@ Our ${routeToTeam.replace(/_/g, " ")} team will be in touch shortly with tailore
         recommendedPlan: leadScore.recommendedPlan,
         upsellOpportunities: leadScore.upsellOpportunities,
       },
-    });
+      opportunityFlags: {
+        whiteLabelCandidate: whiteLabelEligibility.isCandidate,
+        whiteLabelRevenue: whiteLabelEligibility.estimatedValue,
+        pesoEligible: pesoEligibility.eligible,
+        managedServicesOpportunity:
+          managedServicesOpportunity.isBestFit,
+        managedServicesRevenue:
+          managedServicesOpportunity.estimatedRevenue,
+      },
+    };
+
+    return NextResponse.json(response);
   } catch (error) {
     console.error("[Vendor Request] Error:", error);
     return NextResponse.json(
