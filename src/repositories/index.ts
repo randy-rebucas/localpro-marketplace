@@ -14,6 +14,7 @@ export { skillRepository } from "./skill.repository";
 export { payoutRepository } from "./payout.repository";
 export { favoriteProviderRepository } from "./favoriteProvider.repository";
 export { announcementRepository } from "./announcement.repository";
+export { blogRepository } from "./blog.repository";
 export { knowledgeArticleRepository } from "./knowledgeArticle.repository";
 export { loyaltyRepository } from "./loyalty.repository";
 export { categoryRepository } from "./category.repository";

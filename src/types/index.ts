@@ -15,7 +15,8 @@ export type StaffCapability =
   | "manage_payouts"
   | "manage_categories"
   | "manage_support"
-  | "manage_courses";
+  | "manage_courses"
+  | "manage_blogs";
 
 export interface IAddress {
   _id: string;
@@ -80,7 +81,7 @@ export interface IUserPreferences {
 
 // ─── Upload ───────────────────────────────────────────────────────────────────
 
-export type UploadFolder = "jobs/before" | "jobs/after" | "avatars" | "kyc" | "misc" | "peso/logos" | "resumes";
+export type UploadFolder = "jobs/before" | "jobs/after" | "avatars" | "kyc" | "misc" | "peso/logos" | "resumes" | "blogs";
 
 export interface IUser {
   _id: Types.ObjectId | string;
