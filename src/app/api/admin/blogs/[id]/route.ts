@@ -10,6 +10,7 @@ import { assertObjectId, NotFoundError } from "@/lib/errors";
  */
 const UpdateBlogSchema = z.object({
   title: z.string().min(3).max(200).optional(),
+  slug: z.string().min(1).max(200).optional(),
   content: z.string().min(10).optional(),
   excerpt: z.string().max(500).optional(),
   featuredImage: z.string().url().optional().nullable().or(z.literal("")),

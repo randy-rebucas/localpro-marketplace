@@ -271,6 +271,7 @@ export class BlogRepository {
     // Allowlist to prevent mass-assignment
     const allowedFields = [
       "title",
+      "slug",
       "content",
       "excerpt",
       "featuredImage",

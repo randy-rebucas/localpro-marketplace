@@ -143,6 +143,8 @@ const BlogSchema = new Schema<BlogDocument>(
 
 /**
  * Auto-generate slug from title on creation/update
+ * Slug is only regenerated if title is modified
+ * Existing slugs are preserved during other field updates
  */
 BlogSchema.pre<BlogDocument>("save", function (next) {
   if (this.isModified("title")) {
@@ -153,12 +155,6 @@ BlogSchema.pre<BlogDocument>("save", function (next) {
       .replace(/\s+/g, "-") // Replace spaces with hyphens
       .replace(/-+/g, "-") // Replace multiple hyphens with single hyphen
       .replace(/^-|-$/g, ""); // Remove leading/trailing hyphens
-
-    // Add timestamp to slug if it already exists (prevent duplicates during tests)
-    if (this.isNew === false) {
-      const timestamp = Date.now().toString().slice(-6);
-      this.slug = `${this.slug}-${timestamp}`;
-    }
   }
 
   // Auto-set publishedAt when transitioning to published
@@ -175,7 +171,8 @@ BlogSchema.pre<BlogDocument>("save", function (next) {
 BlogSchema.index({ status: 1, publishedAt: -1 }); // For listing published blogs
 BlogSchema.index({ category: 1, publishedAt: -1 }); // For category browsing
 BlogSchema.index({ author: 1, createdAt: -1 }); // For author's blogs
-BlogSchema.index({ slug: 1, isDeleted: 1 }); // Lookup by slug
+// Compound index: slug + isDeleted to allow slug reuse for non-deleted blogs only
+BlogSchema.index({ slug: 1, isDeleted: 1 }, { unique: true, sparse: true }); // Lookup by slug, exclude deleted
 
 const Blog: Model<BlogDocument> =
   mongoose.models.Blog || mongoose.model<BlogDocument>("Blog", BlogSchema);

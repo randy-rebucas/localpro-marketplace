@@ -197,6 +197,7 @@ export default function BlogEditor({ blog, onClose, onSave }: BlogEditorProps) {
     try {
       const payload = {
         ...formData,
+        slug,
         keywords: formData.keywords
           .split(",")
           .map((k) => k.trim())
