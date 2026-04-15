@@ -95,8 +95,13 @@ export default function PwaSetup() {
 
   function applyUpdate() {
     if (!pendingWorker) return;
-    pendingWorker.postMessage({ type: "SKIP_WAITING" });
-    // controllerchange listener above will reload the page
+    try {
+      pendingWorker.postMessage({ type: "SKIP_WAITING" });
+      // controllerchange listener above will reload the page
+    } catch (error) {
+      // Suppress "message port closed" errors — worker will self-destruct on next update
+      console.debug("SW message error (ignored):", error);
+    }
   }
 
   if (!pendingWorker || dismissed) return null;
