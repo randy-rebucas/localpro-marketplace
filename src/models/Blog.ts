@@ -60,9 +60,8 @@ const BlogSchema = new Schema<BlogDocument>(
     },
     slug: {
       type: String,
-      required: [true, "Blog slug is required"],
       unique: true,
-      sparse: false,
+      sparse: true,
       trim: true,
       lowercase: true,
       index: true,
@@ -144,13 +143,11 @@ const BlogSchema = new Schema<BlogDocument>(
 
 /**
  * Auto-generate slug from title on creation/update
- * Slug is regenerated from title only if:
- * - Blog is new (creation), OR
- * - Title is modified AND slug is not explicitly provided
+ * Always ensures a slug exists, either from explicit input or auto-generated from title
  */
 BlogSchema.pre<BlogDocument>("save", function (next) {
-  // Generate slug from title if not explicitly set
-  if (!this.slug || (this.isModified("title") && !this.isModified("slug"))) {
+  // Ensure slug exists: use provided slug or generate from title
+  if (!this.slug) {
     this.slug = this.title
       .toLowerCase()
       .trim()
@@ -158,6 +155,15 @@ BlogSchema.pre<BlogDocument>("save", function (next) {
       .replace(/\s+/g, "-") // Replace spaces with hyphens
       .replace(/-+/g, "-") // Replace multiple hyphens with single hyphen
       .replace(/^-|-$/g, ""); // Remove leading/trailing hyphens
+  } else if (this.isModified("title") && !this.isModified("slug")) {
+    // If title changed but slug wasn't explicitly updated, regenerate slug from new title
+    this.slug = this.title
+      .toLowerCase()
+      .trim()
+      .replace(/[^\w\s-]/g, "")
+      .replace(/\s+/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "");
   }
 
   // Auto-set publishedAt when transitioning to published

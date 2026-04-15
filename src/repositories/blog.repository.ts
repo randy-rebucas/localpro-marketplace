@@ -59,8 +59,22 @@ export class BlogRepository {
       Blog.countDocuments(query),
     ]);
 
+    // Ensure all blogs have slugs (for backward compatibility)
+    const blogsWithSlugs = blogs.map((blog: any) => {
+      if (!blog.slug) {
+        blog.slug = blog.title
+          .toLowerCase()
+          .trim()
+          .replace(/[^\w\s-]/g, "")
+          .replace(/\s+/g, "-")
+          .replace(/-+/g, "-")
+          .replace(/^-|-$/g, "");
+      }
+      return blog;
+    });
+
     return {
-      blogs: blogs as unknown as BlogDocument[],
+      blogs: blogsWithSlugs as unknown as BlogDocument[],
       total,
       page,
       limit,
@@ -71,17 +85,32 @@ export class BlogRepository {
    * Find blog by ID
    */
   async findById(id: string): Promise<BlogDocument | null> {
-    return Blog.findOne({
+    const blog = await Blog.findOne({
       _id: new Types.ObjectId(id),
       isDeleted: false,
     }).populate("author", "name email");
+
+    if (!blog) return null;
+
+    // Ensure blog has a slug (for backward compatibility)
+    const blogObj = blog.toObject() as any;
+    if (!blogObj.slug) {
+      blogObj.slug = blogObj.title
+        .toLowerCase()
+        .trim()
+        .replace(/[^\w\s-]/g, "")
+        .replace(/\s+/g, "-")
+        .replace(/-+/g, "-")
+        .replace(/^-|-$/g, "");
+    }
+    return blogObj;
   }
 
   /**
    * Find blog by slug (for public pages)
    */
   async findBySlug(slug: string): Promise<BlogDocument | null> {
-    // First try to find published blogs (production mode)
+    // First try to find published blogs by exact slug match (production mode)
     let blog = await Blog.findOne({
       slug,
       status: "published",
@@ -99,7 +128,21 @@ export class BlogRepository {
       }).populate("author", "name email");
     }
 
-    return blog;
+    if (!blog) return null;
+
+    // Ensure blog has a slug (for backward compatibility)
+    const blogObj = blog.toObject() as any;
+    if (!blogObj.slug) {
+      blogObj.slug = blogObj.title
+        .toLowerCase()
+        .trim()
+        .replace(/[^\w\s-]/g, "")
+        .replace(/\s+/g, "-")
+        .replace(/-+/g, "-")
+        .replace(/^-|-$/g, "");
+    }
+
+    return blogObj;
   }
 
   /**
@@ -248,8 +291,22 @@ export class BlogRepository {
       Blog.countDocuments(query),
     ]);
 
+    // Ensure all returned blogs have slugs (for backward compatibility with older docs)
+    const blogsWithSlugs = blogs.map((blog: any) => {
+      if (!blog.slug) {
+        blog.slug = blog.title
+          .toLowerCase()
+          .trim()
+          .replace(/[^\w\s-]/g, "")
+          .replace(/\s+/g, "-")
+          .replace(/-+/g, "-")
+          .replace(/^-|-$/g, "");
+      }
+      return blog;
+    });
+
     return {
-      blogs: blogs as unknown as BlogDocument[],
+      blogs: blogsWithSlugs as unknown as BlogDocument[],
       total,
       page,
       limit,

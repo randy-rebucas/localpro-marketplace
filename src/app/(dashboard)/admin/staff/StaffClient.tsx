@@ -16,7 +16,9 @@ export type StaffCapability =
   | "view_revenue"
   | "manage_payouts"
   | "manage_categories"
-  | "manage_support";
+  | "manage_support"
+  | "manage_courses"
+  | "manage_blogs";
 
 export interface StaffMember {
   _id: string;
@@ -43,6 +45,8 @@ const CAPABILITY_META: Record<
   manage_payouts:    { label: "Manage Payouts",     description: "Process provider payout requests",              color: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300" },
   manage_categories: { label: "Manage Categories",  description: "Add, edit, or reorder service categories",     color: "bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300" },
   manage_support:    { label: "Manage Support",     description: "Handle user support tickets",                   color: "bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-300" },
+  manage_courses:    { label: "Manage Courses",     description: "Create and manage training courses",            color: "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300" },
+  manage_blogs:      { label: "Manage Blogs",       description: "Create, edit, and publish blog articles",      color: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300" },
 };
 
 const ALL_CAPABILITIES = Object.keys(CAPABILITY_META) as StaffCapability[];

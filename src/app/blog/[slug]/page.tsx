@@ -93,13 +93,17 @@ export default async function BlogArticlePage(props: PageProps) {
       notFound();
     }
 
-    if (!blog.publishedAt) {
+    // Require status to be published (publishedAt is auto-set but may be missing on old blogs)
+    if (blog.status !== "published") {
       console.warn(`[Blog 404] Blog found but not published: slug="${slug}", status="${blog.status}"`);
       notFound();
     }
 
+    // Auto-set publishedAt if missing (for backward compatibility with older blogs)
+    const publishedAt = blog.publishedAt || new Date();
+
     // Format date
-    const publishDate = new Date(blog.publishedAt!).toLocaleDateString(
+    const publishDate = new Date(publishedAt).toLocaleDateString(
       "en-US",
       { year: "numeric", month: "long", day: "numeric" }
     );
