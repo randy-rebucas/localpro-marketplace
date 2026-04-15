@@ -55,6 +55,23 @@ const nextConfig: NextConfig = {
     },
   },
 
+  async rewrites() {
+    return {
+      beforeFiles: [
+        // Map /blog/feed.xml → /blog/feed and /blog/sitemap.xml → /blog/sitemap
+        // This allows search engines to see proper .xml extensions while keeping routes clean
+        {
+          source: "/blog/feed.xml",
+          destination: "/blog/feed",
+        },
+        {
+          source: "/blog/sitemap.xml",
+          destination: "/blog/sitemap",
+        },
+      ],
+    };
+  },
+
   async headers() {
     return [
       {

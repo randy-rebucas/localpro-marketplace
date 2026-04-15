@@ -2,10 +2,13 @@ import React from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Metadata } from "next";
-import { Calendar, User, ArrowLeft, Share2, Tag } from "lucide-react";
+import { Calendar, User, Share2, Tag, ArrowRight } from "lucide-react";
 import { blogRepository } from "@/repositories";
+import { blogCommentRepository } from "@/repositories/blog-comment.repository";
 import BlogContent from "./BlogContent";
 import ShareSection from "./ShareSection";
+import BlogComments from "./BlogComments";
+import AnalyticsTracker from "./AnalyticsTracker";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -89,21 +92,18 @@ export default async function BlogArticlePage(props: PageProps) {
       .slice(0, 3) ||
       [];
 
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
-        {/* Sticky Navigation */}
-        <div className="sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 shadow-sm">
-          <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between">
-            <Link
-              href="/blog"
-              className="inline-flex items-center gap-2 text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 font-semibold transition-colors duration-200 group"
-            >
-              <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
-              Back to Blog
-            </Link>
-          </div>
-        </div>
+    // Get comments for this blog
+    const commentsResult = await blogCommentRepository.getApprovedComments(
+      blog._id?.toString() || "",
+      1,
+      20
+    );
+    const commentCount = await blogCommentRepository.getCommentCount(
+      blog._id?.toString() || ""
+    );
 
+    return (
+      <div className="bg-gradient-to-br from-slate-50 via-white to-slate-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
         {/* Featured Image */}
         {blog.featuredImage && (
           <div className="relative h-96 md:h-[500px] lg:h-[600px] overflow-hidden bg-gradient-to-br from-slate-200 to-slate-300 dark:from-slate-800 dark:to-slate-900">
@@ -118,6 +118,7 @@ export default async function BlogArticlePage(props: PageProps) {
 
         {/* Article Content */}
         <article className="py-16 px-4 sm:px-6 lg:px-8">
+          <AnalyticsTracker blogId={blog._id?.toString() || ""} />
           <div className="max-w-3xl mx-auto">
             {/* Header */}
             <header className="mb-16">
@@ -199,6 +200,21 @@ export default async function BlogArticlePage(props: PageProps) {
             {/* Share Section */}
             <ShareSection title={blog.title} slug={blog.slug} />
 
+            {/* Comments Section */}
+            <BlogComments
+              blogId={blog._id?.toString() || ""}
+              initialComments={
+                commentsResult.comments as unknown as Array<{
+                  _id: string;
+                  authorName: string;
+                  content: string;
+                  likes: number;
+                  createdAt: string;
+                }>
+              }
+              totalComments={commentCount}
+            />
+
             {/* Related Articles */}
             {related.length > 0 && (
               <div className="mt-20 pt-14 border-t border-slate-200 dark:border-slate-800">
@@ -262,7 +278,7 @@ export default async function BlogArticlePage(props: PageProps) {
             </p>
             <button className="inline-flex items-center gap-2 px-8 py-4 rounded-lg bg-white text-blue-600 font-semibold hover:bg-blue-50 transition-colors shadow-lg">
               Get Started Today
-              <ArrowLeft className="w-5 h-5 rotate-180" />
+              <ArrowRight className="w-5 h-5" />
             </button>
           </div>
         </div>
