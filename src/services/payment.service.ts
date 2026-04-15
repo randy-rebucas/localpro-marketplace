@@ -6,6 +6,7 @@ import {
 } from "@/repositories";
 import { ledgerService } from "@/services/ledger.service";
 import { ledgerRepository } from "@/repositories/ledger.repository";
+import { transactionScopes } from "@/lib/transactions";
 import {
   createCheckoutSession,
   getCheckoutSession,
@@ -259,6 +260,9 @@ export class PaymentService {
   /**
    * Called from the PayMongo webhook when checkout_session.payment.paid fires,
    * or directly from pollCheckoutSession. Idempotent.
+   * 
+   * Wraps critical operations (payment confirmation, job update, ledger posting) in a transaction
+   * to ensure consistency even under concurrent webhook deliveries.
    */
   async confirmEscrowFunding(
     sessionId: string,
@@ -280,6 +284,26 @@ export class PaymentService {
       return;
     }
 
+    // Run the rest in a transaction to ensure atomic job update + ledger posting
+    await transactionScopes.escrowFunding(async (session) => {
+      return this._confirmEscrowFundingTransactional(
+        sessionId,
+        payment,
+        session
+      );
+    });
+  }
+
+  /**
+   * Internal transactional confirmation logic.
+   * Handles: job update, transaction creation, ledger posting.
+   * Runs within a MongoDB transaction session.
+   */
+  private async _confirmEscrowFundingTransactional(
+    sessionId: string,
+    payment: any,
+    session: any
+  ): Promise<void> {
     const p = payment as unknown as {
       jobId: { toString(): string };
       clientId: { toString(): string };
@@ -300,7 +324,7 @@ export class PaymentService {
     (job as unknown as { escrowFee: number }).escrowFee = p.escrowFee ?? 0;
     (job as unknown as { processingFee: number }).processingFee = p.processingFee ?? 0;
     (job as unknown as { platformServiceFee: number }).platformServiceFee = p.platformServiceFee ?? 0;
-    await jobDoc.save();
+    await jobDoc.save({ session });
 
     const rate = await getEffectiveCommissionRate(job.category, p.clientId.toString());
     const { commission, netAmount } = calculateCommission(p.amount, rate);
@@ -344,9 +368,29 @@ export class PaymentService {
       userId: p.clientId.toString(),
       eventType: "escrow_funded",
       jobId: p.jobId.toString(),
-      metadata: { sessionId, paymentIntentId, paymentMethodType },
+      metadata: { sessionId, paymentIntentId: sessionId, paymentMethodType: "checkout" },
     });
 
+    // Post-transaction notifications (non-blocking, outside transaction)
+    this._notifyEscrowFunding(p).catch(err => {
+      console.error("[EscrowFunding] Notification error:", err);
+    });
+  }
+
+  /**
+   * Send notifications after escrow funding completes.
+   * Runs outside the transaction to avoid transaction timeouts.
+   */
+  private async _notifyEscrowFunding(p: {
+    jobId: { toString(): string };
+    clientId: { toString(): string };
+    providerId: { toString(): string } | null;
+    amount: number;
+    escrowFee?: number;
+    processingFee?: number;
+    urgencyFee?: number;
+    platformServiceFee?: number;
+  }): Promise<void> {
     const { notificationService } = await import("@/services/notification.service");
 
     if (p.providerId) {

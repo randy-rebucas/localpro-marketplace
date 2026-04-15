@@ -1,10 +1,13 @@
 import mongoose from "mongoose";
 import { attachDatabasePool } from "@vercel/functions";
 
-const MONGODB_URI = process.env.MONGODB_URI as string;
-
-if (!MONGODB_URI) {
-  throw new Error("Please define the MONGODB_URI environment variable in .env.local");
+// Defer validation until connectDB() is called to support test environments
+function getMongoDBUri(): string {
+  const uri = process.env.MONGODB_URI as string;
+  if (!uri) {
+    throw new Error("Please define the MONGODB_URI environment variable in .env.local");
+  }
+  return uri;
 }
 
 interface MongooseCache {
@@ -60,7 +63,7 @@ export async function connectDB(): Promise<typeof mongoose> {
       // a user request lands on a stale connection.
       heartbeatFrequencyMS: 5_000,
     };
-    cached.promise = mongoose.connect(MONGODB_URI, opts);
+    cached.promise = mongoose.connect(getMongoDBUri(), opts);
   }
 
   try {

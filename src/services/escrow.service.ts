@@ -7,6 +7,7 @@ import {
 } from "@/repositories";
 import { ledgerService } from "@/services/ledger.service";
 import { statusNotifierService } from "@/services/status-notifier.service";
+import { transactionScopes } from "@/lib/transactions";
 import { canTransition, canTransitionEscrow } from "@/lib/jobLifecycle";
 import { pushStatusUpdateMany } from "@/lib/events";
 import { calculateCommission } from "@/lib/commission";
@@ -224,33 +225,37 @@ export class EscrowService {
 
     await transactionRepository.setPending(job._id!.toString(), "completed");
 
-    // ── post ledger entry for escrow release ─────────────────────────────────
-    try {
-      const tx = await transactionRepository.findOneByJobId(job._id!.toString());
-      if (tx) {
-        const t = tx as unknown as { _id: { toString(): string }; amount: number; commission: number; netAmount: number };
-        // Guard: skip ledger write if amounts are missing/invalid (shouldn't happen)
-        if (t.amount > 0 && t.commission >= 0 && t.netAmount >= 0) {
-          const releaseJournalId = `escrow-release-${job._id!.toString()}`;
-          await ledgerService.postEscrowReleased(
-            {
-              journalId: releaseJournalId,
-              entityType: "job",
-              entityId: job._id!.toString(),
-              clientId: job.clientId.toString(),
-              providerId: job.providerId?.toString(),
-              initiatedBy: user.userId,
-            },
-            t.amount, t.commission, t.netAmount
-          );
-          // Stamp the release journal on the Transaction for end-to-end traceability
-          await transactionRepository.updateById(t._id.toString(), { ledgerJournalId: releaseJournalId });
+    // ── post ledger entry for escrow release (within transaction) ───────────
+    await transactionScopes.jobCompletion(async (session) => {
+      try {
+        const tx = await transactionRepository.findOneByJobId(job._id!.toString());
+        if (tx) {
+          const t = tx as unknown as { _id: { toString(): string }; amount: number; commission: number; netAmount: number };
+          // Guard: skip ledger write if amounts are missing/invalid (shouldn't happen)
+          if (t.amount > 0 && t.commission >= 0 && t.netAmount >= 0) {
+            const releaseJournalId = `escrow-release-${job._id!.toString()}`;
+            await ledgerService.postEscrowReleased(
+              {
+                journalId: releaseJournalId,
+                entityType: "job",
+                entityId: job._id!.toString(),
+                clientId: job.clientId.toString(),
+                providerId: job.providerId?.toString(),
+                initiatedBy: user.userId,
+              },
+              t.amount, t.commission, t.netAmount
+            );
+            // Stamp the release journal on the Transaction for end-to-end traceability
+            await transactionRepository.updateById(t._id.toString(), { ledgerJournalId: releaseJournalId });
+          }
         }
+      } catch (err) {
+        // Non-critical — escrow was released; log so reconciliation discrepancies are visible
+        console.error(`[EscrowService] Ledger post failed for escrow release on job ${job._id?.toString()}:`, err);
       }
-    } catch (err) {
-      // Non-critical — escrow was released; log so reconciliation discrepancies are visible
-      console.error(`[EscrowService] Ledger post failed for escrow release on job ${job._id?.toString()}:`, err);
-    }
+    }).catch(err => {
+      console.error(`[EscrowService] Transaction error during escrow release for job ${job._id?.toString()}:`, err);
+    });
 
     // ── loyalty points for client ────────────────────────────────────────────
     try {

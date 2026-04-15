@@ -6,6 +6,9 @@ import {
 } from "@/repositories";
 import { getAppSetting } from "@/lib/appSettings";
 import { pushStatusUpdate, pushStatusUpdateMany } from "@/lib/events";
+import { transactionScopes } from "@/lib/transactions";
+import Quote from "@/models/Quote";
+import Job from "@/models/Job";
 import {
   NotFoundError,
   ForbiddenError,
@@ -180,25 +183,34 @@ export class QuoteService {
       }
     }
 
-    // ── 2. Atomically accept quote (CAS: status must still be "pending") ──
-    const acceptedQuote = await quoteRepository.atomicAccept(quoteId);
-    if (!acceptedQuote) {
-      throw new ConflictError("Quote was already accepted or rejected by a concurrent request");
-    }
+    // ── 2. Atomically accept quote + assign job in a transaction ──────────
+    // This ensures that if quote acceptance succeeds, job assignment will also succeed.
+    const result = await transactionScopes.quoteAcceptance(async (session) => {
+      // Atomically accept quote (CAS: status must still be "pending")
+      const acceptedQuote = await quoteRepository.atomicAccept(quoteId);
+      if (!acceptedQuote) {
+        throw new ConflictError("Quote was already accepted or rejected by a concurrent request");
+      }
 
-    await quoteRepository.rejectOthers(q.jobId.toString(), q._id.toString());
+      // Reject other quotes for this job
+      await quoteRepository.rejectOthers(q.jobId.toString(), q._id.toString());
 
-    // ── 3. Atomically assign job (also updates budget to accepted amount — H8) ──
-    const acceptedJob = await jobRepository.atomicAssignProvider(
-      j._id.toString(),
-      q.providerId?.toString() ?? "",
-      q.proposedAmount
-    );
-    if (!acceptedJob) {
-      // Rollback quote acceptance — job was concurrently modified
-      await quoteRepository.revertAccepted(quoteId);
-      throw new ConflictError("Job is no longer available for assignment");
-    }
+      // Atomically assign job (also updates budget to accepted amount — H8)
+      const acceptedJob = await jobRepository.atomicAssignProvider(
+        j._id.toString(),
+        q.providerId?.toString() ?? "",
+        q.proposedAmount
+      );
+      if (!acceptedJob) {
+        // Rollback quote acceptance — job was concurrently modified
+        await quoteRepository.revertAccepted(quoteId);
+        throw new ConflictError("Job is no longer available for assignment");
+      }
+
+      return { acceptedQuote, acceptedJob };
+    });
+
+    const { acceptedQuote, acceptedJob } = result;
 
     await activityRepository.log({
       userId: user.userId,
