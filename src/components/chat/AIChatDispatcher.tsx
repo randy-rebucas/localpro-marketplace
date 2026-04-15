@@ -1,7 +1,15 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { MessageCircle, X, Send, Loader2, AlertCircle } from "lucide-react";
+import {
+  MessageCircle,
+  X,
+  Send,
+  Loader2,
+  Sparkles,
+  ChevronDown,
+  Zap,
+} from "lucide-react";
 import { apiFetch } from "@/lib/fetchClient";
 import toast from "react-hot-toast";
 import BookingConfirmation from "./BookingConfirmation";
@@ -21,6 +29,19 @@ interface ConversationState {
   confirmedBooking?: boolean;
   jobId?: string;
   jobStatus?: string;
+  urgentMode?: boolean;
+  switchMode?: boolean;
+}
+
+const QUICK_PROMPTS = [
+  "I need a plumber",
+  "Find an electrician",
+  "Where is my provider?",
+  "Cancel my request",
+];
+
+function formatTime(iso: string) {
+  return new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
 export default function AIChatDispatcher() {
@@ -34,19 +55,16 @@ export default function AIChatDispatcher() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  // Auto-scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messages, loading]);
 
-  // Focus input when chat opens
   useEffect(() => {
     if (isOpen && inputRef.current) {
-      inputRef.current.focus();
+      setTimeout(() => inputRef.current?.focus(), 150);
     }
   }, [isOpen]);
 
-  // Initialize with welcome message
   useEffect(() => {
     if (isOpen && messages.length === 0) {
       setMessages([
@@ -54,18 +72,17 @@ export default function AIChatDispatcher() {
           id: "welcome",
           role: "assistant",
           content:
-            "Hello! 👋 I'm the LocalPro assistant. I can help you post a job and find the perfect provider instantly.\n\nTry saying:\n• 'I need a plumber in Quezon City - budget 2000 pesos'\n• 'Where is my provider?'\n• 'Cancel my request'",
+            "Hi there! 👋 I'm your LocalPro AI agent. I can help you book services, track jobs, and resolve issues instantly.\n\nWhat do you need help with today?",
           timestamp: new Date().toISOString(),
         },
       ]);
     }
   }, [isOpen, messages.length]);
 
-  const handleSend = async () => {
-    const trimmed = input.trim();
+  const handleSend = async (text?: string) => {
+    const trimmed = (text ?? input).trim();
     if (!trimmed || loading) return;
 
-    // Add user message
     const userMessage: Message = {
       id: Date.now().toString(),
       role: "user",
@@ -75,9 +92,7 @@ export default function AIChatDispatcher() {
 
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
-    if (inputRef.current) {
-      inputRef.current.style.height = "auto";
-    }
+    if (inputRef.current) inputRef.current.style.height = "auto";
 
     setLoading(true);
 
@@ -116,353 +131,110 @@ export default function AIChatDispatcher() {
 
       setMessages((prev) => [...prev, assistantMessage]);
 
-      // Handle different action types
-      if (data.action?.action === "STATUS_UPDATE" && data.action?.jobId) {
-        // Fetch job status
-        setTimeout(async () => {
-          try {
-            const statusRes = await apiFetch("/api/ai/chat/job-status", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ jobId: data.action.jobId }),
-            });
-
-            if (statusRes.ok) {
-              const statusData = await statusRes.json();
-              const statusMsg: Message = {
-                id: `status-${Date.now()}`,
-                role: "assistant",
-                content: statusData.clientMessage,
-                timestamp: new Date().toISOString(),
-              };
-              setMessages((prev) => [...prev, statusMsg]);
-              setConversationState((prev) => ({
-                ...prev,
-                jobStatus: statusData.status,
-              }));
-            }
-          } catch (err) {
-            console.error("Failed to get status:", err);
+      const dispatchAction = async (url: string, body: object, key: string) => {
+        await new Promise((r) => setTimeout(r, 500));
+        try {
+          const res = await apiFetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+          });
+          if (!res.ok) {
+            const err = await res.json();
+            throw new Error(err.error || "Request failed");
           }
-        }, 500);
-      } else if (data.action?.action === "CANCEL_JOB" && data.action?.jobId) {
-        // Cancel job
-        setTimeout(async () => {
-          try {
-            const cancelRes = await apiFetch("/api/ai/chat/cancel-job", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ jobId: data.action.jobId }),
-            });
+          return await res.json();
+        } catch (err) {
+          throw err;
+        }
+      };
 
-            if (cancelRes.ok) {
-              const cancelData = await cancelRes.json();
-              const cancelMsg: Message = {
-                id: `cancel-${Date.now()}`,
-                role: "assistant",
-                content: cancelData.message + "\n\n" + cancelData.refundInfo,
-                timestamp: new Date().toISOString(),
-              };
-              setMessages((prev) => [...prev, cancelMsg]);
-              setConversationState({});
-            } else {
-              const error = await cancelRes.json();
-              toast.error(error.error || "Failed to cancel job");
-            }
-          } catch (err) {
-            console.error("Failed to cancel job:", err);
-            toast.error("Failed to cancel job");
-          }
-        }, 500);
-      } else if (data.action?.action === "ESCALATE_DISPUTE" && data.action?.jobId) {
-        // Escalate dispute to support team
-        setTimeout(async () => {
-          try {
-            const disputeRes = await apiFetch("/api/ai/chat/escalate-dispute", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(data.action),
-            });
-
-            if (disputeRes.ok) {
-              const disputeData = await disputeRes.json();
-              const disputeMsg: Message = {
-                id: `dispute-${Date.now()}`,
-                role: "assistant",
-                content: disputeData.message,
-                timestamp: new Date().toISOString(),
-              };
-              setMessages((prev) => [...prev, disputeMsg]);
-              toast.success("Dispute escalated to support team");
-            } else {
-              const error = await disputeRes.json();
-              toast.error(error.error || "Failed to escalate dispute");
-            }
-          } catch (err) {
-            console.error("Failed to escalate dispute:", err);
-            toast.error("Failed to escalate dispute");
-          }
-        }, 500);
-      } else if (data.action?.action === "BOOKING_INQUIRY") {
-        // Get booking/FAQ information
-        setTimeout(async () => {
-          try {
-            const bookingRes = await apiFetch("/api/ai/chat/booking-info", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ userMessage: data.action.userMessage }),
-            });
-
-            if (bookingRes.ok) {
-              const bookingData = await bookingRes.json();
-              const bookingMsg: Message = {
-                id: `booking-${Date.now()}`,
-                role: "assistant",
-                content: bookingData.message,
-                timestamp: new Date().toISOString(),
-              };
-              setMessages((prev) => [...prev, bookingMsg]);
-            }
-          } catch (err) {
-            console.error("Failed to get booking info:", err);
-          }
-        }, 500);
-      } else if (data.action?.action === "RECURRING_SERVICE" && data.action?.jobData) {
-        // Search for recurring providers
-        setTimeout(async () => {
-          try {
-            const recurringRes = await apiFetch("/api/ai/chat/recurring-job", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ jobData: data.action.jobData }),
-            });
-
-            if (recurringRes.ok) {
-              const recurringData = await recurringRes.json();
-              const recurringMsg: Message = {
-                id: `recurring-${Date.now()}`,
-                role: "assistant",
-                content: recurringData.message,
-                timestamp: new Date().toISOString(),
-              };
-              setMessages((prev) => [...prev, recurringMsg]);
-              
-              if (recurringData.providers && recurringData.providers.length > 0) {
-                setAvailableProviders(recurringData.providers);
-                setConversationState((prev) => ({
-                  ...prev,
-                  jobData: data.action.jobData,
-                }));
-              }
-            }
-          } catch (err) {
-            console.error("Failed to search recurring providers:", err);
-            toast.error("Failed to find recurring service providers");
-          }
-        }, 500);
-      } else if (data.action?.action === "GET_QUOTE_ESTIMATE" && data.action?.jobData) {
-        // Get price estimate
-        setTimeout(async () => {
-          try {
-            const estimateRes = await apiFetch("/api/ai/chat/price-estimate", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ jobData: data.action.jobData }),
-            });
-
-            if (estimateRes.ok) {
-              const estimateData = await estimateRes.json();
-              const estimateMsg: Message = {
-                id: `estimate-${Date.now()}`,
-                role: "assistant",
-                content: estimateData.message,
-                timestamp: new Date().toISOString(),
-              };
-              setMessages((prev) => [...prev, estimateMsg]);
-              setConversationState((prev) => ({
-                ...prev,
-                jobData: data.action.jobData,
-              }));
-            }
-          } catch (err) {
-            console.error("Failed to get price estimate:", err);
-            toast.error("Failed to calculate price estimate");
-          }
-        }, 500);
-      } else if (data.action?.action === "MODIFY_JOB" && data.action?.jobId) {
-        // Modify job
-        setTimeout(async () => {
-          try {
-            const modifyRes = await apiFetch("/api/ai/chat/modify-job", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(data.action),
-            });
-
-            if (modifyRes.ok) {
-              const modifyData = await modifyRes.json();
-              const modifyMsg: Message = {
-                id: `modify-${Date.now()}`,
-                role: "assistant",
-                content: modifyData.message,
-                timestamp: new Date().toISOString(),
-              };
-              setMessages((prev) => [...prev, modifyMsg]);
-            } else {
-              const error = await modifyRes.json();
-              toast.error(error.error || "Failed to modify job");
-            }
-          } catch (err) {
-            console.error("Failed to modify job:", err);
-            toast.error("Failed to modify job");
-          }
-        }, 500);
-      } else if (data.action?.action === "URGENT_SERVICE") {
-        // Search for urgent service providers
-        setTimeout(async () => {
-          try {
-            const urgentRes = await apiFetch("/api/ai/chat/urgent-service", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ jobData: data.action.jobData }),
-            });
-
-            if (urgentRes.ok) {
-              const urgentData = await urgentRes.json();
-              const urgentMsg: Message = {
-                id: `urgent-${Date.now()}`,
-                role: "assistant",
-                content: urgentData.message,
-                timestamp: new Date().toISOString(),
-              };
-              setMessages((prev) => [...prev, urgentMsg]);
-
-              if (urgentData.urgentProviders && urgentData.urgentProviders.length > 0) {
-                setAvailableProviders(urgentData.urgentProviders);
-                setConversationState((prev) => ({
-                  ...prev,
-                  jobData: data.action.jobData,
-                  urgentMode: true,
-                }));
-              }
-            }
-          } catch (err) {
-            console.error("Failed to search urgent providers:", err);
-            toast.error("Failed to find urgent service providers");
-          }
-        }, 500);
-      } else if (data.action?.action === "SWITCH_PROVIDER") {
-        // Handle provider switch request
-        setTimeout(async () => {
-          try {
-            const switchRes = await apiFetch("/api/ai/chat/switch-provider", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                jobId: conversationState?.jobId,
-                jobData: data.action.jobData,
-                reason: data.action.reason,
-                feedback: data.action.feedback,
-              }),
-            });
-
-            if (switchRes.ok) {
-              const switchData = await switchRes.json();
-              const switchMsg: Message = {
-                id: `switch-${Date.now()}`,
-                role: "assistant",
-                content: switchData.message,
-                timestamp: new Date().toISOString(),
-              };
-              setMessages((prev) => [...prev, switchMsg]);
-
-              if (
-                switchData.replacementProviders &&
-                switchData.replacementProviders.length > 0
-              ) {
-                setAvailableProviders(switchData.replacementProviders);
-                setConversationState((prev) => ({
-                  ...prev,
-                  switchMode: true,
-                }));
-              }
-            } else {
-              const error = await switchRes.json();
-              toast.error(error.error || "Failed to switch provider");
-              const errorMsg: Message = {
-                id: `switch-error-${Date.now()}`,
-                role: "assistant",
-                content: error.error || "Unable to switch provider at this time",
-                timestamp: new Date().toISOString(),
-              };
-              setMessages((prev) => [...prev, errorMsg]);
-            }
-          } catch (err) {
-            console.error("Failed to switch provider:", err);
-            toast.error("Failed to process provider switch");
-          }
-        }, 500);
-      } else if (data.action?.action === "VENDOR_REQUEST") {
-        // Handle vendor/partner inquiry
-        setTimeout(async () => {
-          try {
-            const vendorRes = await apiFetch("/api/ai/chat/vendor-request", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(data.action),
-            });
-
-            if (vendorRes.ok) {
-              const vendorData = await vendorRes.json();
-              const vendorMsg: Message = {
-                id: `vendor-${Date.now()}`,
-                role: "assistant",
-                content: vendorData.message,
-                timestamp: new Date().toISOString(),
-              };
-              setMessages((prev) => [...prev, vendorMsg]);
-              toast.success("Vendor inquiry submitted! We'll contact you soon.");
-            } else {
-              const error = await vendorRes.json();
-              toast.error(error.error || "Failed to submit vendor inquiry");
-            }
-          } catch (err) {
-            console.error("Failed to submit vendor inquiry:", err);
-            toast.error("Failed to submit vendor inquiry");
-          }
-        }, 500);
-      } else if (data.nextAction === "ASSIGN_PROVIDER" && data.extractedData) {
-        // Update conversation state with job data
-        setConversationState((prev) => ({
+      const addMsg = (content: string, id: string) =>
+        setMessages((prev) => [
           ...prev,
-          jobData: data.extractedData,
-        }));
+          { id, role: "assistant", content, timestamp: new Date().toISOString() },
+        ]);
 
-        // In real implementation, would search providers here
-        // For now, simulate with mock data
+      if (data.action?.action === "STATUS_UPDATE" && data.action?.jobId) {
+        const d = await dispatchAction("/api/ai/chat/job-status", { jobId: data.action.jobId }, "status").catch(() => null);
+        if (d) {
+          addMsg(d.clientMessage, `status-${Date.now()}`);
+          setConversationState((p) => ({ ...p, jobStatus: d.status }));
+        }
+      } else if (data.action?.action === "CANCEL_JOB" && data.action?.jobId) {
+        const d = await dispatchAction("/api/ai/chat/cancel-job", { jobId: data.action.jobId }, "cancel").catch((e) => { toast.error(e.message); return null; });
+        if (d) {
+          addMsg(d.message + "\n\n" + d.refundInfo, `cancel-${Date.now()}`);
+          setConversationState({});
+        }
+      } else if (data.action?.action === "ESCALATE_DISPUTE" && data.action?.jobId) {
+        const d = await dispatchAction("/api/ai/chat/escalate-dispute", data.action, "dispute").catch((e) => { toast.error(e.message); return null; });
+        if (d) {
+          addMsg(d.message, `dispute-${Date.now()}`);
+          toast.success("Dispute escalated to support team");
+        }
+      } else if (data.action?.action === "BOOKING_INQUIRY") {
+        const d = await dispatchAction("/api/ai/chat/booking-info", { userMessage: data.action.userMessage }, "booking").catch(() => null);
+        if (d) addMsg(d.message, `booking-${Date.now()}`);
+      } else if (data.action?.action === "RECURRING_SERVICE" && data.action?.jobData) {
+        const d = await dispatchAction("/api/ai/chat/recurring-job", { jobData: data.action.jobData }, "recurring").catch((e) => { toast.error(e.message); return null; });
+        if (d) {
+          addMsg(d.message, `recurring-${Date.now()}`);
+          if (d.providers?.length) {
+            setAvailableProviders(d.providers);
+            setConversationState((p) => ({ ...p, jobData: data.action.jobData }));
+          }
+        }
+      } else if (data.action?.action === "GET_QUOTE_ESTIMATE" && data.action?.jobData) {
+        const d = await dispatchAction("/api/ai/chat/price-estimate", { jobData: data.action.jobData }, "estimate").catch((e) => { toast.error(e.message); return null; });
+        if (d) {
+          addMsg(d.message, `estimate-${Date.now()}`);
+          setConversationState((p) => ({ ...p, jobData: data.action.jobData }));
+        }
+      } else if (data.action?.action === "MODIFY_JOB" && data.action?.jobId) {
+        const d = await dispatchAction("/api/ai/chat/modify-job", data.action, "modify").catch((e) => { toast.error(e.message); return null; });
+        if (d) addMsg(d.message, `modify-${Date.now()}`);
+      } else if (data.action?.action === "URGENT_SERVICE") {
+        const d = await dispatchAction("/api/ai/chat/urgent-service", { jobData: data.action.jobData }, "urgent").catch((e) => { toast.error(e.message); return null; });
+        if (d) {
+          addMsg(d.message, `urgent-${Date.now()}`);
+          if (d.urgentProviders?.length) {
+            setAvailableProviders(d.urgentProviders);
+            setConversationState((p) => ({ ...p, jobData: data.action.jobData, urgentMode: true }));
+          }
+        }
+      } else if (data.action?.action === "SWITCH_PROVIDER") {
+        const d = await dispatchAction("/api/ai/chat/switch-provider", {
+          jobId: conversationState?.jobId,
+          jobData: data.action.jobData,
+          reason: data.action.reason,
+          feedback: data.action.feedback,
+        }, "switch").catch((e) => { toast.error(e.message); return null; });
+        if (d) {
+          addMsg(d.message, `switch-${Date.now()}`);
+          if (d.replacementProviders?.length) {
+            setAvailableProviders(d.replacementProviders);
+            setConversationState((p) => ({ ...p, switchMode: true }));
+          }
+        }
+      } else if (data.action?.action === "VENDOR_REQUEST") {
+        const d = await dispatchAction("/api/ai/chat/vendor-request", data.action, "vendor").catch((e) => { toast.error(e.message); return null; });
+        if (d) {
+          addMsg(d.message, `vendor-${Date.now()}`);
+          toast.success("Vendor inquiry submitted! We'll contact you soon.");
+        }
+      } else if (data.nextAction === "ASSIGN_PROVIDER" && data.extractedData) {
+        setConversationState((p) => ({ ...p, jobData: data.extractedData }));
         setTimeout(() => {
-          const mockProviders = [
-            {
-              providerId: "provider1",
-              name: "Juan Plumbing Services",
-              rating: 4.8,
-              jobs: 128,
-              matchScore: 95,
-              reason: "Expert plumber with 95% match in your area",
-            },
-          ];
-          setAvailableProviders(mockProviders);
-          setConversationState((prev) => ({
-            ...prev,
-            selectedProvider: mockProviders[0],
-          }));
+          const mock = [{ providerId: "provider1", name: "Juan Plumbing Services", rating: 4.8, jobs: 128, matchScore: 95, reason: "Expert plumber with 95% match in your area" }];
+          setAvailableProviders(mock);
+          setConversationState((p) => ({ ...p, selectedProvider: mock[0] }));
         }, 1500);
       } else if (data.nextAction === "CONFIRM_BOOKING") {
         setShowBookingConfirm(true);
       }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to send message");
-      // Remove the user message on error
       setMessages((prev) => prev.slice(0, -1));
     } finally {
       setLoading(false);
@@ -475,9 +247,7 @@ export default function AIChatDispatcher() {
       if (!conversationState.selectedProvider || !conversationState.jobData) {
         throw new Error("Missing booking information");
       }
-
-      // Create job and assign provider
-      const bookingRes = await apiFetch("/api/ai/chat/confirm-booking", {
+      const res = await apiFetch("/api/ai/chat/confirm-booking", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -485,33 +255,22 @@ export default function AIChatDispatcher() {
           providerId: conversationState.selectedProvider.providerId,
         }),
       });
-
-      if (!bookingRes.ok) {
-        const error = await bookingRes.json();
+      if (!res.ok) {
+        const error = await res.json();
         throw new Error(error.error || "Failed to confirm booking");
       }
-
-      const bookingData = await bookingRes.json();
-
+      const data = await res.json();
       setShowBookingConfirm(false);
-
-      // Add success message with jobId
-      const successMsg: Message = {
-        id: `success-${Date.now()}`,
-        role: "assistant",
-        content: `✅ Booking confirmed! Your job has been created (ID: ${bookingData.jobId.slice(-8)}). The provider has been notified and will contact you shortly.\n\nYou can ask 'Where is my provider?' or 'Cancel my request' anytime.`,
-        timestamp: new Date().toISOString(),
-      };
-
-      setMessages((prev) => [...prev, successMsg]);
-
-      // Update state with created jobId
-      setConversationState((prev) => ({
+      setMessages((prev) => [
         ...prev,
-        jobId: bookingData.jobId,
-        jobStatus: "assigned",
-      }));
-
+        {
+          id: `success-${Date.now()}`,
+          role: "assistant",
+          content: `✅ Booking confirmed! Your job has been created (ID: ${data.jobId.slice(-8)}). The provider has been notified and will contact you shortly.\n\nYou can ask 'Where is my provider?' or 'Cancel my request' anytime.`,
+          timestamp: new Date().toISOString(),
+        },
+      ]);
+      setConversationState((p) => ({ ...p, jobId: data.jobId, jobStatus: "assigned" }));
       toast.success("Booking confirmed!");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to confirm booking");
@@ -519,24 +278,17 @@ export default function AIChatDispatcher() {
   };
 
   const handleSelectProvider = (provider: any) => {
-    setConversationState((prev) => ({
+    setConversationState((p) => ({ ...p, selectedProvider: provider }));
+    setMessages((prev) => [
       ...prev,
-      selectedProvider: provider,
-    }));
-
-    const msg: Message = {
-      id: `provider-select-${Date.now()}`,
-      role: "user",
-      content: `Great! Let's go with ${provider.name}. Please confirm the booking.`,
-      timestamp: new Date().toISOString(),
-    };
-
-    setMessages((prev) => [...prev, msg]);
-
-    // Trigger confirmation
-    setTimeout(() => {
-      setShowBookingConfirm(true);
-    }, 500);
+      {
+        id: `provider-select-${Date.now()}`,
+        role: "user",
+        content: `Great! Let's go with ${provider.name}. Please confirm the booking.`,
+        timestamp: new Date().toISOString(),
+      },
+    ]);
+    setTimeout(() => setShowBookingConfirm(true), 500);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -548,141 +300,200 @@ export default function AIChatDispatcher() {
 
   const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setInput(e.target.value);
-    // Auto-resize textarea
     e.target.style.height = "auto";
-    e.target.style.height = `${Math.min(e.target.scrollHeight, 100)}px`;
+    e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
   };
+
+  const showQuickPrompts = messages.length <= 1 && !loading;
 
   return (
     <>
-      {/* Chat button */}
+      {/* Floating trigger button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className={`fixed bottom-6 right-6 z-40 rounded-full shadow-lg p-4 transition-all duration-300 ${
+        className={`fixed bottom-6 right-6 z-40 rounded-full shadow-xl transition-all duration-300 flex items-center justify-center group ${
           isOpen
-            ? "bg-slate-600 hover:bg-slate-700"
-            : "bg-gradient-to-br from-primary to-primary-dark hover:shadow-xl"
+            ? "w-12 h-12 bg-slate-700 hover:bg-slate-800"
+            : "w-14 h-14 bg-gradient-to-br from-primary to-primary-dark hover:scale-105 hover:shadow-2xl"
         } text-white`}
-        title={isOpen ? "Close chat" : "Open AI assistant"}
+        title={isOpen ? "Close assistant" : "Open LocalPro AI"}
         aria-label="AI Chat Dispatcher"
       >
         {isOpen ? (
-          <X className="w-6 h-6" />
+          <ChevronDown className="w-5 h-5" />
         ) : (
-          <MessageCircle className="w-6 h-6" />
+          <>
+            <Sparkles className="w-6 h-6" />
+            <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-green-400 rounded-full border-2 border-white" />
+          </>
         )}
       </button>
 
-      {/* Chat window */}
+      {/* Agent panel */}
       {isOpen && (
-        <div className="fixed bottom-24 right-6 z-40 w-96 max-w-[calc(100vw-24px)] bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-700 flex flex-col max-h-[600px]">
-          {/* Header */}
-          <div className="bg-gradient-to-r from-primary to-primary-dark text-white px-6 py-4 rounded-t-xl flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <MessageCircle className="w-5 h-5" />
-              <h3 className="font-semibold">LocalPro Assistant</h3>
+        <div
+          className="fixed bottom-24 right-6 z-40 flex flex-col rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden"
+          style={{ width: 384, maxWidth: "calc(100vw - 24px)", height: 560, maxHeight: "calc(100vh - 120px)" }}
+        >
+          {/* ── Header ── */}
+          <div className="flex-none bg-gradient-to-r from-primary to-primary-dark px-4 py-3 flex items-center gap-3">
+            {/* Avatar */}
+            <div className="relative flex-none">
+              <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center">
+                <Sparkles className="w-5 h-5 text-white" />
+              </div>
+              <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-400 rounded-full border-2 border-white" />
             </div>
-            <button
-              onClick={() => setIsOpen(false)}
-              className="hover:bg-white/20 rounded-lg p-1 transition-colors"
-              aria-label="Close chat"
-            >
-              <X className="w-5 h-5" />
-            </button>
+
+            {/* Info */}
+            <div className="flex-1 min-w-0">
+              <p className="text-white font-semibold text-sm leading-tight">LocalPro AI</p>
+              <p className="text-white/70 text-xs">Online · Responds instantly</p>
+            </div>
+
+            {/* Actions */}
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => { setMessages([]); setConversationState({}); setAvailableProviders([]); }}
+                className="text-white/70 hover:text-white hover:bg-white/15 rounded-lg px-2 py-1 text-xs transition-colors"
+                title="Clear chat"
+              >
+                Clear
+              </button>
+              <button
+                onClick={() => setIsOpen(false)}
+                className="text-white/70 hover:text-white hover:bg-white/15 rounded-lg p-1.5 transition-colors"
+                aria-label="Close"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
           </div>
 
-          {/* Messages */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          {/* ── Messages ── */}
+          <div className="flex-1 overflow-y-auto bg-slate-50 dark:bg-slate-900 px-4 py-4 space-y-4">
             {messages.map((msg) => (
-              <div key={msg.id}>
-                <div
-                  className={`flex ${
-                    msg.role === "user" ? "justify-end" : "justify-start"
-                  }`}
-                >
+              <div key={msg.id} className={`flex gap-2 ${msg.role === "user" ? "flex-row-reverse" : "flex-row"}`}>
+                {/* Avatar */}
+                {msg.role === "assistant" && (
+                  <div className="flex-none w-7 h-7 rounded-full bg-primary/10 dark:bg-primary/20 flex items-center justify-center mt-auto mb-0.5">
+                    <Sparkles className="w-3.5 h-3.5 text-primary" />
+                  </div>
+                )}
+
+                <div className={`flex flex-col gap-1 max-w-[78%] ${msg.role === "user" ? "items-end" : "items-start"}`}>
                   <div
-                    className={`max-w-xs px-4 py-3 rounded-lg ${
+                    className={`px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap break-words ${
                       msg.role === "user"
-                        ? "bg-primary text-white rounded-br-none"
-                        : "bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-slate-100 rounded-bl-none"
+                        ? "bg-primary text-white rounded-tr-sm"
+                        : "bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 shadow-sm border border-slate-100 dark:border-slate-700 rounded-tl-sm"
                     }`}
                   >
-                    <p className="text-sm whitespace-pre-wrap break-words">
-                      {msg.content}
-                    </p>
+                    {msg.content}
                   </div>
-                </div>
+                  <span className="text-[10px] text-slate-400 dark:text-slate-500 px-1">
+                    {formatTime(msg.timestamp)}
+                  </span>
 
-                {/* Provider Selection UI */}
-                {msg.nextAction === "ASSIGN_PROVIDER" &&
-                  availableProviders.length > 0 && (
-                    <div className="mt-3 space-y-2">
+                  {/* Provider selection cards */}
+                  {msg.nextAction === "ASSIGN_PROVIDER" && availableProviders.length > 0 && (
+                    <div className="w-full space-y-2 mt-1">
                       {availableProviders.map((provider) => (
                         <button
                           key={provider.providerId}
                           onClick={() => handleSelectProvider(provider)}
-                          className="w-full text-left p-3 rounded-lg border border-slate-200 dark:border-slate-600 hover:border-primary hover:bg-primary/5 dark:hover:bg-primary/10 transition-all"
+                          className="w-full text-left p-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 hover:border-primary hover:shadow-sm transition-all text-sm"
                         >
-                          <div className="flex items-start justify-between">
+                          <div className="flex items-center justify-between gap-2">
                             <div>
-                              <p className="font-medium text-slate-900 dark:text-white">
-                                {provider.name}
+                              <p className="font-medium text-slate-900 dark:text-white text-sm">{provider.name}</p>
+                              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                                ⭐ {provider.rating} · {provider.jobs} jobs
                               </p>
-                              <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
-                                ⭐ {provider.rating} ({provider.jobs} jobs)
-                              </p>
-                              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                                {provider.reason}
-                              </p>
+                              <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{provider.reason}</p>
                             </div>
-                            <div className="text-right">
-                              <div className="text-sm font-bold text-green-600 dark:text-green-400">
-                                {provider.matchScore}%
-                              </div>
-                              <p className="text-xs text-slate-500">match</p>
+                            <div className="flex-none text-center">
+                              <div className="text-base font-bold text-green-600 dark:text-green-400">{provider.matchScore}%</div>
+                              <p className="text-[10px] text-slate-400">match</p>
                             </div>
                           </div>
                         </button>
                       ))}
                     </div>
                   )}
+                </div>
               </div>
             ))}
 
+            {/* Typing indicator */}
             {loading && (
-              <div className="flex justify-start">
-                <div className="bg-slate-100 dark:bg-slate-700 px-4 py-3 rounded-lg rounded-bl-none">
-                  <Loader2 className="w-5 h-5 animate-spin text-slate-600 dark:text-slate-300" />
+              <div className="flex gap-2">
+                <div className="flex-none w-7 h-7 rounded-full bg-primary/10 dark:bg-primary/20 flex items-center justify-center">
+                  <Sparkles className="w-3.5 h-3.5 text-primary" />
+                </div>
+                <div className="bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 shadow-sm rounded-2xl rounded-tl-sm px-4 py-3 flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: "0ms" }} />
+                  <span className="w-2 h-2 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: "150ms" }} />
+                  <span className="w-2 h-2 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: "300ms" }} />
                 </div>
               </div>
             )}
+
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Input */}
-          <div className="border-t border-slate-200 dark:border-slate-700 p-4 rounded-b-xl">
-            <div className="flex gap-2">
-              <textarea
-                ref={inputRef}
-                value={input}
-                onChange={handleInput}
-                onKeyDown={handleKeyDown}
-                placeholder="Tell me what you need..."
-                className="flex-1 resize-none bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary dark:text-slate-100 dark:placeholder-slate-400"
-                rows={1}
-              />
+          {/* ── Quick prompts ── */}
+          {showQuickPrompts && (
+            <div className="flex-none bg-slate-50 dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 px-3 py-2 flex gap-1.5 overflow-x-auto scrollbar-hide">
+              {QUICK_PROMPTS.map((prompt) => (
+                <button
+                  key={prompt}
+                  onClick={() => handleSend(prompt)}
+                  className="flex-none text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-primary hover:text-primary dark:hover:text-primary rounded-full px-3 py-1.5 transition-colors whitespace-nowrap"
+                >
+                  {prompt}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* ── Input bar (LinkedIn style) ── */}
+          <div className="flex-none bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 px-3 py-2.5">
+            <div className="flex items-end gap-2">
+              <div className="flex-1 bg-slate-100 dark:bg-slate-700 rounded-2xl px-3.5 py-2 min-h-[40px] flex items-end">
+                <textarea
+                  ref={inputRef}
+                  value={input}
+                  onChange={handleInput}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Write a message…"
+                  rows={1}
+                  className="w-full resize-none bg-transparent text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none leading-relaxed"
+                  style={{ maxHeight: 120 }}
+                />
+              </div>
               <button
-                onClick={handleSend}
+                onClick={() => handleSend()}
                 disabled={loading || !input.trim()}
-                className="bg-primary hover:bg-primary-dark disabled:bg-slate-400 text-white rounded-lg p-2 transition-colors flex items-center justify-center"
-                title="Send message"
+                className={`flex-none w-9 h-9 rounded-full flex items-center justify-center transition-all ${
+                  input.trim() && !loading
+                    ? "bg-primary hover:bg-primary-dark text-white shadow-sm"
+                    : "bg-slate-200 dark:bg-slate-700 text-slate-400 cursor-not-allowed"
+                }`}
+                title="Send"
               >
                 {loading ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <Loader2 className="w-4 h-4 animate-spin" />
                 ) : (
-                  <Send className="w-5 h-5" />
+                  <Send className="w-4 h-4" />
                 )}
               </button>
+            </div>
+
+            {/* Powered by row */}
+            <div className="flex items-center justify-center gap-1 mt-1.5">
+              <Zap className="w-3 h-3 text-slate-300 dark:text-slate-600" />
+              <span className="text-[10px] text-slate-300 dark:text-slate-600 tracking-wide">Powered by LocalPro AI</span>
             </div>
           </div>
         </div>
