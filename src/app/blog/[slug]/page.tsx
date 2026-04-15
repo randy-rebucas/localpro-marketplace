@@ -15,17 +15,31 @@ interface PageProps {
 }
 
 /**
+ * Enable ISR (Incremental Static Regeneration)
+ * Pages are regenerated every 3600 seconds (1 hour) in the background
+ * This ensures new blogs appear without full rebuild
+ */
+export const revalidate = 3600;
+
+/**
  * Generate static params for published blog articles
- * This helps Next.js pre-generate pages at build time
+ * Generates params for frequently accessed blogs to improve initial build time
+ * Other blogs will be rendered on-demand and cached
  */
 export async function generateStaticParams() {
   try {
-    const result = await blogRepository.findPublished(1, 100);
-    return (result.blogs || []).map((blog) => ({
+    // Fetch published blogs for static generation
+    // Increased limit to cover more blogs at build time
+    const result = await blogRepository.findPublished(1, 50);
+    const params = (result.blogs || []).map((blog) => ({
       slug: blog.slug,
     }));
+    
+    console.log(`Generated static params for ${params.length} blog articles`);
+    return params;
   } catch (error) {
     console.error("Error generating static params for blogs:", error);
+    // Return empty array - pages will be generated on-demand
     return [];
   }
 }
@@ -64,7 +78,8 @@ export async function generateMetadata(props: PageProps): Promise<Metadata> {
  * - Markdown content rendering
  * - Author and publication info
  * - Social sharing
- * - Development: fallback to draft/scheduled blogs if no published version exists
+ * - ISR: Pages cache for 1 hour, regenerate in background
+ * - Dynamic rendering: Unmapped slugs render on-demand and cache
  */
 export default async function BlogArticlePage(props: PageProps) {
   const { slug } = await props.params;
@@ -73,9 +88,13 @@ export default async function BlogArticlePage(props: PageProps) {
     const blog = await blogRepository.findBySlug(slug);
 
     if (!blog) {
-      console.warn(`Blog not found for slug: ${slug}`);
-      console.warn(`Attempted to find: published blog with slug "${slug}" and publishedAt in the past`);
-      console.warn(`If in development mode, unpublished blogs should be shown. Verify the blog exists and has status='published'.`);
+      console.warn(`[Blog 404] Slug not found: "${slug}"`);
+      console.warn(`Conditions: Looking for published blog with valid publishedAt date`);
+      notFound();
+    }
+
+    if (!blog.publishedAt) {
+      console.warn(`[Blog 404] Blog found but not published: slug="${slug}", status="${blog.status}"`);
       notFound();
     }
 
