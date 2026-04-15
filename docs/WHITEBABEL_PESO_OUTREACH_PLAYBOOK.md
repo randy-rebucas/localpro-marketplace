@@ -77,6 +77,35 @@ Revenue Potential:
 
 ### Phase 2: Qualification & Discovery Calls (Week 2-4)
 
+#### Initial Outreach: Email & Chat Templates
+
+**Before scheduling discovery calls, send personalized outreach using templates:**
+
+- **Cold Outreach:** Use [Email Template 1: White-Label Cold Outreach](OUTREACH_COMMUNICATION_TEMPLATES.md#template-1-white-label-cold-outreach-discovery-call-request)
+  - Subject: "Let's explore white-label partnership for [Company]"
+  - Tone: Professional, benefit-focused, clear CTA
+  - Length: 120-180 words
+  - Expected response time: 5-7 days
+
+- **Warm Referral:** Use [Email Template 2: Warm Referral](OUTREACH_COMMUNICATION_TEMPLATES.md#template-2-white-label-warm-referral-follow-up)
+  - Subject: "[Referrer Name] suggested I reach out"
+  - Tone: Casual but professional, leverages referrer credibility
+  - Length: 140-160 words
+  - Expected response time: 3-5 days
+
+- **WhatsApp Follow-Up:** Use [WhatsApp Template 1](OUTREACH_COMMUNICATION_TEMPLATES.md#template-1-white-label-warm-intro-via-messenger)
+  - If no email response after 48 hours (for warm referrals)
+  - Keep conversational, non-pushy
+  - "15 min call" CTA (lower friction)
+
+**Outreach Personalization Checklist:**
+- [ ] Company footprint researched (website, LinkedIn, recent news)
+- [ ] Decision maker identified (VP Ops, CTO, Owner) + name spelling verified
+- [ ] Realistic annual volume calculated based on locations/industry
+- [ ] Specific expansion signals cited (press release, social media)
+- [ ] Industry/city references personalized
+- [ ] Subject line tested (variant A/B/C for open rate tracking)
+
 #### Week 1 Discovery Call Agenda (30 minutes)
 
 **Objective:** Understand business model, confirm white-label fit, gauge timeline
@@ -127,6 +156,21 @@ Rate each candidate (0-100):
 - 60-80: **TIER 2** — Nurture track (2-3 month close)
 - 40-60: **TIER 3** — Monitor for interest signals (6-month pipeline)
 - <40: **Pass** — Not ready or misaligned
+
+#### Post-Discovery Follow-Up Email
+
+**Send within 24 hours of call using [Email Template 3](OUTREACH_COMMUNICATION_TEMPLATES.md#template-3-post-discovery-call-follow-up-proposal-coming):**
+- Acknowledge the conversation by referencing specific pain points they mentioned
+- Outline what you're preparing (custom revenue model, case study, implementation timeline)
+- Give exact date for proposal delivery
+- Invite them to loop in other stakeholders
+- Length: 155 words, professional but warm tone
+
+**Follow-up Cadence:**
+- T+24 hrs: Follow-up email sent
+- T+3 days: If no response, WhatsApp/call for light check-in
+- T+5 days: Schedule technical deep-dive for Tier 1/2 candidates
+- T+10 days: Send formal proposal for Tier 1 candidates
 
 ### Phase 3: Technical Deep-Dive & Proposal (Week 3-6)
 
@@ -290,6 +334,38 @@ Governance Agencies to Engage:
 
 ### Phase 2: LGU Engagement & Pilot Qualification (Week 2-5)
 
+#### Initial Outreach: Email & Formal Communication
+
+**Before scheduling calls, send formal outreach using templates:**
+
+- **Cold LGU Outreach:** Use [Email Template 4: PESO/LGU Formal Outreach](OUTREACH_COMMUNICATION_TEMPLATES.md#template-4-pesulgu-formal-outreach-government-partnership)
+  - Subject: "DOLE-aligned workforce platform partnership for [LGU Name]"
+  - Tone: Formal, policy-oriented, emphasizes government alignment
+  - Language: References DOLE, TESDA, DICT compliance
+  - Length: 170 words
+  - Expected response time: 7-10 days
+
+- **Warm Government Referral:** Use [WhatsApp Template 2: PESO Contact](OUTREACH_COMMUNICATION_TEMPLATES.md#template-2-peso-pilot-interest-via-whatsapp)
+  - More conversational than email, but still formal
+  - Use if DOLE office or Sanggunian member provides warm intro
+  - "20-minute call" CTA
+  - Expected response time: 3-5 days
+
+- **Sanggunian Committee Briefing:** Use [LGU Sanggunian Briefing Email](OUTREACH_COMMUNICATION_TEMPLATES.md#template-2-lgu-sanggunian-briefing-request-council-awareness-email)
+  - After initial PESO director contact confirmed
+  - Approach committee responsible for employment/social services
+  - Position as "employment initiative" (not just technology project)
+  - Offer 15-minute committee presentation
+
+**Outreach Personalization Checklist for Government:**
+- [ ] PESO Director name + correct spelling verified
+- [ ] Sanggunian committee identified (usually Social Services or Economic Dev)
+- [ ] Recent LGU employment initiatives researched (mayors website, news)
+- [ ] Current DOLE alignment status checked
+- [ ] Budget cycle timing identified (Q4 usually for next year budget)
+- [ ] DOLE regional office contact established (warm intro path)
+- [ ] Pilot dates don't conflict with LGU fiscal holidays/cycles
+
 #### LGU Decision-Making Process
 
 Government procurement typically requires:
@@ -334,6 +410,15 @@ Next Steps (7 min)
 - Contract: MOU for pilot, then full agreement
 - Technical: API integration with your current systems
 ```
+
+#### Post-Call Follow-Up (WhatsApp/Same-Day)
+
+**Send within 2 hours using [WhatsApp Template 3](OUTREACH_COMMUNICATION_TEMPLATES.md#template-3-discovery-call-follow-up-same-day):**
+- Quick recap of call discussion
+- Checklist of what you're sending (technical spec, pilot timeline)
+- Next steps with specific date
+- Keeps tone conversational but professional
+- Length: 3-4 short messages (not one long block)
 
 #### LGU Qualification Framework
 
@@ -407,6 +492,29 @@ During 12-week pilot:
 - Additional 4-8 weeks with intensified marketing
 - Root cause analysis (tech, marketing, quality issues)
 - Adjustment plan before full procurement
+
+#### Post-Pilot Government Relations (Success Formalization)
+
+**If pilot succeeds (placement rate >20%, NPS >8), prepare:**
+
+- **Success Memorandum:** Use [LGU Post-Pilot Success Story Template](OUTREACH_COMMUNICATION_TEMPLATES.md#template-3-lgu-post-pilot-success-story-formal-release)
+  - Formal memo format to Mayor + Sanggunian
+  - Quantified results (jobseekers, placements, wages formalized)
+  - Recommendation for full procurement
+  - Next steps for City Council Q4 budget approval
+  - Length: Professional memo (1-2 pages)
+
+- **Press Release:** Coordinate with LGU communications office
+  - Emphasize employment impact & municipal leadership positioning
+  - Highlight DOLE alignment and government modernization
+  - Include testimonials from PESO staff + jobseekers
+  - Target: Mayor's office, local news outlets
+
+**Timing:**
+- T+10 weeks (2 weeks before pilot end): Prepare success memo (even if data still loading)
+- T+12 weeks (At pilot end): Submit formal success memo + press release
+- T+13 weeks: Schedule meeting with Mayor + Finance to discuss Q4 budget allocation
+- T+14-16 weeks: Full procurement process begins (Q4 budget cycle)
 
 #### Expansion to Provincial Coverage
 
