@@ -49,7 +49,7 @@ export interface ImplementationPhase {
  */
 export function generateCommissionStructure(
   annualVolumeEstimate: number,
-  partnershipType: "regional_franchise" | "staffing_firm" | "enterprise_platform" = "regional_franchise"
+  partnershipType: "regional_franchise" | "staffing_firm" | "enterprise_platform" | "sme_network" = "regional_franchise"
 ): CommissionTier[] {
   // Base rates for LocalPro: 15% standard, 20% premium
   const baseCommissionRate = 0.15;
@@ -111,6 +111,38 @@ export function generateCommissionStructure(
         partnerShare: 45,
         minCommissionPerTx: Math.round(baseCommissionRate * 1200),
         recurringSubscriptionShare: 65,
+      },
+    ];
+  } else if (partnershipType === "sme_network") {
+    // SME network: cooperative model with shared benefits and lower LocalPro take
+    return [
+      {
+        annualVolumeThreshold: 0,
+        localpropShare: 55,
+        partnerShare: 45,
+        minCommissionPerTx: Math.round(baseCommissionRate * 800),
+        recurringSubscriptionShare: 60,
+      },
+      {
+        annualVolumeThreshold: 5_000_000,
+        localpropShare: 50,
+        partnerShare: 50,
+        minCommissionPerTx: Math.round(baseCommissionRate * 800),
+        recurringSubscriptionShare: 55,
+      },
+      {
+        annualVolumeThreshold: 20_000_000,
+        localpropShare: 45,
+        partnerShare: 55,
+        minCommissionPerTx: Math.round(baseCommissionRate * 1000),
+        recurringSubscriptionShare: 50,
+      },
+      {
+        annualVolumeThreshold: 50_000_000,
+        localpropShare: 40,
+        partnerShare: 60,
+        minCommissionPerTx: Math.round(baseCommissionRate * 1000),
+        recurringSubscriptionShare: 45,
       },
     ];
   } else {

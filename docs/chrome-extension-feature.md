@@ -1,5 +1,15 @@
 # Feature: LocalPro Companion — Chrome Extension
 
+## 📦 Get the Extension
+
+**Download LocalPro Companion from the Chrome Web Store:**
+- **Extension Name:** LocalPro Companion
+- **Chrome Web Store Link:** https://chromewebstore.google.com/detail/localpro-companion/lkbgkaaoaiikeefgfddlblhfmkccejia
+
+Install the extension to get real-time notifications, quick job posts, and priority alerts directly in your browser!
+
+---
+
 ## Context
 
 LocalPro Marketplace is a 3-sided service marketplace (Clients, Providers, Admin, PESO)

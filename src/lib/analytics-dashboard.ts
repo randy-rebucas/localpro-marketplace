@@ -63,10 +63,10 @@ export interface PerformanceMetrics {
   // By team
   teamPerformance: {
     [teamName: string]: {
-      responsTime: number;
+      responseTime: number;
       conversionRate: number;
       avgDealValue: number;
-      piplineValue: number;
+      pipelineValue: number;
     };
   };
 
@@ -195,10 +195,10 @@ export function generateDashboardMetrics(
 
       teamPerformance: {
         sales_team: {
-          responsTime: 145,
+          responseTime: 145,
           conversionRate: 32,
           avgDealValue: 2_500_000,
-          piplineValue: 85_000_000,
+          pipelineValue: 85_000_000,
         },
         partnerships: {
           responseTime: 210,
@@ -423,9 +423,9 @@ ${Object.entries(metrics.metrics.inquiriesByType)
 ## Performance by Team
 
 ### Sales Team
-- Response Time: ${metrics.metrics.teamPerformance.sales_team.responsTime}min
+- Response Time: ${metrics.metrics.teamPerformance.sales_team.responseTime}min
 - Conversion Rate: ${metrics.metrics.teamPerformance.sales_team.conversionRate}%
-- Pipeline Value: ₱${(metrics.metrics.teamPerformance.sales_team.piplineValue / 1_000_000).toFixed(0)}M
+- Pipeline Value: ₱${(metrics.metrics.teamPerformance.sales_team.pipelineValue / 1_000_000).toFixed(0)}M
 - Average Deal: ₱${(metrics.metrics.teamPerformance.sales_team.avgDealValue / 1_000_000).toFixed(1)}M
 
 ### Partnerships Team
@@ -437,7 +437,7 @@ ${Object.entries(metrics.metrics.inquiriesByType)
 ### Technical Team
 - Response Time: ${metrics.metrics.teamPerformance.technical_team.responseTime}min ✅
 - Conversion Rate: ${metrics.metrics.teamPerformance.technical_team.conversionRate}%
-- Pipeline Value: ₱${(metrics.metrics.teamPerformance.technical_team.piplineValue / 1_000_000).toFixed(0)}M
+- Pipeline Value: ₱${(metrics.metrics.teamPerformance.technical_team.pipelineValue / 1_000_000).toFixed(0)}M
 
 ---
 

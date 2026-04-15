@@ -79,6 +79,16 @@ A full-stack service marketplace platform built with **Next.js 16**, **MongoDB**
 - Category management with custom icons and ordering
 - Training course management
 
+### Chrome Extension - LocalPro Companion
+- Real-time notification badge with unread count
+- Quick job posting from text selection
+- Provider job alerts and quick quoting
+- In-browser messaging and chat
+- Payment status tracking
+- PESO officer referral tool
+
+**📥 [Get LocalPro Companion from Chrome Web Store](https://chromewebstore.google.com/detail/localpro-companion/lkbgkaaoaiikeefgfddlblhfmkccejia)**
+
 ### PESO (Public Employment Service Office)
 - PESO officer onboarding and municipal assignment
 - Livelihood group management

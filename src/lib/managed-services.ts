@@ -247,14 +247,14 @@ export function generateManagedServicesSLA(
 ): string {
   const slaTargets: {
     [key in "essentials" | "plus" | "fullscale"]: {
-      responseTIme: string;
+      responseTime: string;
       providerAvailability: string;
       qualityScore: string;
       uptime: string;
     };
   } = {
     essentials: {
-      resposeTime: "< 4 hours",
+      responseTime: "< 4 hours",
       providerAvailability: "95%",
       qualityScore: "≥ 4.0/5.0",
       uptime: "99%",
