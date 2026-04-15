@@ -167,7 +167,7 @@ export default function BlogEditor({ blog, onClose, onSave }: BlogEditorProps) {
       const result = await res.json();
       setFormData((prev) => ({
         ...prev,
-        featuredImage: result.data.url,
+        featuredImage: result.url,
       }));
 
       toast.success("Image uploaded successfully");
