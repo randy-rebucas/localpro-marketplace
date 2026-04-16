@@ -122,6 +122,18 @@ export class PayoutRepository extends BaseRepository<PayoutDocument> {
       status: "completed",
     });
   }
+
+  /**
+   * Per-provider sum of paid-out amounts (pending + processing + completed).
+   * Used by the admin provider-payable view to calculate what is still owed.
+   */
+  async aggregatePaidOutByProvider(): Promise<Array<{ _id: unknown; paidOut: number }>> {
+    await this.connect();
+    return Payout.aggregate([
+      { $match: { status: { $in: ["pending", "processing", "completed"] } } },
+      { $group: { _id: "$providerId", paidOut: { $sum: "$amount" } } },
+    ]);
+  }
 }
 
 export const payoutRepository = new PayoutRepository();

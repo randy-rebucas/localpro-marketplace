@@ -27,8 +27,22 @@ export const GET = withHandler(async (req: NextRequest) => {
   const { searchParams } = req.nextUrl;
   const page    = Math.max(1, Number(searchParams.get("page") ?? "1"));
   const limit   = Math.min(50, Math.max(1, Number(searchParams.get("limit") ?? "20")));
-  const type    = searchParams.get("type") ?? "";
-  const entity  = searchParams.get("entity") ?? "";
+  const typeRaw   = searchParams.get("type")   ?? "";
+  const entityRaw = searchParams.get("entity") ?? "";
+
+  // Allowlists guard against NoSQL injection via aggregation $match
+  const VALID_ENTRY_TYPES = new Set([
+    "escrow_funded", "escrow_released", "platform_commission", "provider_payout",
+    "wallet_deposit", "wallet_withdrawal", "wallet_escrow", "wallet_escrow_release",
+    "dispute_refund", "dispute_platform", "admin_credit", "admin_debit",
+  ]);
+  const VALID_ENTITY_TYPES = new Set([
+    "job", "payout", "payment", "wallet_withdrawal",
+    "dispute", "transaction", "recurring_schedule", "manual",
+  ]);
+
+  const type   = VALID_ENTRY_TYPES.has(typeRaw)   ? typeRaw   : "";
+  const entity = VALID_ENTITY_TYPES.has(entityRaw) ? entityRaw : "";
 
   // Build match for individual entries
   const match: Record<string, string> = {};

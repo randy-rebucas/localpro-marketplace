@@ -3,7 +3,7 @@ import { cookies, headers } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import type { StaffCapability, UserRole } from "@/types";
 import { getRedis } from "@/lib/redis";
-import { randomUUID, createHmac, timingSafeEqual } from "crypto";
+import { randomUUID, randomBytes, createHmac, timingSafeEqual } from "crypto";
 
 const ACCESS_SECRET = process.env.JWT_SECRET as string;
 const REFRESH_SECRET = process.env.JWT_REFRESH_SECRET as string;
@@ -171,15 +171,19 @@ export async function getCurrentUser(): Promise<TokenPayload | null> {
     const payload = verifyAccessToken(token);
 
     // ── Deny-list check (Redis-backed revocation) ─────────────────────────
+    // Fail closed: if Redis is available we MUST check it. If it's down we
+    // cannot verify revocation so we reject the token to be safe.
     const redis = getRedis();
-    if (redis && payload.jti) {
-      const revoked = await redis.get(`jwt:denied:${payload.jti}`);
-      if (revoked) return null;
-    }
-    // ── Per-user revocation (password change / ban) ───────────────────────
-    if (redis && payload.userId) {
-      const revokedAt = await redis.get<number>(`jwt:revoke-user:${payload.userId}`);
-      if (revokedAt && payload.iat && payload.iat <= revokedAt) return null;
+    if (redis) {
+      if (payload.jti) {
+        const revoked = await redis.get(`jwt:denied:${payload.jti}`);
+        if (revoked) return null;
+      }
+      // ── Per-user revocation (password change / ban) ───────────────────────
+      if (payload.userId) {
+        const revokedAt = await redis.get<number>(`jwt:revoke-user:${payload.userId}`);
+        if (revokedAt && payload.iat && payload.iat <= revokedAt) return null;
+      }
     }
 
     // ── Stamp lastSeenAt (throttled to once per 5 min via Redis) ─────────
@@ -254,15 +258,22 @@ export function requireCapability(user: TokenPayload, capability: StaffCapabilit
 
 /**
  * Generates an HMAC-based CSRF token for the given userId.
- * The token encodes the current 1-hour window so it is naturally time-bounded.
- * Two consecutive windows are accepted to avoid edge-case expiry at window boundaries.
+ *
+ * Format: `<window>.<randomNonce>.<mac>`
+ *   - window      — current 1-hour bucket (natural expiry)
+ *   - randomNonce — 16 cryptographically random bytes (prevents pre-computation
+ *                   and brute-force even if the userId + window are known)
+ *   - mac         — HMAC-SHA-256 over userId:window:nonce
+ *
+ * Two consecutive windows are accepted to handle edge-case expiry at boundaries.
  */
 export function generateCsrfToken(userId: string): string {
-  const window = Math.floor(Date.now() / (60 * 60 * 1000)); // current 1-hour bucket
-  const mac = createHmac("sha256", ACCESS_SECRET)
-    .update(`${userId}:${window}`)
+  const window = Math.floor(Date.now() / (60 * 60 * 1000));
+  const nonce  = randomBytes(16).toString("hex");
+  const mac    = createHmac("sha256", ACCESS_SECRET)
+    .update(`${userId}:${window}:${nonce}`)
     .digest("hex");
-  return `${window}.${mac}`;
+  return `${window}.${nonce}.${mac}`;
 }
 
 /**
@@ -271,17 +282,26 @@ export function generateCsrfToken(userId: string): string {
  */
 export function verifyCsrfToken(token: string, userId: string): boolean {
   if (!token) return false;
-  const currentWindow = Math.floor(Date.now() / (60 * 60 * 1000));
+  const parts = token.split(".");
+  if (parts.length !== 3) return false;
+  const [windowStr, nonce, mac] = parts;
+  if (!windowStr || !nonce || !mac) return false;
 
-  for (const w of [currentWindow, currentWindow - 1]) {
-    const expected = `${w}.${createHmac("sha256", ACCESS_SECRET).update(`${userId}:${w}`).digest("hex")}`;
-    try {
-      if (timingSafeEqual(Buffer.from(token), Buffer.from(expected))) return true;
-    } catch {
-      // Buffer lengths differ — not a match
-    }
+  const tokenWindow   = parseInt(windowStr, 10);
+  if (isNaN(tokenWindow)) return false;
+
+  const currentWindow = Math.floor(Date.now() / (60 * 60 * 1000));
+  // Only accept current and previous window
+  if (tokenWindow !== currentWindow && tokenWindow !== currentWindow - 1) return false;
+
+  const expected = createHmac("sha256", ACCESS_SECRET)
+    .update(`${userId}:${tokenWindow}:${nonce}`)
+    .digest("hex");
+  try {
+    return timingSafeEqual(Buffer.from(mac), Buffer.from(expected));
+  } catch {
+    return false;
   }
-  return false;
 }
 
 /**

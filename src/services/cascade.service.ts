@@ -8,13 +8,14 @@
  * preserved for regulatory / audit purposes.
  */
 
-import { connectDB } from "@/lib/db";
-import User from "@/models/User";
-import Job from "@/models/Job";
-import Quote from "@/models/Quote";
-import ProviderProfile from "@/models/ProviderProfile";
-import BusinessOrganization from "@/models/BusinessOrganization";
-import { activityRepository } from "@/repositories";
+import {
+  userRepository,
+  jobRepository,
+  quoteRepository,
+  providerProfileRepository,
+  businessOrganizationRepository,
+  activityRepository,
+} from "@/repositories";
 import { Types } from "mongoose";
 
 export interface CascadeResult {
@@ -29,25 +30,24 @@ export class CascadeService {
    * 2. Cancel all open/assigned jobs where the user is the client.
    * 3. Reject all pending quotes submitted by this user (as provider).
    * 4. Set provider profile availabilityStatus to "unavailable".
-   * 5. Log the cascade action to the ActivityLog.
+   * 5. Suspend any business organizations owned by this user.
+   * 6. Log the cascade action to the ActivityLog.
    *
    * Does NOT touch financial records (payments, transactions, ledger entries).
    */
   async cascadeSoftDelete(userId: string): Promise<CascadeResult> {
-    await connectDB();
-
     const affected: Record<string, number> = {};
     const userObjId = new Types.ObjectId(userId);
 
     // 1. Soft-delete the user
-    const userUpdate = await User.updateOne(
+    const userUpdate = await userRepository.updateMany(
       { _id: userObjId },
       { $set: { isDeleted: true, deletedAt: new Date(), isSuspended: true } }
     );
     affected.users = userUpdate.modifiedCount ?? 0;
 
     // 2. Cancel all open/assigned jobs where this user is the client
-    const jobCancelResult = await Job.updateMany(
+    const jobCancelResult = await jobRepository.updateMany(
       {
         clientId: userObjId,
         status: { $in: ["open", "assigned"] },
@@ -56,8 +56,8 @@ export class CascadeService {
     );
     affected.jobsCancelled = jobCancelResult.modifiedCount ?? 0;
 
-    // 3. Reject all pending quotes from this user (acting as provider)
-    const quoteRejectResult = await Quote.updateMany(
+    // 3. Reject all pending quotes submitted by this user (as provider)
+    const quoteRejectResult = await quoteRepository.updateMany(
       {
         providerId: userObjId,
         status: "pending",
@@ -67,14 +67,14 @@ export class CascadeService {
     affected.quotesRejected = quoteRejectResult.modifiedCount ?? 0;
 
     // 4. Mark provider profile as unavailable (if one exists)
-    const profileUpdate = await ProviderProfile.updateOne(
+    const profileUpdate = await providerProfileRepository.updateMany(
       { userId: userObjId },
       { $set: { availabilityStatus: "unavailable" } }
     );
     affected.profilesUpdated = profileUpdate.modifiedCount ?? 0;
 
     // 5. Suspend any business organization owned by this user
-    const orgUpdate = await BusinessOrganization.updateMany(
+    const orgUpdate = await businessOrganizationRepository.updateMany(
       { ownerId: userObjId },
       { $set: { planStatus: "cancelled" } }
     );

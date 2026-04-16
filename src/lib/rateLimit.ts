@@ -111,6 +111,28 @@ export interface RateLimitCheckOptions {
   failOpen?: boolean;
 }
 
+/**
+ * Pre-built per-operation rate limit presets.
+ * Usage: `await checkSensitiveRateLimit("auth:login", ip)` — throws nothing,
+ * returns the result. The caller is responsible for returning a 429 if ok===false.
+ *
+ * These are intentionally more restrictive than the global 100 req/min in withHandler.
+ */
+export const SENSITIVE_LIMITS = {
+  /** Login attempts: 5 per 15 min per IP (fail-closed so Redis outage blocks). */
+  login:          { windowMs: 15 * 60_000, max: 5,  failOpen: false } as const,
+  /** Password reset sends: 3 per hour per IP. */
+  passwordReset:  { windowMs: 60 * 60_000, max: 3,  failOpen: false } as const,
+  /** Password change: 5 per day per user. */
+  passwordChange: { windowMs: 24 * 60 * 60_000, max: 5,  failOpen: false } as const,
+  /** Payment/checkout initiation: 10 per hour per user. */
+  payment:        { windowMs: 60 * 60_000, max: 10, failOpen: false } as const,
+  /** Dispute creation: 5 per hour per user. */
+  dispute:        { windowMs: 60 * 60_000, max: 5,  failOpen: false } as const,
+  /** Email verification sends: 3 per hour per user. */
+  emailVerify:    { windowMs: 60 * 60_000, max: 3,  failOpen: false } as const,
+} as const;
+
 export async function checkRateLimit(
   key: string,
   options: RateLimitOptions,

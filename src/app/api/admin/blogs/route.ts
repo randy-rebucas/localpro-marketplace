@@ -1,9 +1,8 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { z } from "zod";
-import { withHandler, apiError, apiResponse } from "@/lib/utils";
+import { withHandler, apiResponse } from "@/lib/utils";
 import { requireUser, requireCapability } from "@/lib/auth";
 import { blogRepository } from "@/repositories";
-import { assertObjectId } from "@/lib/errors";
 
 /**
  * Validation Schemas
@@ -32,61 +31,54 @@ const UpdateBlogSchema = z.object({
   scheduledFor: z.string().datetime().optional().nullable(),
 });
 
-type Ctx = { params: Promise<Record<string, string>> };
+const VALID_BLOG_STATUSES = ["draft", "published", "scheduled", "archived"] as const;
+type BlogStatus = typeof VALID_BLOG_STATUSES[number];
 
 /**
  * GET /api/admin/blogs
  * List all blogs with pagination and filters
  */
-export const GET = withHandler(async (req: NextRequest, _ctx: any) => {
+export const GET = withHandler(async (req: NextRequest) => {
   const user = await requireUser();
   requireCapability(user, "manage_blogs");
 
-  // Parse query parameters
   const { searchParams } = new URL(req.url);
-  const page = parseInt(searchParams.get("page") ?? "1");
-  const limit = parseInt(searchParams.get("limit") ?? "10");
-  const status = searchParams.get("status") as any;
+  const page   = Math.max(1, parseInt(searchParams.get("page")  ?? "1",  10));
+  const limit  = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") ?? "10", 10)));
+  const rawStatus = searchParams.get("status") ?? "";
+  const status: BlogStatus | undefined = VALID_BLOG_STATUSES.includes(rawStatus as BlogStatus)
+    ? (rawStatus as BlogStatus)
+    : undefined;
   const search = searchParams.get("search");
 
   const result = await blogRepository.findAll({
-    page: Math.max(1, page),
-    limit: Math.min(100, Math.max(1, limit)),
+    page,
+    limit,
     status,
     search: search ?? undefined,
     author: user.userId,
   });
 
-  return apiResponse({
-    data: result,
-  });
+  return apiResponse({ data: result });
 });
 
 /**
  * POST /api/admin/blogs
  * Create new blog (initial status: draft)
  */
-export const POST = withHandler(async (req: NextRequest, _ctx: any) => {
+export const POST = withHandler(async (req: NextRequest) => {
   const user = await requireUser();
   requireCapability(user, "manage_blogs");
 
   const body = await req.json();
   const validated = CreateBlogSchema.parse(body);
 
-  // Sanitize: convert empty strings to undefined
-  const sanitized = {
-    ...(validated as any),
+  const blog = await blogRepository.create({
+    ...validated,
     featuredImage: validated.featuredImage || undefined,
     author: user.userId,
-    status: "draft",
-  };
+    status: "draft" as const,
+  });
 
-  const blog = await blogRepository.create(sanitized);
-
-  return apiResponse(
-    {
-      data: blog,
-    },
-    201
-  );
+  return apiResponse({ data: blog }, 201);
 });

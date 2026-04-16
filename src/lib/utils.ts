@@ -85,6 +85,24 @@ export function apiResponse<T>(data: T, status = 200) {
   return Response.json(data, { status });
 }
 
+/**
+ * Parses and clamps pagination query params from a URLSearchParams object.
+ * Always returns safe, bounded integers — never NaN.
+ *
+ * @param searchParams  URLSearchParams (or req.nextUrl.searchParams)
+ * @param defaultLimit  default items-per-page when not supplied (default: 20)
+ * @param maxLimit      hard cap on items-per-page (default: 100)
+ */
+export function parsePaginationParams(
+  searchParams: URLSearchParams,
+  defaultLimit = 20,
+  maxLimit = 100
+): { page: number; limit: number; skip: number } {
+  const page  = Math.max(1, parseInt(searchParams.get("page")  ?? "1",  10) || 1);
+  const limit = Math.min(maxLimit, Math.max(1, parseInt(searchParams.get("limit") ?? String(defaultLimit), 10) || defaultLimit));
+  return { page, limit, skip: (page - 1) * limit };
+}
+
 export function apiError(message: string, status = 400) {
   return Response.json({ error: message }, { status });
 }

@@ -23,6 +23,7 @@ import { z } from "zod";
 import { requireUser, requireRole } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { connectDB } from "@/lib/db";
+import { assertObjectId } from "@/lib/errors";
 import { ledgerRepository } from "@/repositories/ledger.repository";
 import { activityRepository } from "@/repositories";
 import { ACCOUNT_CODES } from "@/models/LedgerEntry";
@@ -69,7 +70,12 @@ export const POST = withHandler(async (req: NextRequest) => {
     providerId,
   } = parsed.data;
 
+  // Validate optional ID strings before using them as ObjectIds
+  if (clientId)   assertObjectId(clientId,   "clientId");
+  if (providerId) assertObjectId(providerId, "providerId");
+
   const entityId = parsed.data.entityId ?? new mongoose.Types.ObjectId().toString();
+  if (parsed.data.entityId) assertObjectId(entityId, "entityId");
 
   if (debitAccount === creditAccount) {
     return NextResponse.json({ error: "Debit and credit accounts must differ" }, { status: 400 });

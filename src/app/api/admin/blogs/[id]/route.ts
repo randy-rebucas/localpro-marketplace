@@ -1,9 +1,9 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { z } from "zod";
-import { withHandler, apiError, apiResponse } from "@/lib/utils";
+import { withHandler, apiResponse } from "@/lib/utils";
 import { requireUser, requireCapability } from "@/lib/auth";
 import { blogRepository } from "@/repositories";
-import { assertObjectId, NotFoundError } from "@/lib/errors";
+import { assertObjectId, NotFoundError, UnprocessableError } from "@/lib/errors";
 
 /**
  * Validation Schemas
@@ -21,17 +21,13 @@ const UpdateBlogSchema = z.object({
   scheduledFor: z.string().datetime().optional().nullable(),
 });
 
-const PublishBlogSchema = z.object({
-  scheduledFor: z.string().datetime().optional().nullable(),
-});
-
 type Ctx = { params: Promise<Record<string, string>> };
 
 /**
  * PATCH /api/admin/blogs/[id]
  * Update blog details
  */
-export const PATCH = withHandler(async (req: NextRequest, ctx: any) => {
+export const PATCH = withHandler(async (req: NextRequest, ctx: Ctx) => {
   const user = await requireUser();
   requireCapability(user, "manage_blogs");
 
@@ -39,43 +35,42 @@ export const PATCH = withHandler(async (req: NextRequest, ctx: any) => {
   const id = params.id;
   assertObjectId(id);
 
-  // Verify blog exists
   const blog = await blogRepository.findById(id);
-  if (!blog) {
-    throw new NotFoundError("Blog not found");
-  }
+  if (!blog) throw new NotFoundError("Blog not found");
 
   const body = await req.json();
-  const { status, scheduledFor, ...updateData } = UpdateBlogSchema.parse(body);
+  const { status, scheduledFor, featuredImage: rawImage, ...rest } = UpdateBlogSchema.parse(body);
 
-  // Sanitize: convert empty strings to undefined
-  if (updateData.featuredImage === "") {
-    (updateData as any).featuredImage = undefined;
-  }
+  // Sanitize: convert empty string / null to undefined so downstream types match IBlog
+  const updateData = {
+    ...rest,
+    ...(rawImage ? { featuredImage: rawImage } : {}),
+  };
 
   // Handle status transitions
   if (status) {
     if (status === "published") {
       const updated = await blogRepository.publish(id);
       return apiResponse({ data: updated });
-    } else if (status === "scheduled" && scheduledFor) {
+    }
+    if (status === "scheduled" && scheduledFor) {
       const scheduledDate = new Date(scheduledFor);
       if (scheduledDate <= new Date()) {
-        throw new Error("Scheduled date must be in the future");
+        throw new UnprocessableError("Scheduled date must be in the future");
       }
       const updated = await blogRepository.schedule(id, scheduledDate);
       return apiResponse({ data: updated });
-    } else if (status === "archived") {
+    }
+    if (status === "archived") {
       const updated = await blogRepository.archive(id);
       return apiResponse({ data: updated });
-    } else {
-      // Draft or other status change
-      (updateData as any).status = status;
     }
+    // Draft or other explicit status change — fall through to updateById
+    const updated = await blogRepository.updateById(id, { ...updateData, status });
+    return apiResponse({ data: updated });
   }
 
-  // Update other fields
-  const updated = await blogRepository.updateById(id, updateData as any);
+  const updated = await blogRepository.updateById(id, updateData);
   return apiResponse({ data: updated });
 });
 
@@ -83,7 +78,7 @@ export const PATCH = withHandler(async (req: NextRequest, ctx: any) => {
  * DELETE /api/admin/blogs/[id]
  * Soft delete blog
  */
-export const DELETE = withHandler(async (req: NextRequest, ctx: any) => {
+export const DELETE = withHandler(async (req: NextRequest, ctx: Ctx) => {
   const user = await requireUser();
   requireCapability(user, "manage_blogs");
 
@@ -108,7 +103,7 @@ export const DELETE = withHandler(async (req: NextRequest, ctx: any) => {
  * GET /api/admin/blogs/[id]
  * Get blog details
  */
-export const GET = withHandler(async (req: NextRequest, ctx: any) => {
+export const GET = withHandler(async (req: NextRequest, ctx: Ctx) => {
   const user = await requireUser();
   requireCapability(user, "manage_blogs");
 

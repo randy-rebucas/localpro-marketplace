@@ -31,3 +31,4 @@ export { leadSubscriptionRepository } from "./leadSubscription.repository";
 export { bidCreditAccountRepository } from "./bidCreditAccount.repository";
 export { trainingCourseRepository } from "./trainingCourse.repository";
 export { trainingEnrollmentRepository } from "./trainingEnrollment.repository";
+export { backupLogRepository } from "./backupLog.repository";

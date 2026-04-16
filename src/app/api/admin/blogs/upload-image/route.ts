@@ -1,6 +1,25 @@
 import { withHandler, apiResponse } from "@/lib/utils";
 import { requireUser, requireCapability } from "@/lib/auth";
 import { uploadToCloudinary } from "@/lib/cloudinary";
+import { UnprocessableError } from "@/lib/errors";
+
+// Known magic bytes for allowed image formats
+const IMAGE_MAGIC_BYTES: Array<{ mime: string; bytes: number[]; offset?: number }> = [
+  { mime: "image/jpeg", bytes: [0xff, 0xd8, 0xff] },
+  { mime: "image/png",  bytes: [0x89, 0x50, 0x4e, 0x47] },
+  { mime: "image/gif",  bytes: [0x47, 0x49, 0x46] },
+  { mime: "image/webp", bytes: [0x52, 0x49, 0x46, 0x46], offset: 0 }, // RIFF header
+];
+
+function validateImageMagicBytes(buffer: Buffer): boolean {
+  for (const sig of IMAGE_MAGIC_BYTES) {
+    const offset = sig.offset ?? 0;
+    if (buffer.length < offset + sig.bytes.length) continue;
+    const match = sig.bytes.every((b, i) => buffer[offset + i] === b);
+    if (match) return true;
+  }
+  return false;
+}
 
 /**
  * POST /api/admin/blogs/upload-image
@@ -41,6 +60,11 @@ export const POST = withHandler(async (req) => {
   try {
     // Convert file to buffer
     const buffer = Buffer.from(await file.arrayBuffer());
+
+    // Validate magic bytes — MIME type alone is spoofable
+    if (!validateImageMagicBytes(buffer)) {
+      throw new UnprocessableError("File content does not match a supported image format (JPEG, PNG, GIF, WebP)");
+    }
 
     // Upload to Cloudinary
     const result = await uploadToCloudinary(buffer, "blogs", {

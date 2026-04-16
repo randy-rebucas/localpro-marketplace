@@ -15,7 +15,8 @@
  *   https://www.mongodb.com/docs/atlas/reference/api-resources-spec/v2/#tag/Cloud-Backups
  */
 
-import BackupLog, { type BackupTrigger } from "@/models/BackupLog";
+import { type BackupTrigger } from "@/models/BackupLog";
+import { backupLogRepository } from "@/repositories/backupLog.repository";
 
 const BASE = "https://cloud.mongodb.com/api/atlas/v2";
 
@@ -147,13 +148,15 @@ export async function triggerAtlasSnapshot(
   const { projectId, clusterName } = cfg();
 
   // Create a pending log entry first
-  const log = await BackupLog.create({
+  const log = await backupLogRepository.createLog({
     type: "atlas_snapshot",
     status: "pending",
     triggeredBy,
     adminId: adminId ?? undefined,
     description,
   });
+
+  const logId = String(log._id);
 
   try {
     const res = await atlasRequest(
@@ -169,16 +172,16 @@ export async function triggerAtlasSnapshot(
 
     const data = await res.json() as AtlasSnapshot;
 
-    await BackupLog.findByIdAndUpdate(log._id, {
+    await backupLogRepository.updateLog(logId, {
       status: "completed",
       snapshotId: data.id,
       sizeBytes: data.storageSizeBytes,
       completedAt: new Date(),
     });
 
-    return { snapshotId: data.id, logId: String(log._id) };
+    return { snapshotId: data.id, logId };
   } catch (err) {
-    await BackupLog.findByIdAndUpdate(log._id, {
+    await backupLogRepository.updateLog(logId, {
       status: "failed",
       error: (err as Error).message,
       completedAt: new Date(),
@@ -207,5 +210,5 @@ export async function listAtlasSnapshots(): Promise<AtlasSnapshot[]> {
 
 /** Return the last N backup log records. */
 export async function listBackupLogs(limit = 20) {
-  return BackupLog.find({}).sort({ createdAt: -1 }).limit(limit).lean();
+  return backupLogRepository.listRecent(limit);
 }

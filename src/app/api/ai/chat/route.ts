@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
+import { z } from "zod";
 import { withHandler } from "@/lib/utils";
 import { requireUser } from "@/lib/auth";
 
@@ -44,6 +45,15 @@ export interface ExtractedIntent {
   clarifyingQuestions?: string[];
   nextAction: "ASK_QUESTION" | "CONFIRM_BOOKING" | "ASSIGN_PROVIDER" | "STATUS_UPDATE" | "CANCEL_JOB" | "RESPOND_ONLY" | "SHOW_RECURRING_OPTIONS" | "SHOW_PRICE_ESTIMATE" | "MODIFY_JOB_CONFIRM" | "ESCALATE_DISPUTE" | "SHOW_BOOKING_INFO" | "SHOW_URGENT_OPTIONS" | "CONFIRM_PROVIDER_SWITCH" | "VENDOR_INQUIRY_RECEIVED";
 }
+
+// Zod schema for the JSON blob we expect OpenAI to return
+const IntentResponseSchema = z.object({
+  intent: z.string().default("GENERAL_CHAT"),
+  confidence: z.number().min(0).max(1).default(0.5),
+  extractedData: z.record(z.unknown()).default({}),
+  clarifyingQuestions: z.array(z.string()).default([]),
+  nextAction: z.string().default("RESPOND_ONLY"),
+});
 
 /**
  * Extract intent and structured data from user message using OpenAI
@@ -132,14 +142,20 @@ Respond ONLY with valid JSON (no markdown):
     });
 
     const content = response.choices[0]?.message?.content?.trim() || "{}";
-    const parsed = JSON.parse(content);
+    let raw: unknown;
+    try {
+      raw = JSON.parse(content);
+    } catch {
+      raw = {};
+    }
+    const parsed = IntentResponseSchema.parse(raw);
 
     return {
-      intent: parsed.intent || "GENERAL_CHAT",
-      confidence: parsed.confidence || 0.5,
-      extractedData: parsed.extractedData || {},
-      clarifyingQuestions: parsed.clarifyingQuestions || [],
-      nextAction: parsed.nextAction || "RESPOND_ONLY",
+      intent:              parsed.intent as ExtractedIntent["intent"],
+      confidence:          parsed.confidence,
+      extractedData:       parsed.extractedData as ExtractedIntent["extractedData"],
+      clarifyingQuestions: parsed.clarifyingQuestions,
+      nextAction:          parsed.nextAction as ExtractedIntent["nextAction"],
     };
   } catch (err) {
     console.error("[Intent extraction failed]:", err);

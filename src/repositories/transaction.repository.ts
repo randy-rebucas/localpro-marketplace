@@ -186,6 +186,61 @@ export class TransactionRepository extends BaseRepository<TransactionDocument> {
   }
 
   /**
+   * Paginated list of pending (escrow-funded, not yet released) transactions
+   * with populated job/payer/payee refs.  Used by the admin escrow-holdings view.
+   */
+  async findEscrowHoldings(
+    currency: string,
+    page: number,
+    limit: number
+  ): Promise<{ rows: unknown[]; total: number; aggregate: { totalAmount: number; totalCommission: number; totalNetAmount: number; count: number } }> {
+    await this.connect();
+    const filter = { status: "pending", currency };
+    const skip = (page - 1) * limit;
+    const [rows, total, agg] = await Promise.all([
+      Transaction.find(filter)
+        .populate("jobId",   "title category location scheduleDate")
+        .populate("payerId", "name email")
+        .populate("payeeId", "name email")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      Transaction.countDocuments(filter),
+      Transaction.aggregate([
+        { $match: filter },
+        { $group: {
+          _id:             null,
+          totalAmount:     { $sum: "$amount"     },
+          totalCommission: { $sum: "$commission"  },
+          totalNetAmount:  { $sum: "$netAmount"   },
+          count:           { $sum: 1             },
+        }},
+      ]),
+    ]);
+    const totals = agg[0] ?? { totalAmount: 0, totalCommission: 0, totalNetAmount: 0, count: 0 };
+    return { rows, total, aggregate: totals };
+  }
+
+  /**
+   * Per-provider breakdown of earned (completed) amounts and job counts.
+   * Used by the admin provider-payable view.
+   */
+  async aggregateEarnedByProvider(
+    currency: string
+  ): Promise<Array<{ _id: unknown; earned: number; jobCount: number }>> {
+    await this.connect();
+    return Transaction.aggregate([
+      { $match: { status: "completed", currency } },
+      { $group: {
+        _id:      "$payeeId",
+        earned:   { $sum: "$netAmount" },
+        jobCount: { $sum: 1 },
+      }},
+    ]);
+  }
+
+  /**
    * Monthly earnings breakdown for a provider over the last `months` months.
    * Returns one row per calendar month with gross/commission/net/job count.
    */

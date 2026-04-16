@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireUser, requireRole } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
-import { connectDB } from "@/lib/db";
-import Transaction from "@/models/Transaction";
-import Payout from "@/models/Payout";
+import { transactionRepository, payoutRepository, userRepository } from "@/repositories";
 
 /**
  * GET /api/admin/accounting/provider-payable?currency=PHP
@@ -19,28 +17,11 @@ export const GET = withHandler(async (req: NextRequest) => {
   const user = await requireUser();
   requireRole(user, "admin");
 
-  await connectDB();
-
   const currency = new URL(req.url).searchParams.get("currency") ?? "PHP";
 
   const [earnedRows, payoutRows] = await Promise.all([
-    // Group completed transaction nets by provider
-    Transaction.aggregate([
-      { $match: { status: "completed", currency } },
-      { $group: {
-        _id:           "$payeeId",
-        earned:        { $sum: "$netAmount" },
-        jobCount:      { $sum: 1 },
-      }},
-    ]),
-    // Group all non-rejected payouts per provider (pending+processing+completed)
-    Payout.aggregate([
-      { $match: { status: { $in: ["pending", "processing", "completed"] } } },
-      { $group: {
-        _id:     "$providerId",
-        paidOut: { $sum: "$amount" },
-      }},
-    ]),
+    transactionRepository.aggregateEarnedByProvider(currency),
+    payoutRepository.aggregatePaidOutByProvider(),
   ]);
 
   // Build a map of paidOut per provider
@@ -48,14 +29,10 @@ export const GET = withHandler(async (req: NextRequest) => {
     payoutRows.map((r) => [String(r._id), r.paidOut as number])
   );
 
-  // Populate provider names/emails
-  const providerIds = earnedRows.map((r) => r._id);
-  const { default: User } = await import("@/models/User");
-  const providers = await User.find(
-    { _id: { $in: providerIds } },
-    "name email"
-  ).lean();
-  const providerMap = new Map(providers.map((p) => [String((p as { _id: unknown })._id), p]));
+  // Populate provider names/emails via repository
+  const providerIds = earnedRows.map((r) => String(r._id));
+  const providers = await userRepository.findByIds(providerIds);
+  const providerMap = new Map(providers.map((p) => [String(p._id), p]));
 
   let totalOwed = 0;
   const rows = earnedRows.map((r) => {
@@ -64,15 +41,15 @@ export const GET = withHandler(async (req: NextRequest) => {
     const paidOut = payoutMap.get(id) ?? 0;
     const owed    = earned - paidOut;
     totalOwed += owed;
-    const p = providerMap.get(id) as { name?: string; email?: string } | undefined;
+    const p = providerMap.get(id);
     return {
       providerId: id,
-      name:       p?.name ?? "Unknown",
+      name:       p?.name  ?? "Unknown",
       email:      p?.email ?? "",
       earned,
       paidOut,
       owed,
-      jobCount:   r.jobCount as number,
+      jobCount: r.jobCount as number,
     };
   });
 
@@ -81,8 +58,8 @@ export const GET = withHandler(async (req: NextRequest) => {
 
   return NextResponse.json({
     currency,
-    totalOwedPHP:     totalOwed,
-    providerCount:    rows.length,
-    providers:        rows,
+    totalOwedPHP:  totalOwed,
+    providerCount: rows.length,
+    providers:     rows,
   });
 });

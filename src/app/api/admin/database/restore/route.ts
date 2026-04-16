@@ -70,6 +70,8 @@ export const POST = withHandler(async (req: NextRequest) => {
   const meta = backup.__meta as Array<{ exportedAt?: string; version?: string }> | undefined;
   if (meta?.[0]?.exportedAt) log.push(`Backup exported: ${meta[0].exportedAt}`);
 
+  // Collect work items so we can validate before touching the DB
+  const workItems: Array<{ collName: string; docs: unknown[] }> = [];
   for (const [collName, docs] of Object.entries(backup)) {
     if (collName === "__meta") continue;
     if (!ALLOWED_COLLECTIONS.has(collName)) {
@@ -80,23 +82,42 @@ export const POST = withHandler(async (req: NextRequest) => {
       log.push(`Skipped "${collName}" — empty`);
       continue;
     }
+    workItems.push({ collName, docs });
+  }
 
-    const coll = db.collection(collName);
+  // Execute all writes inside a single MongoDB client session for atomicity.
+  // If any collection write fails, the session aborts and the DB is left intact.
+  const session = await mongoose.startSession();
+  try {
+    await session.withTransaction(async () => {
+      for (const { collName, docs } of workItems) {
+        const coll = db.collection(collName);
 
-    if (mode === "replace") {
-      await coll.deleteMany({});
-      await coll.insertMany(docs as mongoose.mongo.OptionalId<mongoose.mongo.Document>[]);
-      log.push(`Replaced "${collName}": ${docs.length} documents`);
-    } else {
-      // upsert mode: insertOrReplace by _id
-      let upserted = 0;
-      for (const doc of docs as Array<{ _id?: unknown }>) {
-        if (!doc._id) continue;
-        await coll.replaceOne({ _id: doc._id }, doc as mongoose.mongo.Document, { upsert: true });
-        upserted++;
+        if (mode === "replace") {
+          await coll.deleteMany({}, { session });
+          await coll.insertMany(
+            docs as mongoose.mongo.OptionalId<mongoose.mongo.Document>[],
+            { session }
+          );
+          log.push(`Replaced "${collName}": ${docs.length} documents`);
+        } else {
+          // upsert mode: insertOrReplace by _id
+          let upserted = 0;
+          for (const doc of docs as Array<{ _id?: unknown }>) {
+            if (!doc._id) continue;
+            await coll.replaceOne(
+              { _id: doc._id },
+              doc as mongoose.mongo.Document,
+              { upsert: true, session }
+            );
+            upserted++;
+          }
+          log.push(`Upserted "${collName}": ${upserted} documents`);
+        }
       }
-      log.push(`Upserted "${collName}": ${upserted} documents`);
-    }
+    });
+  } finally {
+    await session.endSession();
   }
 
   return NextResponse.json({ success: true, log });

@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withHandler } from "@/lib/utils";
-import { requireUser } from "@/lib/auth";
+import { requireUser, requireRole } from "@/lib/auth";
 import { jobRepository, userRepository, notificationRepository } from "@/repositories";
 import { connectDB } from "@/lib/db";
 import { jobService } from "@/services";
 import { escalationService, EscalationReason } from "@/services/escalation.service";
 import { pushNotification } from "@/lib/events";
-import type { IJob } from "@/types";
 
 interface BookingRequest {
   jobData: {
@@ -23,13 +22,7 @@ interface BookingRequest {
 /** POST /api/ai/chat/confirm-booking - Create job and assign provider */
 export const POST = withHandler(async (req: NextRequest) => {
   const user = await requireUser();
-
-  if (user.role !== "client") {
-    return NextResponse.json(
-      { error: "Only clients can create jobs" },
-      { status: 403 }
-    );
-  }
+  requireRole(user, "client");
 
   const { jobData, providerId } = (await req.json()) as BookingRequest;
 
@@ -79,14 +72,18 @@ export const POST = withHandler(async (req: NextRequest) => {
       // Reject the job
       await jobRepository.updateById(jobId, { status: "rejected" });
 
-      // Notify admin
-      const adminNotif = await notificationRepository.create({
-        userId: "admin", // TODO: Query for admin user ID
-        type: "job_rejected",
-        title: "Job Auto-Rejected - Critical Fraud Indicators",
-        message: escalation.action,
-        data: { jobId, escalationId: escalation.reason },
-      });
+      // Notify admin — resolve actual admin user ID from DB
+      const adminUser = await userRepository.findAdmin();
+      if (adminUser) {
+        const adminNotif = await notificationRepository.create({
+          userId: String(adminUser._id),
+          type: "job_rejected",
+          title: "Job Auto-Rejected - Critical Fraud Indicators",
+          message: escalation.action,
+          data: { jobId, escalationId: escalation.reason },
+        });
+        pushNotification(String(adminUser._id), adminNotif);
+      }
 
       return NextResponse.json({
         success: false,

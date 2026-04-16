@@ -1,27 +1,30 @@
 import { NextRequest, NextResponse } from "next/server";
 import { blogAnalyticsRepository } from "@/repositories/blog-analytics.repository";
+import { requireUser, requireCapability } from "@/lib/auth";
+import { withHandler } from "@/lib/utils";
 
 /**
  * GET /api/admin/analytics
  * Get blog analytics dashboard (admin)
- * 
+ *
  * Query params:
  * - metric: "top-articles" | "referrers"
  * - blogId: (optional) specific blog analytics
  * - dateFrom: (optional) ISO date string (YYYY-MM-DD)
  * - dateTo: (optional) ISO date string (YYYY-MM-DD)
- * - limit: (optional) number of results (default: 10)
+ * - limit: (optional) number of results (default: 10, max: 100)
  */
-export async function GET(req: NextRequest) {
-  try {
-    // TODO: Add authentication check for admin
-    const searchParams = req.nextUrl.searchParams;
-    const blogId = searchParams.get("blogId");
-    const metric = searchParams.get("metric");
-    const limit = parseInt(searchParams.get("limit") || "10");
-    // Date range parameters (optional)
-    const dateFrom = searchParams.get("dateFrom");
-    const dateTo = searchParams.get("dateTo");
+export const GET = withHandler(async (req: NextRequest) => {
+  const user = await requireUser();
+  requireCapability(user, "manage_blogs");
+
+  const searchParams = req.nextUrl.searchParams;
+  const blogId = searchParams.get("blogId");
+  const metric = searchParams.get("metric");
+  const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "10", 10)));
+  // Date range parameters (optional)
+  const dateFrom = searchParams.get("dateFrom");
+  const dateTo = searchParams.get("dateTo");
 
     // Parse dates if provided
     const dateRange = dateFrom && dateTo 
@@ -59,11 +62,4 @@ export async function GET(req: NextRequest) {
       referrers,
       metric: "dashboard"
     });
-  } catch (error) {
-    console.error("Error fetching analytics:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch analytics", details: error instanceof Error ? error.message : String(error) },
-      { status: 500 }
-    );
-  }
-}
+});
