@@ -115,6 +115,8 @@ export interface IUser {
   savedPaymentMethodLast4?: string | null;
   savedPaymentMethodBrand?: string | null;
   preferences?: IUserPreferences;
+  /** Expo push notification tokens for mobile apps */
+  expoPushTokens?: Array<{ token: string; deviceId?: string; createdAt: Date; lastUsedAt: Date }>;
   /** Number of consecutive failed login attempts */
   failedLoginAttempts?: number;
   /** Account locked until this date after too many failed login attempts */

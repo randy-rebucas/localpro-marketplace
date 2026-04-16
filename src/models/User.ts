@@ -8,6 +8,13 @@ export interface PushSubscriptionRecord {
   keys: { p256dh: string; auth: string };
 }
 
+export interface ExpoPushTokenRecord {
+  token: string;           // Expo push token (format: ExponentPushToken[...])
+  deviceId?: string;       // Unique device identifier
+  createdAt: Date;
+  lastUsedAt: Date;
+}
+
 export interface UserDocument extends Omit<IUser, "_id">, Document {
   comparePassword(candidate: string): Promise<boolean>;
   password?: string;
@@ -22,6 +29,7 @@ export interface UserDocument extends Omit<IUser, "_id">, Document {
   isDeleted?: boolean;
   deletedAt?: Date | null;
   pushSubscriptions?: PushSubscriptionRecord[];
+  expoPushTokens?: ExpoPushTokenRecord[];
 }
 
 const AddressSubSchema = new Schema(
@@ -125,6 +133,20 @@ const UserSchema = new Schema<UserDocument>(
             auth:   { type: String, required: true },
             _id: false,
           },
+          _id: false,
+        },
+      ],
+      default: [],
+      select: false,
+    },
+    // Expo push notification tokens (mobile apps)
+    expoPushTokens: {
+      type: [
+        {
+          token:      { type: String, required: true, trim: true },
+          deviceId:   { type: String, default: null },
+          createdAt:  { type: Date, default: Date.now },
+          lastUsedAt: { type: Date, default: Date.now },
           _id: false,
         },
       ],
