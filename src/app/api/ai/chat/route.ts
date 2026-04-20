@@ -56,6 +56,57 @@ const IntentResponseSchema = z.object({
 });
 
 /**
+ * Map service category to specialized booking endpoint
+ */
+function getSpecializedBookingEndpoint(
+  category?: string
+): string | null {
+  if (!category) return null;
+
+  const categoryLower = category.toLowerCase();
+
+  // Map categories to specialized endpoints
+  if (
+    categoryLower.includes("plumbing") ||
+    categoryLower.includes("electrical") ||
+    categoryLower.includes("hvac")
+  ) {
+    return "/api/ai/chat/booking-plumbing-electrical";
+  } else if (categoryLower.includes("cleaning")) {
+    return "/api/ai/chat/booking-cleaning";
+  } else if (
+    categoryLower.includes("beauty") ||
+    categoryLower.includes("salon") ||
+    categoryLower.includes("spa")
+  ) {
+    return "/api/ai/chat/booking-beauty";
+  } else if (
+    categoryLower.includes("construction") ||
+    categoryLower.includes("carpentry") ||
+    categoryLower.includes("painting") ||
+    categoryLower.includes("labor")
+  ) {
+    return "/api/ai/chat/booking-construction";
+  } else if (
+    categoryLower.includes("food") ||
+    categoryLower.includes("culinary") ||
+    categoryLower.includes("catering")
+  ) {
+    return "/api/ai/chat/booking-food";
+  } else if (
+    categoryLower.includes("it") ||
+    categoryLower.includes("tech") ||
+    categoryLower.includes("computer") ||
+    categoryLower.includes("software") ||
+    categoryLower.includes("hardware")
+  ) {
+    return "/api/ai/chat/booking-it";
+  }
+
+  return null; // Fall back to generic confirm-booking
+}
+
+/**
  * Extract intent and structured data from user message using OpenAI
  */
 async function extractIntent(
@@ -281,17 +332,32 @@ export const POST = withHandler(async (req: NextRequest) => {
   } else if (intent.nextAction === "ASSIGN_PROVIDER") {
     responseContent =
       "Great! I found some perfect providers for you. Let me show you the best matches. (Searching providers...)";
+
+    // Determine if specialized endpoint should be used
+    const specializedEndpoint = getSpecializedBookingEndpoint(
+      intent.extractedData.category
+    );
+
     actionData = {
       action: "ASSIGN_PROVIDER",
       jobData: intent.extractedData,
+      specializedEndpoint: specializedEndpoint, // Route to service-specific handler if available
     };
   } else if (intent.nextAction === "CONFIRM_BOOKING") {
     if (intent.extractedData.isConfirmation) {
       responseContent =
         "Perfect! Confirming your booking and notifying the provider...";
+
+      // Determine if specialized endpoint should be used
+      const specializedEndpoint = getSpecializedBookingEndpoint(
+        intent.extractedData.category
+      );
+
       actionData = {
         action: "CONFIRM_BOOKING",
         bookingData: conversationState?.selectedProvider,
+        specializedEndpoint: specializedEndpoint, // Route to service-specific handler if available
+        jobData: intent.extractedData,
       };
     } else {
       responseContent =
@@ -299,6 +365,7 @@ export const POST = withHandler(async (req: NextRequest) => {
       actionData = {
         action: "CONFIRM_BOOKING",
         bookingData: conversationState?.selectedProvider,
+        jobData: intent.extractedData,
       };
     }
   } else {
