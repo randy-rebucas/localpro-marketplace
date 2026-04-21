@@ -12,6 +12,8 @@ import { getPaymentSettings } from "@/lib/appSettings";
 import { calculateDisputeHandlingFee } from "@/lib/commission";
 import type { TokenPayload } from "@/lib/auth";
 import type { IJob } from "@/types";
+import { AIDecisionService } from "@/services/ai-decision.service";
+import { connectDB } from "@/lib/db";
 
 export interface OpenDisputeInput {
   jobId: string;
@@ -102,6 +104,18 @@ export class DisputeService {
       [job.clientId.toString(), job.providerId?.toString()].filter(Boolean) as string[],
       { entity: "job", id: input.jobId, status: "disputed" }
     );
+
+    // ── AI-powered dispute analysis with Dispute Resolver agent ─────────────
+    // This runs asynchronously to not block dispute creation
+    this.analyzeDisputeWithAI(
+      dispute._id!.toString(),
+      input.jobId,
+      job.budget,
+      input.reason,
+      input.evidence,
+      isClient ? "client" : "provider",
+      user.userId
+    ).catch((err) => console.error("[DisputeService] AI analysis failed (non-blocking):", err));
 
     return dispute;
   }
@@ -338,6 +352,99 @@ export class DisputeService {
     }
 
     return disputeDoc;
+  }
+
+  /**
+   * Analyze dispute with AI Dispute Resolver agent
+   * Generates recommended resolution and queues for admin approval
+   */
+  private async analyzeDisputeWithAI(
+    disputeId: string,
+    jobId: string,
+    jobAmount: number,
+    reason: string,
+    evidence: string[] | undefined,
+    raisedByRole: "client" | "provider",
+    raisedByUserId: string
+  ) {
+    try {
+      await connectDB();
+
+      // Fetch additional context
+      const jobDoc = await jobRepository.getDocById(jobId);
+      if (!jobDoc) return;
+
+      const job = jobDoc as unknown as IJob & {
+        clientId: { toString(): string };
+        providerId?: { toString(): string } | null;
+      };
+
+      const otherPartyId =
+        raisedByRole === "client" ? job.providerId?.toString() : job.clientId.toString();
+
+      // Call AI Dispute Resolver API
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+      const response = await fetch(`${appUrl}/api/ai/agents/dispute-resolver`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${process.env.INTERNAL_API_KEY || ""}`,
+        },
+        body: JSON.stringify({
+          disputeId,
+          jobAmount,
+          reason,
+          evidencePhotos: evidence || [],
+          raisedByRole,
+          raisedByHistory: {
+            // These would normally come from user profile, using defaults here
+            totalDisputes: 0,
+            avgDisputes: 0,
+            reputation: "neutral",
+          },
+          otherPartyHistory: {
+            // These would normally come from other party profile
+            totalDisputes: 0,
+            avgDisputes: 0,
+            reputation: "neutral",
+          },
+        }),
+      });
+
+      if (!response.ok) {
+        console.warn(
+          "[DisputeService] AI dispute resolver returned non-OK status:",
+          response.status
+        );
+        return;
+      }
+
+      const aiResult = await response.json();
+
+      // All disputes queue for manual review (high financial stakes)
+      // Create AIDecision record for founder approval
+      await AIDecisionService.createDecision({
+        type: "DISPUTE",
+        agentName: "dispute_resolver",
+        confidenceScore: aiResult.decision?.confidence || 0,
+        riskLevel: aiResult.decision?.riskLevel || "high",
+        recommendation: aiResult.decision?.recommendedResolution || "Manual review required",
+        supportingEvidence: {
+          fraudScore: 0,
+          patternDetected: `Dispute requires resolution. Recommended: ${aiResult.decision?.recommendedResolution || "Manual review"}`,
+        },
+        relatedEntityType: "dispute",
+        relatedEntityId: disputeId,
+      });
+
+      console.log(
+        `[DisputeService] Dispute ${disputeId} queued for manual review (AI confidence: ${aiResult.decision?.confidence}%)`
+      );
+    } catch (error) {
+      console.error("[DisputeService] AI dispute analysis failed:", error);
+      // Silently fail - dispute is already created
+      // Admin will manually review it through the regular dispute resolution flow
+    }
   }
 }
 

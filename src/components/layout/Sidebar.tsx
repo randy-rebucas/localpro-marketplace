@@ -50,6 +50,8 @@ import {
   FileBarChart,
   Database,
   MessageSquare,
+  Brain,
+  TrendingUpIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/authStore";
@@ -177,6 +179,14 @@ const navGroups: Partial<Record<UserRole, NavGroup[]>> = {
         { label: "Fraud Monitor",  href: "/admin/fraud",    icon: <ShieldAlert   className="h-4.5 w-4.5" />, capability: "manage_jobs" },
         { label: "KYC Review",     href: "/admin/kyc",      icon: <ShieldCheck   className="h-4.5 w-4.5" />, capability: "manage_kyc" },
         { label: "Activity Logs",  href: "/admin/logs",     icon: <ScrollText    className="h-4.5 w-4.5" />, capability: "__admin_only__" },
+      ],
+    },
+    {
+      heading: "AI Automation",
+      items: [
+        { label: "Decision Queue",   href: "/admin/approval-queue", icon: <Brain           className="h-4.5 w-4.5" />, capability: "manage_operations" },
+        { label: "AI Performance",   href: "/admin/ai-performance", icon: <TrendingUpIcon  className="h-4.5 w-4.5" />, capability: "manage_operations" },
+        { label: "AI Metrics",       href: "/admin/ai-metrics",     icon: <FileBarChart   className="h-4.5 w-4.5" />, capability: "manage_operations" },
       ],
     },
     {

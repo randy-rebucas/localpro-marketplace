@@ -16,7 +16,8 @@ export type StaffCapability =
   | "manage_categories"
   | "manage_support"
   | "manage_courses"
-  | "manage_blogs";
+  | "manage_blogs"
+  | "manage_operations";
 
 export interface IAddress {
   _id: string;

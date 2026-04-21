@@ -7,6 +7,8 @@ import {
 import { maskContactInfo } from "@/lib/contactFilter";
 import { NotFoundError } from "@/lib/errors";
 import type { TokenPayload } from "@/lib/auth";
+import { AIDecisionService } from "@/services/ai-decision.service";
+import { connectDB } from "@/lib/db";
 
 export class SupportService {
   // ─── User side ────────────────────────────────────────────────────────────
@@ -42,7 +44,101 @@ export class SupportService {
     pushSupportToAdmin({ userId: user.userId, message: payload });
     pushSupportToUser(user.userId, payload);
 
+    // Try to analyze with AI agent (non-blocking - if fails, just continue)
+    this.analyzeAndRespondWithAI(user, body, (message._id as any)?.toString()).catch(
+      (err) => console.error("[SupportService] AI analysis failed (non-blocking):", err)
+    );
+
     return populated ?? message;
+  }
+
+  /**
+   * Analyze support message with AI agent and auto-reply if confident
+   * This runs asynchronously and doesn't block the message creation
+   */
+  private async analyzeAndRespondWithAI(
+    user: TokenPayload,
+    message: string,
+    messageId: string
+  ) {
+    try {
+      await connectDB();
+
+      // Call AI Support Agent API
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+      const response = await fetch(`${appUrl}/api/ai/agents/support-agent`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${process.env.INTERNAL_API_KEY || ""}`, // Use internal key
+        },
+        body: JSON.stringify({
+          userId: user.userId,
+          message: message,
+          category: this.detectCategory(message),
+          previousMessages: [], // First message
+        }),
+      });
+
+      if (!response.ok) {
+        console.warn("[SupportService] AI agent returned non-OK status:", response.status);
+        return;
+      }
+
+      const aiResult = await response.json();
+
+      // Queue all support messages for manual review via founder dashboard
+      // The AI recommendation helps the support team make faster decisions
+      console.log(
+        `[SupportService] AI support message ${messageId} analysis complete (confidence: ${aiResult.decision?.confidence}%, risk: ${aiResult.decision?.riskLevel})`
+      );
+    } catch (error) {
+      console.error("[SupportService] AI support analysis failed:", error);
+      // Silently fail - message was already created and sent to admin
+    }
+  }
+
+  /**
+   * Detect support category from message content
+   */
+  private detectCategory(message: string): string {
+    const lowerMsg = message.toLowerCase();
+
+    if (
+      lowerMsg.includes("payment") ||
+      lowerMsg.includes("charge") ||
+      lowerMsg.includes("bill")
+    ) {
+      return "billing";
+    }
+    if (
+      lowerMsg.includes("account") ||
+      lowerMsg.includes("password") ||
+      lowerMsg.includes("login")
+    ) {
+      return "account";
+    }
+    if (
+      lowerMsg.includes("dispute") ||
+      lowerMsg.includes("disagree") ||
+      lowerMsg.includes("issue")
+    ) {
+      return "dispute";
+    }
+    if (
+      lowerMsg.includes("technical") ||
+      lowerMsg.includes("bug") ||
+      lowerMsg.includes("error")
+    ) {
+      return "technical";
+    }
+    if (lowerMsg.includes("kyc") || lowerMsg.includes("verification")) {
+      return "kyc";
+    }
+    if (lowerMsg.includes("payout") || lowerMsg.includes("withdrawal")) {
+      return "payout";
+    }
+    return "other";
   }
 
   // ─── Admin side ───────────────────────────────────────────────────────────

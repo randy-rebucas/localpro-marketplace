@@ -1,9 +1,11 @@
 import { payoutRepository } from "@/repositories/payout.repository";
-import { transactionRepository, activityRepository } from "@/repositories";
+import { transactionRepository, activityRepository, userRepository } from "@/repositories";
 import { providerProfileRepository } from "@/repositories/providerProfile.repository";
 import { ledgerService } from "@/services/ledger.service";
+import { AIDecisionService } from "@/services/ai-decision.service";
 import { getAppSetting } from "@/lib/appSettings";
 import { calculateWithdrawalFee } from "@/lib/commission";
+import { connectDB } from "@/lib/db";
 import {
   NotFoundError,
   ForbiddenError,
@@ -98,28 +100,109 @@ export class PayoutService {
     // prior completed payout skip admin review and go straight to "processing".
     let autoApproved = false;
     try {
-      const [profile, completedPayoutCount] = await Promise.all([
-        providerProfileRepository.findByUserId(user.userId),
-        payoutRepository.countCompletedByProvider(user.userId),
-      ]);
+      // ── Fraud Detection (non-blocking) ──────────────────────────────────────
+      // Check transaction for fraud indicators before auto-approval
+      await connectDB();
+      const userData = await userRepository.getDocById(user.userId);
+      let fraudRisk = "low";
 
-      if (
-        profile &&
-        (profile as unknown as { completedJobCount: number }).completedJobCount >= 10 &&
-        (profile as unknown as { avgRating: number }).avgRating >= 4.0 &&
-        completedPayoutCount >= 1
-      ) {
-        autoApproved = true;
-        await payoutRepository.updateById(
-          payout._id?.toString() ?? "",
-          { status: "processing", autoApproved: true, processedAt: new Date() }
-        );
-        console.log(
-          `[PayoutService] Auto-approved payout ${payout._id?.toString()} for provider ${user.userId} ` +
-          `(completedJobs=${(profile as unknown as { completedJobCount: number }).completedJobCount}, ` +
-          `avgRating=${(profile as unknown as { avgRating: number }).avgRating}, ` +
-          `priorPayouts=${completedPayoutCount})`
-        );
+      try {
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+        const fraudResponse = await fetch(`${appUrl}/api/ai/agents/fraud-detector`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${process.env.INTERNAL_API_KEY || ""}`,
+          },
+          body: JSON.stringify({
+            transactionId: payout._id?.toString(),
+            type: "withdrawal",
+            amount,
+            userHistory: {
+              accountAge: userData && userData.createdAt
+                ? Math.floor(
+                    (Date.now() - new Date(userData.createdAt).getTime()) /
+                      (1000 * 60 * 60 * 24)
+                  )
+                : 0,
+              chargebacks: (userData as any)?.chargebackCount || 0,
+              disputes: (userData as any)?.disputeCount || 0,
+              fraudFlags: (userData as any)?.fraudFlags || [],
+              previousWithdrawals: (userData as any)?.totalWithdrawn || 0,
+              averageWithdrawal: (userData as any)?.averageWithdrawl || 0,
+              jobsCompleted: (userData as any)?.jobsCompleted || 0,
+              accountRating: (userData as any)?.rating || 0,
+            },
+          }),
+        });
+
+        if (fraudResponse.ok) {
+          const fraudResult = await fraudResponse.json();
+          fraudRisk = fraudResult.decision?.riskLevel || "low";
+
+          // If HIGH fraud risk: queue for manual review
+          if (fraudRisk === "high") {
+            await AIDecisionService.createDecision({
+              type: "PAYOUT",
+              agentName: "support_agent",
+              confidenceScore: fraudResult.decision?.confidence || 0,
+              riskLevel: "high",
+              recommendation: `High fraud risk detected for payout: ${fraudResult.decision?.fraudIndicators?.join(", ") || "Suspicious activity"}`,
+              supportingEvidence: {
+                fraudScore: fraudResult.decision?.riskScore,
+                behavioralFlags: fraudResult.decision?.fraudIndicators,
+              },
+              relatedEntityType: "payout",
+              relatedEntityId: payout._id as any,
+            });
+          } else if (fraudRisk === "medium") {
+            // Flag for founder review but don't block
+            await AIDecisionService.createDecision({
+              type: "PAYOUT",
+              agentName: "support_agent",
+              confidenceScore: fraudResult.decision?.confidence || 0,
+              riskLevel: "medium",
+              recommendation: `Medium fraud risk on payout - manual review recommended`,
+              supportingEvidence: {
+                fraudScore: fraudResult.decision?.riskScore,
+                behavioralFlags: fraudResult.decision?.fraudIndicators,
+              },
+              relatedEntityType: "payout",
+              relatedEntityId: payout._id as any,
+            });
+          }
+        }
+      } catch (err) {
+        console.error("[PayoutService] Fraud detection failed (non-blocking):", err);
+        // Continue - fraud check is advisory only
+      }
+
+      // ── Standard auto-approval check ────────────────────────────────────────
+      // Only auto-approve if fraud risk is low
+      if (fraudRisk === "low") {
+        const [profile, completedPayoutCount] = await Promise.all([
+          providerProfileRepository.findByUserId(user.userId),
+          payoutRepository.countCompletedByProvider(user.userId),
+        ]);
+
+        if (
+          profile &&
+          (profile as unknown as { completedJobCount: number }).completedJobCount >= 10 &&
+          (profile as unknown as { avgRating: number }).avgRating >= 4.0 &&
+          completedPayoutCount >= 1
+        ) {
+          autoApproved = true;
+          await payoutRepository.updateById(
+            payout._id?.toString() ?? "",
+            { status: "processing", autoApproved: true, processedAt: new Date() }
+          );
+          console.log(
+            `[PayoutService] Auto-approved payout ${payout._id?.toString()} for provider ${user.userId} ` +
+            `(completedJobs=${(profile as unknown as { completedJobCount: number }).completedJobCount}, ` +
+            `avgRating=${(profile as unknown as { avgRating: number }).avgRating}, ` +
+            `priorPayouts=${completedPayoutCount})`
+          );
+        }
       }
     } catch (err) {
       // Non-critical — if auto-approval check fails, payout stays in "pending" for admin review

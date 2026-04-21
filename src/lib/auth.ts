@@ -28,6 +28,7 @@ export const STAFF_CAPABILITIES: StaffCapability[] = [
   "manage_support",
   "manage_courses",
   "manage_blogs",
+  "manage_operations",
 ];
 
 export interface TokenPayload {

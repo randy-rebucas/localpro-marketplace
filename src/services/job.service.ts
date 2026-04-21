@@ -9,6 +9,7 @@ import User from "@/models/User";
 import { getAppSetting } from "@/lib/appSettings";
 import { type UrgencyLevel } from "@/lib/commission";
 import type { JobTag } from "@/types";
+import { AIDecisionService } from "@/services/ai-decision.service";
 
 // ─── Shared base ─────────────────────────────────────────────────────────────
 
@@ -248,6 +249,18 @@ export class JobService {
       { jobId: job._id!.toString() }
     );
 
+    // ── AI-powered proactive support check ────────────────────────────────────
+    // Identify at-risk jobs and send preventive tips to both parties
+    this.checkJobRiskWithAI(job._id!.toString(), jobData, user.userId).catch(
+      (err) => console.error("[JobService] Proactive support check failed (non-blocking):", err)
+    );
+
+    // ── AI-powered validation with Operations Manager agent ─────────────────
+    // This runs asynchronously to not block job creation
+    this.validateJobWithAI(job._id!.toString(), jobData, riskScore, fraudFlags, user.userId).catch(
+      (err) => console.error("[JobService] AI validation failed (non-blocking):", err)
+    );
+
     return job;
   }
 
@@ -278,6 +291,168 @@ export class JobService {
     }
 
     return job;
+  }
+
+  /**
+   * Validate job with AI Operations Manager agent
+   * Runs asynchronously, updates job status based on AI recommendation
+   */
+  private async validateJobWithAI(
+    jobId: string,
+    jobData: any,
+    riskScore: number,
+    fraudFlags: string[],
+    userId: string
+  ) {
+    try {
+      await connectDB();
+
+      // Call AI Operations Manager API
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+      const response = await fetch(`${appUrl}/api/ai/agents/operations-manager`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${process.env.INTERNAL_API_KEY || ""}`,
+        },
+        body: JSON.stringify({
+          operationType: "job_validation",
+          jobId,
+          fraudScore: riskScore,
+          behavioralFlags: fraudFlags,
+          jobDetails: {
+            category: jobData.category,
+            budget: jobData.budget,
+            isFirstTimeClient: fraudFlags.includes("new_account"),
+            urgency: jobData.urgency || "standard",
+            description: jobData.description,
+          },
+        }),
+      });
+
+      if (!response.ok) {
+        console.warn(
+          "[JobService] AI operations manager returned non-OK status:",
+          response.status
+        );
+        return;
+      }
+
+      const aiResult = await response.json();
+
+      // If AI auto-approved, immediately publish job
+      if (aiResult.decision?.action === "auto_approve") {
+        await jobRepository.updateById(jobId, { status: "open" });
+        console.log(
+          `[JobService] Job ${jobId} auto-approved by AI (confidence: ${aiResult.decision?.confidence}%)`
+        );
+
+        // Notify client that job is live
+        const { notificationService } = await import("@/services/notification.service");
+        await notificationService.push({
+          userId,
+          type: "job_approved",
+          title: "Your job is now live!",
+          message: `Your job "${jobData.title}" has been validated and is now visible to providers.`,
+          data: { jobId },
+        });
+      } else {
+        // Decision queued for manual review or rejected
+        // Job remains in pending_validation status
+        console.log(
+          `[JobService] Job ${jobId} queued for manual review (action: ${aiResult.decision?.action}, confidence: ${aiResult.decision?.confidence}%)`
+        );
+      }
+    } catch (error) {
+      console.error("[JobService] AI job validation failed:", error);
+      // Silently fail - job is already created in pending_validation
+      // Admin will manually review it
+    }
+  }
+
+  /**
+   * Check job risk with AI Proactive Support agent
+   * Identifies at-risk jobs and sends preventive tips
+   */
+  private async checkJobRiskWithAI(jobId: string, jobData: any, clientId: string) {
+    try {
+      await connectDB();
+
+      // Fetch client profile
+      const clientDoc = await User.findById(clientId)
+        .select("isVerified kycStatus jobsCompleted rating createdAt")
+        .lean() as any;
+
+      // Call AI Proactive Support agent
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+      const response = await fetch(`${appUrl}/api/ai/agents/proactive-support`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${process.env.INTERNAL_API_KEY || ""}`,
+        },
+        body: JSON.stringify({
+          jobId,
+          jobData: {
+            title: jobData.title,
+            budget: jobData.budget,
+            category: jobData.category,
+            urgency: jobData.urgency || "standard",
+            complexity: jobData.specialInstructions ? "high" : "medium",
+            location: jobData.location,
+          },
+          clientProfile: {
+            isFirstTime: (clientDoc?.jobsCompleted || 0) === 0,
+            previousJobs: clientDoc?.jobsCompleted || 0,
+            totalSpent: 0, // Would need to calculate from transactions
+            rating: clientDoc?.rating || 5,
+            responseTime: "normal",
+          },
+          providerProfile: {
+            yearsExperience: 0,
+            jobsCompleted: 0,
+            rating: 4.5,
+            completionRate: 0.95,
+            isNew: true,
+          },
+          riskFactors: [],
+        }),
+      });
+
+      if (!response.ok) {
+        console.warn(
+          "[JobService] AI proactive support returned non-OK status:",
+          response.status
+        );
+        return;
+      }
+
+      const aiResult = await response.json();
+      const assessment = aiResult.assessment || {};
+
+      // If HIGH risk: send preventive tips
+      if (assessment.riskLevel === "high" || assessment.riskLevel === "medium") {
+        const { notificationService } = await import("@/services/notification.service");
+
+        // Notify client of potential issues
+        if (assessment.preventiveTipsClient && assessment.preventiveTipsClient.length > 0) {
+          await notificationService.push({
+            userId: clientId,
+            type: "job_submitted" as any, // Use existing notification type
+            title: "Job Tips: Improve Success",
+            message: `For your job "${jobData.title}": ${assessment.preventiveTipsClient[0]}`,
+            data: { jobId },
+          });
+        }
+
+        console.log(
+          `[JobService] High-risk job identified: ${jobId} (riskLevel: ${assessment.riskLevel}, riskScore: ${assessment.riskScore})`
+        );
+      }
+    } catch (error) {
+      console.error("[JobService] AI proactive support check failed:", error);
+      // Silently fail - proactive check is advisory only
+    }
   }
 }
 
