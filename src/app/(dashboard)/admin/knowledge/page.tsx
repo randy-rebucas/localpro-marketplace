@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { getAllArticles } from "@/lib/knowledge";
 import KnowledgeAdminView from "./KnowledgeAdminView";
@@ -9,22 +10,37 @@ export const metadata: Metadata = { title: "Knowledge Base" };
 
 export default async function AdminKnowledgePage() {
   const user = await getCurrentUser();
-  if (!user || (user.role !== "admin" && user.role !== "staff")) return null;
+  if (!user || (user.role !== "admin" && user.role !== "staff")) {
+    redirect("/login");
+  }
 
-  const raw = getAllArticles();
-  // Attach composite id used by the CRUD API
-  const articles = raw.map((a) => ({
-    id:        `${a.folder}__${a.slug}`,
-    slug:      a.slug,
-    folder:    a.folder,
-    title:     a.title,
-    excerpt:   a.excerpt,
-    content:   a.content,
-    group:     a.group,
-    order:     a.order,
-    audience:  a.audience,
-    updatedAt: a.updatedAt,
-  }));
+  let articles = [];
+  try {
+    const raw = getAllArticles();
+    // Attach composite id used by the CRUD API
+    articles = raw.map((a) => ({
+      id:        `${a.folder}__${a.slug}`,
+      slug:      a.slug,
+      folder:    a.folder,
+      title:     a.title,
+      excerpt:   a.excerpt,
+      content:   a.content,
+      group:     a.group,
+      order:     a.order,
+      audience:  a.audience,
+      updatedAt: a.updatedAt,
+    }));
+  } catch (error) {
+    console.error("Failed to load knowledge articles:", error);
+    return (
+      <div className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-2xl">
+        <h2 className="text-red-900 font-bold text-lg">Failed to Load Knowledge Base</h2>
+        <p className="text-red-700 mt-2">
+          {error instanceof Error ? error.message : "An unexpected error occurred"}
+        </p>
+      </div>
+    );
+  }
 
   const clientCount   = articles.filter((a) => a.folder === "client").length;
   const providerCount = articles.filter((a) => a.folder === "provider").length;
