@@ -1,3 +1,5 @@
+'use server';
+
 import mongoose from "mongoose";
 import { attachDatabasePool } from "@vercel/functions";
 
