@@ -21,7 +21,8 @@ export const GET = withHandler(async (req: NextRequest) => {
     if (agentName) {
       // Get detailed metrics for a single agent
       const metrics = await AIDecisionService.getAgentAccuracyMetrics(agentName);
-      return NextResponse.json({ data: metrics });
+      const riskDistribution = await AIDecisionService.getRiskDistribution(agentName);
+      return NextResponse.json({ data: { ...metrics, riskDistribution } });
     }
 
     // Get metrics for all 11 agents (Phase 1-2, Phase 4, Phase 5, Phase 6, Phase 7)
@@ -43,8 +44,13 @@ export const GET = withHandler(async (req: NextRequest) => {
       "review_moderator",
       "outreach_agent",
     ];
+    
+    // Get metrics and risk distributions for all agents
     const allMetrics = await Promise.all(
       agents.map((agent) => AIDecisionService.getAgentAccuracyMetrics(agent))
+    );
+    const allRiskDistributions = await Promise.all(
+      agents.map((agent) => AIDecisionService.getRiskDistribution(agent))
     );
 
     // Calculate summary metrics
@@ -69,19 +75,14 @@ export const GET = withHandler(async (req: NextRequest) => {
         overallAutoApproveRate,
         averageConfidenceScore,
       },
-      byAgent: allMetrics.map((m) => ({
+      byAgent: allMetrics.map((m, i) => ({
         agentName: m.agentName,
         totalDecisions: m.totalDecisions,
         avgConfidenceScore: m.avgConfidenceScore,
         autoApproveRate: 100 - m.overrideRate,
         approvalRate: 100 - m.overrideRate,
         rejectionRate: m.overrideRate,
-        riskDistribution: {
-          low: 0,
-          medium: 0,
-          high: 0,
-          critical: 0,
-        },
+        riskDistribution: allRiskDistributions[i],
         accuracy: m.accuracyRate,
         overrideRate: m.overrideRate,
         avgConfidenceAccuracy: m.avgConfidenceScore,

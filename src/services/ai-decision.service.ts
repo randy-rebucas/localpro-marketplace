@@ -276,10 +276,14 @@ export class AIDecisionService {
   }> {
     await connectDB();
 
+    // Get data from last 7 days
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
     const query = agentName ? { agentName } : {};
 
     const feedback = await AIFeedbackModel.aggregate([
-      { $match: query },
+      { $match: { ...query, createdAt: { $gte: sevenDaysAgo } } },
       {
         $group: {
           _id: "$agentName",
@@ -316,5 +320,49 @@ export class AIDecisionService {
       overrideRate: stats.totalDecisions > 0 ? (stats.overrideCount / stats.totalDecisions) * 100 : 0,
       avgConfidenceScore: stats.avgConfidence || 0,
     };
+  }
+
+  /**
+   * Get risk distribution for an agent
+   * Returns count of decisions by risk level (low, medium, high, critical)
+   */
+  static async getRiskDistribution(agentName?: string): Promise<{
+    low: number;
+    medium: number;
+    high: number;
+    critical: number;
+  }> {
+    await connectDB();
+
+    // Get decisions from last 7 days
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+    const query = agentName ? { agentName } : {};
+
+    const distribution = await AIDecisionModel.aggregate([
+      {
+        $match: {
+          ...query,
+          createdAt: { $gte: sevenDaysAgo },
+        },
+      },
+      {
+        $group: {
+          _id: "$riskLevel",
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+
+    // Format result with safe defaults
+    const result = { low: 0, medium: 0, high: 0, critical: 0 };
+    distribution.forEach((d: any) => {
+      if (d._id && d._id in result) {
+        result[d._id as keyof typeof result] = d.count;
+      }
+    });
+
+    return result;
   }
 }

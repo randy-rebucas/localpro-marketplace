@@ -18,7 +18,12 @@ export default function AIPerformanceMetrics() {
   const [selectedAgent, setSelectedAgent] = useState<string | undefined>(undefined);
 
   // Fetch all agent metrics
-  const { data: allMetrics } = useQuery({
+  const {
+    data: allMetrics,
+    isLoading: isLoadingMetrics,
+    isError: isErrorMetrics,
+    error: metricsError,
+  } = useQuery({
     queryKey: ["ai-agent-metrics"],
     queryFn: async () => {
       const res = await fetch("/api/admin/ai-metrics");
@@ -56,6 +61,66 @@ export default function AIPerformanceMetrics() {
     if (accuracy >= 60) return <TrendingDown className="text-yellow-600" size={18} />;
     return <TrendingDown className="text-red-600" size={18} />;
   };
+
+  // Error state
+  if (isErrorMetrics) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-6">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-2xl">
+          <h2 className="text-red-900 font-bold text-lg">Failed to Load Metrics</h2>
+          <p className="text-red-700 mt-2">
+            {metricsError instanceof Error ? metricsError.message : "Unknown error occurred"}
+          </p>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-4 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Loading state
+  if (isLoadingMetrics) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-6">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">AI Agent Performance</h1>
+          <p className="text-gray-600 mt-2">Track accuracy, override rates, and confidence scores</p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <div key={i} className="bg-white rounded-lg shadow p-6 animate-pulse">
+              <div className="h-4 bg-gray-200 rounded w-3/4 mb-4"></div>
+              <div className="space-y-3">
+                {[1, 2, 3].map((j) => (
+                  <div key={j} className="h-3 bg-gray-100 rounded w-full"></div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // Empty state
+  if (agents.length === 0) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-6">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">AI Agent Performance</h1>
+          <p className="text-gray-600 mt-2">Track accuracy, override rates, and confidence scores</p>
+        </div>
+        <div className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-12 text-center">
+          <p className="text-gray-600 text-lg">No agent metrics available</p>
+          <p className="text-gray-500 mt-1">Data will appear once agents process decisions</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
