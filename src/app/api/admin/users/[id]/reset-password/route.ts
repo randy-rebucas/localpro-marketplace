@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireUser, requireCapability } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { NotFoundError, assertObjectId } from "@/lib/errors";
-import { userRepository } from "@/repositories/user.repository";
+import { userRepository, activityRepository } from "@/repositories";
 import { sendPasswordResetEmail } from "@/lib/email";
 import crypto from "crypto";
 
@@ -33,6 +33,23 @@ export const POST = withHandler(async (
     (user as { name: string }).name,
     token
   );
+
+  // Audit log: record the password reset action
+  try {
+    await activityRepository.log({
+      userId: admin.userId,
+      eventType: "user_password_reset",
+      metadata: {
+        action: "admin_reset_password",
+        targetUserId: id,
+        targetUserEmail: user.email,
+        targetUserRole: user.role,
+        timestamp: new Date().toISOString(),
+      },
+    });
+  } catch (err) {
+    console.error("[AUDIT] Failed to log password reset:", err);
+  }
 
   return NextResponse.json({ ok: true, message: "Password reset email sent." });
 });

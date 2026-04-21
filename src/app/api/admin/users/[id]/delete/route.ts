@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireUser, requireRole } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { NotFoundError } from "@/lib/errors";
-import { userRepository } from "@/repositories";
+import { userRepository, activityRepository } from "@/repositories";
 import { cascadeService } from "@/services/cascade.service";
 
 /**
@@ -30,6 +30,25 @@ export const DELETE = withHandler(async (
   if (!user) throw new NotFoundError("User");
 
   const { affected } = await cascadeService.cascadeSoftDelete(id);
+
+  // Log the admin action for audit trail
+  try {
+    await activityRepository.log({
+      userId: admin.userId,
+      eventType: "user_deleted",
+      metadata: {
+        action: "admin_soft_delete_user",
+        deletedUserId: id,
+        deletedUserEmail: user.email,
+        deletedUserRole: user.role,
+        affected,
+        timestamp: new Date().toISOString(),
+      },
+    });
+  } catch (err) {
+    console.error("[AUDIT] Failed to log user deletion:", err);
+    // Don't fail the request if logging fails
+  }
 
   return NextResponse.json({ ok: true, affected });
 });

@@ -235,10 +235,9 @@ UserSchema.index({ role: 1 });
 UserSchema.index({ approvalStatus: 1 });
 // Unique sparse index — phone numbers must be distinct (null is excluded)
 UserSchema.index({ phone: 1 }, { unique: true, sparse: true });
-// TTL indexes — automatically purge expired tokens from the users collection
-UserSchema.index({ verificationTokenExpiry: 1 }, { expireAfterSeconds: 0, sparse: true });
-UserSchema.index({ resetPasswordTokenExpiry: 1 }, { expireAfterSeconds: 0, sparse: true });
-UserSchema.index({ otpExpiry: 1 }, { expireAfterSeconds: 0, sparse: true });
+// NOTE: DO NOT use TTL indexes on token expiry fields — they delete entire documents!
+// Token fields are manually cleared by setVerificationToken(), setResetPasswordToken(), etc.
+// For expired/orphaned tokens, the retention-cleanup cron handles anonymization at 90 days.
 
 const User: Model<UserDocument> =
   mongoose.models.User ?? mongoose.model<UserDocument>("User", UserSchema);

@@ -99,7 +99,7 @@ export default function CreateUserModal({ onClose, onSuccess }: Props) {
           role,
           isVerified,
           ...(role === "provider" && phone.trim()           ? { phone: phone.trim() }                                                      : {}),
-          ...(role === "provider" && skillsRaw.trim()       ? { skills: skillsRaw.split(",").map((s) => s.trim()).filter(Boolean) }         : {}),
+          ...(role === "provider" && skillsRaw.trim()       ? { skills: skillsRaw.split(",").map((s) => ({ skill: s.trim(), yearsExperience: 0, hourlyRate: "" })).filter((s) => s.skill) }         : {}),
           ...(role === "provider" && yearsExperience !== "" ? { yearsExperience: Math.max(0, parseInt(yearsExperience, 10) || 0) }          : {}),
           ...(role === "peso" ? {
             pesoOffice: {

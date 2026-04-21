@@ -104,6 +104,26 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "maps.gstatic.com" },
     ],
   },
+
+  webpack: (config, { isServer }) => {
+    // Tree-shake Sentry debug logging from production bundles
+    config.optimization = {
+      ...config.optimization,
+      treeshake: { removeDebugLogging: true },
+    };
+
+    // Exclude jsdom and isomorphic-dompurify from server bundle
+    // These cause ESM/CommonJS issues in SSR/Lambda environments
+    if (isServer) {
+      config.externals = {
+        ...config.externals,
+        jsdom: "jsdom",
+        "isomorphic-dompurify": "isomorphic-dompurify",
+      };
+    }
+
+    return config;
+  },
 };
 
 const withAnalyzer = withBundleAnalyzer(nextConfig);
@@ -116,10 +136,5 @@ export default withSentryConfig(withAnalyzer, {
   sourcemaps: { disable: process.env.CI !== "true" },
   // Suppress noisy Sentry build output
   silent: true,
-  webpack: {
-    // Tree-shake Sentry debug logging from production bundles
-    treeshake: { removeDebugLogging: true },
-    // Automatically instrument server-side route handlers
-    autoInstrumentServerFunctions: true,
-  },
+  autoInstrumentServerFunctions: true,
 });

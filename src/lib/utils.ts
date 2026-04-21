@@ -3,6 +3,7 @@ import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { AppError } from "@/lib/errors";
 import { checkRateLimit } from "@/lib/rateLimit";
+import { connectDB } from "@/lib/db";
 
 export function cn(...inputs: ClassValue[]): string {
   return twMerge(clsx(inputs));
@@ -119,6 +120,15 @@ type RouteHandler = (req: NextRequest, ctx: RouteContext) => Promise<Response>;
 
 export function withHandler(fn: RouteHandler): RouteHandler {
   return async (req: NextRequest, ctx: RouteContext) => {
+    // Ensure database connection is established before handler executes
+    // Prevents "Operation buffering timed out" errors on cold starts
+    try {
+      await connectDB();
+    } catch (err) {
+      console.error("[DB Connection Error]", err);
+      return apiError("Database connection failed", 503);
+    }
+
     // Rate limit by IP (skip for SSE endpoints — they hold connections open)
     const isSSE = req.headers.get("accept") === "text/event-stream";
     if (!isSSE) {
