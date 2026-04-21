@@ -75,7 +75,6 @@ const AIFeedbackSchema = new Schema<IAIFeedback>(
 );
 
 // Add indexes
-AIFeedbackSchema.index({ decisionId: 1 });
 AIFeedbackSchema.index({ agentName: 1, wasCorrect: 1 });
 AIFeedbackSchema.index({ userOverride: 1, createdAt: -1 });
 
