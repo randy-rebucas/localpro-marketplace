@@ -379,7 +379,10 @@ export type ActivityEventType =
   | "job_cancelled"
   | "provider_withdrew"
   | "admin_ledger_entry"
-  | "admin_impersonation";
+  | "admin_impersonation"
+  | "user_deleted"
+  | "user_password_reset"
+  | "user_unlocked";
 
 export interface IActivityLog {
   _id: Types.ObjectId | string;

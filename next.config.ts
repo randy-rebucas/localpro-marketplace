@@ -136,5 +136,9 @@ export default withSentryConfig(withAnalyzer, {
   sourcemaps: { disable: process.env.CI !== "true" },
   // Suppress noisy Sentry build output
   silent: true,
-  autoInstrumentServerFunctions: true,
+  // Instrument server-side functions for error tracking (webpack configuration)
+  // Note: Not supported with Turbopack — only used with webpack
+  webpack: {
+    autoInstrumentServerFunctions: true,
+  },
 });
