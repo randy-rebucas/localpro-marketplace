@@ -581,10 +581,14 @@ export default async function RootPage() {
               <div className="absolute top-0 inset-x-0 h-7 bg-slate-900 flex justify-center pt-2 z-10">
                 <div className="h-5 w-24 rounded-full bg-slate-800" />
               </div>
-              <div className="absolute inset-x-3 top-10 bottom-3 rounded-xl bg-gradient-to-b from-primary-600 via-primary-700 to-primary-900 flex flex-col items-center justify-center text-white p-4 text-center shadow-inner">
-                <span className="text-2xl mb-2 drop-shadow-sm">📍</span>
-                <p className="text-xs font-bold tracking-wide">LocalPro</p>
-                <p className="text-[10px] text-white/80 mt-1">Jobs · Messages · Wallet</p>
+              <div className="absolute inset-x-3 top-10 bottom-3 rounded-xl overflow-hidden shadow-inner">
+                <Image
+                  src="/homepage.PNG"
+                  alt="LocalPro app — dashboard screenshot"
+                  fill
+                  className="object-cover object-top"
+                  sizes="232px"
+                />
               </div>
             </div>
           </div>
