@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { getCurrentUser } from "@/lib/auth";
-import { connectDB } from "@/lib/db";
+import { redirect } from "next/navigation";
 import { featuredListingService } from "@/services/featured-listing.service";
 import { walletRepository } from "@/repositories/wallet.repository";
 import { getPaymentSettings } from "@/lib/appSettings";
@@ -10,9 +10,7 @@ export const metadata: Metadata = { title: "Boost & Featured Listings" };
 
 export default async function BoostPage() {
   const user = await getCurrentUser();
-  if (!user) return null;
-
-  await connectDB();
+  if (!user) redirect("/login");
 
   const [activeBoosts, history, balance, settings] = await Promise.all([
     featuredListingService.getActive(user.userId),

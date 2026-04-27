@@ -11,37 +11,62 @@ export const metadata: Metadata = { title: "Activity Logs" };
 // ── Event display config ───────────────────────────────────────────────────────
 
 export const EVENT_CONFIG: Record<ActivityEventType, { label: string; color: string; dot: string }> = {
-  job_created:      { label: "Job Created",       color: "bg-blue-100 text-blue-700 border-blue-200",          dot: "bg-blue-500" },
-  job_approved:     { label: "Job Approved",      color: "bg-emerald-100 text-emerald-700 border-emerald-200",  dot: "bg-emerald-500" },
-  job_rejected:     { label: "Job Rejected",      color: "bg-red-100 text-red-700 border-red-200",             dot: "bg-red-500" },
-  job_started:      { label: "Job Started",       color: "bg-cyan-100 text-cyan-700 border-cyan-200",          dot: "bg-cyan-500" },
-  job_completed:    { label: "Job Completed",     color: "bg-green-100 text-green-700 border-green-200",       dot: "bg-green-500" },
-  job_expired:      { label: "Job Expired",       color: "bg-slate-100 text-slate-500 border-slate-200",       dot: "bg-slate-400" },
-  quote_submitted:  { label: "Quote Submitted",   color: "bg-indigo-100 text-indigo-700 border-indigo-200",    dot: "bg-indigo-500" },
-  quote_accepted:   { label: "Quote Accepted",    color: "bg-violet-100 text-violet-700 border-violet-200",    dot: "bg-violet-500" },
-  quote_expired:    { label: "Quote Expired",     color: "bg-slate-100 text-slate-500 border-slate-200",       dot: "bg-slate-400" },
-  escrow_funded:    { label: "Escrow Funded",     color: "bg-amber-100 text-amber-700 border-amber-200",       dot: "bg-amber-500" },
-  escrow_released:  { label: "Escrow Released",   color: "bg-teal-100 text-teal-700 border-teal-200",          dot: "bg-teal-500" },
-  provider_withdrew: { label: "Provider Withdrew", color: "bg-orange-100 text-orange-700 border-orange-200",   dot: "bg-orange-500" },
-  dispute_opened:   { label: "Dispute Opened",    color: "bg-red-100 text-red-700 border-red-200",             dot: "bg-red-500" },
-  dispute_resolved: { label: "Dispute Resolved",  color: "bg-orange-100 text-orange-700 border-orange-200",    dot: "bg-orange-500" },
-  review_submitted: { label: "Review Submitted",  color: "bg-yellow-100 text-yellow-700 border-yellow-200",    dot: "bg-yellow-500" },
-  payout_requested:              { label: "Payout Requested",          color: "bg-purple-100 text-purple-700 border-purple-200",  dot: "bg-purple-500" },
-  payout_updated:                { label: "Payout Updated",            color: "bg-pink-100 text-pink-700 border-pink-200",        dot: "bg-pink-500" },
-  consultation_requested:        { label: "Consultation Requested",    color: "bg-sky-100 text-sky-700 border-sky-200",           dot: "bg-sky-500" },
-  consultation_accepted:         { label: "Consultation Accepted",     color: "bg-green-100 text-green-700 border-green-200",     dot: "bg-green-500" },
-  consultation_declined:         { label: "Consultation Declined",     color: "bg-red-100 text-red-700 border-red-200",          dot: "bg-red-500" },
-  consultation_converted_to_job: { label: "Converted to Job",          color: "bg-teal-100 text-teal-700 border-teal-200",        dot: "bg-teal-500" },
+  // ── Job lifecycle ──────────────────────────────────────────────────────────
+  job_created:      { label: "Job Created",       color: "bg-blue-100 text-blue-700 border-blue-200",           dot: "bg-blue-500" },
+  job_approved:     { label: "Job Approved",      color: "bg-emerald-100 text-emerald-700 border-emerald-200",   dot: "bg-emerald-500" },
+  job_rejected:     { label: "Job Rejected",      color: "bg-red-100 text-red-700 border-red-200",              dot: "bg-red-500" },
+  job_started:      { label: "Job Started",       color: "bg-cyan-100 text-cyan-700 border-cyan-200",           dot: "bg-cyan-500" },
+  job_completed:    { label: "Job Completed",     color: "bg-green-100 text-green-700 border-green-200",        dot: "bg-green-500" },
+  job_expired:      { label: "Job Expired",       color: "bg-slate-100 text-slate-500 border-slate-200",        dot: "bg-slate-400" },
+  job_cancelled:    { label: "Job Cancelled",     color: "bg-slate-100 text-slate-600 border-slate-200",        dot: "bg-slate-500" },
+  job_reopened:     { label: "Job Reopened",      color: "bg-sky-100 text-sky-700 border-sky-200",              dot: "bg-sky-500" },
+  // ── Quotes ────────────────────────────────────────────────────────────────
+  quote_submitted:  { label: "Quote Submitted",   color: "bg-indigo-100 text-indigo-700 border-indigo-200",     dot: "bg-indigo-500" },
+  quote_accepted:   { label: "Quote Accepted",    color: "bg-violet-100 text-violet-700 border-violet-200",     dot: "bg-violet-500" },
+  quote_expired:    { label: "Quote Expired",     color: "bg-slate-100 text-slate-500 border-slate-200",        dot: "bg-slate-400" },
+  quote_revised:    { label: "Quote Revised",     color: "bg-indigo-100 text-indigo-600 border-indigo-200",     dot: "bg-indigo-400" },
+  // ── Escrow / Payments ─────────────────────────────────────────────────────
+  escrow_funded:    { label: "Escrow Funded",     color: "bg-amber-100 text-amber-700 border-amber-200",        dot: "bg-amber-500" },
+  escrow_released:  { label: "Escrow Released",   color: "bg-teal-100 text-teal-700 border-teal-200",           dot: "bg-teal-500" },
+  provider_withdrew: { label: "Provider Withdrew", color: "bg-orange-100 text-orange-700 border-orange-200",    dot: "bg-orange-500" },
+  payout_requested: { label: "Payout Requested",  color: "bg-purple-100 text-purple-700 border-purple-200",    dot: "bg-purple-500" },
+  payout_updated:   { label: "Payout Updated",    color: "bg-pink-100 text-pink-700 border-pink-200",           dot: "bg-pink-500" },
+  // ── Disputes ──────────────────────────────────────────────────────────────
+  dispute_opened:   { label: "Dispute Opened",    color: "bg-red-100 text-red-700 border-red-200",              dot: "bg-red-500" },
+  dispute_resolved: { label: "Dispute Resolved",  color: "bg-orange-100 text-orange-700 border-orange-200",     dot: "bg-orange-500" },
+  // ── Reviews ───────────────────────────────────────────────────────────────
+  review_submitted: { label: "Review Submitted",  color: "bg-yellow-100 text-yellow-700 border-yellow-200",     dot: "bg-yellow-500" },
+  review_responded: { label: "Review Response",   color: "bg-yellow-100 text-yellow-600 border-yellow-200",     dot: "bg-yellow-400" },
+  review_hidden:    { label: "Review Hidden",     color: "bg-slate-100 text-slate-600 border-slate-200",        dot: "bg-slate-500" },
+  review_unhidden:  { label: "Review Restored",   color: "bg-slate-100 text-slate-500 border-slate-200",        dot: "bg-slate-400" },
+  // ── Consultations ─────────────────────────────────────────────────────────
+  consultation_requested:        { label: "Consultation Requested",    color: "bg-sky-100 text-sky-700 border-sky-200",            dot: "bg-sky-500" },
+  consultation_accepted:         { label: "Consultation Accepted",     color: "bg-green-100 text-green-700 border-green-200",      dot: "bg-green-500" },
+  consultation_declined:         { label: "Consultation Declined",     color: "bg-red-100 text-red-700 border-red-200",            dot: "bg-red-500" },
+  consultation_converted_to_job: { label: "Converted to Job",          color: "bg-teal-100 text-teal-700 border-teal-200",         dot: "bg-teal-500" },
   consultation_stale_accepted:   { label: "Stale Accepted",            color: "bg-orange-100 text-orange-700 border-orange-200",   dot: "bg-orange-500" },
-  recurring_created:             { label: "Recurring Created",          color: "bg-violet-100 text-violet-700 border-violet-200",   dot: "bg-violet-500" },
-  recurring_cancelled:           { label: "Recurring Cancelled",        color: "bg-red-100 text-red-600 border-red-200",            dot: "bg-red-400" },
-  recurring_job_spawned:         { label: "Recurring Job Spawned",      color: "bg-teal-100 text-teal-700 border-teal-200",         dot: "bg-teal-500" },
-  job_cancelled:                 { label: "Job Cancelled",              color: "bg-slate-100 text-slate-600 border-slate-200",      dot: "bg-slate-500" },
-  admin_ledger_entry:            { label: "Ledger Entry",               color: "bg-teal-100 text-teal-700 border-teal-200",          dot: "bg-teal-500" },
-  admin_impersonation:           { label: "Admin Impersonation",        color: "bg-rose-100 text-rose-700 border-rose-200",           dot: "bg-rose-500" },
-  user_deleted:                  { label: "User Deleted",               color: "bg-red-100 text-red-700 border-red-200",             dot: "bg-red-500" },
-  user_password_reset:           { label: "Password Reset",             color: "bg-amber-100 text-amber-700 border-amber-200",       dot: "bg-amber-500" },
-  user_unlocked:                 { label: "Account Unlocked",           color: "bg-emerald-100 text-emerald-700 border-emerald-200", dot: "bg-emerald-500" },
+  // ── Recurring ─────────────────────────────────────────────────────────────
+  recurring_created:     { label: "Recurring Created",     color: "bg-violet-100 text-violet-700 border-violet-200", dot: "bg-violet-500" },
+  recurring_cancelled:   { label: "Recurring Cancelled",   color: "bg-red-100 text-red-600 border-red-200",           dot: "bg-red-400" },
+  recurring_job_spawned: { label: "Recurring Job Spawned", color: "bg-teal-100 text-teal-700 border-teal-200",         dot: "bg-teal-500" },
+  // ── User / Auth ───────────────────────────────────────────────────────────
+  user_registered:    { label: "User Registered",   color: "bg-emerald-100 text-emerald-700 border-emerald-200", dot: "bg-emerald-500" },
+  user_login:         { label: "Login",              color: "bg-blue-100 text-blue-600 border-blue-200",           dot: "bg-blue-400" },
+  user_login_failed:  { label: "Login Failed",       color: "bg-red-100 text-red-600 border-red-200",              dot: "bg-red-400" },
+  email_verified:     { label: "Email Verified",     color: "bg-emerald-100 text-emerald-600 border-emerald-200",  dot: "bg-emerald-400" },
+  user_deleted:            { label: "User Deleted",          color: "bg-red-100 text-red-700 border-red-200",              dot: "bg-red-500" },
+  user_deletion_requested: { label: "Deletion Requested",   color: "bg-rose-100 text-rose-700 border-rose-200",            dot: "bg-rose-500" },
+  user_data_exported:      { label: "Data Exported",        color: "bg-slate-100 text-slate-600 border-slate-200",         dot: "bg-slate-400" },
+  user_password_reset:     { label: "Password Reset",       color: "bg-amber-100 text-amber-700 border-amber-200",         dot: "bg-amber-500" },
+  user_unlocked:           { label: "Account Unlocked",     color: "bg-emerald-100 text-emerald-700 border-emerald-200",   dot: "bg-emerald-500" },
+  // ── Admin actions ─────────────────────────────────────────────────────────
+  admin_ledger_entry:   { label: "Ledger Entry",        color: "bg-teal-100 text-teal-700 border-teal-200",          dot: "bg-teal-500" },
+  admin_impersonation:  { label: "Admin Impersonation", color: "bg-rose-100 text-rose-700 border-rose-200",           dot: "bg-rose-500" },
+  account_suspended:    { label: "Account Suspended",   color: "bg-red-100 text-red-700 border-red-200",              dot: "bg-red-500" },
+  account_unsuspended:  { label: "Account Unsuspended", color: "bg-emerald-100 text-emerald-700 border-emerald-200",  dot: "bg-emerald-500" },
+  provider_approved:    { label: "Provider Approved",   color: "bg-emerald-100 text-emerald-700 border-emerald-200",  dot: "bg-emerald-500" },
+  provider_rejected:    { label: "Provider Rejected",   color: "bg-red-100 text-red-700 border-red-200",              dot: "bg-red-500" },
+  role_changed:         { label: "Role Changed",        color: "bg-rose-100 text-rose-700 border-rose-200",           dot: "bg-rose-500" },
 };
 
 export const ALL_EVENT_TYPES = Object.keys(EVENT_CONFIG) as ActivityEventType[];
@@ -258,21 +283,25 @@ export default async function AdminLogsPage({
 
                         {/* Metadata */}
                         <td className="px-5 py-3.5">
-                          {metaEntries.length > 0 ? (
-                            <div className="flex flex-wrap gap-1">
-                              {metaEntries.slice(0, 3).map(([k, v]) => (
-                                <span key={k} className="inline-flex items-center gap-1 text-[10px] bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded px-1.5 py-0.5">
-                                  <span className="text-slate-400 dark:text-slate-500">{k}:</span>
-                                  <span className="font-medium">{String(v)}</span>
-                                </span>
-                              ))}
-                              {metaEntries.length > 3 && (
-                                <span className="text-[10px] text-slate-400 dark:text-slate-500">+{metaEntries.length - 3} more</span>
-                              )}
-                            </div>
-                          ) : (
-                            <span className="text-xs text-slate-300 dark:text-slate-600">—</span>
-                          )}
+                          <div className="flex flex-wrap gap-1">
+                            {log.ipAddress && (
+                              <span className="inline-flex items-center gap-1 text-[10px] bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300 rounded px-1.5 py-0.5 font-mono">
+                                {log.ipAddress}
+                              </span>
+                            )}
+                            {metaEntries.slice(0, log.ipAddress ? 2 : 3).map(([k, v]) => (
+                              <span key={k} className="inline-flex items-center gap-1 text-[10px] bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded px-1.5 py-0.5">
+                                <span className="text-slate-400 dark:text-slate-500">{k}:</span>
+                                <span className="font-medium">{String(v)}</span>
+                              </span>
+                            ))}
+                            {metaEntries.length > (log.ipAddress ? 2 : 3) && (
+                              <span className="text-[10px] text-slate-400 dark:text-slate-500">+{metaEntries.length - (log.ipAddress ? 2 : 3)} more</span>
+                            )}
+                            {!log.ipAddress && metaEntries.length === 0 && (
+                              <span className="text-xs text-slate-300 dark:text-slate-600">—</span>
+                            )}
+                          </div>
                         </td>
 
                         {/* View detail arrow */}

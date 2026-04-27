@@ -1,8 +1,10 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { withHandler } from "@/lib/utils";
 import { connectDB } from "@/lib/db";
 import mongoose from "mongoose";
 import { v2 as cloudinary } from "cloudinary";
 import { Redis } from "@upstash/redis";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 /**
  * GET /api/health
@@ -24,6 +26,21 @@ interface ServiceCheck {
   error?: string;
 }
 
+// Configure Cloudinary once at module load, not per request
+const cloudinaryConfigured =
+  !!process.env.CLOUDINARY_CLOUD_NAME &&
+  !!process.env.CLOUDINARY_API_KEY &&
+  !!process.env.CLOUDINARY_API_SECRET;
+
+if (cloudinaryConfigured) {
+  cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key:    process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+    secure: true,
+  });
+}
+
 async function checkMongo(): Promise<ServiceCheck> {
   const t = Date.now();
   try {
@@ -31,30 +48,22 @@ async function checkMongo(): Promise<ServiceCheck> {
     await mongoose.connection.db?.command({ ping: 1 });
     return { status: "ok", latencyMs: Date.now() - t };
   } catch (err) {
-    return { status: "down", latencyMs: Date.now() - t, error: (err as Error).message };
+    console.error("[health] MongoDB check failed:", err);
+    return { status: "down", latencyMs: Date.now() - t, error: "connection failed" };
   }
 }
 
 async function checkCloudinary(): Promise<ServiceCheck> {
   const t = Date.now();
-  const configured =
-    !!process.env.CLOUDINARY_CLOUD_NAME &&
-    !!process.env.CLOUDINARY_API_KEY &&
-    !!process.env.CLOUDINARY_API_SECRET;
-
-  if (!configured) return { status: "degraded", latencyMs: 0, error: "Cloudinary env vars not set" };
-
+  if (!cloudinaryConfigured) {
+    return { status: "degraded", latencyMs: 0, error: "not configured" };
+  }
   try {
-    cloudinary.config({
-      cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-      api_key:    process.env.CLOUDINARY_API_KEY,
-      api_secret: process.env.CLOUDINARY_API_SECRET,
-      secure: true,
-    });
     await cloudinary.api.ping();
     return { status: "ok", latencyMs: Date.now() - t };
   } catch (err) {
-    return { status: "degraded", latencyMs: Date.now() - t, error: (err as Error).message };
+    console.error("[health] Cloudinary check failed:", err);
+    return { status: "degraded", latencyMs: Date.now() - t, error: "connection failed" };
   }
 }
 
@@ -64,7 +73,9 @@ async function checkRedis(): Promise<ServiceCheck> {
     !!process.env.UPSTASH_REDIS_REST_URL &&
     !!process.env.UPSTASH_REDIS_REST_TOKEN;
 
-  if (!configured) return { status: "degraded", latencyMs: 0, error: "Upstash Redis env vars not set" };
+  if (!configured) {
+    return { status: "degraded", latencyMs: 0, error: "not configured" };
+  }
 
   try {
     const redis = new Redis({
@@ -72,14 +83,20 @@ async function checkRedis(): Promise<ServiceCheck> {
       token: process.env.UPSTASH_REDIS_REST_TOKEN!,
     });
     const pong = await redis.ping();
-    if (pong !== "PONG") throw new Error(`Unexpected PING response: ${pong}`);
+    if (pong !== "PONG") throw new Error("unexpected PING response");
     return { status: "ok", latencyMs: Date.now() - t };
   } catch (err) {
-    return { status: "degraded", latencyMs: Date.now() - t, error: (err as Error).message };
+    console.error("[health] Redis check failed:", err);
+    return { status: "degraded", latencyMs: Date.now() - t, error: "connection failed" };
   }
 }
 
-export async function GET() {
+export const GET = withHandler(async (req: NextRequest) => {
+  // IP-based rate limit — this endpoint is unauthenticated but fires 3 I/O ops per call
+  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+  const rl = await checkRateLimit(`health:${ip}`, { windowMs: 60_000, max: 30 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+
   const [db, cdn, redis] = await Promise.all([
     checkMongo(),
     checkCloudinary(),
@@ -88,7 +105,6 @@ export async function GET() {
 
   const services = { db, cloudinary: cdn, redis };
 
-  // Overall status: down if MongoDB is down, degraded if any other service is not ok
   const overallStatus: ServiceStatus =
     db.status === "down"
       ? "down"
@@ -109,7 +125,6 @@ export async function GET() {
       headers: { "Cache-Control": "no-store, no-cache" },
     }
   );
-}
+});
 
-// Allow search engines and monitors to cache nothing
 export const dynamic = "force-dynamic";

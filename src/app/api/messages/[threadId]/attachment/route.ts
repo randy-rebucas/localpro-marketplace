@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireUser } from "@/lib/auth";
+import { requireUser, requireCsrfToken } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
-import { ForbiddenError, UnprocessableError } from "@/lib/errors";
+import { ForbiddenError, UnprocessableError, assertObjectId } from "@/lib/errors";
+import { checkRateLimit } from "@/lib/rateLimit";
 import { cloudinary } from "@/lib/cloudinary";
-import { jobRepository } from "@/repositories/job.repository";
-import { messageRepository } from "@/repositories";
-import Message from "@/models/Message";
+import { jobRepository, messageRepository } from "@/repositories";
 import type { IJob } from "@/types";
 
 const MAX_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
@@ -27,7 +26,13 @@ const ALLOWED_MIME = [
 export const POST = withHandler(
   async (req: NextRequest, { params }: { params: Promise<{ threadId: string }> }) => {
     const user = await requireUser();
+    requireCsrfToken(req, user);
+
+    const rl = await checkRateLimit(`msg-attachment:${user.userId}`, { windowMs: 60_000, max: 10 });
+    if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+
     const { threadId } = await params;
+    assertObjectId(threadId, "threadId");
 
     // Verify participant
     const job = await jobRepository.findById(threadId);
@@ -62,7 +67,6 @@ export const POST = withHandler(
 
     const receiverId = user.userId === clientId ? providerId : clientId;
 
-    // Create the message record (type = 'file')
     const message = await messageRepository.create({
       threadId,
       senderId: user.userId,
@@ -75,11 +79,10 @@ export const POST = withHandler(
       fileSize: file.size,
     } as never);
 
-    // Return populated message
-    const populated = await Message.findById(message._id)
-      .populate("senderId", "name role")
-      .populate("receiverId", "name role")
-      .lean();
+    // Return populated message via repository
+    const populated = await messageRepository.findByIdPopulated(
+      (message as unknown as { _id: { toString(): string } })._id.toString()
+    );
     return NextResponse.json(populated ?? message, { status: 201 });
   }
 );

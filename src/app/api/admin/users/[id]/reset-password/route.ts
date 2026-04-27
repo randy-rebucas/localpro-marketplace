@@ -6,6 +6,7 @@ import { userRepository, activityRepository } from "@/repositories";
 import { sendPasswordResetEmail } from "@/lib/email";
 import crypto from "crypto";
 
+import { checkRateLimit } from "@/lib/rateLimit";
 /**
  * POST /api/admin/users/[id]/reset-password
  *
@@ -18,6 +19,8 @@ export const POST = withHandler(async (
 ) => {
   const admin = await requireUser();
   requireCapability(admin, "manage_users");
+  const rl = await checkRateLimit(`admin:${admin.userId}`, { windowMs: 60_000, max: 200 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   const { id } = await params;
   assertObjectId(id, "userId");

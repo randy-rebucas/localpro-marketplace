@@ -4,11 +4,17 @@ import type { UploadFolder } from "@/types";
 import { requireUser } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { ValidationError } from "@/lib/errors";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
 const ALLOWED_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp", ".pdf"];
 const MAX_BYTES = 10 * 1024 * 1024; // 10 MB
-const ALLOWED_FOLDERS: UploadFolder[] = ["jobs/before", "jobs/after", "avatars", "kyc", "misc", "resumes"];
+
+// Must stay in sync with UploadFolder in @/types — satisfies ensures all values are valid folder names
+const ALLOWED_FOLDERS = [
+  "jobs/before", "jobs/after", "avatars", "kyc", "misc",
+  "resumes", "blogs", "peso/logos",
+] as const satisfies readonly UploadFolder[];
 
 /**
  * L9: Verify the file's magic bytes against its declared MIME type.
@@ -33,7 +39,15 @@ function verifyMagicBytes(buf: Buffer, mimeType: string): boolean {
 }
 
 export const POST = withHandler(async (req: NextRequest) => {
-  await requireUser();
+  const user = await requireUser();
+
+  // Rate limit: 20 uploads per minute per user
+  const rl = await checkRateLimit(`upload:${user.userId}`, { windowMs: 60_000, max: 20 });
+  if (!rl.ok) throw new ValidationError("Too many uploads. Please wait before uploading again.");
+
+  // Lightweight pre-check before buffering the body — rejects obviously oversized requests early
+  const contentLength = Number(req.headers.get("content-length") ?? 0);
+  if (contentLength > MAX_BYTES + 4096) throw new ValidationError("File exceeds the 10 MB limit");
 
   const formData = await req.formData();
   const file = formData.get("file") as File | null;
@@ -44,7 +58,7 @@ export const POST = withHandler(async (req: NextRequest) => {
   const ext = file.name.toLowerCase().match(/\.[^.]+$/)?.[0] ?? "";
   if (!ALLOWED_EXTENSIONS.includes(ext)) throw new ValidationError("File extension not allowed");
   if (file.size > MAX_BYTES) throw new ValidationError("File exceeds the 10 MB limit");
-  if (!ALLOWED_FOLDERS.includes(folderParam as UploadFolder)) throw new ValidationError("Invalid upload folder");
+  if (!(ALLOWED_FOLDERS as readonly string[]).includes(folderParam)) throw new ValidationError("Invalid upload folder");
 
   const buffer = Buffer.from(await file.arrayBuffer());
 

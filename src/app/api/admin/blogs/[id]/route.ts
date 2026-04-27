@@ -1,10 +1,11 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { withHandler, apiResponse } from "@/lib/utils";
 import { requireUser, requireCapability } from "@/lib/auth";
 import { blogRepository } from "@/repositories";
 import { assertObjectId, NotFoundError, UnprocessableError } from "@/lib/errors";
 
+import { checkRateLimit } from "@/lib/rateLimit";
 /**
  * Validation Schemas
  */
@@ -30,6 +31,8 @@ type Ctx = { params: Promise<Record<string, string>> };
 export const PATCH = withHandler(async (req: NextRequest, ctx: Ctx) => {
   const user = await requireUser();
   requireCapability(user, "manage_blogs");
+  const rl = await checkRateLimit(`admin:${user.userId}`, { windowMs: 60_000, max: 200 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   const params = await ctx.params;
   const id = params.id;
@@ -81,6 +84,8 @@ export const PATCH = withHandler(async (req: NextRequest, ctx: Ctx) => {
 export const DELETE = withHandler(async (req: NextRequest, ctx: Ctx) => {
   const user = await requireUser();
   requireCapability(user, "manage_blogs");
+  const rl = await checkRateLimit(`admin:${user.userId}`, { windowMs: 60_000, max: 200 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   const params = await ctx.params;
   const id = params.id;
@@ -106,6 +111,8 @@ export const DELETE = withHandler(async (req: NextRequest, ctx: Ctx) => {
 export const GET = withHandler(async (req: NextRequest, ctx: Ctx) => {
   const user = await requireUser();
   requireCapability(user, "manage_blogs");
+  const rl = await checkRateLimit(`admin:${user.userId}`, { windowMs: 60_000, max: 200 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   const params = await ctx.params;
   const id = params.id;

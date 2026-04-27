@@ -47,8 +47,7 @@ export async function GET(req: NextRequest) {
 
     return Response.json({ ok: true, snapshotId, logId });
   } catch (err) {
-    const message = (err as Error).message;
-    console.error("[CRON/db-backup] Snapshot failed:", message);
-    return Response.json({ ok: false, error: message }, { status: 500 });
+    console.error("[CRON/db-backup] Snapshot failed:", (err as Error).message);
+    return Response.json({ ok: false, error: "Snapshot request failed" }, { status: 500 });
   }
 }

@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { ConsultationService } from "@/services/consultation.service";
-import { requireUser } from "@/lib/auth";
+import { requireUser, requireCsrfToken } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { ValidationError, assertObjectId } from "@/lib/errors";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 const ConvertToJobSchema = z.object({
   title: z.string().min(5).max(200).optional(),
@@ -19,6 +20,11 @@ const ConvertToJobSchema = z.object({
 export const POST = withHandler(
   async (req: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
     const user = await requireUser();
+    requireCsrfToken(req, user);
+
+    const rl = await checkRateLimit(`consultation-convert:${user.userId}`, { windowMs: 60_000, max: 10 });
+    if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+
     const { id } = await params;
     assertObjectId(id, "consultationId");
 
@@ -29,11 +35,7 @@ export const POST = withHandler(
     }
 
     const consultationService = new ConsultationService();
-    const result = await consultationService.convertToJob(
-      user,
-      id,
-      parsed.data
-    );
+    const result = await consultationService.convertToJob(user, id, parsed.data);
 
     return NextResponse.json(result, { status: 201 });
   }

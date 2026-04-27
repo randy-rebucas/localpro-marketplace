@@ -3,10 +3,14 @@ import { z } from "zod";
 import { requireUser, requireRole } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { ValidationError } from "@/lib/errors";
+import { checkRateLimit } from "@/lib/rateLimit";
 import { connectDB } from "@/lib/db";
 import ProviderProfile from "@/models/ProviderProfile";
 
-const CoordSchema = z.object({ lat: z.number(), lng: z.number() });
+const CoordSchema = z.object({
+  lat: z.number().min(-90).max(90),
+  lng: z.number().min(-180).max(180),
+});
 
 const ServiceAreaSchema = z.object({
   label:       z.string().min(1).max(80).trim(),
@@ -19,7 +23,10 @@ export const POST = withHandler(async (req: NextRequest) => {
   const user = await requireUser();
   requireRole(user, "provider");
 
-  const body = await req.json();
+  const rl = await checkRateLimit(`service-area:${user.userId}`, { windowMs: 60_000, max: 20 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+
+  const body = await req.json().catch(() => ({}));
   const parsed = ServiceAreaSchema.safeParse(body);
   if (!parsed.success) throw new ValidationError(parsed.error.errors[0].message);
 

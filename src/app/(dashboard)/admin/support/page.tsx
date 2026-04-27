@@ -1,6 +1,10 @@
+import { redirect } from "next/navigation";
+import { getCurrentUser } from "@/lib/auth";
 import { Headphones } from "lucide-react";
 
-export default function AdminSupportInboxPage() {
+export default async function AdminSupportInboxPage() {
+  const user = await getCurrentUser();
+  if (!user || (user.role !== "admin" && user.role !== "staff")) redirect("/login");
   return (
     <div className="flex-1 flex flex-col items-center justify-center gap-4 p-8 text-center">
       <div className="p-4 rounded-2xl bg-slate-100 dark:bg-slate-700 ring-8 ring-slate-100 dark:ring-slate-700">

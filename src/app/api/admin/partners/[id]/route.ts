@@ -4,10 +4,13 @@ import { withHandler } from "@/lib/utils";
 import { pesoRepository } from "@/repositories/peso.repository";
 import { ValidationError, NotFoundError } from "@/lib/errors";
 
+import { checkRateLimit } from "@/lib/rateLimit";
 /** PATCH — toggle isActive only */
 export const PATCH = withHandler(async (req: NextRequest, ctx) => {
   const user = await requireUser();
   requireCapability(user, "manage_users");
+  const rl = await checkRateLimit(`admin:${user.userId}`, { windowMs: 60_000, max: 200 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   const { id } = await ctx.params;
   const body = await req.json();
@@ -26,6 +29,8 @@ export const PATCH = withHandler(async (req: NextRequest, ctx) => {
 export const PUT = withHandler(async (req: NextRequest, ctx) => {
   const user = await requireUser();
   requireCapability(user, "manage_users");
+  const rl = await checkRateLimit(`admin:${user.userId}`, { windowMs: 60_000, max: 200 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   const { id } = await ctx.params;
   const body = await req.json();
@@ -56,6 +61,8 @@ export const PUT = withHandler(async (req: NextRequest, ctx) => {
 export const DELETE = withHandler(async (req: NextRequest, ctx) => {
   const user = await requireUser();
   requireCapability(user, "manage_users");
+  const rl = await checkRateLimit(`admin:${user.userId}`, { windowMs: 60_000, max: 200 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   const { id } = await ctx.params;
   const deleted = await pesoRepository.deleteOffice(id);

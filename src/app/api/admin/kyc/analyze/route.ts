@@ -12,9 +12,12 @@ import { userRepository } from "@/repositories";
 import { AIDecisionService } from "@/services/ai-decision.service";
 import { connectDB } from "@/lib/db";
 
+import { checkRateLimit } from "@/lib/rateLimit";
 export const POST = withHandler(async (req: NextRequest) => {
   const admin = await requireUser();
   requireCapability(admin, "manage_kyc");
+  const rl = await checkRateLimit(`admin:${admin.userId}`, { windowMs: 60_000, max: 200 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   await connectDB();
 

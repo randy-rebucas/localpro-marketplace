@@ -3,6 +3,7 @@ import OpenAI from "openai";
 import { requireUser } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { ValidationError } from "@/lib/errors";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 function getClient(): OpenAI | null {
   if (!process.env.OPENAI_API_KEY) return null;
@@ -15,7 +16,9 @@ function getClient(): OpenAI | null {
  * Returns: { summary: string; agreements: string[]; nextSteps: string[] }
  */
 export const POST = withHandler(async (req: NextRequest) => {
-  await requireUser();
+  const user = await requireUser();
+  const rl = await checkRateLimit(`ai:summarize-chat:${user.userId}`, { windowMs: 60_000, max: 20 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   const { messages, jobTitle } = await req.json() as {
     messages: { body: string; senderRole: string }[];

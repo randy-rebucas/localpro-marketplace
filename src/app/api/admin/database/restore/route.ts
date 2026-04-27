@@ -19,6 +19,7 @@ import { ForbiddenError, UnprocessableError } from "@/lib/errors";
 import { connectDB } from "@/lib/db";
 import mongoose from "mongoose";
 
+import { checkRateLimit } from "@/lib/rateLimit";
 const ALLOWED_COLLECTIONS = new Set([
   "users", "jobs", "quotes", "transactions", "payments", "payouts",
   "reviews", "disputes", "messages", "notifications", "activitylogs",
@@ -34,6 +35,8 @@ const ALLOWED_COLLECTIONS = new Set([
 export const POST = withHandler(async (req: NextRequest) => {
   const user = await requireUser();
   requireRole(user, "admin");
+  const rl = await checkRateLimit(`admin:${user.userId}`, { windowMs: 60_000, max: 200 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   if (process.env.DB_RESET_ENABLED !== "true") {
     throw new ForbiddenError("Database restore is disabled. Set DB_RESET_ENABLED=true to enable.");

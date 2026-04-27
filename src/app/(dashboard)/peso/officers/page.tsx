@@ -64,7 +64,7 @@ export default function OfficersPage() {
 
   useEffect(() => { load(); }, []);
 
-  const isHead = office && user && String(office.headOfficerId._id ?? office.headOfficerId) === String(user._id);
+  const isHead = office && user && String(office.headOfficerId._id) === String(user._id);
 
   async function handleAddOfficer(e: React.FormEvent) {
     e.preventDefault();

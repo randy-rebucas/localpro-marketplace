@@ -187,7 +187,7 @@ export default async function PublicProvidersPage({
         </div>
       </section>
 
-      <div className="max-w-6xl mx-auto px-4 py-8 flex gap-6">
+      <div className="max-w-site mx-auto px-4 py-8 flex gap-6">
         {/* Sidebar filters */}
         <aside className="hidden lg:block w-52 shrink-0 space-y-2">
           <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">

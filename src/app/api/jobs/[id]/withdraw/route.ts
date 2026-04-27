@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { escrowService } from "@/services";
-import { requireUser, requireRole } from "@/lib/auth";
+import { requireUser, requireRole, requireCsrfToken } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
-import { ValidationError } from "@/lib/errors";
+import { ValidationError, assertObjectId } from "@/lib/errors";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 const WithdrawSchema = z.object({
   reason: z.string().min(5, "Please provide a reason (at least 5 characters)"),
@@ -22,8 +23,13 @@ export const POST = withHandler(async (
 ) => {
   const user = await requireUser();
   requireRole(user, "provider");
+  requireCsrfToken(req, user);
 
   const { id } = await params;
+  assertObjectId(id, "jobId");
+
+  const rl = await checkRateLimit(`job-withdraw:${user.userId}`, { windowMs: 60_000, max: 10 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   const body = await req.json().catch(() => ({}));
   const parsed = WithdrawSchema.safeParse(body);

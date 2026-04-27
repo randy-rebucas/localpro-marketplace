@@ -240,7 +240,7 @@ export default async function JobDetailPage(
       </header>
 
       {/* ── Body ─────────────────────────────────────────────────────────────── */}
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-10 py-8 flex flex-col lg:flex-row gap-6">
+      <main className="max-w-site mx-auto px-4 sm:px-6 lg:px-10 py-8 flex flex-col lg:flex-row gap-6">
 
         {/* ── Left: Job Detail ─────────────────────────────────────────────── */}
         <article className="flex-1 min-w-0 flex flex-col gap-6">
@@ -483,7 +483,7 @@ export default async function JobDetailPage(
 
       {/* ── Footer ───────────────────────────────────────────────────────────── */}
       <footer className="border-t border-slate-200 py-6 mt-8 px-4 sm:px-6 bg-white">
-        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-600">
+        <div className="max-w-site mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-600">
           <span>
             Powered by{" "}
             <Link href={APP_URL} className="text-primary hover:text-primary/80 font-semibold">

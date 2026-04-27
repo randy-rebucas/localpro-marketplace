@@ -105,6 +105,7 @@ export default function PesoJobsPage() {
       setPage(pageNum);
     } catch (err) {
       console.error("Failed to load jobs:", err);
+      if (!isLoadMore) toast.error("Failed to load jobs. Please refresh.");
     } finally {
       if (isLoadMore) {
         setLoadingMore(false);

@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, use, useRef } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { apiFetch } from "@/lib/fetchClient";
 import { marked } from "marked";
 import DOMPurify from "dompurify";
 import {
@@ -87,7 +88,7 @@ export default function TrainingCoursePage({ params }: { params: Promise<{ id: s
   const fetchCourse = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/provider/training/${id}`);
+      const res = await apiFetch(`/api/provider/training/${id}`);
       if (!res.ok) { toast.error("Course not found."); return; }
       const data = await res.json() as { course: Course };
       const c = data.course;
@@ -134,7 +135,7 @@ export default function TrainingCoursePage({ params }: { params: Promise<{ id: s
         if (storedSessionId) {
           sessionStorage.removeItem(`training_session_${id}`);
           try {
-            const activateRes = await fetch(`/api/provider/training/${id}/activate`, {
+            const activateRes = await apiFetch(`/api/provider/training/${id}/activate`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ sessionId: storedSessionId }),
@@ -165,7 +166,7 @@ export default function TrainingCoursePage({ params }: { params: Promise<{ id: s
           }
           attempts += 1;
           try {
-            const res = await fetch(`/api/provider/training/${id}`);
+            const res = await apiFetch(`/api/provider/training/${id}`);
             const data = await res.json() as { course: Course };
             if (data.course?.enrollment) {
               clearInterval(pollRef.current!);
@@ -199,7 +200,7 @@ export default function TrainingCoursePage({ params }: { params: Promise<{ id: s
     if (!course?.enrollment || !activeLesson) return;
     setMarking(true);
     try {
-      const res = await fetch(
+      const res = await apiFetch(
         `/api/provider/training/enrollments/${course.enrollment._id}/lessons/${activeLesson._id}/complete`,
         { method: "POST" }
       );
@@ -228,7 +229,7 @@ export default function TrainingCoursePage({ params }: { params: Promise<{ id: s
     if (!course?.enrollment) return;
     setCompleting(true);
     try {
-      const res = await fetch(
+      const res = await apiFetch(
         `/api/provider/training/enrollments/${course.enrollment._id}/complete`,
         { method: "POST" }
       );

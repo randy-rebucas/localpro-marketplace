@@ -12,6 +12,7 @@ import { requireUser, requireCapability } from "@/lib/auth";
 import { AIDecisionService } from "@/services/ai-decision.service";
 import { enqueueNotification } from "@/lib/notification-queue";
 
+import { checkRateLimit } from "@/lib/rateLimit";
 /**
  * GET /api/admin/approval-queue
  * Fetch pending decisions with filters
@@ -20,6 +21,8 @@ export const GET = withHandler(async (req: NextRequest) => {
   await connectDB();
   const user = await requireUser();
   requireCapability(user, "manage_operations");
+  const rl = await checkRateLimit(`admin:${user.userId}`, { windowMs: 60_000, max: 200 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   const { searchParams } = new URL(req.url);
   const status = (searchParams.get("status") || "pending_review") as any;
@@ -72,6 +75,8 @@ export async function getDecision(req: NextRequest, { params }: { params: { id: 
   await connectDB();
   const user = await requireUser();
   requireCapability(user, "manage_operations");
+  const rl = await checkRateLimit(`admin:${user.userId}`, { windowMs: 60_000, max: 200 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   try {
     const decision = await AIDecisionService.getDecision(params.id);
@@ -104,6 +109,8 @@ export async function approveDecision(
   await connectDB();
   const user = await requireUser();
   requireCapability(user, "manage_operations");
+  const rl = await checkRateLimit(`admin:${user.userId}`, { windowMs: 60_000, max: 200 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   try {
     const body = await req.json();
@@ -151,6 +158,8 @@ export async function rejectDecision(
   await connectDB();
   const user = await requireUser();
   requireCapability(user, "manage_operations");
+  const rl = await checkRateLimit(`admin:${user.userId}`, { windowMs: 60_000, max: 200 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   try {
     const body = await req.json();
@@ -200,6 +209,8 @@ export async function escalateDecision(
   await connectDB();
   const user = await requireUser();
   requireCapability(user, "manage_operations");
+  const rl = await checkRateLimit(`admin:${user.userId}`, { windowMs: 60_000, max: 200 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   try {
     const body = await req.json();
@@ -231,6 +242,8 @@ export async function bulkApprove(req: NextRequest) {
   await connectDB();
   const user = await requireUser();
   requireCapability(user, "manage_operations");
+  const rl = await checkRateLimit(`admin:${user.userId}`, { windowMs: 60_000, max: 200 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   try {
     const body = await req.json();

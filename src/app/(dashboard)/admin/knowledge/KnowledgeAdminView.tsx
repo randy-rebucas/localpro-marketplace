@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { apiFetch } from "@/lib/fetchClient";
 import {
   Plus, Pencil, Trash2, BookOpen, Search, FileText, Eye, EyeOff,
 } from "lucide-react";
@@ -146,7 +147,7 @@ export default function KnowledgeAdminView({ initialArticles }: Props) {
         const payload: Record<string, unknown> = { title, excerpt, content, group, order };
         if (folder !== editing.folder) payload.folder = folder;
 
-        const res = await fetch(`/api/admin/knowledge/${editing.id}`, {
+        const res = await apiFetch(`/api/admin/knowledge/${editing.id}`, {
           method:  "PUT",
           headers: { "Content-Type": "application/json" },
           body:    JSON.stringify(payload),
@@ -161,7 +162,7 @@ export default function KnowledgeAdminView({ initialArticles }: Props) {
         toast.success("Article saved");
       } else {
         // POST — create new file
-        const res = await fetch("/api/admin/knowledge", {
+        const res = await apiFetch("/api/admin/knowledge", {
           method:  "POST",
           headers: { "Content-Type": "application/json" },
           body:    JSON.stringify({ folder, slug, title, excerpt, content, group, order }),
@@ -185,7 +186,7 @@ export default function KnowledgeAdminView({ initialArticles }: Props) {
     if (!confirm(`Delete "${a.title}"? This cannot be undone.`)) return;
     setDeletingId(a.id);
     try {
-      const res = await fetch(`/api/admin/knowledge/${a.id}`, { method: "DELETE" });
+      const res = await apiFetch(`/api/admin/knowledge/${a.id}`, { method: "DELETE" });
       if (!res.ok) throw new Error();
       setItems((prev) => prev.filter((x) => x.id !== a.id));
       toast.success("Article deleted");

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireUser, requireRole } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { NotFoundError } from "@/lib/errors";
+import { checkRateLimit } from "@/lib/rateLimit";
 import { connectDB } from "@/lib/db";
 import ProviderProfile from "@/models/ProviderProfile";
 
@@ -12,6 +13,9 @@ export const DELETE = withHandler(
     requireRole(user, "provider");
 
     const { id } = await context.params;
+
+    const rl = await checkRateLimit(`service-area-del:${user.userId}`, { windowMs: 60_000, max: 20 });
+    if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
     await connectDB();
     const profile = await ProviderProfile.findOne({ userId: user.userId });

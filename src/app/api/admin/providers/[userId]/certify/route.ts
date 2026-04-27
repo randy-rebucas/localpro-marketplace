@@ -1,4 +1,4 @@
-import { type NextRequest } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireUser, requireRole } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
@@ -6,6 +6,7 @@ import { connectDB } from "@/lib/db";
 import { providerProfileRepository } from "@/repositories";
 import { assertObjectId } from "@/lib/errors";
 
+import { checkRateLimit } from "@/lib/rateLimit";
 const Schema = z.object({
   certified: z.boolean(),
 });
@@ -20,6 +21,8 @@ type Ctx = { params: Promise<{ userId: string }> };
 export const PATCH = withHandler(async (req: NextRequest, { params }: Ctx) => {
   const user = await requireUser();
   requireRole(user, "admin", "staff");
+  const rl = await checkRateLimit(`admin:${user.userId}`, { windowMs: 60_000, max: 200 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   const { userId } = await params;
   assertObjectId(userId, "userId");

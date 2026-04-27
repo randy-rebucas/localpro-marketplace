@@ -4,6 +4,7 @@ import { requireUser } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { connectDB } from "@/lib/db";
 import { ForbiddenError, NotFoundError, ValidationError } from "@/lib/errors";
+import { checkRateLimit } from "@/lib/rateLimit";
 import AgencyProfile from "@/models/AgencyProfile";
 import Job from "@/models/Job";
 import User from "@/models/User";
@@ -14,10 +15,13 @@ export const POST = withHandler(async (req: NextRequest, ctx: { params: Promise<
   const user = await requireUser();
   if (user.role !== "provider") throw new ForbiddenError();
 
+  const rl = await checkRateLimit(`agency-assign:${user.userId}`, { windowMs: 60_000, max: 30 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+
   const { id } = await ctx.params;
   if (!mongoose.isValidObjectId(id)) throw new ValidationError("Invalid job ID.");
 
-  const { staffId } = await req.json() as { staffId?: string };
+  const { staffId } = await req.json().catch(() => ({})) as { staffId?: string };
   if (!staffId || !mongoose.isValidObjectId(staffId)) throw new ValidationError("staffId is required.");
 
   await connectDB();

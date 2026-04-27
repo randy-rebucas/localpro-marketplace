@@ -48,7 +48,7 @@ export const POST = withHandler(async (req: NextRequest) => {
     );
   }
 
-  const { user, accessToken, refreshToken } = await authService.login(parsed.data);
+  const { user, accessToken, refreshToken } = await authService.login({ ...parsed.data, ipAddress: ip });
 
   const response = NextResponse.json({ user });
   setAuthCookies(response, accessToken, refreshToken);

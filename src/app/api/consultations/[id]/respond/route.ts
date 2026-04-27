@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { ConsultationService } from "@/services/consultation.service";
-import { requireUser } from "@/lib/auth";
+import { requireUser, requireCsrfToken } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
-import { ValidationError } from "@/lib/errors";
+import { ValidationError, assertObjectId } from "@/lib/errors";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 const RespondToConsultationSchema = z.object({
   action: z.enum(["accept", "decline"]),
@@ -14,7 +15,13 @@ const RespondToConsultationSchema = z.object({
 export const PUT = withHandler(
   async (req: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
     const user = await requireUser();
+    requireCsrfToken(req, user);
+
+    const rl = await checkRateLimit(`consultation-respond:${user.userId}`, { windowMs: 60_000, max: 20 });
+    if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+
     const { id } = await params;
+    assertObjectId(id, "consultationId");
 
     const body = await req.json();
     const parsed = RespondToConsultationSchema.safeParse(body);
@@ -23,11 +30,7 @@ export const PUT = withHandler(
     }
 
     const consultationService = new ConsultationService();
-    const consultation = await consultationService.respondToConsultation(
-      user,
-      id,
-      parsed.data
-    );
+    const consultation = await consultationService.respondToConsultation(user, id, parsed.data);
 
     return NextResponse.json(consultation);
   }

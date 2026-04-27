@@ -77,7 +77,7 @@ export default async function CategoryPage(props: PageProps) {
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-20">
         {/* Header */}
         <div className="relative py-16 px-4 sm:px-6 lg:px-8 border-b border-slate-700">
-          <div className="max-w-6xl mx-auto">
+          <div className="max-w-site mx-auto">
             <Link
               href="/blog"
               className="inline-flex items-center gap-2 text-indigo-400 hover:text-indigo-300 transition-colors mb-4"
@@ -97,7 +97,7 @@ export default async function CategoryPage(props: PageProps) {
 
         {/* Content */}
         <div className="relative py-16 px-4 sm:px-6 lg:px-8">
-          <div className="max-w-6xl mx-auto">
+          <div className="max-w-site mx-auto">
             {blogs.length === 0 ? (
               <div className="text-center py-12">
                 <p className="text-xl text-slate-300 mb-4">

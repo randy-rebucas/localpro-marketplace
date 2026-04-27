@@ -10,19 +10,27 @@
  *   data: {}\n\n
  */
 
+import { NextRequest } from "next/server";
 import { settingsBus } from "@/lib/events";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+function clientIp(req: NextRequest): string {
+  return req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+}
+
+export async function GET(req: NextRequest) {
+  const rl = await checkRateLimit(`board-settings-sse:${clientIp(req)}`, { windowMs: 60_000, max: 10 });
+  if (!rl.ok) return new Response("Too many requests", { status: 429 });
+
   const encoder = new TextEncoder();
+  let cleanup: (() => void) | undefined;
 
   const stream = new ReadableStream({
     start(controller) {
-      // Send an initial heartbeat so the browser knows the connection is live
       controller.enqueue(encoder.encode(": connected\n\n"));
 
-      // Keep-alive ping every 20 s to prevent proxy / browser timeouts
       const heartbeat = setInterval(() => {
         try {
           controller.enqueue(encoder.encode(": ping\n\n"));
@@ -31,24 +39,27 @@ export async function GET() {
         }
       }, 20_000);
 
-      // Listen for settings changes pushed by the admin PATCH route
       function onSettingsChanged() {
         try {
           controller.enqueue(encoder.encode("event: settings_changed\ndata: {}\n\n"));
-        } catch {
-          // Client already disconnected — ignore
-        }
+        } catch {}
       }
 
       settingsBus.on("settings:changed", onSettingsChanged);
 
-      // Clean up when the client disconnects
-      return () => {
+      let cleaned = false;
+      cleanup = () => {
+        if (cleaned) return;
+        cleaned = true;
         clearInterval(heartbeat);
         settingsBus.off("settings:changed", onSettingsChanged);
+        try { controller.close(); } catch {}
       };
     },
+    cancel() { cleanup?.(); },
   });
+
+  req.signal.addEventListener("abort", () => cleanup?.());
 
   return new Response(stream, {
     headers: {

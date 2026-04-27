@@ -4,6 +4,7 @@ import { requireUser } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { connectDB } from "@/lib/db";
 import { ForbiddenError, ValidationError } from "@/lib/errors";
+import { checkRateLimit } from "@/lib/rateLimit";
 import AgencyProfile from "@/models/AgencyProfile";
 
 const SlotSchema = z.object({
@@ -31,8 +32,12 @@ const DEFAULTS = [0, 1, 2, 3, 4, 5, 6].map((day) => ({
 }));
 
 /** GET /api/provider/agency/schedule */
-export const GET = withHandler(async () => {
+export const GET = withHandler(async (_req: NextRequest) => {
   const user = await requireProvider();
+
+  const rl = await checkRateLimit(`agency-schedule:${user.userId}`, { windowMs: 60_000, max: 60 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+
   await connectDB();
   const agency = await AgencyProfile.findOne({ providerId: user.userId }).lean();
 
@@ -52,7 +57,7 @@ export const GET = withHandler(async () => {
 /** PATCH /api/provider/agency/schedule — save full 7-day availability */
 export const PATCH = withHandler(async (req: NextRequest) => {
   const user = await requireProvider();
-  const body = await req.json();
+  const body = await req.json().catch(() => ({}));
   const parsed = UpdateSchema.safeParse(body);
   if (!parsed.success) throw new ValidationError(parsed.error.errors[0].message);
 

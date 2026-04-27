@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
+import { apiFetch } from "@/lib/fetchClient";
 import {
   GraduationCap,
   BookOpen,
@@ -68,7 +69,7 @@ export default function ProviderTrainingPage() {
   const fetchCourses = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/provider/training");
+      const res = await apiFetch("/api/provider/training");
       const data = await res.json() as { courses: Course[] };
       setCourses(data.courses ?? []);
     } catch {
@@ -84,7 +85,7 @@ export default function ProviderTrainingPage() {
     if (price > 0 && !confirm(`Enroll for ₱${price.toLocaleString()} from your wallet?`)) return;
     setEnrolling(courseId);
     try {
-      const res = await fetch(`/api/provider/training/${courseId}/enroll`, { method: "POST" });
+      const res = await apiFetch(`/api/provider/training/${courseId}/enroll`, { method: "POST" });
       const data = await res.json() as { activated?: boolean; error?: string };
       if (!res.ok) {
         // Insufficient wallet balance → fall through to PayMongo
@@ -109,7 +110,7 @@ export default function ProviderTrainingPage() {
   async function handlePayMongo(courseId: string) {
     setEnrolling(courseId);
     try {
-      const res = await fetch(`/api/provider/training/${courseId}/checkout`, { method: "POST" });
+      const res = await apiFetch(`/api/provider/training/${courseId}/checkout`, { method: "POST" });
       const data = await res.json() as { checkoutUrl?: string; checkoutSessionId?: string; activated?: boolean; error?: string };
       if (!res.ok) { toast.error(data.error ?? "Could not initiate checkout."); return; }
       if (data.checkoutUrl) {

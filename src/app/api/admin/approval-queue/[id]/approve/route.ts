@@ -9,10 +9,13 @@ import { withHandler } from "@/lib/utils";
 import { requireUser, requireCapability } from "@/lib/auth";
 import { AIDecisionService } from "@/services/ai-decision.service";
 
+import { checkRateLimit } from "@/lib/rateLimit";
 export const POST = withHandler(async (req: NextRequest, ctx) => {
   await connectDB();
   const user = await requireUser();
   requireCapability(user, "manage_operations");
+  const rl = await checkRateLimit(`admin:${user.userId}`, { windowMs: 60_000, max: 200 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   try {
     const params = await ctx.params;

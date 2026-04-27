@@ -14,13 +14,18 @@ import type { IWalletTransaction } from "@/types";
 // ─── TX type display config ──────────────────────────────────────────────────
 
 const TX_CONFIG: Record<string, { label: string; credit: boolean; color: string; icon: React.ReactNode }> = {
-  topup:               { label: "Top-up",             credit: true,  color: "bg-violet-100 text-violet-700",  icon: <ArrowDownCircle className="h-4 w-4 text-violet-500" />  },
-  refund_credit:       { label: "Refund",              credit: true,  color: "bg-emerald-100 text-emerald-700", icon: <ArrowDownCircle className="h-4 w-4 text-emerald-500" /> },
-  withdrawal_reversed: { label: "Withdrawal Reversed", credit: true,  color: "bg-blue-100 text-blue-700",      icon: <ArrowDownCircle className="h-4 w-4 text-blue-500" />    },
-  admin_credit:        { label: "Admin Credit",        credit: true,  color: "bg-sky-100 text-sky-700",        icon: <ArrowDownCircle className="h-4 w-4 text-sky-500" />     },
-  escrow_payment:      { label: "Escrow Funded",       credit: false, color: "bg-rose-100 text-rose-700",      icon: <ArrowUpCircle   className="h-4 w-4 text-rose-500" />    },
-  withdrawal:          { label: "Withdrawal",          credit: false, color: "bg-amber-100 text-amber-700",    icon: <ArrowUpCircle   className="h-4 w-4 text-amber-500" />   },
-  admin_debit:         { label: "Admin Debit",         credit: false, color: "bg-slate-100 text-slate-600",    icon: <ArrowUpCircle   className="h-4 w-4 text-slate-500" />   },
+  topup:                      { label: "Top-up",              credit: true,  color: "bg-violet-100 text-violet-700",  icon: <ArrowDownCircle className="h-4 w-4 text-violet-500" />  },
+  refund_credit:              { label: "Refund",              credit: true,  color: "bg-emerald-100 text-emerald-700", icon: <ArrowDownCircle className="h-4 w-4 text-emerald-500" /> },
+  withdrawal_reversed:        { label: "Withdrawal Reversed", credit: true,  color: "bg-blue-100 text-blue-700",      icon: <ArrowDownCircle className="h-4 w-4 text-blue-500" />    },
+  admin_credit:               { label: "Admin Credit",        credit: true,  color: "bg-sky-100 text-sky-700",        icon: <ArrowDownCircle className="h-4 w-4 text-sky-500" />     },
+  escrow_payment:             { label: "Escrow Funded",       credit: false, color: "bg-rose-100 text-rose-700",      icon: <ArrowUpCircle   className="h-4 w-4 text-rose-500" />    },
+  withdrawal:                 { label: "Withdrawal",          credit: false, color: "bg-amber-100 text-amber-700",    icon: <ArrowUpCircle   className="h-4 w-4 text-amber-500" />   },
+  admin_debit:                { label: "Admin Debit",         credit: false, color: "bg-slate-100 text-slate-600",    icon: <ArrowUpCircle   className="h-4 w-4 text-slate-500" />   },
+  featured_listing_payment:   { label: "Featured Listing",    credit: false, color: "bg-orange-100 text-orange-700",  icon: <ArrowUpCircle   className="h-4 w-4 text-orange-500" />  },
+  lead_fee_payment:           { label: "Lead Fee",            credit: false, color: "bg-rose-100 text-rose-700",      icon: <ArrowUpCircle   className="h-4 w-4 text-rose-500" />    },
+  lead_subscription_payment:  { label: "Lead Subscription",  credit: false, color: "bg-rose-100 text-rose-700",      icon: <ArrowUpCircle   className="h-4 w-4 text-rose-500" />    },
+  bid_credit_purchase:        { label: "Bid Credits",         credit: false, color: "bg-purple-100 text-purple-700",  icon: <ArrowUpCircle   className="h-4 w-4 text-purple-500" />  },
+  training_course_payment:    { label: "Training Course",     credit: false, color: "bg-indigo-100 text-indigo-700",  icon: <ArrowUpCircle   className="h-4 w-4 text-indigo-500" />  },
 };
 
 // ─── Detail row ──────────────────────────────────────────────────────────────

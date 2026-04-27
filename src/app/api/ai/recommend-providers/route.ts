@@ -3,13 +3,14 @@ import { withHandler } from "@/lib/utils";
 import { requireUser } from "@/lib/auth";
 import { jobRepository } from "@/repositories/job.repository";
 import { recommendProvidersForClient } from "@/lib/openai";
-import { connectDB } from "@/lib/db";
 import User from "@/models/User";
 import ProviderProfile from "@/models/ProviderProfile";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 export const GET = withHandler(async (req: NextRequest) => {
   const user = await requireUser();
-  await connectDB();
+  const rl = await checkRateLimit(`ai:recommend:${user.userId}`, { windowMs: 60_000, max: 20 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   const { searchParams } = new URL(req.url);
   const category = searchParams.get("category") ?? "";

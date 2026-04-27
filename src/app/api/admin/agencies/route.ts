@@ -8,9 +8,12 @@ import { connectDB } from "@/lib/db";
 import AgencyProfile from "@/models/AgencyProfile";
 import User from "@/models/User";
 
+import { checkRateLimit } from "@/lib/rateLimit";
 export const GET = withHandler(async (req: NextRequest) => {
   const admin = await requireUser();
   requireCapability(admin, "manage_agencies");
+  const rl = await checkRateLimit(`admin:${admin.userId}`, { windowMs: 60_000, max: 200 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   await connectDB();
 

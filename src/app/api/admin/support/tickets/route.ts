@@ -7,6 +7,7 @@ import { ValidationError } from "@/lib/errors";
 import SupportTicket from "@/models/SupportTicket";
 import mongoose from "mongoose";
 
+import { checkRateLimit } from "@/lib/rateLimit";
 const PatchSchema = z.object({
   ticketId:   z.string().min(1),
   status:     z.enum(["open", "in_progress", "resolved", "closed"]).optional(),
@@ -27,6 +28,8 @@ const PatchSchema = z.object({
 export const GET = withHandler(async (req: NextRequest) => {
   const user = await requireUser();
   requireCapability(user, "manage_support");
+  const rl = await checkRateLimit(`admin:${user.userId}`, { windowMs: 60_000, max: 200 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   await connectDB();
 
   const { searchParams } = new URL(req.url);
@@ -58,6 +61,8 @@ export const GET = withHandler(async (req: NextRequest) => {
 export const PATCH = withHandler(async (req: NextRequest) => {
   const user = await requireUser();
   requireCapability(user, "manage_support");
+  const rl = await checkRateLimit(`admin:${user.userId}`, { windowMs: 60_000, max: 200 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   await connectDB();
 
   const body = await req.json();

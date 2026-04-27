@@ -53,7 +53,7 @@ class LeadSubscriptionRepository {
 
   async updateStatus(id: string, status: "active" | "cancelled" | "expired"): Promise<void> {
     await connectDB();
-    await LeadSubscription.findByIdAndUpdate(id, { status });
+    await LeadSubscription.findByIdAndUpdate(id, { $set: { status } });
   }
 
   /** Bulk expire all active subscriptions whose expiresAt has passed. */

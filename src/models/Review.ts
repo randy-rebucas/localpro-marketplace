@@ -57,8 +57,8 @@ const ReviewSchema = new Schema<ReviewDocument>(
 
 // One review per client per job (replaces the old jobId-only unique index)
 ReviewSchema.index({ jobId: 1, clientId: 1 }, { unique: true });
-// L12: index on clientId for fast per-client review lookups
 ReviewSchema.index({ clientId: 1 });
+ReviewSchema.index({ providerId: 1, createdAt: -1 });
 
 const Review: Model<ReviewDocument> =
   mongoose.models.Review ??

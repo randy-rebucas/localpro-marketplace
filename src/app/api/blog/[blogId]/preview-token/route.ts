@@ -1,68 +1,47 @@
-import { getCurrentUser } from "@/lib/auth";
+import { NextRequest, NextResponse } from "next/server";
+import { requireUser, requireCsrfToken } from "@/lib/auth";
 import { blogRepository } from "@/repositories";
 import { generatePreviewToken } from "@/lib/preview-token";
-import { Types } from "mongoose";
-import { NextResponse } from "next/server";
+import { withHandler } from "@/lib/utils";
+import { NotFoundError, ForbiddenError, ValidationError, assertObjectId } from "@/lib/errors";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 /**
  * POST /api/blog/[blogId]/preview-token
- * 
- * Generate a preview token for a draft/scheduled blog
- * Only the blog author or admin can generate preview tokens
+ *
+ * Generate a preview token for a draft/scheduled blog.
+ * Only the blog author or admin/staff with manage_blogs can generate tokens.
  */
-export async function POST(
-  req: Request,
-  { params }: { params: Promise<{ blogId: string }> }
-) {
-  try {
+export const POST = withHandler(
+  async (req: NextRequest, { params }: { params: Promise<{ blogId: string }> }) => {
+    const user = await requireUser();
+    requireCsrfToken(req, user);
+
+    const rl = await checkRateLimit(`blog-preview-token:${user.userId}`, { windowMs: 60_000, max: 10 });
+    if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+
     const { blogId } = await params;
-    const user = await getCurrentUser();
+    assertObjectId(blogId, "blogId");
 
-    if (!user) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
-
-    // Fetch blog
     const blog = await blogRepository.findById(blogId);
-    if (!blog) {
-      return NextResponse.json(
-        { error: "Blog not found" },
-        { status: 404 }
-      );
-    }
+    if (!blog) throw new NotFoundError("Blog");
 
-    // Check authorization: only author or admin can preview
-    const authorId =
-      typeof blog.author === "object" ? blog.author._id : blog.author;
+    const authorId = typeof blog.author === "object" ? blog.author._id : blog.author;
     const isAuthor = authorId.toString() === user.userId;
-    const isAdmin = user.role === "admin" || (user.role === "staff" && user.capabilities?.includes("manage_blogs"));
+    const isAdmin  = user.role === "admin" || (user.role === "staff" && user.capabilities?.includes("manage_blogs"));
 
     if (!isAuthor && !isAdmin) {
-      return NextResponse.json(
-        { error: "Forbidden: You can only preview your own blogs" },
-        { status: 403 }
-      );
+      throw new ForbiddenError("You can only preview your own blogs.");
     }
 
-    // Check blog status (can only preview draft/scheduled)
     if (blog.status === "published") {
-      return NextResponse.json(
-        { error: "Blog is already published. No preview token needed." },
-        { status: 400 }
-      );
+      throw new ValidationError("Blog is already published. No preview token needed.");
     }
 
     if (blog.status === "archived") {
-      return NextResponse.json(
-        { error: "Cannot preview archived blogs" },
-        { status: 400 }
-      );
+      throw new ValidationError("Cannot preview archived blogs.");
     }
 
-    // Generate preview token
     const token = generatePreviewToken(blogId, user.userId);
 
     return NextResponse.json({
@@ -71,11 +50,5 @@ export async function POST(
       previewUrl: `/blog/${blog.slug}/preview?token=${encodeURIComponent(token)}`,
       expiresIn: "7 days",
     });
-  } catch (error) {
-    console.error("[Preview Token API] Error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
   }
-}
+);

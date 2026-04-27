@@ -58,6 +58,32 @@ export class DisputeRepository extends BaseRepository<DisputeDocument> {
       .lean() as never;
   }
 
+  /** Disputes at a given escalation level that were created before `before` — used by the escalation cron. */
+  async findByEscalationLevel(
+    level: string,
+    before: Date,
+    statuses: string[] = ["open", "investigating"]
+  ): Promise<Array<{
+    _id: { toString(): string };
+    raisedBy: { toString(): string };
+    reason: string;
+    jobId: {
+      _id: { toString(): string };
+      title: string;
+      clientId: { toString(): string };
+      providerId?: { toString(): string } | null;
+    } | null;
+  }>> {
+    await this.connect();
+    return Dispute.find({
+      status: { $in: statuses },
+      disputeEscalationLevel: level,
+      createdAt: { $lt: before },
+    })
+      .populate("jobId", "title clientId providerId")
+      .lean() as never;
+  }
+
   /** Most recent dispute for a job, with only fields needed for the timeline UI. */
   async findLatestByJobId(jobId: string): Promise<{
     _id: string;

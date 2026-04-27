@@ -268,6 +268,8 @@ export class DisputeService {
             partiesToCharge.push({ party: "provider", userId: job.providerId.toString() });
           }
 
+          const chargedParties: Array<"client" | "provider"> = [];
+
           for (const { party, userId } of partiesToCharge) {
             try {
               const result = await walletService.debit(
@@ -277,7 +279,7 @@ export class DisputeService {
                 { silent: true }
               );
               if (result.success) {
-                feeCharged = true;
+                chargedParties.push(party);
                 feeAmount = fee;
                 await ledgerService.postDisputeHandlingFee(
                   {
@@ -295,9 +297,13 @@ export class DisputeService {
             } catch { /* non-critical — skip silently */ }
           }
 
-          // Persist fee metadata on the dispute record
-          if (feeCharged) {
-            d.losingParty      = input.handlingFeeChargedTo;
+          // Persist fee metadata — losingParty reflects who was actually debited,
+          // not just who was intended, so records stay accurate when one side lacks funds.
+          if (chargedParties.length > 0) {
+            feeCharged = true;
+            d.losingParty = chargedParties.length === 2
+              ? "both"
+              : chargedParties[0];
             d.handlingFeeAmount = feeAmount;
             d.handlingFeePaid   = true;
             await disputeDoc.save();

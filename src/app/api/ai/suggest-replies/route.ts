@@ -3,9 +3,9 @@ import OpenAI from "openai";
 import { requireUser } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { ValidationError } from "@/lib/errors";
-import { connectDB } from "@/lib/db";
-import ProviderProfile from "@/models/ProviderProfile";
+import { providerProfileRepository } from "@/repositories";
 import { getProviderTier } from "@/lib/tier";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 function getClient(): OpenAI | null {
   if (!process.env.OPENAI_API_KEY) return null;
@@ -15,18 +15,18 @@ function getClient(): OpenAI | null {
 /** POST /api/ai/suggest-replies */
 export const POST = withHandler(async (req: NextRequest) => {
   const user = await requireUser();
+  const rl = await checkRateLimit(`ai:suggest-replies:${user.userId}`, { windowMs: 60_000, max: 20 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   const { lastMessages, role, jobTitle } = await req.json();
 
   // Tier gate: Gold+ for providers only (clients bypass)
   if (user.role === "provider") {
-    await connectDB();
-    const rProfile = await ProviderProfile.findOne({ userId: user.userId })
-      .select("completedJobCount avgRating completionRate").lean();
+    const rProfile = await providerProfileRepository.findByUserId(user.userId);
     const replyTier = getProviderTier(
-      (rProfile as { completedJobCount?: number } | null)?.completedJobCount ?? 0,
-      (rProfile as { avgRating?: number } | null)?.avgRating ?? 0,
-      (rProfile as { completionRate?: number } | null)?.completionRate ?? 0
+      rProfile?.completedJobCount ?? 0,
+      rProfile?.avgRating ?? 0,
+      (rProfile as any)?.completionRate ?? 0
     );
     if (!replyTier.hasAIAccess) {
       return NextResponse.json({

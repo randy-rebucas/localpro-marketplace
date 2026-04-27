@@ -2,12 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireUser, requireRole } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
-import { pesoService } from "@/services/peso.service";
 import { ValidationError } from "@/lib/errors";
+import { checkRateLimit } from "@/lib/rateLimit";
+import { pesoService } from "@/services/peso.service";
 
-export const GET = withHandler(async () => {
+export const GET = withHandler(async (_req: NextRequest) => {
   const user = await requireUser();
   requireRole(user, "peso");
+
+  const rl = await checkRateLimit(`peso-settings:${user.userId}`, { windowMs: 60_000, max: 60 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   const office = await pesoService.getOfficeSettings(user.userId);
   return NextResponse.json(office);
@@ -32,7 +36,7 @@ export const PATCH = withHandler(async (req: NextRequest) => {
   const user = await requireUser();
   requireRole(user, "peso");
 
-  const parsed = UpdateSchema.safeParse(await req.json());
+  const parsed = UpdateSchema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) throw new ValidationError(parsed.error.errors[0].message);
 
   const updated = await pesoService.updateOfficeSettings(user.userId, parsed.data);

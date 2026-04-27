@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
+import { checkRateLimit } from "@/lib/rateLimit";
 import { featuredListingService } from "@/services/featured-listing.service";
 import { walletRepository } from "@/repositories/wallet.repository";
 import { getPaymentSettings } from "@/lib/appSettings";
@@ -17,8 +18,12 @@ const VALID_TYPES: FeaturedListingType[] = [
  * GET /api/provider/boost
  * Returns active boosts for the requesting provider + prices + wallet balance.
  */
-export const GET = withHandler(async () => {
+export const GET = withHandler(async (req: NextRequest) => {
   const user = await requireUser();
+
+  const rl = await checkRateLimit(`boost-get:${user.userId}`, { windowMs: 60_000, max: 60 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+
   await connectDB();
 
   const [activeBoosts, history, balance, settings] = await Promise.all([
@@ -43,9 +48,13 @@ export const GET = withHandler(async () => {
  */
 export const POST = withHandler(async (req: NextRequest) => {
   const user = await requireUser();
+
+  const rl = await checkRateLimit(`boost-buy:${user.userId}`, { windowMs: 3_600_000, max: 10 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+
   await connectDB();
 
-  const body = await req.json() as { type?: string; payWith?: string };
+  const body = await req.json().catch(() => ({})) as { type?: string; payWith?: string };
   const type = body.type as FeaturedListingType;
   const payWith = body.payWith ?? "wallet";
 

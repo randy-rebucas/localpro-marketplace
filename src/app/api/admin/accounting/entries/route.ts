@@ -18,9 +18,12 @@ import { withHandler } from "@/lib/utils";
 import { connectDB } from "@/lib/db";
 import LedgerEntry from "@/models/LedgerEntry";
 
+import { checkRateLimit } from "@/lib/rateLimit";
 export const GET = withHandler(async (req: NextRequest) => {
   const user = await requireUser();
   requireRole(user, "admin");
+  const rl = await checkRateLimit(`admin:${user.userId}`, { windowMs: 60_000, max: 200 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   await connectDB();
 

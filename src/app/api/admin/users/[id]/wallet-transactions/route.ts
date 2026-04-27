@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 import { requireUser, requireRole } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
+import { assertObjectId } from "@/lib/errors";
 import { walletRepository } from "@/repositories/wallet.repository";
 
+import { checkRateLimit } from "@/lib/rateLimit";
 /**
  * GET /api/admin/users/[id]/wallet-transactions
  *
@@ -15,8 +17,11 @@ export const GET = withHandler(async (
 ) => {
   const user = await requireUser();
   requireRole(user, "admin");
+  const rl = await checkRateLimit(`admin:${user.userId}`, { windowMs: 60_000, max: 200 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   const { id } = await params;
+  assertObjectId(id, "userId");
 
   const [balance, pendingWithdrawals, transactions, withdrawals] = await Promise.all([
     walletRepository.getBalance(id),

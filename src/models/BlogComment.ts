@@ -36,7 +36,6 @@ const BlogCommentSchema = new Schema<BlogCommentDocument>(
     author: {
       type: Schema.Types.ObjectId,
       ref: "User",
-      optional: true,
     },
     authorName: {
       type: String,
@@ -66,7 +65,6 @@ const BlogCommentSchema = new Schema<BlogCommentDocument>(
     parentComment: {
       type: Schema.Types.ObjectId,
       ref: "BlogComment",
-      optional: true,
       index: true,
     },
     isDeleted: {

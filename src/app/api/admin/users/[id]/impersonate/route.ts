@@ -4,6 +4,7 @@ import { withHandler } from "@/lib/utils";
 import { NotFoundError, assertObjectId } from "@/lib/errors";
 import { userRepository } from "@/repositories/user.repository";
 import { activityRepository } from "@/repositories/activity.repository";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 /**
  * POST /api/admin/users/[id]/impersonate
@@ -21,6 +22,8 @@ export const POST = withHandler(async (
 ) => {
   const admin = await requireUser();
   requireRole(admin, "admin");          // only full admins may impersonate
+  const rl = await checkRateLimit(`admin:${admin.userId}`, { windowMs: 60_000, max: 200 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   const { id } = await params;
   assertObjectId(id, "userId");

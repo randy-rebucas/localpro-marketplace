@@ -51,7 +51,7 @@ const BusinessOrganizationSchema = new Schema<BusinessOrganizationDocument>(
     planActivatedAt:      { type: Date, default: null },
     planExpiresAt:        { type: Date, default: null },
     pendingPlanSessionId: { type: String, default: null },
-    pendingPlan:          { type: String, enum: ["starter", "growth", "pro", "enterprise", null], default: null },
+    pendingPlan:          { type: String, enum: ["starter", "growth", "pro", "enterprise"], default: null },
   },
   { timestamps: true }
 );

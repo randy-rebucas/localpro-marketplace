@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { announcementRepository } from "@/repositories/announcement.repository";
 import AnnouncementsClient from "./AnnouncementsClient";
@@ -9,7 +10,7 @@ export const metadata: Metadata = { title: "Announcements" };
 
 export default async function AdminAnnouncementsPage() {
   const user = await getCurrentUser();
-  if (!user || user.role !== "admin") return null;
+  if (!user || user.role !== "admin") redirect("/login");
 
   const docs = await announcementRepository.findAll();
   const announcements = JSON.parse(JSON.stringify(docs));

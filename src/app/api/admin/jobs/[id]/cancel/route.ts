@@ -15,6 +15,7 @@ import { pushStatusUpdateMany, pushNotification } from "@/lib/events";
 import { ledgerService } from "@/services/ledger.service";
 import type { IJob } from "@/types";
 
+import { checkRateLimit } from "@/lib/rateLimit";
 const AdminCancelSchema = z.object({
   reason: z.string().min(5, "Please provide a reason (min 5 characters)"),
 });
@@ -37,6 +38,8 @@ export const POST = withHandler(async (
 ) => {
   const admin = await requireUser();
   requireCapability(admin, "manage_jobs");
+  const rl = await checkRateLimit(`admin:${admin.userId}`, { windowMs: 60_000, max: 200 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   const { id } = await params;
 

@@ -1,3 +1,4 @@
+import { Types } from "mongoose";
 import { BaseRepository } from "./base.repository";
 import BusinessOrganization, {
   BusinessOrganizationDocument,
@@ -111,7 +112,7 @@ class BusinessOrganizationRepository extends BaseRepository<BusinessOrganization
     await this.connect();
     return BusinessOrganization.findOneAndUpdate(
       { _id: orgId, "locations._id": locationId },
-      { $addToSet: { "locations.$.preferredProviderIds": new (require("mongoose").Types.ObjectId)(providerId) } },
+      { $addToSet: { "locations.$.preferredProviderIds": new Types.ObjectId(providerId) } },
       { new: true }
     ).lean() as unknown as IBusinessOrganization | null;
   }
@@ -125,7 +126,7 @@ class BusinessOrganizationRepository extends BaseRepository<BusinessOrganization
     await this.connect();
     return BusinessOrganization.findOneAndUpdate(
       { _id: orgId, "locations._id": locationId },
-      { $pull: { "locations.$.preferredProviderIds": new (require("mongoose").Types.ObjectId)(providerId) } },
+      { $pull: { "locations.$.preferredProviderIds": new Types.ObjectId(providerId) } },
       { new: true }
     ).lean() as unknown as IBusinessOrganization | null;
   }

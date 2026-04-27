@@ -44,7 +44,6 @@ const BlogAnalyticSchema = new Schema<BlogAnalyticDocument>(
     userId: {
       type: Schema.Types.ObjectId,
       ref: "User",
-      optional: true,
     },
     viewCount: {
       type: Number,
@@ -69,15 +68,12 @@ const BlogAnalyticSchema = new Schema<BlogAnalyticDocument>(
     },
     referrer: {
       type: String,
-      optional: true,
     },
     userAgent: {
       type: String,
-      optional: true,
     },
     country: {
       type: String,
-      optional: true,
     },
     lastViewedAt: {
       type: Date,

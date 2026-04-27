@@ -27,7 +27,7 @@ export class QuoteRepository extends BaseRepository<QuoteDocument> {
   async rejectOthers(jobId: string, acceptedQuoteId: string): Promise<void> {
     await this.updateMany(
       { jobId, _id: { $ne: acceptedQuoteId }, status: "pending" } as never,
-      { status: "rejected" }
+      { $set: { status: "rejected" } }
     );
   }
 

@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
 import toast from "react-hot-toast";
+import { apiFetch } from "@/lib/fetchClient";
 
 const BENEFITS = [
   {
@@ -51,7 +52,7 @@ export default function UpgradeBusinessClient({ userName }: { userName: string }
   async function handleActivate() {
     setLoading(true);
     try {
-      const res = await fetch("/api/client/upgrade-business", { method: "POST" });
+      const res = await apiFetch("/api/client/upgrade-business", { method: "POST" });
       const data = await res.json();
 
       if (!res.ok) {

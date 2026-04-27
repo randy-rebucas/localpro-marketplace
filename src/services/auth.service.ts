@@ -1,6 +1,6 @@
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
-import { userRepository, notificationRepository } from "@/repositories";
+import { userRepository, notificationRepository, activityRepository } from "@/repositories";
 import {
   signAccessToken,
   signRefreshToken,
@@ -30,11 +30,13 @@ export interface RegisterInput {
   password: string;
   role: UserRole;
   referralCode?: string;
+  ipAddress?: string;
 }
 
 export interface LoginInput {
   email: string;
   password: string;
+  ipAddress?: string;
 }
 
 export interface AuthTokens {
@@ -67,6 +69,14 @@ export class AuthService {
     const user = await userRepository.create({ ...input, approvalStatus });
     const userId = user._id.toString();
 
+    // Audit log — fire-and-forget so registration is never blocked by logging
+    activityRepository.log({
+      userId,
+      eventType: "user_registered",
+      ipAddress: input.ipAddress,
+      metadata: { role: input.role, approvalStatus },
+    }).catch((err) => console.error("[AUDIT] user_registered log failed:", err));
+
     // Send verification email (fire-and-forget; skipped if SMTP not configured)
     const verificationToken = crypto.randomBytes(32).toString("hex");
     const expiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
@@ -87,8 +97,8 @@ export class AuthService {
             await loyaltyRepository.setReferredBy(userId, referrerAcct.userId.toString());
           }
         }
-      } catch {
-        // Non-critical
+      } catch (err) {
+        console.error("[LOYALTY] account setup failed during registration:", err);
       }
     }
 
@@ -176,6 +186,14 @@ export class AuthService {
     const accessToken = signAccessToken(user._id.toString(), user.role as UserRole, capabilities);
     const refreshToken = signRefreshToken(user._id.toString());
 
+    // Audit log — fire-and-forget
+    activityRepository.log({
+      userId: user._id.toString(),
+      eventType: "user_login",
+      ipAddress: input.ipAddress,
+      metadata: { role: user.role },
+    }).catch((err) => console.error("[AUDIT] user_login log failed:", err));
+
     return {
       user: {
         _id: user._id.toString(),
@@ -251,6 +269,11 @@ export class AuthService {
     }
 
     await userRepository.markVerified(u._id.toString());
+
+    activityRepository.log({
+      userId: u._id.toString(),
+      eventType: "email_verified",
+    }).catch((err) => console.error("[AUDIT] email_verified log failed:", err));
   }
 
   async resendVerificationEmail(userId: string): Promise<void> {

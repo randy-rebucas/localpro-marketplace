@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { requireUser } from "@/lib/auth";
+import { requireUser, requireCsrfToken } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { ValidationError, assertObjectId } from "@/lib/errors";
 import { walletService } from "@/services/wallet.service";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 const Schema = z.object({
   amount: z.number().positive("Amount must be positive").optional(),
@@ -18,8 +19,14 @@ export const POST = withHandler(async (
   { params }: { params: Promise<{ id: string }> }
 ) => {
   const user = await requireUser();
+  requireCsrfToken(req, user);
+
   const { id } = await params;
   assertObjectId(id, "jobId");
+
+  const rl = await checkRateLimit(`job-fund-wallet:${user.userId}`, { windowMs: 60_000, max: 10 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+
   const body = await req.json().catch(() => ({}));
   const parsed = Schema.safeParse(body);
   if (!parsed.success) throw new ValidationError(parsed.error.errors[0].message);

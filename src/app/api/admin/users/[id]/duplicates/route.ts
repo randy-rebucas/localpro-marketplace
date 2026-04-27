@@ -4,6 +4,7 @@ import { withHandler } from "@/lib/utils";
 import { NotFoundError } from "@/lib/errors";
 import { userRepository } from "@/repositories";
 
+import { checkRateLimit } from "@/lib/rateLimit";
 /**
  * GET /api/admin/users/[id]/duplicates
  *
@@ -20,6 +21,8 @@ export const GET = withHandler(async (
 ) => {
   const admin = await requireUser();
   requireCapability(admin, "manage_users");
+  const rl = await checkRateLimit(`admin:${admin.userId}`, { windowMs: 60_000, max: 200 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   const { id } = await params;
 

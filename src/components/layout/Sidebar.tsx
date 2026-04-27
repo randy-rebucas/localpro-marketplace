@@ -125,6 +125,7 @@ const navGroups: Partial<Record<UserRole, NavGroup[]>> = {
       items: [
         { label: "Earnings", href: "/provider/earnings", icon: <CircleDollarSign className="h-4.5 w-4.5" /> },
         { label: "Payouts", href: "/provider/payouts", icon: <Banknote className="h-4.5 w-4.5" /> },
+        { label: "Wallet", href: "/provider/wallet", icon: <Wallet className="h-4.5 w-4.5" /> },
         { label: "Boost", href: "/provider/boost", icon: <Zap className="h-4.5 w-4.5" /> },
       ],
     },

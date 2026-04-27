@@ -1,6 +1,7 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { requireUser, requireRole } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
+import { checkRateLimit } from "@/lib/rateLimit";
 import { connectDB } from "@/lib/db";
 import ProviderProfile from "@/models/ProviderProfile";
 import User from "@/models/User";
@@ -13,9 +14,13 @@ function getClient(): OpenAI | null {
 }
 
 /** POST /api/providers/profile/generate-bio */
-export const POST = withHandler(async () => {
+export const POST = withHandler(async (req: NextRequest) => {
   const user = await requireUser();
   requireRole(user, "provider");
+
+  // Tight limit — each call costs an OpenAI API credit
+  const rl = await checkRateLimit(`gen-bio:${user.userId}`, { windowMs: 3_600_000, max: 5 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   await connectDB();
 

@@ -11,24 +11,23 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { requireUser } from "@/lib/auth";
+import { requireUser, requireRole, requireCsrfToken } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
-import { ValidationError, NotFoundError, assertObjectId } from "@/lib/errors";
+import { ValidationError, NotFoundError } from "@/lib/errors";
 import { userRepository } from "@/repositories";
 import { AIDecisionService } from "@/services/ai-decision.service";
-import { connectDB } from "@/lib/db";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 export const POST = withHandler(async (req: NextRequest) => {
   const user = await requireUser();
-  await connectDB();
+  requireRole(user, "provider");
+  requireCsrfToken(req, user);
+
+  const rl = await checkRateLimit(`payout-verify:${user.userId}`, { windowMs: 60_000, max: 10 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   const body = await req.json().catch(() => ({}));
-  const {
-    transactionId,
-    amount,
-    method = "bank_transfer",
-    description = "Provider payout",
-  } = body;
+  const { transactionId, amount } = body;
 
   if (!amount || typeof amount !== "number" || amount <= 0) {
     throw new ValidationError("Valid amount is required");
@@ -98,11 +97,12 @@ export const POST = withHandler(async (req: NextRequest) => {
       });
 
       // Update user fraud flag (for future detection)
-      userData.fraudFlags = userData.fraudFlags || [];
-      if (!userData.fraudFlags.includes("blocked_payout")) {
-        userData.fraudFlags.push("blocked_payout");
+      const currentFlags: string[] = userData.fraudFlags || [];
+      if (!currentFlags.includes("blocked_payout")) {
+        await userRepository.updateById(userId, {
+          fraudFlags: [...currentFlags, "blocked_payout"],
+        });
       }
-      await userData.save();
 
       return NextResponse.json(
         {

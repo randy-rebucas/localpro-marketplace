@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef, useCallback } from "react";
+import { apiFetch } from "@/lib/fetchClient";
 import {
   Database,
   RefreshCw,
@@ -302,7 +303,7 @@ export default function DatabaseClient({ resetEnabled }: { resetEnabled: boolean
     setLogStatus("idle");
     setExpandedLog(true);
     try {
-      const res = await fetch("/api/admin/database/reset", {
+      const res = await apiFetch("/api/admin/database/reset", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action, collection, confirmToken: token }),
@@ -358,7 +359,7 @@ export default function DatabaseClient({ resetEnabled }: { resetEnabled: boolean
       form.append("file", file);
       form.append("mode", mode);
       form.append("confirmToken", token);
-      const res = await fetch("/api/admin/database/restore", { method: "POST", body: form });
+      const res = await apiFetch("/api/admin/database/restore", { method: "POST", body: form });
       const data = await res.json();
       pushLog(data.log ?? [data.error ?? "Restore failed"], res.ok ? "success" : "error");
       if (res.ok) { setShowRestore(false); await fetchStats(); }
@@ -377,7 +378,7 @@ export default function DatabaseClient({ resetEnabled }: { resetEnabled: boolean
     setSnapshotConfirm(false);
     setTakingSnapshot(true);
     try {
-      const res = await fetch("/api/admin/backup/snapshots", {
+      const res = await apiFetch("/api/admin/backup/snapshots", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({}),

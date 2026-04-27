@@ -4,12 +4,15 @@ import { requireUser, requireCapability } from "@/lib/auth";
 import { categoryRepository } from "@/repositories";
 import { NotFoundError, assertObjectId } from "@/lib/errors";
 
+import { checkRateLimit } from "@/lib/rateLimit";
 type Ctx = { params: Promise<{ id: string }> };
 
 // PATCH /api/admin/categories/[id]
 export const PATCH = withHandler(async (req: NextRequest, ctx: Ctx) => {
   const user = await requireUser();
   requireCapability(user, "manage_categories");
+  const rl = await checkRateLimit(`admin:${user.userId}`, { windowMs: 60_000, max: 200 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   const { id } = await ctx.params;
   assertObjectId(id, "categoryId");
@@ -41,6 +44,8 @@ export const PATCH = withHandler(async (req: NextRequest, ctx: Ctx) => {
 export const DELETE = withHandler(async (_req: NextRequest, ctx: Ctx) => {
   const user = await requireUser();
   requireCapability(user, "manage_categories");
+  const rl = await checkRateLimit(`admin:${user.userId}`, { windowMs: 60_000, max: 200 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   const { id } = await ctx.params;
   assertObjectId(id, "categoryId");

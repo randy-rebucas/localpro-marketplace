@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { getCurrentUser } from "@/lib/auth";
+import { redirect } from "next/navigation";
 import Link from "next/link";
 import { PayoutsContent } from "./_components/PayoutsContent";
 import { PayoutsSkeleton } from "./_components/skeletons";
@@ -9,7 +10,7 @@ export const metadata: Metadata = { title: "Payouts" };
 
 export default async function ProviderPayoutsPage() {
   const user = await getCurrentUser();
-  if (!user) return null;
+  if (!user) redirect("/login");
 
   return (
     <div className="space-y-6">

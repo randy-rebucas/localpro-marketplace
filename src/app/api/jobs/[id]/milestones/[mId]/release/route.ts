@@ -1,15 +1,17 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { requireUser, requireRole } from "@/lib/auth";
+import { requireUser, requireRole, requireCsrfToken } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
-import { connectDB } from "@/lib/db";
-import Job from "@/models/Job";
-import Transaction from "@/models/Transaction";
-import ProviderProfile from "@/models/ProviderProfile";
 import { calculateCommission, getCommissionRate } from "@/lib/commission";
 import { pushStatusUpdateMany } from "@/lib/events";
-import { activityRepository, transactionRepository } from "@/repositories";
+import {
+  jobRepository,
+  activityRepository,
+  transactionRepository,
+  providerProfileRepository,
+} from "@/repositories";
 import { NotFoundError, ForbiddenError, UnprocessableError, assertObjectId } from "@/lib/errors";
 import { ledgerService } from "@/services/ledger.service";
+import { checkRateLimit } from "@/lib/rateLimit";
 import type { IJob, IMilestone } from "@/types";
 
 type Ctx = { params: Promise<{ id: string; mId: string }> };
@@ -22,7 +24,7 @@ type Ctx = { params: Promise<{ id: string; mId: string }> };
  * set to "released".
  */
 export const POST = withHandler(async (
-  _req: NextRequest,
+  req: NextRequest,
   { params }: Ctx
 ) => {
   const { id, mId } = await params;
@@ -30,10 +32,12 @@ export const POST = withHandler(async (
   assertObjectId(mId, "milestoneId");
   const user = await requireUser();
   requireRole(user, "client");
+  requireCsrfToken(req, user);
 
-  await connectDB();
+  const rl = await checkRateLimit(`milestone-release:${user.userId}`, { windowMs: 60_000, max: 20 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
-  const jobDoc = await Job.findOne({ _id: id, clientId: user.userId });
+  const jobDoc = await jobRepository.getDocById(id);
   if (!jobDoc) throw new NotFoundError("Job");
 
   const job = jobDoc as unknown as IJob & {
@@ -41,7 +45,6 @@ export const POST = withHandler(async (
     clientId: { toString(): string };
     providerId?: { toString(): string } | null;
     milestones: (IMilestone & { _id: { toString(): string } })[];
-    save(): Promise<void>;
   };
 
   if (job.clientId.toString() !== user.userId) throw new ForbiddenError();
@@ -65,20 +68,21 @@ export const POST = withHandler(async (
   const { commission, netAmount } = calculateCommission(milestone.amount, getCommissionRate(job.category));
 
   // Mark the milestone as released
-  job.milestones[milestoneIndex] = {
+  const updatedMilestones = [...job.milestones];
+  updatedMilestones[milestoneIndex] = {
     title: milestone.title,
     amount: milestone.amount,
     description: milestone.description ?? "",
     status: "released",
     releasedAt: new Date(),
     _id: milestone._id,
-  };
+  } as unknown as typeof milestone;
 
   // Check if all milestones are now released → close escrow
-  const allReleased = job.milestones.every((m) => m.status === "released");
-  (jobDoc as unknown as { escrowStatus: string }).escrowStatus = allReleased ? "released" : "funded";
+  const allReleased = updatedMilestones.every((m) => m.status === "released");
+  const newEscrowStatus = allReleased ? "released" : "funded";
 
-  await jobDoc.save();
+  await jobRepository.updateById(id, { $set: { milestones: updatedMilestones, escrowStatus: newEscrowStatus } });
 
   // Resolve the original pending transaction (created at escrow funding) when
   // all milestones are done — each milestone creates its own completed tx below.
@@ -87,7 +91,7 @@ export const POST = withHandler(async (
   }
 
   // Record the transaction
-  const milestoneTx = await Transaction.create({
+  const milestoneTx = await transactionRepository.create({
     jobId: job._id,
     payerId: user.userId,
     payeeId: job.providerId,
@@ -100,12 +104,12 @@ export const POST = withHandler(async (
 
   // Post double-entry ledger journal for this milestone
   try {
-    const journalId = `milestone-release-${job._id!.toString()}-${mId}`;
+    const journalId = `milestone-release-${String(job._id)}-${mId}`;
     await ledgerService.postMilestoneRelease(
       {
         journalId,
         entityType: "job",
-        entityId: job._id!.toString(),
+        entityId: String(job._id),
         clientId: job.clientId.toString(),
         providerId: job.providerId?.toString() ?? null,
         initiatedBy: user.userId,
@@ -114,8 +118,7 @@ export const POST = withHandler(async (
       commission,
       netAmount
     );
-    // Link transaction to ledger journal
-    await Transaction.updateOne({ _id: milestoneTx._id }, { ledgerJournalId: journalId });
+    await transactionRepository.updateById(String(milestoneTx._id), { ledgerJournalId: journalId });
   } catch {
     // Non-critical — do not fail milestone release if ledger write fails
   }
@@ -124,14 +127,11 @@ export const POST = withHandler(async (
   if (allReleased && job.providerId) {
     const providerId = job.providerId.toString();
     const [completedCount, totalCount] = await Promise.all([
-      Job.countDocuments({ providerId, status: "completed" }),
-      Job.countDocuments({ providerId, status: { $in: ["completed", "cancelled", "refunded"] } }),
+      jobRepository.countByProvider(providerId, ["completed"]),
+      jobRepository.countByProvider(providerId, ["completed", "cancelled", "refunded"]),
     ]);
     const completionRate = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 100;
-    await ProviderProfile.updateOne(
-      { userId: providerId },
-      { $set: { completedJobCount: completedCount, completionRate } }
-    );
+    await providerProfileRepository.updateCompletionStats(providerId, completedCount, completionRate);
   }
 
   await activityRepository.log({
@@ -148,7 +148,7 @@ export const POST = withHandler(async (
       type: "escrow_released",
       title: allReleased ? "Full payment released" : "Milestone payment released",
       message: allReleased
-        ? `All milestone payments have been released. Total: ₱${job.milestones.reduce((s, m) => s + m.amount, 0).toLocaleString()}.`
+        ? `All milestone payments have been released. Total: ₱${updatedMilestones.reduce((s, m) => s + m.amount, 0).toLocaleString()}.`
         : `Milestone "${milestone.title}" — ₱${milestone.amount.toLocaleString()} has been released.`,
       data: { jobId: id },
     });
@@ -156,7 +156,7 @@ export const POST = withHandler(async (
 
   pushStatusUpdateMany(
     [user.userId, job.providerId?.toString()].filter(Boolean) as string[],
-    { entity: "job", id, escrowStatus: allReleased ? "released" : "funded" }
+    { entity: "job", id, escrowStatus: newEscrowStatus }
   );
 
   return NextResponse.json({

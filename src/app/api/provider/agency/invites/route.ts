@@ -4,7 +4,8 @@ import crypto from "crypto";
 import { requireUser } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { connectDB } from "@/lib/db";
-import { ForbiddenError, NotFoundError, ValidationError, ConflictError } from "@/lib/errors";
+import { ForbiddenError, NotFoundError, ValidationError, ConflictError, assertObjectId } from "@/lib/errors";
+import { checkRateLimit } from "@/lib/rateLimit";
 import AgencyProfile from "@/models/AgencyProfile";
 import AgencyInvite from "@/models/AgencyInvite";
 import User from "@/models/User";
@@ -20,7 +21,10 @@ export const POST = withHandler(async (req: NextRequest) => {
   const user = await requireUser();
   if (user.role !== "provider") throw new ForbiddenError();
 
-  const body = await req.json();
+  const rl = await checkRateLimit(`agency-invites:${user.userId}`, { windowMs: 3_600_000, max: 20 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+
+  const body = await req.json().catch(() => ({}));
   const parsed = CreateSchema.safeParse(body);
   if (!parsed.success) throw new ValidationError(parsed.error.errors[0].message);
 
@@ -102,6 +106,7 @@ export const DELETE = withHandler(async (req: NextRequest) => {
 
   const id = new URL(req.url).searchParams.get("id");
   if (!id) throw new ValidationError("Missing invite id.");
+  assertObjectId(id, "inviteId");
 
   await connectDB();
 

@@ -44,7 +44,7 @@ export class AppSettingRepository extends BaseRepository<AppSettingDocument> {
       Object.entries(entries).map(([key, value]) =>
         AppSetting.findOneAndUpdate(
           { key },
-          { value, updatedBy },
+          { $set: { value, updatedBy } },
           { upsert: true, new: true }
         )
       )

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { withHandler } from "@/lib/utils";
 import { requireUser, verifyAccessToken } from "@/lib/auth";
 import { ForbiddenError } from "@/lib/errors";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 /**
  * POST /api/admin/impersonate/exit
@@ -15,8 +16,9 @@ import { ForbiddenError } from "@/lib/errors";
  * saved token into the active session.
  */
 export const POST = withHandler(async (req: NextRequest) => {
-  // Must be authenticated
-  await requireUser();
+  const user = await requireUser();
+  const rl = await checkRateLimit(`admin:${user.userId}`, { windowMs: 60_000, max: 200 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   // Must actually be in an impersonation session
   const returnToken = req.cookies.get("impersonation_return_token")?.value ?? "";

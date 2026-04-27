@@ -6,6 +6,7 @@ import toast from "react-hot-toast";
 import Card, { CardBody, CardFooter } from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import type { IRecurringSchedule } from "@/types";
+import { apiFetch } from "@/lib/fetchClient";
 
 interface PastProvider { _id: string; name: string; email: string; }
 
@@ -67,7 +68,7 @@ export function EditRecurringClient({ id }: { id: string }) {
     e.preventDefault();
     try {
       setSaving(true);
-      const res = await fetch(`/api/recurring/${id}`, {
+      const res = await apiFetch(`/api/recurring/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

@@ -4,6 +4,7 @@ import { requireUser } from "@/lib/auth";
 import { userRepository } from "@/repositories";
 import { withHandler } from "@/lib/utils";
 import { ValidationError, NotFoundError } from "@/lib/errors";
+import { checkRateLimit } from "@/lib/rateLimit";
 import type { UserDocument } from "@/models/User";
 
 const DEFAULT_PREFS = {
@@ -39,6 +40,8 @@ const PrefsSchema = z.object({
 
 export const GET = withHandler(async () => {
   const token = await requireUser();
+  const rl = await checkRateLimit(`user:settings:get:${token.userId}`, { windowMs: 60_000, max: 60 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   const user = await userRepository.findById(token.userId);
   if (!user) throw new NotFoundError("User");
 
@@ -48,7 +51,10 @@ export const GET = withHandler(async () => {
 
 export const PUT = withHandler(async (req: NextRequest) => {
   const token = await requireUser();
-  const body = await req.json();
+  const rl = await checkRateLimit(`user:settings:put:${token.userId}`, { windowMs: 60_000, max: 20 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+
+  const body = await req.json().catch(() => ({}));
   const parsed = PrefsSchema.safeParse(body);
   if (!parsed.success) throw new ValidationError(parsed.error.errors[0].message);
 

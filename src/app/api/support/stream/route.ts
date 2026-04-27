@@ -2,12 +2,17 @@ import { NextRequest } from "next/server";
 import { supportBus } from "@/lib/events";
 import { requireUser } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 export const dynamic = "force-dynamic";
 
 /** GET /api/support/stream — SSE stream for user's own support thread */
 export const GET = withHandler(async (req: NextRequest) => {
   const user = await requireUser();
+
+  const rl = await checkRateLimit(`support-stream:${user.userId}`, { windowMs: 60_000, max: 5 });
+  if (!rl.ok) return new Response("Too many requests", { status: 429 });
+
   const encoder = new TextEncoder();
   const eventKey = `support:${user.userId}`;
 
@@ -18,10 +23,12 @@ export const GET = withHandler(async (req: NextRequest) => {
       const enqueue = (data: unknown) => {
         try {
           controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
-        } catch {}
+        } catch {
+          cleanup?.();
+        }
       };
 
-      enqueue({ type: "connected", userId: user.userId });
+      enqueue({ type: "connected" });
 
       const onMessage = (payload: unknown) => enqueue(payload);
       supportBus.on(eventKey, onMessage);
@@ -52,7 +59,6 @@ export const GET = withHandler(async (req: NextRequest) => {
     headers: {
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache, no-transform",
-      Connection: "keep-alive",
       "X-Accel-Buffering": "no",
     },
   });

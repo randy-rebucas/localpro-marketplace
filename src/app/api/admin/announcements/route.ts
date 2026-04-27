@@ -5,6 +5,7 @@ import { requireUser, requireRole } from "@/lib/auth";
 import { announcementRepository } from "@/repositories/announcement.repository";
 import { ValidationError } from "@/lib/errors";
 
+import { checkRateLimit } from "@/lib/rateLimit";
 const TARGETS = ["all", "client", "provider", "admin", "staff"] as const;
 const TYPES   = ["info", "warning", "success", "danger"] as const;
 
@@ -39,6 +40,8 @@ export const GET = withHandler(async () => {
 export const POST = withHandler(async (req: NextRequest) => {
   const user = await requireUser();
   requireRole(user, "admin");
+  const rl = await checkRateLimit(`admin:${user.userId}`, { windowMs: 60_000, max: 200 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   const body = await req.json();
   const parsed = CreateSchema.safeParse(body);

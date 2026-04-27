@@ -94,7 +94,7 @@ export class CronService {
 
       await activityRepository.log({
         userId: "system",
-        eventType: "job_reopened" as never,
+        eventType: "job_reopened",
         jobId: j._id.toString(),
         metadata: { reason: "stale_assignment_unfunded", thresholdHours: threshold },
       });

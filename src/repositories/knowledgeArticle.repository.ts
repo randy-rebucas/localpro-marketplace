@@ -57,7 +57,7 @@ export const knowledgeArticleRepository = {
     }>
   ) {
     await connectDB();
-    return KnowledgeArticle.findByIdAndUpdate(id, data, { new: true }).lean();
+    return KnowledgeArticle.findByIdAndUpdate(id, { $set: data }, { new: true }).lean();
   },
 
   async delete(id: string) {

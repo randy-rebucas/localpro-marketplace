@@ -6,6 +6,7 @@ import { ValidationError, NotFoundError, assertObjectId } from "@/lib/errors";
 import { userRepository, notificationRepository } from "@/repositories";
 import { pushNotification } from "@/lib/events";
 
+import { checkRateLimit } from "@/lib/rateLimit";
 const ReviewSchema = z.object({
   action: z.enum(["approve", "reject"]),
   reason: z.string().optional(),
@@ -18,6 +19,8 @@ export const PATCH = withHandler(async (
 ) => {
   const adminUser = await requireUser();
   requireCapability(adminUser, "manage_kyc");
+  const rl = await checkRateLimit(`admin:${adminUser.userId}`, { windowMs: 60_000, max: 200 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   const { userId } = await params;
   assertObjectId(userId, "userId");

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { requireUser } from "@/lib/auth";
+import { requireUser, requireCsrfToken } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { ForbiddenError, NotFoundError, UnprocessableError, ValidationError, assertObjectId } from "@/lib/errors";
 import { canTransition } from "@/lib/jobLifecycle";
@@ -9,13 +9,14 @@ import { calculateCancellationFee } from "@/lib/commission";
 import {
   jobRepository,
   activityRepository,
-  notificationRepository,
   quoteRepository,
   paymentRepository,
 } from "@/repositories";
 import { ledgerRepository } from "@/repositories/ledger.repository";
-import { pushStatusUpdateMany, pushNotification } from "@/lib/events";
+import { pushStatusUpdateMany } from "@/lib/events";
 import { ledgerService } from "@/services/ledger.service";
+import { notificationService } from "@/services";
+import { checkRateLimit } from "@/lib/rateLimit";
 import type { IJob } from "@/types";
 
 const CancelSchema = z.object({
@@ -37,9 +38,13 @@ export const POST = withHandler(async (
   { params }: { params: Promise<{ id: string }> }
 ) => {
   const user = await requireUser();
+  requireCsrfToken(req, user);
 
   const { id } = await params;
   assertObjectId(id, "jobId");
+
+  const rl = await checkRateLimit(`job-cancel:${user.userId}`, { windowMs: 60_000, max: 10 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   const body = await req.json().catch(() => ({}));
   const parsed = CancelSchema.safeParse(body);
@@ -99,19 +104,11 @@ export const POST = withHandler(async (
     cancellationProviderShare = breakdown.providerShare;
   }
 
-  // Cancel the job
-  (job as unknown as { status: string }).status = "cancelled";
-
-  if (cancellationFee > 0) {
-    (job as unknown as { cancellationFee: number }).cancellationFee = cancellationFee;
-  }
-
-  // If escrow was funded, mark it as refunded on the job record
-  if (hadFundedEscrow) {
-    (job as unknown as { escrowStatus: string }).escrowStatus = "refunded";
-  }
-
-  await jobDoc.save();
+  // Cancel the job — atomic update via repository
+  const updateFields: Record<string, unknown> = { status: "cancelled" };
+  if (cancellationFee > 0) updateFields.cancellationFee = cancellationFee;
+  if (hadFundedEscrow) updateFields.escrowStatus = "refunded";
+  await jobRepository.updateById(id, { $set: updateFields });
 
   // If escrow was funded, credit the client's wallet instead of reversing via PayMongo
   if (hadFundedEscrow) {
@@ -200,14 +197,13 @@ export const POST = withHandler(async (
     const feeNote = cancellationFee > 0
       ? ` You will receive ₱${cancellationProviderShare.toLocaleString()} as cancellation compensation.`
       : "";
-    const note = await notificationRepository.create({
+    await notificationService.push({
       userId:  previousProviderId,
-      type:    "job_update" as never,
+      type:    "system_notice",
       title:   "Job cancelled by client",
       message: `The client has cancelled the job you were assigned to. Reason: ${reason}${feeNote}`,
       data:    { jobId: id },
     });
-    pushNotification(previousProviderId, note);
   }
 
   // Realtime update to all affected parties

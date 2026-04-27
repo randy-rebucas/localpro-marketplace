@@ -5,6 +5,7 @@ import { requireUser } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { connectDB } from "@/lib/db";
 import { ForbiddenError, NotFoundError, ValidationError } from "@/lib/errors";
+import { checkRateLimit } from "@/lib/rateLimit";
 import { isAtEquipmentLimit, getEquipmentLimit, PLAN_LABELS } from "@/lib/businessPlan";
 import AgencyProfile from "@/models/AgencyProfile";
 
@@ -16,8 +17,10 @@ const EquipmentSchema = z.object({
   notes:    z.string().max(500).optional().default(""),
 });
 
+const OID_RE = /^[a-f\d]{24}$/i;
+
 const UpdateSchema = z.object({
-  equipmentId: z.string(),
+  equipmentId: z.string().regex(OID_RE, "Invalid equipmentId"),
   name:        z.string().min(1).max(200).optional(),
   type:        z.string().max(100).optional(),
   serialNo:    z.string().max(100).optional(),
@@ -36,8 +39,12 @@ function toOid(id: string) {
 }
 
 /** GET /api/provider/agency/equipment */
-export const GET = withHandler(async () => {
+export const GET = withHandler(async (_req: NextRequest) => {
   const user = await requireProvider();
+
+  const rl = await checkRateLimit(`agency-equipment:${user.userId}`, { windowMs: 60_000, max: 60 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+
   await connectDB();
   const agency = await AgencyProfile.findOne(
     { providerId: toOid(user.userId) },
@@ -50,7 +57,7 @@ export const GET = withHandler(async () => {
 /** POST /api/provider/agency/equipment — add item */
 export const POST = withHandler(async (req: NextRequest) => {
   const user = await requireProvider();
-  const body = await req.json();
+  const body = await req.json().catch(() => ({}));
   const parsed = EquipmentSchema.safeParse(body);
   if (!parsed.success) throw new ValidationError(parsed.error.errors[0].message);
 
@@ -103,7 +110,7 @@ export const POST = withHandler(async (req: NextRequest) => {
 /** PATCH /api/provider/agency/equipment — update item */
 export const PATCH = withHandler(async (req: NextRequest) => {
   const user = await requireProvider();
-  const body = await req.json();
+  const body = await req.json().catch(() => ({}));
   const parsed = UpdateSchema.safeParse(body);
   if (!parsed.success) throw new ValidationError(parsed.error.errors[0].message);
 
@@ -134,6 +141,7 @@ export const DELETE = withHandler(async (req: NextRequest) => {
 
   const equipmentId = new URL(req.url).searchParams.get("equipmentId");
   if (!equipmentId) throw new ValidationError("equipmentId is required.");
+  if (!OID_RE.test(equipmentId)) throw new ValidationError("Invalid equipmentId.");
 
   const result = await AgencyProfile.collection.updateOne(
     { providerId: toOid(user.userId) },

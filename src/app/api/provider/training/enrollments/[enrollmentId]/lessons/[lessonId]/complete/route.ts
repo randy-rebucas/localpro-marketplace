@@ -3,6 +3,7 @@ import { requireUser } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { trainingService } from "@/services/training.service";
 
+import { checkRateLimit } from "@/lib/rateLimit";
 /**
  * POST /api/provider/training/enrollments/[enrollmentId]/lessons/[lessonId]/complete
  * Mark a single lesson as complete for an enrollment.
@@ -12,6 +13,8 @@ export const POST = withHandler(async (
   { params }: { params: Promise<{ enrollmentId: string; lessonId: string }> }
 ) => {
   const user = await requireUser();
+  const rl = await checkRateLimit(`provider:training:${user.userId}`, { windowMs: 60_000, max: 30 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   const { enrollmentId, lessonId } = await params;
   const result = await trainingService.completeLesson(user, enrollmentId, lessonId);
   return NextResponse.json(result);

@@ -4,6 +4,7 @@ import { requireUser } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { connectDB } from "@/lib/db";
 import { ForbiddenError, NotFoundError, ValidationError } from "@/lib/errors";
+import { checkRateLimit } from "@/lib/rateLimit";
 import AgencyProfile from "@/models/AgencyProfile";
 
 async function requireProvider() {
@@ -27,8 +28,12 @@ const ComplianceSchema = z.object({
 });
 
 /** GET /api/provider/agency/compliance */
-export const GET = withHandler(async () => {
+export const GET = withHandler(async (_req: NextRequest) => {
   const user = await requireProvider();
+
+  const rl = await checkRateLimit(`agency-compliance:${user.userId}`, { windowMs: 60_000, max: 60 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+
   await connectDB();
   const agency = await AgencyProfile.findOne(
     { providerId: user.userId },
@@ -52,7 +57,7 @@ export const GET = withHandler(async () => {
 /** PATCH /api/provider/agency/compliance — update TIN/VAT/insurance top-level fields */
 export const PATCH = withHandler(async (req: NextRequest) => {
   const user = await requireProvider();
-  const body = await req.json();
+  const body = await req.json().catch(() => ({}));
   const parsed = ComplianceSchema.safeParse(body);
   if (!parsed.success) throw new ValidationError(parsed.error.errors[0].message);
 
@@ -76,7 +81,7 @@ export const PATCH = withHandler(async (req: NextRequest) => {
 /** POST /api/provider/agency/compliance/permits — add a permit */
 export const POST = withHandler(async (req: NextRequest) => {
   const user = await requireProvider();
-  const body = await req.json();
+  const body = await req.json().catch(() => ({}));
   const parsed = PermitSchema.safeParse(body);
   if (!parsed.success) throw new ValidationError(parsed.error.errors[0].message);
 

@@ -112,7 +112,7 @@ const UserSchema = new Schema<UserDocument>(
     capabilities: { type: [String], default: [] },
     agencyId: { type: Schema.Types.ObjectId, ref: "AgencyProfile", default: null },
     facebookId: { type: String, default: null, index: true, sparse: true },
-    oauthProvider: { type: String, enum: ["facebook", null], default: null },
+    oauthProvider: { type: String, enum: ["facebook"], default: null },
     phone: { type: String, default: null },
     dateOfBirth: { type: Date, default: null },
     gender: { type: String, enum: ["male", "female", "other", null], default: null },

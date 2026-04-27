@@ -137,6 +137,10 @@ export default function EmergencyPage() {
       toast.error("Please fill in all required fields");
       return;
     }
+    if (!form.workersNeeded || form.workersNeeded < 1) {
+      toast.error("Workers needed must be at least 1");
+      return;
+    }
     if (form.urgency === "critical") {
       setConfirmOpen(true);
     } else {

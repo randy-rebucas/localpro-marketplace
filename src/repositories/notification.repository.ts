@@ -19,14 +19,14 @@ export class NotificationRepository extends BaseRepository<NotificationDocument>
     await this.connect();
     await Notification.findOneAndUpdate(
       { _id: notificationId, userId },
-      { readAt: new Date() }
+      { $set: { readAt: new Date() } }
     );
   }
 
   async markAllRead(userId: string): Promise<void> {
     await this.updateMany(
       { userId, readAt: null } as never,
-      { readAt: new Date() }
+      { $set: { readAt: new Date() } }
     );
   }
 

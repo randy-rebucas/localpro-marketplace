@@ -77,12 +77,22 @@ interface FallbackRecord {
 }
 
 const fallbackStore = new Map<string, FallbackRecord>();
+const MAX_FALLBACK_ENTRIES = 10_000;
 const pruneTimer = setInterval(() => {
   const now = Date.now();
   for (const [k, r] of fallbackStore) {
     if (r.resetAt < now) fallbackStore.delete(k);
   }
-}, 5 * 60 * 1000);
+  // Emergency eviction if store is still oversized after expiry pruning
+  if (fallbackStore.size > MAX_FALLBACK_ENTRIES) {
+    const excess = fallbackStore.size - MAX_FALLBACK_ENTRIES;
+    let i = 0;
+    for (const k of fallbackStore.keys()) {
+      if (i++ >= excess) break;
+      fallbackStore.delete(k);
+    }
+  }
+}, 60 * 1000);
 if (typeof pruneTimer === "object" && pruneTimer !== null && "unref" in pruneTimer) {
   (pruneTimer as { unref(): void }).unref();
 }

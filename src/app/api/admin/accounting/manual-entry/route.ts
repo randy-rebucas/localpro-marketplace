@@ -29,6 +29,7 @@ import { activityRepository } from "@/repositories";
 import { ACCOUNT_CODES } from "@/models/LedgerEntry";
 import type { AccountCode, LedgerEntityType } from "@/models/LedgerEntry";
 
+import { checkRateLimit } from "@/lib/rateLimit";
 const VALID_ACCOUNT_CODES = Object.values(ACCOUNT_CODES) as AccountCode[];
 
 const ENTITY_TYPES: LedgerEntityType[] = [
@@ -51,6 +52,8 @@ const Schema = z.object({
 export const POST = withHandler(async (req: NextRequest) => {
   const user = await requireUser();
   requireRole(user, "admin");
+  const rl = await checkRateLimit(`admin:${user.userId}`, { windowMs: 60_000, max: 200 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   const body = await req.json();
   const parsed = Schema.safeParse(body);

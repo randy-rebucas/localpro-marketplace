@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
+import { checkRateLimit } from "@/lib/rateLimit";
 import { connectDB } from "@/lib/db";
 import User from "@/models/User";
 import { favoriteProviderRepository } from "@/repositories/favoriteProvider.repository";
 import { featuredListingRepository } from "@/repositories/featuredListing.repository";
 import type { PipelineStage } from "mongoose";
+
+const ALLOWED_AVAILABILITY = new Set(["available", "busy", "unavailable"]);
 
 /**
  * GET /api/providers
@@ -15,11 +18,16 @@ import type { PipelineStage } from "mongoose";
  */
 export const GET = withHandler(async (req: NextRequest) => {
   const user = await requireUser();
+
+  const rl = await checkRateLimit(`providers:${user.userId}`, { windowMs: 60_000, max: 30 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+
   await connectDB();
 
   const { searchParams } = new URL(req.url);
-  const search = searchParams.get("search")?.trim() ?? "";
-  const availability = searchParams.get("availability") ?? "";
+  const search = (searchParams.get("search") ?? "").trim().slice(0, 100);
+  const rawAvailability = searchParams.get("availability") ?? "";
+  const availability = ALLOWED_AVAILABILITY.has(rawAvailability) ? rawAvailability : "";
 
   type ProviderRow = {
     userId: { _id: { toString(): string }; name?: string };

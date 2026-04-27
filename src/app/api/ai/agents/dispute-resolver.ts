@@ -5,11 +5,10 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
-import { connectDB } from "@/lib/db";
 import { withHandler } from "@/lib/utils";
 import { requireUser, requireCapability } from "@/lib/auth";
 import { AIDecisionService } from "@/services/ai-decision.service";
-import mongoose from "mongoose";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 interface DisputeResolverInput {
   disputeId: string;
@@ -236,9 +235,10 @@ async function analyzeDispute(
  * POST /api/ai/agents/dispute-resolver
  */
 export const POST = withHandler(async (req: NextRequest) => {
-  await connectDB();
   const user = await requireUser();
   requireCapability(user, "manage_disputes");
+  const rl = await checkRateLimit(`ai:dispute-resolver:${user.userId}`, { windowMs: 60_000, max: 10 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   const body = await req.json();
   const input: DisputeResolverInput = {

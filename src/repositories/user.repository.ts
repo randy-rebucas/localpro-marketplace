@@ -22,6 +22,12 @@ export class UserRepository extends BaseRepository<UserDocument> {
     return User.findById(userId).select("+password");
   }
 
+  /** Returns a full Mongoose document with the expoPushTokens field for push-token mutations. */
+  async getDocByIdWithPushTokens(userId: string): Promise<UserDocument | null> {
+    await this.connect();
+    return User.findById(userId).select("+expoPushTokens");
+  }
+
   /** Includes password field for auth comparison. */
   async findByEmailWithPassword(email: string): Promise<UserDocument | null> {
     await this.connect();
@@ -129,8 +135,7 @@ export class UserRepository extends BaseRepository<UserDocument> {
   ): Promise<void> {
     await this.connect();
     await User.findByIdAndUpdate(userId, {
-      verificationToken: token,
-      verificationTokenExpiry: expiry,
+      $set: { verificationToken: token, verificationTokenExpiry: expiry },
     });
   }
 
@@ -144,7 +149,7 @@ export class UserRepository extends BaseRepository<UserDocument> {
   async markVerified(userId: string): Promise<void> {
     await this.connect();
     await User.findByIdAndUpdate(userId, {
-      isVerified: true,
+      $set:   { isVerified: true },
       $unset: { verificationToken: 1, verificationTokenExpiry: 1 },
     });
   }
@@ -158,8 +163,7 @@ export class UserRepository extends BaseRepository<UserDocument> {
   ): Promise<void> {
     await this.connect();
     await User.findByIdAndUpdate(userId, {
-      resetPasswordToken: token,
-      resetPasswordTokenExpiry: expiry,
+      $set: { resetPasswordToken: token, resetPasswordTokenExpiry: expiry },
     });
   }
 
@@ -173,7 +177,7 @@ export class UserRepository extends BaseRepository<UserDocument> {
   async updatePassword(userId: string, hashedPassword: string): Promise<void> {
     await this.connect();
     await User.findByIdAndUpdate(userId, {
-      password: hashedPassword,
+      $set:   { password: hashedPassword },
       $unset: { resetPasswordToken: 1, resetPasswordTokenExpiry: 1 },
     });
   }
@@ -369,6 +373,39 @@ export class UserRepository extends BaseRepository<UserDocument> {
       .sort({ flaggedJobCount: -1, createdAt: -1 })
       .limit(limit)
       .lean();
+  }
+
+  // ─── Retention / Anonymisation ────────────────────────────────────────────
+
+  /** Soft-deleted users whose deletedAt is before `before` and not yet anonymised. */
+  async findPendingAnonymization(before: Date): Promise<{ _id: { toString(): string } }[]> {
+    await this.connect();
+    return User.find({
+      isDeleted: true,
+      deletedAt: { $lt: before },
+      email: { $not: /^deleted-/ },
+    }).select("_id").lean() as unknown as { _id: { toString(): string } }[];
+  }
+
+  /** Wipe all PII fields for a user, replacing them with anonymised placeholders. */
+  async anonymizeById(id: string, suffix: string): Promise<void> {
+    await this.updateById(id, {
+      $set: {
+        name: "Deleted User",
+        email: `deleted-${suffix}@localpro.invalid`,
+        phone: null,
+        avatar: null,
+        password: null,
+        addresses: [],
+        verificationToken: null,
+        verificationTokenExpiry: null,
+        resetPasswordToken: null,
+        resetPasswordTokenExpiry: null,
+        otpCode: null,
+        otpExpiry: null,
+        pushSubscriptions: [],
+      },
+    });
   }
 
   // ─── Duplicate Detection ──────────────────────────────────────────────────

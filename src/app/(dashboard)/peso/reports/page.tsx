@@ -148,7 +148,8 @@ export default function ReportsPage() {
       ["Top Categories", "Count"],
       ...data.topCategories.map((c) => [c.category, c.count]),
     ];
-    const csv  = rows.map((r) => r.join(",")).join("\n");
+    const csvEsc = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+    const csv  = rows.map((r) => r.map(csvEsc).join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const url  = URL.createObjectURL(blob);
     const a    = document.createElement("a");

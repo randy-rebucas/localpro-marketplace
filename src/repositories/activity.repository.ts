@@ -8,6 +8,7 @@ export interface LogEventInput {
   eventType: ActivityEventType;
   jobId?: string;
   metadata?: Record<string, unknown>;
+  ipAddress?: string;
 }
 
 export interface ActivityLogEntry {
@@ -16,6 +17,7 @@ export interface ActivityLogEntry {
   eventType: ActivityEventType;
   jobId?: { _id: string; title: string; status?: string; budget?: number } | string | null;
   metadata?: Record<string, unknown>;
+  ipAddress?: string | null;
   createdAt: Date;
 }
 

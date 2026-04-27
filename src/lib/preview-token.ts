@@ -1,12 +1,5 @@
 import crypto from "crypto";
 
-/**
- * Blog Preview Token Management
- * 
- * Generates secure tokens for previewing draft/scheduled blogs
- * Tokens are time-limited and can only be used by authenticated staff
- */
-
 export interface PreviewTokenPayload {
   blogId: string;
   authorId: string;
@@ -14,12 +7,15 @@ export interface PreviewTokenPayload {
   expiresAt: number;
 }
 
-const PREVIEW_TOKEN_SECRET = process.env.PREVIEW_TOKEN_SECRET || "dev-preview-secret-change-in-production";
-const PREVIEW_TOKEN_DURATION = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
+function getSecret(): string {
+  const s = process.env.PREVIEW_TOKEN_SECRET;
+  if (!s && process.env.NODE_ENV === "production") {
+    throw new Error("PREVIEW_TOKEN_SECRET is not set");
+  }
+  return s ?? "dev-preview-secret";
+}
+const PREVIEW_TOKEN_DURATION = 7 * 24 * 60 * 60 * 1000;
 
-/**
- * Generate a secure preview token for a blog
- */
 export function generatePreviewToken(blogId: string, authorId: string): string {
   const now = Date.now();
   const payload: PreviewTokenPayload = {
@@ -31,18 +27,14 @@ export function generatePreviewToken(blogId: string, authorId: string): string {
 
   const tokenData = JSON.stringify(payload);
   const hmac = crypto
-    .createHmac("sha256", PREVIEW_TOKEN_SECRET)
+    .createHmac("sha256", getSecret())
     .update(tokenData)
     .digest("hex");
 
-  // Combine payload and HMAC in base64
   const token = Buffer.from(`${tokenData}.${hmac}`).toString("base64");
   return token;
 }
 
-/**
- * Verify and decode a preview token
- */
 export function verifyPreviewToken(
   token: string
 ): PreviewTokenPayload | null {
@@ -57,11 +49,16 @@ export function verifyPreviewToken(
 
     // Verify HMAC
     const expectedHmac = crypto
-      .createHmac("sha256", PREVIEW_TOKEN_SECRET)
+      .createHmac("sha256", getSecret())
       .update(tokenDataStr)
       .digest("hex");
 
-    if (providedHmac !== expectedHmac) {
+    const expectedBuf = Buffer.from(expectedHmac, "hex");
+    const providedBuf = Buffer.from(providedHmac, "hex");
+    if (
+      expectedBuf.length !== providedBuf.length ||
+      !crypto.timingSafeEqual(expectedBuf, providedBuf)
+    ) {
       console.warn("[Preview Token] HMAC verification failed");
       return null;
     }

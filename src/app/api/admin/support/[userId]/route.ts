@@ -5,6 +5,7 @@ import { requireUser, requireCapability } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { ValidationError } from "@/lib/errors";
 
+import { checkRateLimit } from "@/lib/rateLimit";
 const ReplySchema = z.object({
   body: z.string().min(1).max(2000),
 });
@@ -16,6 +17,8 @@ export const GET = withHandler(async (
 ) => {
   const user = await requireUser();
   requireCapability(user, "manage_support");
+  const rl = await checkRateLimit(`admin:${user.userId}`, { windowMs: 60_000, max: 200 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   const { userId } = await params;
   const result = await supportService.getThreadForAdmin(userId);
   return NextResponse.json(result);
@@ -28,6 +31,8 @@ export const POST = withHandler(async (
 ) => {
   const admin = await requireUser();
   requireCapability(admin, "manage_support");
+  const rl2 = await checkRateLimit(`admin:${admin.userId}`, { windowMs: 60_000, max: 200 });
+  if (!rl2.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   const { userId } = await params;
 
   const body = await req.json();

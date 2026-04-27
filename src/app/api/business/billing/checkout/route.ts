@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireUser } from "@/lib/auth";
+import { requireUser, requireCsrfToken } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
-import { ForbiddenError, ValidationError, NotFoundError } from "@/lib/errors";
+import { ForbiddenError, ValidationError, NotFoundError, assertObjectId } from "@/lib/errors";
+import { checkRateLimit } from "@/lib/rateLimit";
 import { createOrder } from "@/lib/paypal";
 import { businessOrganizationRepository } from "@/repositories";
 import type { BusinessPlan } from "@/types";
@@ -21,12 +22,17 @@ const PLAN_LABELS: Record<string, string> = {
 /** POST /api/business/billing/checkout — create a PayPal order for a plan upgrade */
 export const POST = withHandler(async (req: NextRequest) => {
   const user = await requireUser();
+  requireCsrfToken(req, user);
   if (user.role !== "client") throw new ForbiddenError();
+
+  const rl = await checkRateLimit(`biz-billing-checkout:${user.userId}`, { windowMs: 60_000, max: 5 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   const body = await req.json() as { orgId?: string; plan?: string };
   const { orgId, plan } = body;
 
   if (!orgId) throw new ValidationError("orgId is required.");
+  assertObjectId(orgId, "orgId");
   if (!plan || !["growth", "pro", "enterprise"].includes(plan)) {
     throw new ValidationError("plan must be one of: growth, pro, enterprise.");
   }
@@ -34,10 +40,8 @@ export const POST = withHandler(async (req: NextRequest) => {
   const org = await businessOrganizationRepository.findById(orgId);
   if (!org) throw new NotFoundError("Organization not found.");
 
-  // Only owner can change the plan
   if (org.ownerId.toString() !== user.userId) throw new ForbiddenError();
 
-  // Already on this plan
   if (org.plan === plan && org.planStatus === "active") {
     throw new ValidationError(`Your organization is already on the ${plan} plan.`);
   }
@@ -58,7 +62,6 @@ export const POST = withHandler(async (req: NextRequest) => {
     },
   });
 
-  // Store the pending PayPal order ID on the org so confirm can resolve it
   await businessOrganizationRepository.updateById(orgId, {
     $set: {
       pendingPlanSessionId: order.id,

@@ -4,6 +4,7 @@ import { requireUser } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { ValidationError } from "@/lib/errors";
 import { walletService } from "@/services/wallet.service";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 const VerifySchema = z.object({
   sessionId: z.string().min(1, "sessionId is required"),
@@ -18,6 +19,8 @@ const VerifySchema = z.object({
  */
 export const POST = withHandler(async (req: NextRequest) => {
   const user = await requireUser();
+  const rl = await checkRateLimit(`wallet:topup-verify:${user.userId}`, { windowMs: 60_000, max: 20 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   const body = await req.json().catch(() => ({}));
   const parsed = VerifySchema.safeParse(body);

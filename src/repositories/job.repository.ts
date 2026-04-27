@@ -1,4 +1,4 @@
-import { FilterQuery, Types, PipelineStage } from "mongoose";
+import { FilterQuery, Types, PipelineStage, type ClientSession } from "mongoose";
 import Job from "@/models/Job";
 import Message from "@/models/Message";
 import type { JobDocument } from "@/models/Job";
@@ -403,6 +403,31 @@ export class JobRepository extends BaseRepository<JobDocument> {
       .lean() as never;
   }
 
+  /** Jobs for the message-threads list: all jobs where userId is client or provider,
+   *  with clientId and providerId populated (name, avatar). Paginated. */
+  async findForMessageThreads(
+    userId: string,
+    limit = 30,
+    skip = 0
+  ): Promise<Array<{
+    _id: { toString(): string };
+    title: string;
+    createdAt: Date;
+    clientId: { _id: { toString(): string }; name: string; avatar?: string | null };
+    providerId: { _id: { toString(): string }; name: string; avatar?: string | null } | null;
+  }>> {
+    await this.connect();
+    const oid = new Types.ObjectId(userId);
+    return Job.find({ $or: [{ clientId: oid }, { providerId: oid }] })
+      .populate("clientId", "_id name avatar")
+      .populate("providerId", "_id name avatar")
+      .select("_id title createdAt clientId providerId")
+      .sort({ updatedAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean() as never;
+  }
+
   /**
    * Patch a job's status + one photo field using the native driver to bypass
    * Mongoose schema casting (allows storing arbitrary string arrays).
@@ -417,6 +442,20 @@ export class JobRepository extends BaseRepository<JobDocument> {
     await Job.collection.updateOne(
       { _id: new Types.ObjectId(id) },
       { $set: { status, [photoField]: photos } }
+    );
+  }
+
+  /** Mark a job's escrow as funded and persist the fee snapshot. */
+  async fundEscrow(
+    jobId: string,
+    fees: { escrowFee: number; processingFee: number; platformServiceFee: number },
+    session?: ClientSession
+  ): Promise<void> {
+    await this.connect();
+    await Job.findByIdAndUpdate(
+      jobId,
+      { $set: { escrowStatus: "funded", ...fees } },
+      { session }
     );
   }
 

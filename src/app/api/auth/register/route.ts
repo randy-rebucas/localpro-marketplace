@@ -45,7 +45,7 @@ export const POST = withHandler(async (req: NextRequest) => {
   const parsed = RegisterSchema.safeParse(body);
   if (!parsed.success) throw new ValidationError(parsed.error.errors[0].message);
 
-  const { user, accessToken, refreshToken } = await authService.register(parsed.data);
+  const { user, accessToken, refreshToken } = await authService.register({ ...parsed.data, ipAddress: ip });
 
   // Fire referral notification email (non-blocking)
   if (parsed.data.referralCode) {

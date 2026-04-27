@@ -5,6 +5,7 @@ import { requireUser, requireRole } from "@/lib/auth";
 import { announcementRepository } from "@/repositories/announcement.repository";
 import { ValidationError, NotFoundError, assertObjectId } from "@/lib/errors";
 
+import { checkRateLimit } from "@/lib/rateLimit";
 const TARGETS = ["all", "client", "provider", "admin", "staff"] as const;
 const TYPES   = ["info", "warning", "success", "danger"] as const;
 
@@ -22,6 +23,8 @@ type RouteContext = { params: Promise<{ id: string }> };
 export const PUT = withHandler(async (req: NextRequest, ctx: RouteContext) => {
   const user = await requireUser();
   requireRole(user, "admin");
+  const rl = await checkRateLimit(`admin:${user.userId}`, { windowMs: 60_000, max: 200 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   const { id } = await ctx.params;
   assertObjectId(id, "announcementId");
@@ -53,6 +56,8 @@ export const PUT = withHandler(async (req: NextRequest, ctx: RouteContext) => {
 export const DELETE = withHandler(async (_req: NextRequest, ctx: RouteContext) => {
   const user = await requireUser();
   requireRole(user, "admin");
+  const rl = await checkRateLimit(`admin:${user.userId}`, { windowMs: 60_000, max: 200 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   const { id } = await ctx.params;
   assertObjectId(id, "announcementId");

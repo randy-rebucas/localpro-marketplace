@@ -54,7 +54,7 @@ export interface IAIDecision extends Document {
   };
   
   // Related entity
-  relatedEntityType?: "job" | "dispute" | "payout" | "ticket" | "lead";
+  relatedEntityType?: "job" | "dispute" | "payout" | "ticket" | "lead" | "user";
   relatedEntityId?: mongoose.Types.ObjectId;
   
   // Resolution
@@ -144,7 +144,7 @@ const AIDecisionSchema = new Schema<IAIDecision>(
     },
     relatedEntityType: {
       type: String,
-      enum: ["job", "dispute", "payout", "ticket", "lead"],
+      enum: ["job", "dispute", "payout", "ticket", "lead", "user"],
     },
     relatedEntityId: Schema.Types.ObjectId,
     

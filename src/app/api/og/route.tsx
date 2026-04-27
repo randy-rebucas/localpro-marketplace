@@ -2,6 +2,8 @@ import { ImageResponse } from "next/og";
 import { readFile } from "fs/promises";
 import path from "path";
 import type { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 export const runtime = "nodejs";
 
@@ -9,14 +11,18 @@ const W = 1200;
 const H = 630;
 
 export async function GET(req: NextRequest) {
+  const ip = req.headers.get("x-forwarded-for") ?? "unknown";
+  const rl = await checkRateLimit(`og:${ip}`, { windowMs: 60_000, max: 60 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+
   const { searchParams } = req.nextUrl;
   const title       = searchParams.get("title")       ?? "Hire Trusted Local Service Professionals";
   const description = searchParams.get("description") ?? "Post jobs · Get quotes · Pay securely with escrow";
   const tag         = searchParams.get("tag")         ?? "";   // e.g. "Open Job", "Category", etc.
 
   // Load logo from filesystem (works in both dev and prod on Vercel)
-  const logoData   = await readFile(path.join(process.cwd(), "public/logo-text.jpg"));
-  const logoBase64 = `data:image/jpeg;base64,${logoData.toString("base64")}`;
+  const logoData   = await readFile(path.join(process.cwd(), "public/logo-text.png"));
+  const logoBase64 = `data:image/png;base64,${logoData.toString("base64")}`;
 
   return new ImageResponse(
     (

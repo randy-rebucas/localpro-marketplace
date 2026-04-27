@@ -1,20 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireUser } from "@/lib/auth";
+import { requireUser, requireCsrfToken } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
-import { ForbiddenError } from "@/lib/errors";
+import { ForbiddenError, assertObjectId } from "@/lib/errors";
 import { favoriteProviderRepository } from "@/repositories/favoriteProvider.repository";
-import ProviderProfile from "@/models/ProviderProfile";
-import { connectDB } from "@/lib/db";
+import { providerProfileRepository } from "@/repositories";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 /** GET /api/favorites — list client's favorite providers with profiles */
-export const GET = withHandler(async (_req: NextRequest) => {
+export const GET = withHandler(async (req: NextRequest) => {
   const user = await requireUser();
   if (user.role !== "client") throw new ForbiddenError();
 
-  await connectDB();
+  const rl = await checkRateLimit(`favorites-get:${user.userId}`, { windowMs: 60_000, max: 30 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+
   const favorites = await favoriteProviderRepository.findByClient(user.userId);
 
-  // Enrich each favorite with the provider's profile
   const providerIds = favorites.map(
     (f) =>
       (f as unknown as { providerId: { _id?: string; toString(): string } })
@@ -22,9 +23,7 @@ export const GET = withHandler(async (_req: NextRequest) => {
       (f as unknown as { providerId: { toString(): string } }).providerId?.toString()
   );
 
-  const profiles = await ProviderProfile.find({ userId: { $in: providerIds } })
-    .select("userId bio skills yearsExperience hourlyRate avgRating completedJobCount availabilityStatus avgResponseTimeHours completionRate isLocalProCertified")
-    .lean();
+  const profiles = await providerProfileRepository.findByUserIds(providerIds.filter(Boolean) as string[]);
 
   const profileMap = new Map(
     profiles.map((p) => [
@@ -39,8 +38,7 @@ export const GET = withHandler(async (_req: NextRequest) => {
       providerId: { _id?: string; toString(): string; name?: string; email?: string };
       createdAt: Date;
     };
-    const pid =
-      fav.providerId?._id?.toString() ?? fav.providerId?.toString();
+    const pid = fav.providerId?._id?.toString() ?? fav.providerId?.toString();
     return {
       _id: fav._id.toString(),
       provider: fav.providerId,
@@ -56,11 +54,16 @@ export const GET = withHandler(async (_req: NextRequest) => {
 export const POST = withHandler(async (req: NextRequest) => {
   const user = await requireUser();
   if (user.role !== "client") throw new ForbiddenError();
+  requireCsrfToken(req, user);
+
+  const rl = await checkRateLimit(`favorites-post:${user.userId}`, { windowMs: 60_000, max: 20 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   const { providerId } = await req.json();
   if (!providerId) {
     return NextResponse.json({ error: "providerId is required" }, { status: 400 });
   }
+  assertObjectId(providerId, "providerId");
 
   await favoriteProviderRepository.addFavorite(user.userId, providerId);
   return NextResponse.json({ favorited: true });

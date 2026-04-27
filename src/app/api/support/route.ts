@@ -5,6 +5,7 @@ import { businessService } from "@/services/business.service";
 import { requireUser } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { ValidationError } from "@/lib/errors";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 const SendMessageSchema = z.object({
   body: z.string().min(1).max(2000),
@@ -21,10 +22,13 @@ export const GET = withHandler(async () => {
 export const POST = withHandler(async (req: NextRequest) => {
   const user = await requireUser();
 
+  const rl = await checkRateLimit(`support-msg:${user.userId}`, { windowMs: 60_000, max: 20 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+
   // Enforce Priority Support plan gate for business clients
   await businessService.checkPrioritySupportAccess(user.userId);
 
-  const body = await req.json();
+  const body = await req.json().catch(() => ({}));
   const parsed = SendMessageSchema.safeParse(body);
   if (!parsed.success) throw new ValidationError(parsed.error.errors[0].message);
 

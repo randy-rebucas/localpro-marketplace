@@ -100,7 +100,7 @@ export default async function BlogPage({
           <div className="absolute -top-40 -right-40 w-80 h-80 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
           <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
 
-          <div className="relative max-w-6xl mx-auto">
+          <div className="relative max-w-site mx-auto">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
 
               {/* Left: text + search + categories */}
@@ -213,7 +213,7 @@ export default async function BlogPage({
 
         {/* ── Article Content ───────────────────────────────────────────── */}
         <div className="relative py-16 px-4 sm:px-6 lg:px-8">
-          <div className="max-w-6xl mx-auto">
+          <div className="max-w-site mx-auto">
             {blogs.length === 0 ? (
               <div className="text-center py-20">
                 <BookOpen className="w-16 h-16 text-slate-300 dark:text-slate-700 mx-auto mb-4" />

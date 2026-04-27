@@ -6,6 +6,7 @@ import { paymentService } from "@/services";
 import { requireUser, requireRole } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { NotFoundError, ForbiddenError, ValidationError } from "@/lib/errors";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 const PollSchema = z.object({ jobId: z.string().optional() });
 
@@ -21,6 +22,9 @@ export const GET = withHandler(async (
   const user = await requireUser();
   requireRole(user, "client");
 
+  const rl = await checkRateLimit(`payments-poll:${user.userId}`, { windowMs: 60_000, max: 20 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+
   const { id } = await params;
   const { searchParams } = new URL(req.url);
   const jobId = searchParams.get("jobId") ?? undefined;
@@ -34,6 +38,7 @@ export const GET = withHandler(async (
 
   // Fetch live checkout session status from PayMongo
   let liveStatus: string | undefined;
+  let confirmError = false;
   if (process.env.PAYMONGO_SECRET_KEY) {
     try {
       const session = await getCheckoutSession(id);
@@ -42,17 +47,22 @@ export const GET = withHandler(async (
       // PayMongo session status is never "paid" — check the payment intent status.
       // paymentIntentStatus is "succeeded" when the PI is expanded on the session.
       if (session.paymentIntentStatus === "succeeded" && jobId) {
-        await paymentService.confirmEscrowFunding(
-          id,
-          session.paymentIntentId ?? "",
-          "checkout"
-        );
-        liveStatus = "paid";
+        try {
+          await paymentService.confirmEscrowFunding(
+            id,
+            session.paymentIntentId ?? "",
+            "checkout"
+          );
+          liveStatus = "paid";
+        } catch (err) {
+          console.error("[PaymentsRoute] confirmEscrowFunding failed:", err);
+          confirmError = true;
+        }
       }
     } catch {
-      // silently ignore transient PayMongo errors
+      // silently ignore transient PayMongo fetch errors
     }
   }
 
-  return NextResponse.json({ payment, liveStatus });
+  return NextResponse.json({ payment, liveStatus, ...(confirmError && { confirmError: true }) });
 });

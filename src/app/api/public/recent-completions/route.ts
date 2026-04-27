@@ -5,13 +5,21 @@
  * Used by the CompletionToast on the public job board.
  */
 
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
+import { checkRateLimit } from "@/lib/rateLimit";
 import Job from "@/models/Job";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+function clientIp(req: NextRequest): string {
+  return req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+}
+
+export async function GET(req: NextRequest) {
+  const rl = await checkRateLimit(`pub-completions:${clientIp(req)}`, { windowMs: 60_000, max: 30 });
+  if (!rl.ok) return NextResponse.json([], { status: 429 });
+
   try {
     await connectDB();
 

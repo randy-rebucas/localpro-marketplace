@@ -16,14 +16,38 @@ import { NextRequest, NextResponse } from "next/server";
  *
  * Security notes:
  * – `to` is validated to only allow relative paths on this origin.
+ * – `\/` prefix is blocked to prevent browser normalisation to `//`.
+ * – `safeTo` is HTML-encoded before embedding in attributes to prevent XSS.
+ * – `JSON.stringify` output has `</` escaped to prevent </script> injection.
  * – No auth check is performed here (intentionally — this is a public bounce).
  */
+
+function htmlEncode(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
 export async function GET(req: NextRequest) {
-  const { searchParams, origin } = req.nextUrl;
+  const { searchParams } = req.nextUrl;
   const to = searchParams.get("to") ?? "/client/escrow";
 
-  // Validate: only allow relative paths (prevents open-redirect to external URLs)
-  const safeTo = to.startsWith("/") && !to.startsWith("//") ? to : "/client/escrow";
+  // Validate: only allow relative paths. Block `//` and `\/` (both normalise
+  // to protocol-relative URLs in some browsers, enabling open-redirect).
+  const safeTo =
+    to.startsWith("/") && !to.startsWith("//") && !to.startsWith("\\/")
+      ? to
+      : "/client/escrow";
+
+  // Encode for safe embedding in HTML attribute values.
+  const encodedTo = htmlEncode(safeTo);
+
+  // Encode for safe embedding inside a <script> block: JSON.stringify handles
+  // quotes and backslashes, but the HTML parser still processes `</script>`
+  // before the JS engine sees the string — replace `</` to neutralise it.
+  const safeJson = JSON.stringify(safeTo).replace(/<\//g, "<\\/");
 
   // Return a minimal HTML page that immediately redirects client-side.
   // The browser follows this as a same-site navigation → cookies are sent.
@@ -31,12 +55,12 @@ export async function GET(req: NextRequest) {
 <html>
 <head>
   <meta charset="utf-8">
-  <meta http-equiv="refresh" content="0;url=${safeTo}">
+  <meta http-equiv="refresh" content="0;url=${encodedTo}">
   <title>Redirecting…</title>
-  <script>window.location.replace(${JSON.stringify(safeTo)});</script>
+  <script>window.location.replace(${safeJson});</script>
 </head>
 <body>
-  <p>Redirecting… <a href="${safeTo}">Click here if not redirected.</a></p>
+  <p>Redirecting… <a href="${encodedTo}">Click here if not redirected.</a></p>
 </body>
 </html>`;
 
@@ -44,8 +68,8 @@ export async function GET(req: NextRequest) {
     status: 200,
     headers: {
       "Content-Type": "text/html; charset=utf-8",
-      // Prevent this bounce page from being cached
       "Cache-Control": "no-store, no-cache, must-revalidate",
+      "X-Content-Type-Options": "nosniff",
     },
   });
 }

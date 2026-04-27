@@ -1,9 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
+import mongoose from "mongoose";
 import { requireUser, requireCapability } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { connectDB } from "@/lib/db";
 import SupportTicket from "@/models/SupportTicket";
-import { NotFoundError, ForbiddenError } from "@/lib/errors";
+import { NotFoundError, ForbiddenError, ValidationError } from "@/lib/errors";
+import { checkRateLimit } from "@/lib/rateLimit";
+import { z } from "zod";
+
+const AdminPatchSchema = z.object({
+  status:     z.enum(["open", "in_progress", "resolved", "closed"]).optional(),
+  priority:   z.enum(["low", "normal", "high", "urgent"]).optional(),
+  assignedTo: z.string().regex(/^[a-f\d]{24}$/i, "Invalid assignedTo ID").optional(),
+});
+
+const UserPatchSchema = z.object({
+  csatScore: z.number().int().min(1).max(5).optional(),
+});
 
 /**
  * GET /api/support/tickets/[id]  — fetch a single ticket (owner or admin)
@@ -15,6 +28,8 @@ export const GET = withHandler(async (
   { params }: { params: Promise<{ id: string }> }
 ) => {
   const user = await requireUser();
+  const rl = await checkRateLimit(`support:tickets:${user.userId}`, { windowMs: 60_000, max: 30 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   await connectDB();
   const { id } = await params;
 
@@ -42,6 +57,8 @@ export const PATCH = withHandler(async (
   { params }: { params: Promise<{ id: string }> }
 ) => {
   const user = await requireUser();
+  const rl2 = await checkRateLimit(`support:tickets:${user.userId}`, { windowMs: 60_000, max: 30 });
+  if (!rl2.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   await connectDB();
   const { id } = await params;
 
@@ -53,23 +70,29 @@ export const PATCH = withHandler(async (
 
   if (!isOwner && !isAdmin) throw new ForbiddenError();
 
-  const body = await req.json();
+  const rawBody = await req.json().catch(() => ({}));
 
   if (isAdmin) {
-    if (body.status)     ticket.status     = body.status;
-    if (body.priority)   ticket.priority   = body.priority;
-    if (body.assignedTo) ticket.assignedTo = body.assignedTo;
-    if (body.status === "resolved") ticket.resolvedAt = new Date();
-    if (body.status === "closed")   ticket.closedAt   = new Date();
+    const parsed = AdminPatchSchema.safeParse(rawBody);
+    if (!parsed.success) throw new ValidationError(parsed.error.errors[0].message);
+    const { status, priority, assignedTo } = parsed.data;
+    if (status)     ticket.status     = status;
+    if (priority)   ticket.priority   = priority;
+    if (assignedTo) ticket.assignedTo = new mongoose.Types.ObjectId(assignedTo) as unknown as typeof ticket.assignedTo;
+    if (status === "resolved") ticket.resolvedAt = new Date();
+    if (status === "closed")   ticket.closedAt   = new Date();
   }
 
   // CSAT: only owner, only when resolved/closed
-  if (isOwner && body.csatScore !== undefined) {
-    if (!["resolved", "closed"].includes(ticket.status)) {
-      return NextResponse.json({ error: "CSAT only allowed on resolved or closed tickets" }, { status: 400 });
+  if (isOwner) {
+    const parsed = UserPatchSchema.safeParse(rawBody);
+    if (!parsed.success) throw new ValidationError(parsed.error.errors[0].message);
+    if (parsed.data.csatScore !== undefined) {
+      if (!["resolved", "closed"].includes(ticket.status)) {
+        return NextResponse.json({ error: "CSAT only allowed on resolved or closed tickets" }, { status: 400 });
+      }
+      ticket.csatScore = parsed.data.csatScore;
     }
-    const score = parseInt(body.csatScore, 10);
-    if (score >= 1 && score <= 5) ticket.csatScore = score;
   }
 
   await ticket.save();

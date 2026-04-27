@@ -1,20 +1,21 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { withHandler, apiError, apiResponse } from "@/lib/utils";
-import { requireUser, requireRole } from "@/lib/auth";
+import { requireUser, requireRole, requireCsrfToken } from "@/lib/auth";
 import { assertObjectId } from "@/lib/errors";
-import { jobRepository, userRepository } from "@/repositories";
+import { jobRepository } from "@/repositories";
 import { providerMatcherService } from "@/services/provider-matcher.service";
+import { checkRateLimit } from "@/lib/rateLimit";
 import type { IJob } from "@/types";
 
 /**
  * Business Operations: Provider Matching Handler
- * 
+ *
  * Finds and ranks candidate providers for a job based on:
  * - Skill match
  * - Rating & performance history
  * - Availability & location
  * - Specializations & certifications
- * 
+ *
  * Used by operations team to review candidate pool before making dispatch decisions.
  */
 
@@ -25,9 +26,13 @@ interface MatchingRequest {
 
 export const POST = withHandler(async (req: NextRequest) => {
   const user = await requireUser();
-  
+
   // Only admins and operations team can access provider matching
   requireRole(user, "admin");
+  requireCsrfToken(req, user);
+
+  const rl = await checkRateLimit(`provider-matching:${user.userId}`, { windowMs: 60_000, max: 20 });
+  if (!rl.ok) return apiError("Too many requests", 429);
 
   const body = await req.json();
   const { jobId, maxResults = 5 } = body as MatchingRequest;
@@ -38,8 +43,8 @@ export const POST = withHandler(async (req: NextRequest) => {
 
   assertObjectId(jobId, "jobId");
 
-  if (maxResults < 1 || maxResults > 20) {
-    return apiError("maxResults must be between 1 and 20", 400);
+  if (typeof maxResults !== "number" || maxResults < 1 || maxResults > 20) {
+    return apiError("maxResults must be a number between 1 and 20", 400);
   }
 
   // Fetch the job

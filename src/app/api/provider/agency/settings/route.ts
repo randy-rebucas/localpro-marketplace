@@ -4,6 +4,7 @@ import { requireUser } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { connectDB } from "@/lib/db";
 import { ForbiddenError, NotFoundError, ValidationError } from "@/lib/errors";
+import { checkRateLimit } from "@/lib/rateLimit";
 import AgencyProfile from "@/models/AgencyProfile";
 
 const SettingsSchema = z.object({
@@ -20,8 +21,12 @@ async function requireProvider() {
 }
 
 /** GET /api/provider/agency/settings */
-export const GET = withHandler(async () => {
+export const GET = withHandler(async (_req: NextRequest) => {
   const user = await requireProvider();
+
+  const rl = await checkRateLimit(`agency-settings:${user.userId}`, { windowMs: 60_000, max: 60 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+
   await connectDB();
   const agency = await AgencyProfile.findOne(
     { providerId: user.userId },
@@ -44,7 +49,7 @@ export const GET = withHandler(async () => {
 /** PATCH /api/provider/agency/settings */
 export const PATCH = withHandler(async (req: NextRequest) => {
   const user = await requireProvider();
-  const body = await req.json();
+  const body = await req.json().catch(() => ({}));
   const parsed = SettingsSchema.safeParse(body);
   if (!parsed.success) throw new ValidationError(parsed.error.errors[0].message);
 

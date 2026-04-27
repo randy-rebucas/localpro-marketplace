@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { getCurrentUser } from "@/lib/auth";
+import { redirect } from "next/navigation";
 import RealtimeRefresher from "@/components/shared/RealtimeRefresher";
 import { JobsContent } from "./_components/JobsContent";
 import { JobsListSkeleton } from "./_components/skeletons";
@@ -9,7 +10,7 @@ export const metadata: Metadata = { title: "My Jobs" };
 
 export default async function ProviderJobsPage() {
   const user = await getCurrentUser();
-  if (!user) return null;
+  if (!user) redirect("/login");
 
   return (
     <div className="space-y-6">

@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import toast from "react-hot-toast";
+import { apiFetch } from "@/lib/fetchClient";
 import { UserSearch, Camera, FileText, LocateFixed, Sparkles } from "lucide-react";
 import Button from "@/components/ui/Button";
 import Card, { CardBody, CardFooter } from "@/components/ui/Card";
@@ -175,7 +176,7 @@ export function RequestConsultationForm({ userId, hasAIAccess = false }: Request
         const fd = new FormData();
         fd.append("file", file);
         fd.append("folder", "misc");
-        const res = await fetch("/api/upload", { method: "POST", body: fd });
+        const res = await apiFetch("/api/upload", { method: "POST", body: fd });
         if (!res.ok) throw new Error("Failed to upload photo");
         const data = await res.json();
         urls.push(data.url);
@@ -200,7 +201,7 @@ export function RequestConsultationForm({ userId, hasAIAccess = false }: Request
     }
     setGeneratingDesc(true);
     try {
-      const res = await fetch("/api/ai/generate-consultation-description", {
+      const res = await apiFetch("/api/ai/generate-consultation-description", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title: formData.title, type: formData.type }),
@@ -273,7 +274,7 @@ export function RequestConsultationForm({ userId, hasAIAccess = false }: Request
     if (!validateStep2()) return;
     setSubmitting(true);
     try {
-      const res = await fetch("/api/consultations", {
+      const res = await apiFetch("/api/consultations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

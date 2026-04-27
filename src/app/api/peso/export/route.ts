@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireUser, requireRole } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
+import { checkRateLimit } from "@/lib/rateLimit";
 import { connectDB } from "@/lib/db";
 import ProviderProfile from "@/models/ProviderProfile";
 
-/** Escape a CSV cell: wrap in quotes if it contains a comma, quote, or newline. */
 function csvCell(value: string | number | null | undefined): string {
   const s = String(value ?? "");
-  if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
-  return s;
+  const safe = /^[=+\-@\t\r]/.test(s) ? `'${s}` : s;
+  return `"${safe.replace(/"/g, '""')}"`;
 }
 
 function csvRow(cells: (string | number | null | undefined)[]): string {
@@ -23,9 +23,12 @@ const MAX_EXPORT = 5_000;
  * Full workforce registry CSV export for PESO officers.
  * Includes provider profile details joined with user account info.
  */
-export const GET = withHandler(async (_req: NextRequest) => {
+export const GET = withHandler(async (req: NextRequest) => {
   const user = await requireUser();
   requireRole(user, "peso");
+
+  const rl = await checkRateLimit(`peso-export:${user.userId}`, { windowMs: 60_000, max: 5 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   await connectDB();
 

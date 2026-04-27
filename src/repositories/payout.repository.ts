@@ -1,3 +1,4 @@
+import { Types } from "mongoose";
 import Payout from "@/models/Payout";
 import type { PayoutDocument } from "@/models/Payout";
 import { BaseRepository } from "./base.repository";
@@ -52,7 +53,7 @@ export class PayoutRepository extends BaseRepository<PayoutDocument> {
     const result = await Payout.aggregate([
       {
         $match: {
-          providerId: new (require("mongoose").Types.ObjectId)(providerId),
+          providerId: new Types.ObjectId(providerId),
           status: { $in: ["pending", "processing", "completed"] },
         },
       },
@@ -102,7 +103,7 @@ export class PayoutRepository extends BaseRepository<PayoutDocument> {
   }> {
     await this.connect();
     const rows = await Payout.aggregate([
-      { $match: { providerId: new (require("mongoose").Types.ObjectId)(providerId) } },
+      { $match: { providerId: new Types.ObjectId(providerId) } },
       { $group: { _id: "$status", total: { $sum: "$amount" }, count: { $sum: 1 } } },
     ]) as Array<{ _id: string; total: number; count: number }>;
 
@@ -118,7 +119,7 @@ export class PayoutRepository extends BaseRepository<PayoutDocument> {
   async countCompletedByProvider(providerId: string): Promise<number> {
     await this.connect();
     return Payout.countDocuments({
-      providerId: new (require("mongoose").Types.ObjectId)(providerId),
+      providerId: new Types.ObjectId(providerId),
       status: "completed",
     });
   }

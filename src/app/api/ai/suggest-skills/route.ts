@@ -3,9 +3,9 @@ import OpenAI from "openai";
 import { requireUser, requireRole } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { ValidationError } from "@/lib/errors";
-import { connectDB } from "@/lib/db";
-import ProviderProfile from "@/models/ProviderProfile";
+import { providerProfileRepository } from "@/repositories";
 import { getProviderTier } from "@/lib/tier";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 function getClient(): OpenAI | null {
   if (!process.env.OPENAI_API_KEY) return null;
@@ -16,17 +16,17 @@ function getClient(): OpenAI | null {
 export const POST = withHandler(async (req: NextRequest) => {
   const user = await requireUser();
   requireRole(user, "provider");
+  const rl = await checkRateLimit(`ai:suggest-skills:${user.userId}`, { windowMs: 60_000, max: 20 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   const { bio, category, existingSkills } = await req.json();
 
   // Tier gate: Gold+ only
-  await connectDB();
-  const pProfile = await ProviderProfile.findOne({ userId: user.userId })
-    .select("completedJobCount avgRating completionRate").lean();
+  const pProfile = await providerProfileRepository.findByUserId(user.userId);
   const skillTier = getProviderTier(
-    (pProfile as { completedJobCount?: number } | null)?.completedJobCount ?? 0,
-    (pProfile as { avgRating?: number } | null)?.avgRating ?? 0,
-    (pProfile as { completionRate?: number } | null)?.completionRate ?? 0
+    pProfile?.completedJobCount ?? 0,
+    pProfile?.avgRating ?? 0,
+    (pProfile as any)?.completionRate ?? 0
   );
   if (!skillTier.hasAIAccess) {
     return NextResponse.json({
@@ -77,14 +77,12 @@ Requirements:
     });
 
     const raw = completion.choices[0]?.message?.content?.trim() ?? "[]";
-    // Strip markdown code fences if present
     const clean = raw.replace(/^```json?\n?/, "").replace(/\n?```$/, "").trim();
     let skills: string[] = [];
     try {
       const parsed = JSON.parse(clean);
       skills = Array.isArray(parsed) ? parsed.filter((s) => typeof s === "string") : [];
     } catch {
-      // Try to extract array portion (strip any surrounding text)
       const bracketStart = clean.indexOf("[");
       const bracketEnd = clean.lastIndexOf("]");
       if (bracketStart !== -1 && bracketEnd > bracketStart) {

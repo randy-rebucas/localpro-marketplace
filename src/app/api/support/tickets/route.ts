@@ -4,15 +4,19 @@ import { withHandler } from "@/lib/utils";
 import { ValidationError } from "@/lib/errors";
 import { connectDB } from "@/lib/db";
 import SupportTicket from "@/models/SupportTicket";
+import { checkRateLimit } from "@/lib/rateLimit";
 import { z } from "zod";
 import type { SupportTicketCategory, SupportTicketPriority } from "@/models/SupportTicket";
+
+const OBJECT_ID_RE = /^[a-f\d]{24}$/i;
+const optionalObjectId = z.string().regex(OBJECT_ID_RE, "Invalid ID format").optional();
 
 const CreateTicketSchema = z.object({
   subject:          z.string().min(5).max(255),
   body:             z.string().min(10).max(5000),
   category:         z.enum(["billing", "account", "dispute", "technical", "kyc", "payout", "other"]),
-  relatedDisputeId: z.string().optional(),
-  relatedJobId:     z.string().optional(),
+  relatedDisputeId: optionalObjectId,
+  relatedJobId:     optionalObjectId,
 });
 
 /**
@@ -37,7 +41,10 @@ export const GET = withHandler(async (_req: NextRequest) => {
 export const POST = withHandler(async (req: NextRequest) => {
   const currentUser = await requireUser();
 
-  const body   = await req.json();
+  const rl = await checkRateLimit(`support-ticket:${currentUser.userId}`, { windowMs: 3_600_000, max: 10 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+
+  const body   = await req.json().catch(() => ({}));
   const parsed = CreateTicketSchema.safeParse(body);
   if (!parsed.success) throw new ValidationError(parsed.error.errors[0].message);
 

@@ -108,19 +108,27 @@ export async function POST(req: NextRequest) {
           log.error({ orgId: metadata.orgId }, "Invalid orgId in subscription metadata");
           return NextResponse.json({ error: "Invalid metadata" }, { status: 400 });
         }
-        const now = new Date();
-        const expires = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-        await businessOrganizationRepository.updateById(metadata.orgId, {
-          $set: {
-            plan:                metadata.plan as BusinessPlan,
-            planStatus:          "active",
-            planActivatedAt:     now,
-            planExpiresAt:       expires,
-            pendingPlanSessionId: null,
-            pendingPlan:         null,
-          },
-        });
-        log.info({ plan: metadata.plan, orgId: metadata.orgId }, "Subscription plan activated");
+        // Idempotency: only activate if not already active — PayMongo retries this
+        // event on network errors, which would otherwise reset planActivatedAt/planExpiresAt
+        // to the retry timestamp instead of the original payment time.
+        const org = await businessOrganizationRepository.findById(metadata.orgId);
+        if (org && org.planStatus !== "active") {
+          const now = new Date();
+          const expires = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+          await businessOrganizationRepository.updateById(metadata.orgId, {
+            $set: {
+              plan:                metadata.plan as BusinessPlan,
+              planStatus:          "active",
+              planActivatedAt:     now,
+              planExpiresAt:       expires,
+              pendingPlanSessionId: null,
+              pendingPlan:         null,
+            },
+          });
+          log.info({ plan: metadata.plan, orgId: metadata.orgId }, "Subscription plan activated");
+        } else {
+          log.info({ plan: metadata.plan, orgId: metadata.orgId }, "Subscription already active — skipping duplicate webhook");
+        }
 
       // ── Branch B: wallet top-up ───────────────────────────────────────────
       } else if (metadata.type === "wallet_topup" && metadata.userId) {
@@ -284,8 +292,10 @@ export async function POST(req: NextRequest) {
           return NextResponse.json({ received: true, duplicate: true });
         }
       }
-      const intentId: string =
-        (resourceData.attributes as Record<string, unknown>).payment_intent_id as string ?? resourceData.id;
+      const rawIntentId = (resourceData.attributes as Record<string, unknown>).payment_intent_id;
+      const intentId: string = (typeof rawIntentId === "string" && rawIntentId)
+        ? rawIntentId
+        : resourceData.id;
       await paymentService.handlePaymentFailed(intentId);
       if (webhookEventId) {
         await Payment.findOneAndUpdate({ paymentIntentId: intentId }, { webhookEventId });

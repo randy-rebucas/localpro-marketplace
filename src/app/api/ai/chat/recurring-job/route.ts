@@ -1,85 +1,56 @@
 import { NextRequest, NextResponse } from "next/server";
+import { withHandler } from "@/lib/utils";
 import { requireUser } from "@/lib/auth";
-import { connectDB } from "@/lib/db";
 import { searchProvidersForJob } from "@/lib/chat-dispatcher";
+import { checkRateLimit } from "@/lib/rateLimit";
+import { ValidationError } from "@/lib/errors";
 
-export async function POST(req: NextRequest) {
-  try {
-    const user = await requireUser();
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+export const POST = withHandler(async (req: NextRequest) => {
+  const user = await requireUser();
+  const rl = await checkRateLimit(`ai:recurring-job:${user.userId}`, { windowMs: 60_000, max: 20 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
-    await connectDB();
+  const body = await req.json();
+  const {
+    jobData: { category, description, location, frequency, budgetMin, budgetMax } = {} as any,
+  } = body;
 
-    const body = await req.json();
-    const {
-      jobData: {
-        category,
-        description,
-        location,
-        frequency,
-        budgetMin,
-        budgetMax,
-      },
-    } = body;
-
-    // Validate required fields for recurring service
-    if (!category || !frequency || !location) {
-      return NextResponse.json(
-        { error: "Missing required fields for recurring service" },
-        { status: 400 }
-      );
-    }
-
-    // Search providers who offer services in this category
-    const providers = await searchProvidersForJob({
-      title: `Recurring ${category} service`,
-      category,
-      location,
-      description: description || "",
-      budget: budgetMax || 5000,
-    });
-
-    // Filter providers with recurring availability
-    const recurringProviders = providers
-      .map((provider) => ({
-        providerId: provider.providerId,
-        name: provider.user?.name || "Provider",
-        rating: provider.profile?.avgRating || 0,
-        matchScore: provider.matchScore || 0,
-        reason: provider.reason,
-      }))
-      .slice(0, 5)
-      .sort((a, b) => b.matchScore - a.matchScore)
-      .slice(0, 5); // Return top 5 matches
-
-    if (recurringProviders.length === 0) {
-      return NextResponse.json(
-        {
-          message: "No providers currently available for recurring service",
-          providers: [],
-        },
-        { status: 200 }
-      );
-    }
-
-    return NextResponse.json({
-      message: `Found ${recurringProviders.length} providers who offer ${frequency} ${category} services`,
-      providers: recurringProviders,
-      frequency,
-      category,
-      budgetRange: {
-        min: budgetMin,
-        max: budgetMax,
-      },
-      nextAction: "SELECT_RECURRING_PROVIDER",
-    });
-  } catch (error) {
-    console.error("[AI Chat] Recurring job search failed:", error);
-    return NextResponse.json(
-      { error: "Failed to search recurring service providers" },
-      { status: 500 }
-    );
+  if (!category || !frequency || !location) {
+    throw new ValidationError("Missing required fields for recurring service");
   }
-}
+
+  const providers = await searchProvidersForJob({
+    title: `Recurring ${category} service`,
+    category,
+    location,
+    description: description || "",
+    budget: budgetMax || 5000,
+  });
+
+  const recurringProviders = providers
+    .map((provider) => ({
+      providerId: provider.providerId,
+      name: provider.user?.name || "Provider",
+      rating: provider.profile?.avgRating || 0,
+      matchScore: provider.matchScore || 0,
+      reason: provider.reason,
+    }))
+    .sort((a, b) => b.matchScore - a.matchScore)
+    .slice(0, 5);
+
+  if (recurringProviders.length === 0) {
+    return NextResponse.json({
+      message: "No providers currently available for recurring service",
+      providers: [],
+    });
+  }
+
+  return NextResponse.json({
+    message: `Found ${recurringProviders.length} providers who offer ${frequency} ${category} services`,
+    providers: recurringProviders,
+    frequency,
+    category,
+    budgetRange: { min: budgetMin, max: budgetMax },
+    nextAction: "SELECT_RECURRING_PROVIDER",
+  });
+});

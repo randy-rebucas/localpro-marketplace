@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireUser } from "@/lib/auth";
+import { requireUser, requireCsrfToken } from "@/lib/auth";
 import { connectDB } from "@/lib/db";
 import { withHandler } from "@/lib/utils";
+import { checkRateLimit } from "@/lib/rateLimit";
 import NotificationPreference from "@/models/NotificationPreference";
 
 const CHANNELS = ["email", "push", "in_app"] as const;
@@ -12,23 +13,23 @@ type Category = (typeof CATEGORIES)[number];
 
 /** Seed default preferences (all enabled) for a user who has none yet. */
 async function ensureDefaults(userId: string) {
-  const existing = await NotificationPreference.countDocuments({ userId });
-  if (existing > 0) return;
-
   const docs: Array<{ userId: string; channel: Channel; category: Category; enabled: boolean }> = [];
   for (const channel of CHANNELS) {
     for (const category of CATEGORIES) {
       docs.push({ userId, channel, category, enabled: true });
     }
   }
-  await NotificationPreference.insertMany(docs, { ordered: false }).catch(() => {
-    // Ignore duplicate-key errors if a concurrent request seeded them first
-  });
+  // insertMany with ordered:false — silently skips duplicates on concurrent calls
+  await NotificationPreference.insertMany(docs, { ordered: false }).catch(() => {});
 }
 
 /** GET /api/notifications/preferences — return all preferences for the authenticated user. */
-export const GET = withHandler(async () => {
+export const GET = withHandler(async (req: NextRequest) => {
   const user = await requireUser();
+
+  const rl = await checkRateLimit(`notif-prefs-get:${user.userId}`, { windowMs: 60_000, max: 20 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+
   await connectDB();
   await ensureDefaults(user.userId);
 
@@ -42,6 +43,11 @@ export const GET = withHandler(async () => {
 /** PUT /api/notifications/preferences — update a single preference. */
 export const PUT = withHandler(async (req: NextRequest) => {
   const user = await requireUser();
+  requireCsrfToken(req, user);
+
+  const rl = await checkRateLimit(`notif-prefs-put:${user.userId}`, { windowMs: 60_000, max: 30 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+
   await connectDB();
 
   const body = await req.json();
