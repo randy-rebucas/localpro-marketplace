@@ -5,23 +5,13 @@ const NOMINATIM_UA = "LocalPro/1.0 (https://www.localpro.asia; support@localpro.
 const NOMINATIM_TIMEOUT_MS = 5_000;
 
 function labelFromEdgeHeaders(req: NextRequest): string {
-  const h = req.headers;
-  const cityRaw = h.get("x-vercel-ip-city") || h.get("cf-ipcity") || "";
-  const region = h.get("x-vercel-ip-country-region") || h.get("cf-region-code") || "";
-  const country = (h.get("x-vercel-ip-country") || h.get("cf-ipcountry") || "PH").toUpperCase();
-
-  // decodeURIComponent throws on malformed percent-sequences (e.g. %ZZ from rogue headers)
-  let city = "";
-  if (cityRaw) {
-    try {
-      city = decodeURIComponent(cityRaw.replace(/\+/g, " ")).trim();
-    } catch {
-      city = cityRaw.trim();
-    }
-  }
-
-  if (city && country) return `${city}, ${country}`;
-  if (region && country) return `${region}, ${country}`;
+  const country = (
+    req.headers.get("x-vercel-ip-country") ||
+    req.headers.get("cf-ipcountry") ||
+    "PH"
+  ).toUpperCase();
+  // Do NOT use IP city headers — they are unreliable for Philippine ISPs which
+  // route through regional hubs (e.g. Cebu) regardless of the user's actual city.
   if (country === "PH") return "Philippines";
   return country.length <= 3 ? country : `Region (${country})`;
 }

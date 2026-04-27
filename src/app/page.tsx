@@ -577,18 +577,18 @@ export default async function RootPage() {
         />
         <div className="max-w-site mx-auto grid lg:grid-cols-[1fr_1.15fr_1fr] gap-12 lg:gap-8 xl:gap-12 items-center">
           <div className="flex justify-center lg:justify-start order-2 lg:order-1">
-            <div className="relative w-[210px] sm:w-[232px] aspect-[9/19] rounded-[2.35rem] border-[3px] border-[#0a2540] bg-slate-900 shadow-[0_28px_64px_rgba(10,37,64,0.22)] overflow-hidden">
-              <div className="absolute top-0 inset-x-0 h-7 bg-slate-900 flex justify-center pt-2 z-10">
+            <div className="relative w-[210px] sm:w-[232px] aspect-[9/19] rounded-[2.35rem] border-[3px] border-[#0a2540] bg-white shadow-[0_28px_64px_rgba(10,37,64,0.22)] overflow-hidden">
+              {/* Screenshot fills the full phone frame */}
+              <Image
+                src="/homepage.PNG"
+                alt="LocalPro app — dashboard screenshot"
+                fill
+                className="object-cover object-top"
+                sizes="232px"
+              />
+              {/* Notch overlay sits on top */}
+              <div className="absolute top-0 inset-x-0 h-7 bg-slate-900/80 flex justify-center pt-2 z-10">
                 <div className="h-5 w-24 rounded-full bg-slate-800" />
-              </div>
-              <div className="absolute inset-x-3 top-10 bottom-3 rounded-xl overflow-hidden shadow-inner">
-                <Image
-                  src="/homepage.PNG"
-                  alt="LocalPro app — dashboard screenshot"
-                  fill
-                  className="object-cover object-top"
-                  sizes="232px"
-                />
               </div>
             </div>
           </div>

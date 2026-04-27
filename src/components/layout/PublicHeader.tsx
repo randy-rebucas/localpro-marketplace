@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState, useRef, useEffect } from "react";
 import { ChevronDown, Loader2, MapPin, Menu, Navigation, X } from "lucide-react";
 import { useVisitorLocation } from "@/hooks/useVisitorLocation";
+import LocationPickerInput from "@/components/layout/LocationPickerInput";
 
 function NavDropdown({
   label,
@@ -62,12 +63,12 @@ function DropdownLink({ href, children }: { href: string; children: React.ReactN
 export default function PublicHeader() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [locationOpen, setLocationOpen] = useState(false);
-  const [locationDraft, setLocationDraft] = useState("");
   const [locationBusy, setLocationBusy] = useState(false);
+  const [pendingLabel, setPendingLabel] = useState("");
   const { label: visitorLocation, setLocation, resetToAutomaticLocation, isManual } = useVisitorLocation();
 
   useEffect(() => {
-    if (locationOpen) setLocationDraft(visitorLocation);
+    if (locationOpen) setPendingLabel(visitorLocation);
   }, [locationOpen, visitorLocation]);
 
   useEffect(() => {
@@ -277,20 +278,20 @@ export default function PublicHeader() {
               </button>
             </div>
             <p className="text-sm text-slate-600 mb-3">
-              We use this for local job search and suggestions. Enter a city or area you want to use.
+              Search for your city or municipality in the Philippines.
             </p>
-            <label className="block text-xs font-medium text-slate-500 mb-1.5" htmlFor="visitor-location-input">
-              City or area
+            <label className="block text-xs font-medium text-slate-500 mb-1.5">
+              City or municipality
             </label>
-            <input
-              id="visitor-location-input"
-              type="text"
-              value={locationDraft}
-              onChange={(e) => setLocationDraft(e.target.value)}
-              placeholder="e.g. Manila, PH"
-              className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm text-[#0a2540] placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary mb-4"
-              autoComplete="address-level2"
-            />
+            <div className="mb-4">
+              <LocationPickerInput
+                initialValue={pendingLabel}
+                onSelect={(label) => {
+                  setLocation(label);
+                  setLocationOpen(false);
+                }}
+              />
+            </div>
             <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
               <button
                 type="button"
@@ -303,18 +304,7 @@ export default function PublicHeader() {
                 ) : (
                   <Navigation className="h-4 w-4" aria-hidden />
                 )}
-                Use automatic location
-              </button>
-              <button
-                type="button"
-                disabled={locationBusy}
-                onClick={() => {
-                  setLocation(locationDraft);
-                  setLocationOpen(false);
-                }}
-                className="inline-flex items-center justify-center rounded-lg bg-brand hover:bg-brand-600 text-white px-4 py-2.5 text-sm font-semibold disabled:opacity-50"
-              >
-                Save
+                Use GPS location
               </button>
             </div>
           </div>
