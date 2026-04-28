@@ -1,454 +1,443 @@
-import React from "react";
 import Link from "next/link";
-import { Metadata } from "next";
-import { Calendar, ArrowRight, Search, BookOpen, Tag, Users, Zap, Lightbulb } from "lucide-react";
+import type { Metadata } from "next";
+import { Search } from "lucide-react";
 import { blogRepository } from "@/repositories";
-import { generateBlogCollectionSchema } from "@/lib/blog-schema";
-import BlogHeroIllustration from "@/components/blog/BlogHeroIllustration";
 
 export const metadata: Metadata = {
   title: "Blog | LocalPro",
-  description: "Insights, updates, and stories from the LocalPro community",
+  description: "Practical tips, expert advice, and stories to help you make the most of local services.",
 };
 
-interface SearchParams {
-  page?: string;
-  search?: string;
-  category?: string;
-}
+/* ── helpers ──────────────────────────────────────────────── */
 
-const BLOG_CATEGORIES = [
-  { value: "news", label: "News", icon: "📰" },
-  { value: "tutorial", label: "Tutorials", icon: "📚" },
-  { value: "tips-tricks", label: "Tips & Tricks", icon: "✨" },
-  { value: "service-update", label: "Updates", icon: "🚀" },
-  { value: "industry-insights", label: "Insights", icon: "💡" },
-  { value: "announcement", label: "Announcements", icon: "📣" },
+const CATEGORIES = [
+  { value: "",                label: "All Topics"      },
+  { value: "for-homeowners",  label: "For Homeowners"  },
+  { value: "for-businesses",  label: "For Businesses"  },
+  { value: "for-pros",        label: "For Pros"        },
+  { value: "news-updates",    label: "News & Updates"  },
+  { value: "tips-guides",     label: "Tips & Guides"   },
 ];
 
-/**
- * Extract plain text preview from markdown content
- * Strips markdown syntax to show readable text on listing page
- */
-function getContentPreview(content: string, maxLength: number = 150): string {
-  if (!content) return "";
+const CATEGORY_LABEL: Record<string, string> = {
+  news:               "NEWS & UPDATES",
+  tutorial:           "TIPS & GUIDES",
+  "tips-tricks":      "TIPS & GUIDES",
+  "service-update":   "FOR BUSINESSES",
+  "industry-insights":"FOR PROS",
+  announcement:       "NEWS & UPDATES",
+  "for-homeowners":   "FOR HOMEOWNERS",
+  "for-businesses":   "FOR BUSINESSES",
+  "for-pros":         "FOR PROS",
+  "news-updates":     "NEWS & UPDATES",
+  "tips-guides":      "TIPS & GUIDES",
+};
 
-  let text = content
-    .replace(/^#+\s+/gm, "")
-    .replace(/\*\*(.+?)\*\*/g, "$1")
-    .replace(/__(.+?)__/g, "$1")
-    .replace(/\*(.+?)\*/g, "$1")
-    .replace(/_(.+?)_/g, "$1")
-    .replace(/`(.+?)`/g, "$1")
-    .replace(/```[\s\S]*?```/g, "")
-    .replace(/\[(.+?)\]\(.+?\)/g, "$1")
-    .replace(/!\[(.+?)\]\(.+?\)/g, "$1")
-    .replace(/^\s*>\s+/gm, "")
-    .replace(/^\s*[-*+]\s+/gm, "")
-    .replace(/^\s*[-_*]{3,}\s*$/gm, "")
-    .replace(/\n\n+/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
+const CATEGORY_COLOR: Record<string, string> = {
+  "FOR HOMEOWNERS":  "text-emerald-700",
+  "FOR BUSINESSES":  "text-blue-700",
+  "FOR PROS":        "text-violet-700",
+  "NEWS & UPDATES":  "text-amber-700",
+  "TIPS & GUIDES":   "text-rose-700",
+};
 
-  if (text.length > maxLength) {
-    text = text.substring(0, maxLength) + "...";
-  }
-
-  return text;
+function categoryLabel(cat?: string) {
+  if (!cat) return "GENERAL";
+  return CATEGORY_LABEL[cat] ?? cat.toUpperCase();
 }
 
-/**
- * Public Blog Listing Page
- *
- * Hero layout mirrors the homepage: text + search + categories on the left,
- * custom SVG illustration + floating mini-cards on the right.
- */
-export default async function BlogPage({
-  searchParams,
-}: {
-  searchParams: Promise<SearchParams>;
-}) {
-  const { page = "1", search = "", category = "" } = await searchParams;
-  const currentPage = Math.max(1, parseInt(page) || 1);
-  const limit = 12;
+function categoryColor(label: string) {
+  return CATEGORY_COLOR[label] ?? "text-primary";
+}
+
+function readTime(content: string) {
+  const words = content?.trim().split(/\s+/).length ?? 0;
+  return `${Math.max(1, Math.round(words / 200))} min read`;
+}
+
+function formatDate(d: Date | string) {
+  return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
+function excerpt(content: string, max = 140) {
+  const plain = content
+    .replace(/```[\s\S]*?```/g, "")
+    .replace(/[#*_`>\[\]!]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  return plain.length > max ? plain.slice(0, max) + "…" : plain;
+}
+
+function authorName(author: unknown) {
+  if (author && typeof author === "object" && "name" in author) return (author as { name: string }).name;
+  return "LocalPro Team";
+}
+
+/* ── article card image placeholder ──────────────────────── */
+const CARD_GRADIENTS = [
+  "from-emerald-100 to-emerald-200",
+  "from-blue-100 to-blue-200",
+  "from-violet-100 to-violet-200",
+  "from-amber-100 to-amber-200",
+  "from-rose-100 to-rose-200",
+  "from-cyan-100 to-cyan-200",
+];
+
+function PlaceholderImg({ idx, className }: { idx: number; className?: string }) {
+  const g = CARD_GRADIENTS[idx % CARD_GRADIENTS.length];
+  return (
+    <div className={`bg-gradient-to-br ${g} flex items-center justify-center ${className ?? ""}`}>
+      <svg viewBox="0 0 48 48" className="h-10 w-10 text-white/60" fill="currentColor">
+        <path d="M4 38l10-14 7 9 10-13L44 38H4z" opacity=".5" />
+        <circle cx="15" cy="16" r="4" opacity=".4" />
+      </svg>
+    </div>
+  );
+}
+
+/* ── page ─────────────────────────────────────────────────── */
+
+type SP = Promise<Record<string, string | string[] | undefined>>;
+
+export default async function BlogPage({ searchParams }: { searchParams: SP }) {
+  const params   = await searchParams;
+  const rawPage  = typeof params.page     === "string" ? params.page     : "1";
+  const search   = typeof params.search   === "string" ? params.search   : "";
+  const category = typeof params.category === "string" ? params.category : "";
+
+  const currentPage = Math.max(1, parseInt(rawPage) || 1);
+  const PER_PAGE    = 9;
+
+  let blogs: any[]  = [];
+  let total         = 0;
+  let totalPages    = 1;
 
   try {
-    const result = await blogRepository.findPublished(currentPage, limit, search);
-    const blogs = result.blogs || [];
-    const total = result.total || 0;
-    const totalPages = Math.ceil(total / limit);
+    const result = await blogRepository.findPublished({
+      page: currentPage,
+      limit: PER_PAGE,
+      search,
+      category,
+    });
+    blogs      = result.blogs ?? [];
+    total      = result.total ?? 0;
+    totalPages = Math.ceil(total / PER_PAGE) || 1;
+  } catch {
+    /* silently fall through to empty state */
+  }
 
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
-        {/* JSON-LD Schema */}
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify(
-              generateBlogCollectionSchema(
-                blogs,
-                category || undefined,
-                process.env.NEXT_PUBLIC_APP_URL || "https://localpro.com"
-              )
-            ),
-          }}
-        />
+  const featured       = currentPage === 1 && blogs.length > 0 ? blogs[0] : null;
+  const gridBlogs      = featured ? blogs.slice(1) : blogs;
+  const popularArticles = blogs.slice(0, 5);
 
-        {/* ── Hero Section ─────────────────────────────────────────────── */}
-        <div className="relative py-16 px-4 sm:px-6 lg:px-8 banner-gradient overflow-hidden">
-          {/* Background blobs */}
-          <div className="absolute -top-40 -right-40 w-80 h-80 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
+  const buildHref = (p: number, q = search, c = category) => {
+    const sp = new URLSearchParams();
+    if (p > 1)  sp.set("page", String(p));
+    if (q)      sp.set("search", q);
+    if (c)      sp.set("category", c);
+    const s = sp.toString();
+    return `/blog${s ? `?${s}` : ""}`;
+  };
 
-          <div className="relative max-w-site mx-auto">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
+  return (
+    <>
+      {/* ── Hero ─────────────────────────────────────────────── */}
+      <section className="bg-[#0c2340] overflow-hidden">
+        <div className="max-w-site mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-2 min-h-[280px]">
+          {/* Left */}
+          <div className="py-12 lg:py-16 flex flex-col justify-center">
+            <p className="text-[#22c55e] text-xs font-bold uppercase tracking-widest mb-3">Blog</p>
+            <h1 className="text-3xl sm:text-4xl lg:text-[2.65rem] font-extrabold text-white leading-tight mb-3">
+              Tips, Insights, and
+              <br />
+              Inspiration for You
+            </h1>
+            <p className="text-slate-300 text-sm sm:text-base max-w-sm leading-relaxed">
+              Practical tips, expert advice, and stories to help you make the most of local services.
+            </p>
+          </div>
 
-              {/* Left: text + search + categories */}
-              <div>
-                {/* Badge */}
-                <div className="mb-6">
-                  <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/80 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 backdrop-blur">
-                    <BookOpen className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                    <span className="text-sm font-bold text-slate-700 dark:text-slate-300">
-                      LocalPro Blog & Resources
-                    </span>
-                  </div>
-                </div>
-
-                {/* Title */}
-                <h1 className="text-4xl md:text-5xl lg:text-6xl font-black bg-gradient-to-r from-slate-900 via-blue-600 to-indigo-600 dark:from-white dark:via-blue-300 dark:to-indigo-300 bg-clip-text text-transparent mb-4 tracking-tight leading-tight">
-                  Insights &<br />Updates
-                </h1>
-                <p className="text-lg text-slate-600 dark:text-slate-400 max-w-lg mb-8 leading-relaxed">
-                  Best practices, industry trends, and success stories from the
-                  LocalPro community — all in one place.
-                </p>
-
-                {/* Search */}
-                <div className="max-w-md mb-6">
-                  <form method="get" className="relative">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
-                    <input
-                      type="text"
-                      name="search"
-                      defaultValue={search}
-                      placeholder="Search articles..."
-                      className="w-full px-6 py-4 pl-12 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-lg transition-all"
-                    />
-                  </form>
-                </div>
-
-                {/* Category pills */}
-                <div className="flex flex-wrap gap-2 mb-6">
-                  <Link
-                    href="/blog"
-                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all duration-200 ${
-                      !category
-                        ? "bg-blue-600 text-white shadow-md"
-                        : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700"
-                    }`}
-                  >
-                    All Articles
-                  </Link>
-                  {BLOG_CATEGORIES.map((cat) => (
-                    <Link
-                      key={cat.value}
-                      href={`/blog?category=${cat.value}`}
-                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all duration-200 ${
-                        category === cat.value
-                          ? "bg-blue-600 text-white shadow-md"
-                          : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700"
-                      }`}
-                    >
-                      <span>{cat.icon}</span>
-                      <span>{cat.label}</span>
-                    </Link>
-                  ))}
-                </div>
-
-                {/* Trust signals */}
-                <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-slate-400">
-                  <span className="flex items-center gap-1.5">
-                    <BookOpen className="h-3.5 w-3.5 text-blue-500" />
-                    {total > 0 ? `${total} Articles` : "Growing library"}
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    <Zap className="h-3.5 w-3.5 text-amber-500" />
-                    Weekly updates
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    <Lightbulb className="h-3.5 w-3.5 text-green-500" />
-                    Expert insights
-                  </span>
-                </div>
-              </div>
-
-              {/* Right: illustration + floating mini-cards */}
-              <div className="relative hidden lg:flex items-center justify-center">
-                <BlogHeroIllustration className="w-full max-w-[420px] h-auto drop-shadow-sm" />
-
-                {/* Floating card: latest article */}
-                <div className="absolute -bottom-2 -left-4 bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 px-4 py-3 flex items-center gap-3 animate-fade-in">
-                  <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center shrink-0">
-                    <BookOpen className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                  </div>
-                  <div>
-                    <p className="text-[11px] font-semibold text-slate-700 dark:text-slate-200">New Article</p>
-                    <p className="text-[10px] text-slate-400">Just published</p>
-                  </div>
-                </div>
-
-                {/* Floating card: readers */}
-                <div className="absolute top-4 -right-2 bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 px-4 py-3 flex items-center gap-2.5 animate-fade-in">
-                  <Users className="h-4 w-4 text-green-500 shrink-0" />
-                  <span className="text-xs font-bold text-slate-700 dark:text-slate-200">
-                    1,200+ readers
-                  </span>
-                </div>
-              </div>
-
-            </div>
+          {/* Right — hero stock image */}
+          <div className="hidden lg:block relative overflow-hidden">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="https://images.unsplash.com/photo-1600880292203-757bb62b4baf?auto=format&fit=crop&w=900&q=80"
+              alt=""
+              aria-hidden
+              className="absolute inset-0 h-full w-full object-cover object-center"
+            />
+            <div className="absolute inset-0 bg-[#0c2340]/30" />
           </div>
         </div>
+      </section>
 
-        {/* ── Article Content ───────────────────────────────────────────── */}
-        <div className="relative py-16 px-4 sm:px-6 lg:px-8">
-          <div className="max-w-site mx-auto">
-            {blogs.length === 0 ? (
-              <div className="text-center py-20">
-                <BookOpen className="w-16 h-16 text-slate-300 dark:text-slate-700 mx-auto mb-4" />
-                <p className="text-xl font-semibold text-slate-900 dark:text-white mb-2">
-                  {search || category ? "No articles found" : "No articles published yet"}
-                </p>
-                <p className="text-slate-600 dark:text-slate-400">
-                  {search ? "Try a different search term" : "Check back soon for new content"}
-                </p>
-              </div>
-            ) : (
-              <>
-                {/* Featured Article */}
-                {currentPage === 1 && blogs.length > 0 && (
-                  <div className="mb-20">
-                    <Link href={`/blog/${blogs[0].slug}`} className="group block">
-                      <div className="rounded-2xl overflow-hidden shadow-xl hover:shadow-2xl transition-shadow bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-0">
-                          {/* Image */}
-                          {blogs[0].featuredImage && (
-                            <div className="relative h-64 md:h-96 overflow-hidden bg-slate-600">
-                              <img
-                                src={blogs[0].featuredImage}
-                                alt={blogs[0].title}
-                                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                              />
-                              <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
-                            </div>
+      {/* ── Search + Category tabs ────────────────────────────── */}
+      <section className="border-b border-slate-200 bg-white sticky top-[5rem] z-30">
+        <div className="max-w-site mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+          {/* Search */}
+          <form method="get" action="/blog" className="relative shrink-0 w-full sm:w-56">
+            {category && <input type="hidden" name="category" value={category} />}
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+            <input
+              name="search"
+              defaultValue={search}
+              placeholder="Search articles..."
+              className="w-full pl-9 pr-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary bg-slate-50"
+            />
+          </form>
+
+          {/* Category pills */}
+          <div className="flex flex-wrap gap-2">
+            {CATEGORIES.map((cat) => {
+              const active = cat.value === category;
+              return (
+                <Link
+                  key={cat.value}
+                  href={buildHref(1, search, cat.value)}
+                  className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-colors whitespace-nowrap ${
+                    active
+                      ? "bg-primary text-white"
+                      : "bg-white border border-slate-200 text-slate-600 hover:border-primary/50 hover:text-primary"
+                  }`}
+                >
+                  {cat.label}
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Main ─────────────────────────────────────────────── */}
+      <div className="max-w-site mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        {blogs.length === 0 ? (
+          <div className="py-24 text-center">
+            <p className="text-2xl font-bold text-slate-800 mb-2">No articles found</p>
+            <p className="text-slate-500 text-sm">
+              {search ? `No results for "${search}" — try a different term.` : "Check back soon for new content."}
+            </p>
+            <Link href="/blog" className="mt-6 inline-block text-sm font-semibold text-primary hover:underline">
+              View all articles
+            </Link>
+          </div>
+        ) : (
+          <div className="flex gap-8 items-start">
+            {/* ── Articles column ── */}
+            <div className="flex-1 min-w-0">
+
+              {/* Featured */}
+              {featured && (
+                <Link href={`/blog/${featured.slug}`} className="group block mb-8">
+                  <div className="rounded-2xl overflow-hidden border border-slate-200 shadow-sm hover:shadow-md transition-shadow grid grid-cols-1 md:grid-cols-2">
+                    {/* Image */}
+                    <div className="relative h-56 md:h-auto overflow-hidden bg-slate-100">
+                      {featured.featuredImage ? (
+                        /* eslint-disable-next-line @next/next/no-img-element */
+                        <img src={featured.featuredImage} alt={featured.title} className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                      ) : (
+                        <PlaceholderImg idx={0} className="h-full w-full" />
+                      )}
+                      <span className="absolute top-3 left-3 bg-primary text-white text-[10px] font-bold px-2.5 py-1 rounded tracking-widest uppercase">
+                        Featured
+                      </span>
+                    </div>
+
+                    {/* Content */}
+                    <div className="p-7 flex flex-col justify-center bg-white">
+                      {featured.category && (
+                        <p className={`text-[11px] font-bold uppercase tracking-widest mb-2 ${categoryColor(categoryLabel(featured.category))}`}>
+                          {categoryLabel(featured.category)}
+                        </p>
+                      )}
+                      <h2 className="text-2xl font-extrabold text-slate-900 leading-snug mb-3 group-hover:text-primary transition-colors line-clamp-3">
+                        {featured.title}
+                      </h2>
+                      <p className="text-slate-500 text-sm leading-relaxed line-clamp-2 mb-5">
+                        {featured.excerpt || excerpt(featured.content ?? "")}
+                      </p>
+                      <div className="flex items-center gap-2 text-xs text-slate-400">
+                        <div className="h-6 w-6 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
+                          <span className="text-primary font-bold text-[10px]">LP</span>
+                        </div>
+                        <span className="font-medium text-slate-600">{authorName(featured.author)}</span>
+                        <span>•</span>
+                        <span>{formatDate(featured.publishedAt)}</span>
+                        <span>•</span>
+                        <span>{readTime(featured.content ?? "")}</span>
+                      </div>
+                    </div>
+                  </div>
+                </Link>
+              )}
+
+              {/* Article grid */}
+              {gridBlogs.length > 0 && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                  {gridBlogs.map((blog, idx) => {
+                    const label = categoryLabel(blog.category);
+                    return (
+                      <Link key={blog._id?.toString() ?? blog.slug} href={`/blog/${blog.slug}`} className="group flex flex-col rounded-xl overflow-hidden border border-slate-200 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all bg-white">
+                        {/* Card image */}
+                        <div className="relative h-44 overflow-hidden">
+                          {blog.featuredImage ? (
+                            /* eslint-disable-next-line @next/next/no-img-element */
+                            <img src={blog.featuredImage} alt={blog.title} className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                          ) : (
+                            <PlaceholderImg idx={idx + 1} className="h-full w-full" />
                           )}
+                        </div>
 
-                          {/* Content */}
-                          <div className="p-8 md:p-10 flex flex-col justify-center">
-                            <div className="flex items-center gap-3 mb-5">
-                              <span className="inline-flex items-center px-3 py-1.5 rounded-lg bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 text-xs font-bold uppercase tracking-wide">
-                                ✨ Featured
-                              </span>
-                              {blogs[0].category && (
-                                <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold">
-                                  <Tag className="w-3 h-3" />
-                                  {blogs[0].category}
-                                </span>
-                              )}
-                            </div>
-
-                            <h2 className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white mb-5 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-3 tracking-tight">
-                              {blogs[0].title}
-                            </h2>
-
-                            <p className="text-slate-600 dark:text-slate-300 text-lg mb-8 line-clamp-3 leading-relaxed">
-                              {blogs[0].excerpt || getContentPreview(blogs[0].content, 200)}
+                        {/* Card body */}
+                        <div className="p-4 flex flex-col flex-1">
+                          {blog.category && (
+                            <p className={`text-[10px] font-bold uppercase tracking-widest mb-1.5 ${categoryColor(label)}`}>
+                              {label}
                             </p>
-
-                            <div className="flex flex-col sm:flex-row sm:items-center gap-6 pt-8 border-t border-slate-200 dark:border-slate-700">
-                              <div className="flex items-center gap-4">
-                                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 shadow-md" />
-                                <div>
-                                  <p className="font-bold text-slate-900 dark:text-white">
-                                    {blogs[0].author &&
-                                    typeof blogs[0].author === "object" &&
-                                    "name" in blogs[0].author
-                                      ? blogs[0].author.name
-                                      : "LocalPro Editors"}
-                                  </p>
-                                  <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">
-                                    By Author
-                                  </p>
-                                </div>
-                              </div>
-
-                              <div className="flex items-center gap-6 sm:ml-auto text-slate-600 dark:text-slate-400 font-medium">
-                                <div className="flex items-center gap-2.5">
-                                  <Calendar className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />
-                                  <time>
-                                    {new Date(blogs[0].publishedAt!).toLocaleDateString("en-US", {
-                                      year: "numeric",
-                                      month: "long",
-                                      day: "numeric",
-                                    })}
-                                  </time>
-                                </div>
-                              </div>
+                          )}
+                          <h3 className="text-sm font-bold text-slate-900 leading-snug mb-2 line-clamp-3 group-hover:text-primary transition-colors flex-1">
+                            {blog.title}
+                          </h3>
+                          <p className="text-xs text-slate-500 line-clamp-2 mb-3">
+                            {blog.excerpt || excerpt(blog.content ?? "", 100)}
+                          </p>
+                          <div className="flex items-center gap-1.5 text-[11px] text-slate-400 mt-auto pt-3 border-t border-slate-100">
+                            <div className="h-5 w-5 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
+                              <span className="text-primary font-bold text-[8px]">LP</span>
                             </div>
-
-                            <div className="mt-8">
-                              <button className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold transition-all duration-200 group/btn shadow-md hover:shadow-lg">
-                                Read Article
-                                <ArrowRight className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform" />
-                              </button>
-                            </div>
+                            <span className="font-medium text-slate-500">{authorName(blog.author)}</span>
+                            <span>•</span>
+                            <span>{formatDate(blog.publishedAt)}</span>
+                            <span>•</span>
+                            <span>{readTime(blog.content ?? "")}</span>
                           </div>
                         </div>
-                      </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="mt-10 flex items-center justify-center gap-1.5 flex-wrap">
+                  {currentPage > 1 && (
+                    <Link href={buildHref(currentPage - 1)} className="flex items-center gap-1 px-3 py-2 rounded-lg border border-slate-200 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors">
+                      ‹ Prev
                     </Link>
+                  )}
+                  {(() => {
+                    const pages: (number | "…")[] = [];
+                    if (totalPages <= 7) {
+                      for (let i = 1; i <= totalPages; i++) pages.push(i);
+                    } else {
+                      pages.push(1, 2, 3);
+                      if (currentPage > 4) pages.push("…");
+                      if (currentPage > 3 && currentPage < totalPages - 2) pages.push(currentPage);
+                      if (currentPage < totalPages - 3) pages.push("…");
+                      pages.push(totalPages);
+                    }
+                    return pages.map((p, i) =>
+                      p === "…" ? (
+                        <span key={`ellipsis-${i}`} className="px-2 py-2 text-slate-400 text-sm select-none">…</span>
+                      ) : (
+                        <Link
+                          key={p}
+                          href={buildHref(p as number)}
+                          className={`w-9 h-9 flex items-center justify-center rounded-lg text-sm font-semibold transition-colors ${
+                            currentPage === p
+                              ? "bg-primary text-white shadow-sm"
+                              : "border border-slate-200 text-slate-600 hover:bg-slate-50"
+                          }`}
+                        >
+                          {p}
+                        </Link>
+                      )
+                    );
+                  })()}
+                  {currentPage < totalPages && (
+                    <Link href={buildHref(currentPage + 1)} className="flex items-center gap-1 px-3 py-2 rounded-lg border border-slate-200 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors">
+                      Next ›
+                    </Link>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* ── Sidebar ── */}
+            <aside className="hidden lg:flex flex-col gap-6 w-[290px] shrink-0">
+
+              {/* About */}
+              <div className="rounded-xl border border-slate-200 p-5">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                    <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5 text-primary" stroke="currentColor" strokeWidth="2">
+                      <path d="M12 20h9" strokeLinecap="round" />
+                      <path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z" strokeLinejoin="round" />
+                    </svg>
                   </div>
-                )}
+                  <h2 className="text-sm font-bold text-slate-900">About LocalPro Blog</h2>
+                </div>
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  We share helpful tips, inspiring stories, and important updates to help you make informed decisions and get the most out of LocalPro.
+                </p>
+              </div>
 
-                {/* Article Grid */}
-                {blogs.length > 1 && (
-                  <>
-                    <h3 className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white mb-12 tracking-tight">
-                      {currentPage === 1 ? "More Articles" : "Articles"}
-                    </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
-                      {blogs
-                        .slice(currentPage === 1 ? 1 : 0)
-                        .map((blog) => (
-                          <Link
-                            key={blog._id?.toString() || blog.slug}
-                            href={`/blog/${blog.slug}`}
-                            className="group h-full"
-                          >
-                            <div className="h-full rounded-xl overflow-hidden bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col">
-                              {blog.featuredImage && (
-                                <div className="relative h-44 overflow-hidden bg-slate-600">
-                                  <img
-                                    src={blog.featuredImage}
-                                    alt={blog.title}
-                                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                                  />
-                                </div>
-                              )}
+              {/* Popular Articles */}
+              {popularArticles.length > 0 && (
+                <div className="rounded-xl border border-slate-200 p-5">
+                  <h2 className="text-sm font-bold text-slate-900 mb-4">Popular Articles</h2>
+                  <ul className="space-y-4">
+                    {popularArticles.map((blog, idx) => (
+                      <li key={blog._id?.toString() ?? blog.slug}>
+                        <Link href={`/blog/${blog.slug}`} className="group flex gap-3 items-start">
+                          <div className="h-14 w-14 rounded-lg overflow-hidden shrink-0">
+                            {blog.featuredImage ? (
+                              /* eslint-disable-next-line @next/next/no-img-element */
+                              <img src={blog.featuredImage} alt="" className="h-full w-full object-cover" />
+                            ) : (
+                              <PlaceholderImg idx={idx} className="h-full w-full" />
+                            )}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-xs font-semibold text-slate-800 leading-snug line-clamp-2 group-hover:text-primary transition-colors">
+                              {blog.title}
+                            </p>
+                            <p className="text-[11px] text-slate-400 mt-0.5">{formatDate(blog.publishedAt)}</p>
+                          </div>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
 
-                              <div className="flex flex-col flex-1 p-5">
-                                {blog.category && (
-                                  <div className="mb-3">
-                                    <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 text-xs font-bold uppercase tracking-wide">
-                                      {blog.category}
-                                    </span>
-                                  </div>
-                                )}
-
-                                <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-3 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-2">
-                                  {blog.title}
-                                </h3>
-
-                                <p className="text-slate-600 dark:text-slate-400 text-sm mb-4 flex-1 line-clamp-2">
-                                  {blog.excerpt || getContentPreview(blog.content, 100)}
-                                </p>
-
-                                <div className="flex items-center justify-between pt-5 border-t border-slate-100 dark:border-slate-700">
-                                  <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400 font-medium">
-                                    <Calendar className="w-4 h-4 flex-shrink-0" />
-                                    <time>
-                                      {new Date(blog.publishedAt!).toLocaleDateString("en-US", {
-                                        month: "short",
-                                        day: "numeric",
-                                      })}
-                                    </time>
-                                  </div>
-                                  <ArrowRight className="w-4 h-4 text-blue-600 dark:text-blue-400 group-hover:translate-x-1 transition-transform" />
-                                </div>
-                              </div>
-                            </div>
-                          </Link>
-                        ))}
-                    </div>
-                  </>
-                )}
-
-                {/* Pagination */}
-                {totalPages > 1 && (
-                  <div className="flex items-center justify-center gap-2 flex-wrap">
-                    {currentPage > 1 && (
-                      <Link
-                        href={`/blog?page=${currentPage - 1}${search ? `&search=${encodeURIComponent(search)}` : ""}${category ? `&category=${category}` : ""}`}
-                        className="px-4 py-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white hover:bg-slate-50 dark:hover:bg-slate-700 font-medium transition-colors"
-                      >
-                        ← Previous
-                      </Link>
-                    )}
-
-                    <div className="flex gap-1">
-                      {Array.from({ length: Math.min(5, totalPages) }).map((_, i) => {
-                        const pageNum = i + 1;
-                        return (
-                          <Link
-                            key={pageNum}
-                            href={`/blog?page=${pageNum}${search ? `&search=${encodeURIComponent(search)}` : ""}${category ? `&category=${category}` : ""}`}
-                            className={`px-3 py-2 rounded-lg font-medium transition-all ${
-                              currentPage === pageNum
-                                ? "bg-blue-600 text-white shadow-md"
-                                : "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white hover:bg-slate-50 dark:hover:bg-slate-700"
-                            }`}
-                          >
-                            {pageNum}
-                          </Link>
-                        );
-                      })}
-                      {totalPages > 5 && <span className="px-3 py-2 text-slate-500">...</span>}
-                    </div>
-
-                    {currentPage < totalPages && (
-                      <Link
-                        href={`/blog?page=${currentPage + 1}${search ? `&search=${encodeURIComponent(search)}` : ""}${category ? `&category=${category}` : ""}`}
-                        className="px-4 py-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white hover:bg-slate-50 dark:hover:bg-slate-700 font-medium transition-colors"
-                      >
-                        Next →
-                      </Link>
-                    )}
-                  </div>
-                )}
-              </>
-            )}
+              {/* Newsletter */}
+              <div className="rounded-xl bg-[#0c2340] p-5">
+                <h2 className="text-sm font-bold text-white mb-1">Stay Updated</h2>
+                <p className="text-xs text-slate-300 leading-relaxed mb-4">
+                  Subscribe to get the latest tips, stories, and updates straight to your inbox.
+                </p>
+                <form action="/api/newsletter" method="post" className="space-y-2">
+                  <input
+                    type="email"
+                    name="email"
+                    placeholder="Enter your email address"
+                    required
+                    className="w-full px-3 py-2.5 rounded-lg text-xs bg-white/10 border border-white/20 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  />
+                  <button
+                    type="submit"
+                    className="w-full py-2.5 rounded-lg bg-primary hover:bg-primary-600 text-white text-xs font-bold transition-colors"
+                  >
+                    Subscribe
+                  </button>
+                </form>
+                <p className="text-[10px] text-slate-400 mt-2 text-center">No spam. Unsubscribe anytime.</p>
+              </div>
+            </aside>
           </div>
-        </div>
-
-        {/* ── CTA Section ───────────────────────────────────────────────── */}
-        <div className="px-4 sm:px-6 lg:px-8 py-24 bg-gradient-to-r from-blue-600 to-indigo-600">
-          <div className="max-w-4xl mx-auto text-center">
-            <h2 className="text-4xl md:text-5xl font-black text-white mb-6 tracking-tight">
-              Have a story to share?
-            </h2>
-            <p className="text-blue-100 text-xl mb-10 max-w-2xl mx-auto font-medium">
-              Join the LocalPro community and contribute your insights, tips, and success stories
-            </p>
-            <button className="inline-flex items-center gap-2 px-8 py-4 rounded-lg bg-white text-blue-600 font-bold hover:bg-blue-50 transition-all duration-200 shadow-lg hover:shadow-xl">
-              Get in Touch
-              <ArrowRight className="w-5 h-5" />
-            </button>
-          </div>
-        </div>
+        )}
       </div>
-    );
-  } catch (error) {
-    console.error("Error loading blog page:", error);
-    return (
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center px-4">
-        <div className="text-center">
-          <BookOpen className="w-16 h-16 text-slate-300 dark:text-slate-700 mx-auto mb-4" />
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
-            Error Loading Articles
-          </h1>
-          <p className="text-slate-600 dark:text-slate-400">Please try again later</p>
-        </div>
-      </div>
-    );
-  }
+    </>
+  );
 }

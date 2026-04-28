@@ -136,16 +136,15 @@ export default function PublicHeader() {
             <DropdownLink href="/jobs">Browse open jobs</DropdownLink>
             <DropdownLink href="/providers">Find professionals</DropdownLink>
             <DropdownLink href="/board">Public job board</DropdownLink>
-            <DropdownLink href="/register?role=client">Post a job</DropdownLink>
           </NavDropdown>
           <Link
-            href="/register?role=client"
+            href="/for-businesses"
             className="text-sm font-medium text-[#0a2540] hover:text-primary-700 px-2.5 py-2 rounded-lg hover:bg-slate-50/80 transition-colors"
           >
             For Businesses
           </Link>
           <Link
-            href="/register?role=provider"
+            href="/for-pros"
             className="text-sm font-medium text-[#0a2540] hover:text-primary-700 px-2.5 py-2 rounded-lg hover:bg-slate-50/80 transition-colors"
           >
             For Pros
@@ -160,7 +159,6 @@ export default function PublicHeader() {
             <DropdownLink href="/blog">Blog</DropdownLink>
             <DropdownLink href="/support">Help &amp; support</DropdownLink>
             <DropdownLink href="/peso-program">PESO program</DropdownLink>
-            <DropdownLink href="/refer">Refer &amp; earn</DropdownLink>
           </NavDropdown>
         </nav>
 

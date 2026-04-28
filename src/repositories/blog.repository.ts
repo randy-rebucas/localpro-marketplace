@@ -250,7 +250,7 @@ export class BlogRepository {
    * Find all published blogs for public listing
    */
   async findPublished(
-    pageOrFilters?: number | { page?: number; limit?: number; search?: string },
+    pageOrFilters?: number | { page?: number; limit?: number; search?: string; category?: string },
     limitOrUndefined?: number,
     search?: string
   ): Promise<{ blogs: BlogDocument[]; total: number; page: number; limit: number }> {
@@ -259,6 +259,7 @@ export class BlogRepository {
     let page = 1;
     let limit = 10;
     let searchQuery = "";
+    let categoryFilter = "";
 
     if (typeof pageOrFilters === "number") {
       // Called with (page, limit, search)
@@ -270,6 +271,7 @@ export class BlogRepository {
       page = pageOrFilters.page || 1;
       limit = pageOrFilters.limit || 10;
       searchQuery = pageOrFilters.search || "";
+      categoryFilter = pageOrFilters.category || "";
     }
 
     const skip = (page - 1) * limit;
@@ -279,6 +281,8 @@ export class BlogRepository {
       publishedAt: { $lte: new Date() }, // Only show published or past scheduled
       isDeleted: false,
     };
+
+    if (categoryFilter) query.category = categoryFilter;
 
     // Use full-text search if search query provided (requires text index)
     if (searchQuery) {
@@ -529,6 +533,40 @@ export class BlogRepository {
       .lean();
 
     return blogs as unknown as BlogDocument[];
+  }
+
+  /**
+   * Find the blog published immediately before the given publishedAt date
+   */
+  async findPrevious(publishedAt: Date, currentId: string): Promise<BlogDocument | null> {
+    await this.connect();
+    const blog = await Blog.findOne({
+      _id: { $ne: new Types.ObjectId(currentId) },
+      status: "published",
+      publishedAt: { $lt: publishedAt },
+      isDeleted: false,
+    })
+      .sort({ publishedAt: -1 })
+      .select("title slug featuredImage category publishedAt")
+      .lean();
+    return blog as unknown as BlogDocument | null;
+  }
+
+  /**
+   * Find the blog published immediately after the given publishedAt date
+   */
+  async findNext(publishedAt: Date, currentId: string): Promise<BlogDocument | null> {
+    await this.connect();
+    const blog = await Blog.findOne({
+      _id: { $ne: new Types.ObjectId(currentId) },
+      status: "published",
+      publishedAt: { $gt: publishedAt },
+      isDeleted: false,
+    })
+      .sort({ publishedAt: 1 })
+      .select("title slug featuredImage category publishedAt")
+      .lean();
+    return blog as unknown as BlogDocument | null;
   }
 
   /**

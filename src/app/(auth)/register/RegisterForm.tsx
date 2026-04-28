@@ -106,7 +106,7 @@ export default function RegisterForm({ defaultRole, refCode }: Props) {
                 : "border-transparent text-slate-500 hover:text-slate-700"
             }`}
           >
-            {role === "provider" ? "I'm a Pro" : "I'm a Business"}
+            {role === "provider" ? "I'm a Pro" : "I'm a Client"}
           </button>
         ))}
       </div>
