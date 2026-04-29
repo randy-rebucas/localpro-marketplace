@@ -2,11 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { isValidObjectId } from "mongoose";
 import { jobService } from "@/services";
-import { requireUser } from "@/lib/auth";
+import { requireUser, requireCsrfToken } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { ValidationError, ForbiddenError, UnprocessableError } from "@/lib/errors";
 import { getAppSetting } from "@/lib/appSettings";
 import { businessService } from "@/services/business.service";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 const JOB_STATUSES = [
   "pending_validation", "open", "assigned", "in_progress",
@@ -35,6 +36,10 @@ const CreateJobSchema = z.object({
 
 export const GET = withHandler(async (req: NextRequest) => {
   const user = await requireUser();
+
+  const rlGet = await checkRateLimit(`jobs-list:${user.userId}`, { windowMs: 60_000, max: 30 });
+  if (!rlGet.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+
   const { searchParams } = new URL(req.url);
 
   const rawStatus = searchParams.get("status");
@@ -78,6 +83,11 @@ export const GET = withHandler(async (req: NextRequest) => {
 
 export const POST = withHandler(async (req: NextRequest) => {
   const user = await requireUser();
+  requireCsrfToken(req, user);
+
+  const rlPost = await checkRateLimit(`jobs-create:${user.userId}`, { windowMs: 60_000, max: 10 });
+  if (!rlPost.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+
   if (user.role !== "client") throw new ForbiddenError("Only clients can post jobs");
 
   // ── Platform gate ────────────────────────────────────────────────────

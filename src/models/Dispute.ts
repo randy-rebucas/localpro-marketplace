@@ -44,7 +44,7 @@ const DisputeSchema = new Schema<DisputeDocument>(
     /** Who was charged the case handling fee at resolution: client, provider, or both. */
     losingParty: {
       type: String,
-      enum: ["client", "provider", "both", null],
+      enum: ["client", "provider", "both"],
       default: null,
     },
     /** Flat handling fee charged in PHP (0 if not charged). */

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { apiFetch } from "@/lib/fetchClient";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -965,7 +966,7 @@ export default function AppSettingsClient() {
       setSaving(true);
       setSaved(false);
       setError(null);
-      const res = await fetch("/api/admin/settings", {
+      const res = await apiFetch("/api/admin/settings", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(settings),

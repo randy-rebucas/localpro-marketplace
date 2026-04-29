@@ -2,12 +2,17 @@
  * KYC Compliance Agent
  * Automatically verifies provider credentials & background
  * POST /api/ai/agents/kyc-verifier
+ * Internal endpoint — requires INTERNAL_API_KEY bearer token
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
+import { withHandler } from "@/lib/utils";
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+function getClient(): OpenAI | null {
+  if (!process.env.OPENAI_API_KEY) return null;
+  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+}
 
 interface KYCInput {
   providerId: string;
@@ -25,25 +30,24 @@ interface KYCInput {
   };
 }
 
-interface KYCDecision {
-  status: "approved" | "pending_review" | "rejected";
-  confidence: number; // 0-100
-  riskLevel: "low" | "medium" | "high" | "critical";
-  reasons: string[];
-  credibilityScore: number; // 0-100
-  recommendedActions: string[];
-}
+export const POST = withHandler(async (req: NextRequest) => {
+  const internalKey = process.env.INTERNAL_API_KEY;
+  const auth = req.headers.get("authorization");
+  if (!internalKey || auth !== `Bearer ${internalKey}`) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
-export async function POST(req: NextRequest) {
-  try {
-    const input: KYCInput = await req.json();
+  const client = getClient();
+  if (!client) {
+    return NextResponse.json({ error: "AI service not configured" }, { status: 503 });
+  }
 
-    const prompt = `You are a KYC (Know Your Customer) compliance expert for a Philippine skilled trades marketplace.
+  const input: KYCInput = await req.json();
+
+  const prompt = `You are a KYC (Know Your Customer) compliance expert for a Philippine skilled trades marketplace.
 Analyze the following provider information and verify credentials:
 
 Provider Name: ${input.userData.name}
-Phone: ${input.userData.phone}
-Email: ${input.userData.email}
 Years in Business: ${input.userData.yearsInBusiness || "Unknown"}
 Previous Jobs: ${input.userData.previousJobs || 0}
 ID Document Status: ${input.documents.idDocument ? "Submitted" : "Missing"}
@@ -55,9 +59,8 @@ Fraud Indicators to Check:
 2. Mismatched information
 3. Missing required documents
 4. Credential inconsistencies
-5. High-risk industries (if applicable)
 
-Provide a JSON response with:
+Provide a JSON response:
 {
   "status": "approved|pending_review|rejected",
   "confidence": <0-100>,
@@ -73,41 +76,28 @@ Rules for auto-approval:
 - Credibility score >= 85
 - All required documents present`;
 
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        {
-          role: "system",
-          content: "You are a compliance expert. Always return valid JSON. Be strict but fair with KYC verification.",
-        },
-        {
-          role: "user",
-          content: prompt,
-        },
-      ],
-      temperature: 0.3, // Low temperature for consistency
-    });
+  const completion = await client.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [
+      { role: "system", content: "You are a compliance expert. Always return valid JSON. Be strict but fair with KYC verification." },
+      { role: "user", content: prompt },
+    ],
+    temperature: 0.3,
+  });
 
-    const content = completion.choices[0]?.message?.content || "{}";
-    const decision = JSON.parse(content) as KYCDecision;
+  const content = completion.choices[0]?.message?.content || "{}";
+  const decision = JSON.parse(content);
 
-    return NextResponse.json({
-      success: true,
-      decision: {
-        status: decision.status,
-        confidence: decision.confidence,
-        riskLevel: decision.riskLevel,
-        credibilityScore: decision.credibilityScore,
-        reasons: decision.reasons,
-        recommendedActions: decision.recommendedActions,
-        shouldAutoApprove: decision.confidence >= 90 && decision.riskLevel === "low" && decision.credibilityScore >= 85,
-      },
-    });
-  } catch (error) {
-    console.error("[KYC Agent] Error:", error);
-    return NextResponse.json(
-      { error: "KYC verification failed", details: String(error) },
-      { status: 500 }
-    );
-  }
-}
+  return NextResponse.json({
+    success: true,
+    decision: {
+      status: decision.status,
+      confidence: decision.confidence,
+      riskLevel: decision.riskLevel,
+      credibilityScore: decision.credibilityScore,
+      reasons: decision.reasons,
+      recommendedActions: decision.recommendedActions,
+      shouldAutoApprove: decision.confidence >= 90 && decision.riskLevel === "low" && decision.credibilityScore >= 85,
+    },
+  });
+});

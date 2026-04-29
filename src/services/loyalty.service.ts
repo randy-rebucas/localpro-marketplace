@@ -1,10 +1,10 @@
 import { loyaltyRepository } from "@/repositories/loyalty.repository";
+import { userRepository } from "@/repositories";
 import { TIER_MULTIPLIER } from "@/lib/loyalty";
 import { getAppSetting } from "@/lib/appSettings";
-import { UnprocessableError, NotFoundError } from "@/lib/errors";
+import { UnprocessableError } from "@/lib/errors";
 import type { LoyaltyAccountDocument } from "@/models/LoyaltyAccount";
 import { sendReferralBonusAwardedEmail } from "@/lib/email";
-import User from "@/models/User";
 
 export class LoyaltyService {
   /** Get or create the loyalty account for a user. */
@@ -26,8 +26,7 @@ export class LoyaltyService {
   async awardJobPoints(
     userId: string,
     jobAmount: number,
-    jobId: string,
-    _isFirstJobHint?: boolean   // deprecated param kept for backwards compat; ignored
+    jobId: string
   ): Promise<void> {
     // L19: Check idempotency — skip if points already awarded for this job
     const alreadyAwarded = await loyaltyRepository.hasLedgerEntry(userId, "earned_job", jobId);
@@ -103,8 +102,10 @@ export class LoyaltyService {
     // Notify referrer via email (non-blocking)
     void (async () => {
       try {
-        const referrer = await User.findById(referrerId).select("name email").lean();
-        const referee = await User.findById(refereeId).select("name").lean();
+        const [referrer, referee] = await Promise.all([
+          userRepository.findById(referrerId),
+          userRepository.findById(refereeId),
+        ]);
         if (referrer?.email) {
           await sendReferralBonusAwardedEmail(
             referrer.email,
@@ -151,17 +152,14 @@ export class LoyaltyService {
       throw new UnprocessableError("Points must be redeemed in multiples of 100");
     }
 
-    const account = await loyaltyRepository.findByUserId(userId);
-    if (!account) throw new NotFoundError("Loyalty account");
-    if (account.points < pointsToRedeem) {
-      throw new UnprocessableError("Insufficient points");
-    }
-
     const pesoPerHundred = await getAppSetting<number>("loyalty.pesoPerHundredPoints", 10) as number;
     const creditAmount = Math.floor(pointsToRedeem / 100) * pesoPerHundred;
 
-    const updated = await loyaltyRepository.deductPoints(userId, pointsToRedeem);
-    await loyaltyRepository.addCredits(userId, creditAmount);
+    // Single atomic write: deduct points and add credits together so there is
+    // no window where points are gone but credits have not yet been applied.
+    const updated = await loyaltyRepository.atomicRedeemPoints(userId, pointsToRedeem, creditAmount);
+    if (!updated) throw new UnprocessableError("Insufficient points");
+
     await loyaltyRepository.addLedgerEntry({
       userId,
       type: "redeemed",

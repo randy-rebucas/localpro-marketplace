@@ -5,6 +5,7 @@ import { withHandler } from "@/lib/utils";
 import { trainingCourseRepository } from "@/repositories/trainingCourse.repository";
 import { ValidationError, NotFoundError } from "@/lib/errors";
 
+import { checkRateLimit } from "@/lib/rateLimit";
 const LessonSchema = z.object({
   title:           z.string().min(1).max(200),
   content:         z.string().min(1),
@@ -34,6 +35,8 @@ export const GET = withHandler(async (
 ) => {
   const user = await requireUser();
   requireCapability(user, "manage_courses");
+  const rl = await checkRateLimit(`admin:${user.userId}`, { windowMs: 60_000, max: 200 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   const { id } = await params;
   const course = await trainingCourseRepository.findById(id);
@@ -52,6 +55,8 @@ export const PATCH = withHandler(async (
 ) => {
   const user = await requireUser();
   requireCapability(user, "manage_courses");
+  const rl = await checkRateLimit(`admin:${user.userId}`, { windowMs: 60_000, max: 200 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   const { id } = await params;
   const body = await req.json();
@@ -74,6 +79,8 @@ export const DELETE = withHandler(async (
 ) => {
   const user = await requireUser();
   requireCapability(user, "manage_courses");
+  const rl = await checkRateLimit(`admin:${user.userId}`, { windowMs: 60_000, max: 200 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   const { id } = await params;
 

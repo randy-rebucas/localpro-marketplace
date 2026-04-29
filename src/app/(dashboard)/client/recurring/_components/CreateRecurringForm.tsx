@@ -6,6 +6,7 @@ import { toast } from "react-hot-toast";
 import { UserCheck } from "lucide-react";
 import Card, { CardBody, CardFooter } from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
+import { apiFetch } from "@/lib/fetchClient";
 
 interface Props {
   onCreated: () => void;
@@ -61,7 +62,7 @@ export function CreateRecurringForm({ onCreated, onCancel }: Props) {
         maxRuns:             form.maxRuns ? parseInt(form.maxRuns, 10) : undefined,
         providerId:          form.providerId || undefined,
       };
-      const res = await fetch("/api/recurring", {
+      const res = await apiFetch("/api/recurring", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),

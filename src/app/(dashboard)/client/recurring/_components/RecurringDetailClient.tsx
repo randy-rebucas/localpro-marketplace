@@ -10,6 +10,7 @@ import {
 import toast from "react-hot-toast";
 import Card, { CardBody } from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
+import { apiFetch } from "@/lib/fetchClient";
 import type { IRecurringSchedule } from "@/types";
 import { STATUS_STYLE, FREQ_STYLE, CAT_ICONS, fmtDate, fmtDateTime } from "./constants";
 
@@ -60,7 +61,7 @@ export function RecurringDetailClient({ id }: { id: string }) {
     if (action === "cancel" && !confirm("Cancel this recurring schedule? This cannot be undone.")) return;
     try {
       setActing(action);
-      const res = await fetch(`/api/recurring/${id}`, {
+      const res = await apiFetch(`/api/recurring/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action }),

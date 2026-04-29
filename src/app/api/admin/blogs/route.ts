@@ -1,9 +1,10 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { withHandler, apiResponse } from "@/lib/utils";
 import { requireUser, requireCapability } from "@/lib/auth";
 import { blogRepository } from "@/repositories";
 
+import { checkRateLimit } from "@/lib/rateLimit";
 /**
  * Validation Schemas
  */
@@ -41,6 +42,8 @@ type BlogStatus = typeof VALID_BLOG_STATUSES[number];
 export const GET = withHandler(async (req: NextRequest) => {
   const user = await requireUser();
   requireCapability(user, "manage_blogs");
+  const rl = await checkRateLimit(`admin:${user.userId}`, { windowMs: 60_000, max: 200 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   const { searchParams } = new URL(req.url);
   const page   = Math.max(1, parseInt(searchParams.get("page")  ?? "1",  10));
@@ -69,6 +72,8 @@ export const GET = withHandler(async (req: NextRequest) => {
 export const POST = withHandler(async (req: NextRequest) => {
   const user = await requireUser();
   requireCapability(user, "manage_blogs");
+  const rl = await checkRateLimit(`admin:${user.userId}`, { windowMs: 60_000, max: 200 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   const body = await req.json();
   const validated = CreateBlogSchema.parse(body);

@@ -5,6 +5,7 @@ import { requireUser, requireRole, STAFF_CAPABILITIES } from "@/lib/auth";
 import { userRepository } from "@/repositories";
 import { ValidationError, ConflictError } from "@/lib/errors";
 
+import { checkRateLimit } from "@/lib/rateLimit";
 const CreateStaffSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters").max(100),
   email: z.string().email("Invalid email address"),
@@ -17,6 +18,8 @@ const CreateStaffSchema = z.object({
 export const GET = withHandler(async (_req: NextRequest) => {
   const user = await requireUser();
   requireRole(user, "admin");
+  const rl = await checkRateLimit(`admin:${user.userId}`, { windowMs: 60_000, max: 200 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   const staff = await userRepository.findAllStaff();
   const serialized = staff.map((s) => ({
@@ -34,6 +37,8 @@ export const GET = withHandler(async (_req: NextRequest) => {
 export const POST = withHandler(async (req: NextRequest) => {
   const user = await requireUser();
   requireRole(user, "admin");
+  const rl = await checkRateLimit(`admin:${user.userId}`, { windowMs: 60_000, max: 200 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   const body = await req.json();
   const parsed = CreateStaffSchema.safeParse(body);

@@ -64,7 +64,7 @@ export function signExtensionToken(userId: string, role: UserRole): string {
 }
 
 export function verifyAccessToken(token: string): TokenPayload {
-  return jwt.verify(token, ACCESS_SECRET) as TokenPayload;
+  return jwt.verify(token, ACCESS_SECRET, { algorithms: ["HS256"] }) as TokenPayload;
 }
 
 /**
@@ -72,12 +72,12 @@ export function verifyAccessToken(token: string): TokenPayload {
  * Rejects tokens that do not carry `aud: "extension"`.
  */
 export function verifyExtensionToken(token: string): TokenPayload {
-  const payload = jwt.verify(token, ACCESS_SECRET, { audience: "extension" }) as TokenPayload;
+  const payload = jwt.verify(token, ACCESS_SECRET, { algorithms: ["HS256"], audience: "extension" }) as TokenPayload;
   return payload;
 }
 
 export function verifyRefreshToken(token: string): { userId: string; jti?: string } {
-  return jwt.verify(token, REFRESH_SECRET) as { userId: string; jti?: string };
+  return jwt.verify(token, REFRESH_SECRET, { algorithms: ["HS256"] }) as { userId: string; jti?: string };
 }
 
 /**

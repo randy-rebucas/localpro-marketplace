@@ -4,8 +4,9 @@ import { adminService } from "@/services";
 import { requireUser, requireCapability, requireRole, STAFF_CAPABILITIES, revokeAllUserTokens } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { ValidationError, NotFoundError } from "@/lib/errors";
-import { userRepository } from "@/repositories";
+import { userRepository, activityRepository } from "@/repositories";
 
+import { checkRateLimit } from "@/lib/rateLimit";
 const UpdateUserSchema = z.object({
   isVerified:     z.boolean().optional(),
   isSuspended:    z.boolean().optional(),
@@ -21,6 +22,8 @@ export const GET = withHandler(async (
 ) => {
   const user = await requireUser();
   requireCapability(user, "manage_users");
+  const rl = await checkRateLimit(`admin:${user.userId}`, { windowMs: 60_000, max: 200 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   const { id } = await params;
   const target = await adminService.getUser(id);
@@ -33,6 +36,8 @@ export const PATCH = withHandler(async (
 ) => {
   const user = await requireUser();
   requireCapability(user, "manage_users");
+  const rl = await checkRateLimit(`admin:${user.userId}`, { windowMs: 60_000, max: 200 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   const { id } = await params;
   const body = await req.json();
@@ -52,12 +57,51 @@ export const PATCH = withHandler(async (
     if (invalid.length) throw new ValidationError(`Unknown capabilities: ${invalid.join(", ")}`);
   }
 
+  // Fetch target user before update (for audit metadata)
+  const targetBefore = await userRepository.findById(id);
+  if (!targetBefore) throw new NotFoundError("User");
+
   // Apply standard status updates through the service
   let result = await adminService.updateUser(user.userId, id, standardUpdates);
 
   // Immediately revoke all active tokens when suspending a user
   if (standardUpdates.isSuspended === true) {
     await revokeAllUserTokens(id);
+  }
+
+  // ── Audit log for status changes ────────────────────────────────────────
+  const ip = req.headers.get("x-real-ip") ?? req.headers.get("x-forwarded-for")?.split(",").at(-1)?.trim() ?? undefined;
+
+  if (standardUpdates.isSuspended === true) {
+    activityRepository.log({
+      userId: user.userId,
+      eventType: "account_suspended",
+      ipAddress: ip,
+      metadata: { targetUserId: id, targetEmail: targetBefore.email, targetRole: targetBefore.role },
+    }).catch(() => {});
+  } else if (standardUpdates.isSuspended === false) {
+    activityRepository.log({
+      userId: user.userId,
+      eventType: "account_unsuspended",
+      ipAddress: ip,
+      metadata: { targetUserId: id, targetEmail: targetBefore.email, targetRole: targetBefore.role },
+    }).catch(() => {});
+  }
+
+  if (standardUpdates.approvalStatus === "approved") {
+    activityRepository.log({
+      userId: user.userId,
+      eventType: "provider_approved",
+      ipAddress: ip,
+      metadata: { targetUserId: id, targetEmail: targetBefore.email },
+    }).catch(() => {});
+  } else if (standardUpdates.approvalStatus === "rejected") {
+    activityRepository.log({
+      userId: user.userId,
+      eventType: "provider_rejected",
+      ipAddress: ip,
+      metadata: { targetUserId: id, targetEmail: targetBefore.email },
+    }).catch(() => {});
   }
 
   // Apply role / capability updates directly
@@ -69,6 +113,15 @@ export const PATCH = withHandler(async (
     const updated = await userRepository.updateRoleAndCapabilities(id, roleUpdate);
     if (!updated) throw new NotFoundError("User");
     result = updated as never;
+
+    if (role !== undefined) {
+      activityRepository.log({
+        userId: user.userId,
+        eventType: "role_changed",
+        ipAddress: ip,
+        metadata: { targetUserId: id, targetEmail: targetBefore.email, fromRole: targetBefore.role, toRole: role },
+      }).catch(() => {});
+    }
   }
 
   return NextResponse.json(result);

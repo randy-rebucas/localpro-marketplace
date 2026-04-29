@@ -7,6 +7,7 @@ import { messageRepository, userRepository } from "@/repositories";
 import { pushSupportToAdmin, pushSupportToUser } from "@/lib/events";
 import Message from "@/models/Message";
 
+import { checkRateLimit } from "@/lib/rateLimit";
 const MAX_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
 const ALLOWED_MIME = [
   "image/jpeg", "image/png", "image/webp", "image/gif",
@@ -26,6 +27,8 @@ export const POST = withHandler(
   async (req: NextRequest, { params }: { params: Promise<{ userId: string }> }) => {
     const admin = await requireUser();
     requireCapability(admin, "manage_support");
+    const rl = await checkRateLimit(`admin:${admin.userId}`, { windowMs: 60_000, max: 200 });
+    if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
     const { userId } = await params;
 
     const targetUser = await userRepository.findById(userId);

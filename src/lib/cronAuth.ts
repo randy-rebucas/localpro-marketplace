@@ -1,4 +1,5 @@
 import type { NextRequest } from "next/server";
+import { timingSafeEqual } from "crypto";
 import { createLogger } from "@/lib/logger";
 
 const log = createLogger("cron");
@@ -18,5 +19,12 @@ if (!_secret && process.env.NODE_ENV === "production") {
 export function verifyCronSecret(req: NextRequest): boolean {
   const secret = process.env.CRON_SECRET ?? "";
   if (!secret) return false;
-  return req.headers.get("authorization") === `Bearer ${secret}`;
+  const provided = req.headers.get("authorization") ?? "";
+  const expected = `Bearer ${secret}`;
+  if (provided.length !== expected.length) return false;
+  try {
+    return timingSafeEqual(Buffer.from(provided), Buffer.from(expected));
+  } catch {
+    return false;
+  }
 }

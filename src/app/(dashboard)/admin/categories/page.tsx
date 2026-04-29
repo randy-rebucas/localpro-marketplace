@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { connectDB } from "@/lib/db";
 import Category from "@/models/Category";
@@ -12,7 +13,7 @@ export const metadata: Metadata = { title: "Categories" };
 
 export default async function AdminCategoriesPage() {
   const user = await getCurrentUser();
-  if (!user) return null;
+  if (!user || user.role !== "admin") redirect("/login");
 
   await connectDB();
 

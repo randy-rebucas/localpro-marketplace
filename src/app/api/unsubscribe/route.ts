@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyUnsubscribeToken } from "@/lib/unsubscribe";
+import { checkRateLimit } from "@/lib/rateLimit";
 import { connectDB } from "@/lib/db";
 import User from "@/models/User";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+
+function clientIp(req: NextRequest): string {
+  return req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+}
 
 /**
  * GET /api/unsubscribe?token=...
@@ -14,6 +19,12 @@ const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
  * No authentication required — must work directly from email links.
  */
 export async function GET(request: NextRequest) {
+  // Rate limit by IP: 10 attempts per minute
+  const rl = await checkRateLimit(`unsubscribe:${clientIp(request)}`, { windowMs: 60_000, max: 10 });
+  if (!rl.ok) {
+    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+  }
+
   const token = request.nextUrl.searchParams.get("token");
 
   if (!token) {
@@ -47,6 +58,12 @@ export async function GET(request: NextRequest) {
  * may POST to the unsubscribe URL with `List-Unsubscribe=One-Click-Unsubscribe`.
  */
 export async function POST(request: NextRequest) {
+  // Rate limit by IP: 10 attempts per minute
+  const rl = await checkRateLimit(`unsubscribe:${clientIp(request)}`, { windowMs: 60_000, max: 10 });
+  if (!rl.ok) {
+    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+  }
+
   const token = request.nextUrl.searchParams.get("token");
 
   if (!token) {

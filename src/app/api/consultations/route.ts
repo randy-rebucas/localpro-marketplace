@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { ConsultationService } from "@/services/consultation.service";
-import { requireUser } from "@/lib/auth";
+import { requireUser, requireCsrfToken } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
-import { ValidationError, ForbiddenError } from "@/lib/errors";
+import { ValidationError, assertObjectId } from "@/lib/errors";
+import { checkRateLimit } from "@/lib/rateLimit";
 import type { ConsultationStatus } from "@/types";
+
+const CLOUDINARY_URL_RE = /^https:\/\/res\.cloudinary\.com\//;
 
 const CreateConsultationSchema = z.object({
   targetUserId: z.string().min(1, "Target user ID is required"),
@@ -18,7 +21,10 @@ const CreateConsultationSchema = z.object({
       coordinates: z.tuple([z.number(), z.number()]),
     })
     .optional(),
-  photos: z.array(z.string().url()).min(1).max(5),
+  photos: z
+    .array(z.string().url().refine((u) => CLOUDINARY_URL_RE.test(u), "Invalid photo URL"))
+    .min(1)
+    .max(5),
 });
 
 const CONSULTATION_STATUSES = [
@@ -31,6 +37,10 @@ const CONSULTATION_STATUSES = [
 
 export const GET = withHandler(async (req: NextRequest) => {
   const user = await requireUser();
+
+  const rl = await checkRateLimit(`consultations-get:${user.userId}`, { windowMs: 60_000, max: 30 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+
   const { searchParams } = new URL(req.url);
 
   const rawStatus = searchParams.get("status");
@@ -39,21 +49,23 @@ export const GET = withHandler(async (req: NextRequest) => {
         (CONSULTATION_STATUSES as readonly string[]).includes(s)
       ) as ConsultationStatus[])
     : undefined;
-  const status =
-    statusValues && statusValues.length > 0 ? statusValues : undefined;
+  const status = statusValues && statusValues.length > 0 ? statusValues : undefined;
+
+  const page  = Math.max(1, parseInt(searchParams.get("page")  ?? "1",  10) || 1);
+  const limit = Math.min(50, Math.max(1, parseInt(searchParams.get("limit") ?? "20", 10) || 20));
 
   const consultationService = new ConsultationService();
-  const result = await consultationService.listConsultations(user, {
-    status,
-    page: Math.max(1, parseInt(searchParams.get("page") ?? "1", 10) || 1),
-    limit: Math.max(1, parseInt(searchParams.get("limit") ?? "20", 10) || 20),
-  });
+  const result = await consultationService.listConsultations(user, { status, page, limit });
 
   return NextResponse.json(result);
 });
 
 export const POST = withHandler(async (req: NextRequest) => {
   const user = await requireUser();
+  requireCsrfToken(req, user);
+
+  const rl = await checkRateLimit(`consultations-post:${user.userId}`, { windowMs: 60_000, max: 10 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   const body = await req.json();
   const parsed = CreateConsultationSchema.safeParse(body);
@@ -61,11 +73,10 @@ export const POST = withHandler(async (req: NextRequest) => {
     throw new ValidationError(parsed.error.errors[0].message);
   }
 
+  assertObjectId(parsed.data.targetUserId, "targetUserId");
+
   const consultationService = new ConsultationService();
-  const consultation = await consultationService.createConsultation(
-    user,
-    parsed.data
-  );
+  const consultation = await consultationService.createConsultation(user, parsed.data);
 
   return NextResponse.json(consultation, { status: 201 });
 });

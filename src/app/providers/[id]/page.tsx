@@ -4,7 +4,6 @@ import type { Metadata } from "next";
 import { providerProfileService } from "@/services";
 import { PublicProfileSkeleton } from "./_components/skeletons";
 import PublicProfileContent from "./_components/PublicProfileContent";
-import { ShareButtons } from "@/app/jobs/[id]/ShareButtons";
 import PublicHeader from "@/components/layout/PublicHeader";
 import PublicFooter from "@/components/layout/PublicFooter";
 
@@ -59,8 +58,6 @@ export default async function PublicProviderProfilePage({
   } catch { /* non-critical */ }
 
   const pageUrl = `${APP_URL}/providers/${id}`;
-  const shareText = `🔧 Check out ${providerName} on LocalPro — hire trusted local service professionals!`;
-
   // LocalBusiness / Person JSON-LD for Google rich results
   const providerSchema = {
     "@context": "https://schema.org",
@@ -90,18 +87,11 @@ export default async function PublicProviderProfilePage({
       {/* Header */}
       <PublicHeader />
 
-      <main className="max-w-5xl mx-auto px-4 py-5 sm:py-8">
+      <main className="max-w-site mx-auto px-4 py-6 sm:px-6 sm:py-8">
         <Suspense fallback={<PublicProfileSkeleton />}>
           <PublicProfileContent providerId={id} />
         </Suspense>
       </main>
-
-      {/* Share strip */}
-      <div className="border-t border-slate-200 bg-slate-900 py-5">
-        <div className="max-w-5xl mx-auto px-4">
-          <ShareButtons url={pageUrl} text={shareText} />
-        </div>
-      </div>
 
       {/* Footer */}
       <PublicFooter />

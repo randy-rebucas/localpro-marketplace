@@ -16,7 +16,7 @@ export interface BidCreditAccountDocument extends Omit<IBidCreditAccount, "_id">
 
 const BidCreditAccountSchema = new Schema<BidCreditAccountDocument>(
   {
-    providerId: { type: Schema.Types.ObjectId, ref: "User", required: true, unique: true, index: true },
+    providerId: { type: Schema.Types.ObjectId, ref: "User", required: true, unique: true },
     balance:    { type: Number, required: true, default: 0, min: 0 },
   },
   { timestamps: true }

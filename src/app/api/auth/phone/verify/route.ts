@@ -5,6 +5,7 @@ import User from "@/models/User";
 import { signAccessToken, signRefreshToken, setAuthCookies } from "@/lib/auth";
 import { checkOtp } from "@/lib/twilio";
 import { ValidationError, UnauthorizedError, NotFoundError } from "@/lib/errors";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 /**
  * POST /api/auth/phone/verify
@@ -13,6 +14,10 @@ import { ValidationError, UnauthorizedError, NotFoundError } from "@/lib/errors"
  * Validates the OTP via Twilio Verify and issues JWT cookies on success.
  */
 export const POST = withHandler(async (req: NextRequest) => {
+  const ip = req.headers.get("x-forwarded-for") ?? "unknown";
+  const rl = await checkRateLimit(`auth:phone-verify:${ip}`, { windowMs: 60 * 60_000, max: 10 }, { failOpen: false });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+
   const { phone, code } = await req.json();
 
   if (!phone) throw new ValidationError("Phone number is required");

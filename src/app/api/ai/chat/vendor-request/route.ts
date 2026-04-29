@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { connectDB } from "@/lib/db";
+import { withHandler } from "@/lib/utils";
 import { enqueueNotification } from "@/lib/notification-queue";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 // Enhancement library imports for analytics and proposal generation
 import {
@@ -427,19 +428,17 @@ function screenManagedServicesOpportunity(
   };
 }
 
-export async function POST(req: NextRequest) {
-  try {
-    await connectDB();
+export const POST = withHandler(async (req: NextRequest) => {
+  const ip = req.headers.get("x-forwarded-for") ?? "unknown";
+  const rl = await checkRateLimit(`vendor-request:${ip}`, { windowMs: 60_000, max: 5 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
-    const body = await req.json();
-    const { vendorData, userEmail } = body;
+  const body = await req.json();
+  const { vendorData, userEmail } = body;
 
-    if (!vendorData) {
-      return NextResponse.json(
-        { error: "Missing vendor data" },
-        { status: 400 }
-      );
-    }
+  if (!vendorData) {
+    return NextResponse.json({ error: "Missing vendor data" }, { status: 400 });
+  }
 
     // Extract inquiry details
     const { businessName, vendorType, inquiryType, message } = vendorData;
@@ -627,44 +626,17 @@ ${whiteLabelEligibility.isCandidate ? `\n📊 **Revenue Opportunity:** Based on 
 **Next Step:** Expect white-label partnership proposal within 4-6 hours`;
     }
 
-    // Enhanced response with opportunity flags
-    const response = {
-      message: `Thank you for your interest, ${businessName || "partner"}! We're excited to learn more about your business.
+  return NextResponse.json({
+    message: `Thank you for your interest, ${businessName || "partner"}! We're excited to learn more about your business.
 
 **Request ID:** ${requestId}
-**Lead Qualification Score:** ${leadScore.qualificationScore}/100 (${leadScore.priority} priority)
 **Estimated Response:** ${estimatedResponse}
 **Status:** Pending Review
 
 Our ${routeToTeam.replace(/_/g, " ")} team will be in touch shortly with tailored opportunities for your business.${followUpInfo}`,
-      requestId,
-      status: "received",
-      estimatedResponse,
-      nextAction: "VENDOR_REQUEST_SUBMITTED",
-      leadScore: {
-        score: leadScore.qualificationScore,
-        priority: leadScore.priority,
-        industry: detectedIndustry,
-        recommendedPlan: leadScore.recommendedPlan,
-        upsellOpportunities: leadScore.upsellOpportunities,
-      },
-      opportunityFlags: {
-        whiteLabelCandidate: whiteLabelEligibility.isCandidate,
-        whiteLabelRevenue: whiteLabelEligibility.estimatedValue,
-        pesoEligible: pesoEligibility.eligible,
-        managedServicesOpportunity:
-          managedServicesOpportunity.isBestFit,
-        managedServicesRevenue:
-          managedServicesOpportunity.estimatedRevenue,
-      },
-    };
-
-    return NextResponse.json(response);
-  } catch (error) {
-    console.error("[Vendor Request] Error:", error);
-    return NextResponse.json(
-      { error: "Failed to process vendor request" },
-      { status: 500 }
-    );
-  }
-}
+    requestId,
+    status: "received",
+    estimatedResponse,
+    nextAction: "VENDOR_REQUEST_SUBMITTED",
+  });
+});

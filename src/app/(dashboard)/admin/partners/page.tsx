@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
+import { apiFetch } from "@/lib/fetchClient";
 import {
   Building2,
   Users,
@@ -199,7 +200,7 @@ export default function AdminPartnersPage() {
     if (!confirm(`${next ? "Activate" : "Deactivate"} ${office.officeName}?`)) return;
     setTogglingId(office._id);
     try {
-      const res = await fetch(`/api/admin/partners/${office._id}`, {
+      const res = await apiFetch(`/api/admin/partners/${office._id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ isActive: next }),
@@ -256,7 +257,7 @@ export default function AdminPartnersPage() {
       const isEdit = modal?.mode === "edit";
       const url = isEdit ? `/api/admin/partners/${modal!.office!._id}` : "/api/admin/partners";
       const method = isEdit ? "PUT" : "POST";
-      const res = await fetch(url, {
+      const res = await apiFetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -283,7 +284,7 @@ export default function AdminPartnersPage() {
     if (!deleteTarget) return;
     setDeleting(true);
     try {
-      const res = await fetch(`/api/admin/partners/${deleteTarget._id}`, { method: "DELETE" });
+      const res = await apiFetch(`/api/admin/partners/${deleteTarget._id}`, { method: "DELETE" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Failed to delete");
       toast.success(`${deleteTarget.officeName} deleted`);

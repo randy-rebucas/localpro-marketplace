@@ -56,8 +56,8 @@ export async function uploadToCloudinary(
 export async function deleteFromCloudinary(publicId: string): Promise<void> {
   try {
     await cloudinary.uploader.destroy(publicId);
-  } catch {
-    // non-fatal — log in production if needed
+  } catch (err) {
+    console.error("[Cloudinary] deleteFromCloudinary failed:", err);
   }
 }
 

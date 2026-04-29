@@ -19,6 +19,7 @@ import { connectDB } from "@/lib/db";
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 
+import { checkRateLimit } from "@/lib/rateLimit";
 const RESETABLE_COLLECTIONS = [
   "users", "jobs", "quotes", "payments", "payouts", "transactions",
   "reviews", "disputes", "messages", "notifications", "activitylogs",
@@ -465,6 +466,8 @@ async function seedCourses(createdBy: string): Promise<{ inserted: number; skipp
 export const POST = withHandler(async (req: NextRequest) => {
   const user = await requireUser();
   requireRole(user, "admin");
+  const rl = await checkRateLimit(`admin:${user.userId}`, { windowMs: 60_000, max: 200 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   // Guard: must be explicitly enabled
   if (process.env.DB_RESET_ENABLED !== "true") {

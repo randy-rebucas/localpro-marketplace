@@ -52,7 +52,7 @@ export const announcementRepository = {
     }>
   ) {
     await connectDB();
-    return Announcement.findByIdAndUpdate(id, data, { new: true }).lean();
+    return Announcement.findByIdAndUpdate(id, { $set: data }, { new: true }).lean();
   },
 
   async delete(id: string) {

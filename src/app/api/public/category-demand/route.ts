@@ -5,13 +5,21 @@
  * Returns top categories by open job count for the demand bar widget.
  */
 
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
+import { checkRateLimit } from "@/lib/rateLimit";
 import Job from "@/models/Job";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+function clientIp(req: NextRequest): string {
+  return req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+}
+
+export async function GET(req: NextRequest) {
+  const rl = await checkRateLimit(`pub-cat-demand:${clientIp(req)}`, { windowMs: 60_000, max: 30 });
+  if (!rl.ok) return NextResponse.json([], { status: 429 });
+
   try {
     await connectDB();
 

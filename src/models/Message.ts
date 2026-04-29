@@ -22,6 +22,7 @@ const MessageSchema = new Schema<MessageDocument>(
 MessageSchema.index({ threadId: 1, createdAt: 1 });
 MessageSchema.index({ senderId: 1, receiverId: 1 });
 MessageSchema.index({ readAt: 1 }, { sparse: true });
+MessageSchema.index({ receiverId: 1, readAt: 1, createdAt: -1 });
 
 const Message: Model<MessageDocument> =
   mongoose.models.Message ?? mongoose.model<MessageDocument>("Message", MessageSchema);

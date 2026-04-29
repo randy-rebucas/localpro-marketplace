@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { getCurrentUser } from "@/lib/auth";
+import { redirect } from "next/navigation";
 import { CalendarContent } from "./_components/CalendarContent";
 import { CalendarSkeleton } from "./_components/skeletons";
 
@@ -8,7 +9,7 @@ export const metadata: Metadata = { title: "Calendar" };
 
 export default async function ProviderCalendarPage() {
   const user = await getCurrentUser();
-  if (!user) return null;
+  if (!user) redirect("/login");
 
   return (
     <div className="space-y-6">

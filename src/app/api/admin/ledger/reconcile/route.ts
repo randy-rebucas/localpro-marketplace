@@ -4,6 +4,7 @@ import { withHandler } from "@/lib/utils";
 import { ledgerRepository } from "@/repositories/ledger.repository";
 import { ACCOUNT_NAMES, ACCOUNT_TYPES, type AccountCode } from "@/models/LedgerEntry";
 
+import { checkRateLimit } from "@/lib/rateLimit";
 /**
  * GET /api/admin/ledger/reconcile
  *
@@ -16,6 +17,8 @@ import { ACCOUNT_NAMES, ACCOUNT_TYPES, type AccountCode } from "@/models/LedgerE
 export const GET = withHandler(async () => {
   const user = await requireUser();
   requireRole(user, "admin");
+  const rl = await checkRateLimit(`admin:${user.userId}`, { windowMs: 60_000, max: 200 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   const rows = await ledgerRepository.getTrialBalance();
 

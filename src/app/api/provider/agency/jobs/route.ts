@@ -3,18 +3,25 @@ import { requireUser } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { connectDB } from "@/lib/db";
 import { ForbiddenError, NotFoundError } from "@/lib/errors";
+import { checkRateLimit } from "@/lib/rateLimit";
 import AgencyProfile from "@/models/AgencyProfile";
 import Job from "@/models/Job";
+
+const ALLOWED_JOB_STATUSES = new Set(["open", "assigned", "in_progress", "completed", "cancelled", "disputed"]);
 
 /** GET /api/provider/agency/jobs?status=<>&search=<>&page=<>&limit=<> */
 export const GET = withHandler(async (req: NextRequest) => {
   const user = await requireUser();
   if (user.role !== "provider") throw new ForbiddenError();
 
+  const rl = await checkRateLimit(`agency-jobs:${user.userId}`, { windowMs: 60_000, max: 60 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+
   await connectDB();
 
   const { searchParams } = new URL(req.url);
-  const status   = searchParams.get("status") || "";
+  const rawStatus = searchParams.get("status") ?? "";
+  const status    = ALLOWED_JOB_STATUSES.has(rawStatus) ? rawStatus : "";
   const search   = searchParams.get("search")?.trim() || "";
   const page     = Math.max(1, Number(searchParams.get("page") || "1"));
   const limit    = Math.min(50, Math.max(1, Number(searchParams.get("limit") || "20")));

@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { getCurrentUser } from "@/lib/auth";
+import { redirect } from "next/navigation";
 import { MessageSquare, ImagePlus, History, Briefcase } from "lucide-react";
 import Link from "next/link";
 
@@ -22,7 +24,9 @@ const TIPS = [
   },
 ];
 
-export default function ClientMessagesPage() {
+export default async function ClientMessagesPage() {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
   return (
     <div className="flex-1 flex flex-col items-center justify-center gap-8 px-10 py-16 text-center select-none">
 

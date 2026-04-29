@@ -33,7 +33,7 @@ export class MessageRepository extends BaseRepository<MessageDocument> {
   async markThreadRead(threadId: string, userId: string): Promise<void> {
     await this.updateMany(
       { threadId, receiverId: userId, readAt: null } as never,
-      { readAt: new Date() }
+      { $set: { readAt: new Date() } }
     );
   }
 

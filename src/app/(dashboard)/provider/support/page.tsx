@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import { getCurrentUser } from "@/lib/auth";
+import { redirect } from "next/navigation";
 import { SupportClient } from "./_components/SupportClient";
 
 export const metadata: Metadata = { title: "Support" };
 
 export default async function ProviderSupportPage() {
   const user = await getCurrentUser();
-  if (!user) return null;
+  if (!user) redirect("/login");
 
   return (
     <div className="flex flex-col gap-6 h-[calc(100vh-8rem)]">

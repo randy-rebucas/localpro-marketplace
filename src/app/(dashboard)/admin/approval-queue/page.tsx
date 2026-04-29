@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { getCurrentUser } from "@/lib/auth";
 import { QueryProvider } from "@/components/providers/QueryProvider";
@@ -11,9 +12,7 @@ export const metadata: Metadata = { title: "AI Decision Queue" };
 
 export default async function ApprovalQueuePage() {
   const user = await getCurrentUser();
-  if (!user) {
-    throw new Error("Not authenticated");
-  }
+  if (!user) redirect("/login");
 
   return (
     <QueryProvider>

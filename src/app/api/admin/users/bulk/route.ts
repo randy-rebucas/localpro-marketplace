@@ -6,6 +6,7 @@ import { ValidationError, ForbiddenError } from "@/lib/errors";
 import { userRepository } from "@/repositories";
 import { cascadeService } from "@/services/cascade.service";
 
+import { checkRateLimit } from "@/lib/rateLimit";
 const BulkSchema = z.object({
   ids: z.array(z.string().min(1)).min(1).max(200),
   action: z.enum(["verify", "suspend", "delete", "approve"]),
@@ -14,6 +15,8 @@ const BulkSchema = z.object({
 export const POST = withHandler(async (req: NextRequest) => {
   const admin = await requireUser();
   requireCapability(admin, "manage_users");
+  const rl = await checkRateLimit(`admin:${admin.userId}`, { windowMs: 60_000, max: 200 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   const body = await req.json();
   const parsed = BulkSchema.safeParse(body);

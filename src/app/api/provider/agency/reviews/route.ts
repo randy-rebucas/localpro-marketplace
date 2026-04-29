@@ -3,7 +3,8 @@ import mongoose from "mongoose";
 import { requireUser } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { connectDB } from "@/lib/db";
-import { ForbiddenError } from "@/lib/errors";
+import { ForbiddenError, ValidationError } from "@/lib/errors";
+import { checkRateLimit } from "@/lib/rateLimit";
 import Review from "@/models/Review";
 import AgencyProfile from "@/models/AgencyProfile";
 
@@ -13,6 +14,9 @@ import AgencyProfile from "@/models/AgencyProfile";
 export const GET = withHandler(async (req: NextRequest) => {
   const user = await requireUser();
   if (user.role !== "provider") throw new ForbiddenError();
+
+  const rl = await checkRateLimit(`agency-reviews:${user.userId}`, { windowMs: 60_000, max: 60 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   await connectDB();
 
@@ -34,7 +38,13 @@ export const GET = withHandler(async (req: NextRequest) => {
   ];
 
   const baseFilter: Record<string, unknown> = { providerId: { $in: staffOids } };
-  if (ratingFilter) baseFilter.rating = parseInt(ratingFilter, 10);
+  if (ratingFilter !== null) {
+    const rating = parseInt(ratingFilter, 10);
+    if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
+      throw new ValidationError("rating must be between 1 and 5.");
+    }
+    baseFilter.rating = rating;
+  }
   if (searchParam)  baseFilter.feedback = { $regex: searchParam.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), $options: "i" };
 
   // Sort order

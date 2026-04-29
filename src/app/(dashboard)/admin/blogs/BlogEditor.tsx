@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useRef } from "react";
+import { apiFetch } from "@/lib/fetchClient";
 import { toast } from "react-hot-toast";
 import {
   X,
@@ -154,7 +155,7 @@ export default function BlogEditor({ blog, onClose, onSave }: BlogEditorProps) {
       const formData = new FormData();
       formData.append("file", file);
 
-      const res = await fetch("/api/admin/blogs/upload-image", {
+      const res = await apiFetch("/api/admin/blogs/upload-image", {
         method: "POST",
         body: formData,
       });
@@ -210,7 +211,7 @@ export default function BlogEditor({ blog, onClose, onSave }: BlogEditorProps) {
 
       if (blog?._id) {
         // Update existing
-        const res = await fetch(`/api/admin/blogs/${blog._id}`, {
+        const res = await apiFetch(`/api/admin/blogs/${blog._id}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
@@ -220,7 +221,7 @@ export default function BlogEditor({ blog, onClose, onSave }: BlogEditorProps) {
         onSave(saved.data);
       } else {
         // Create new
-        const res = await fetch("/api/admin/blogs", {
+        const res = await apiFetch("/api/admin/blogs", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),

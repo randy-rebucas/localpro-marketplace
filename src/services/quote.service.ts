@@ -327,7 +327,7 @@ export class QuoteService {
 
     await activityRepository.log({
       userId: user.userId,
-      eventType: "quote_revised" as never,
+      eventType: "quote_revised",
       jobId: q.jobId.toString(),
       metadata: { quoteId: q._id.toString(), revisionCount: (q.revisionCount ?? 0) + 1 },
     });

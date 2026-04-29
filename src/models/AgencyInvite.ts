@@ -53,7 +53,7 @@ const AgencyInviteSchema = new Schema<AgencyInviteDocument>(
       type: String,
       required: true,
       unique: true,
-      index: true,
+      select: false,
     },
     expiresAt: { type: Date, required: true },
     acceptedAt: { type: Date, default: null },

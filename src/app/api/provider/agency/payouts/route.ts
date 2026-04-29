@@ -4,8 +4,12 @@ import { requireUser } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { connectDB } from "@/lib/db";
 import { ForbiddenError, NotFoundError, ValidationError } from "@/lib/errors";
+import { checkRateLimit } from "@/lib/rateLimit";
 import AgencyProfile from "@/models/AgencyProfile";
 import AgencyStaffPayout from "@/models/AgencyStaffPayout";
+
+const OID_RE = /^[a-f\d]{24}$/i;
+const ALLOWED_PAYOUT_STATUSES = new Set(["pending", "paid"]);
 
 const PAGE_SIZE = 20;
 
@@ -20,12 +24,17 @@ export const GET = withHandler(async (req: NextRequest) => {
   const user = await requireUser();
   if (user.role !== "provider") throw new ForbiddenError();
 
+  const rl = await checkRateLimit(`agency-payouts:${user.userId}`, { windowMs: 60_000, max: 60 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+
   await connectDB();
 
   const { searchParams } = new URL(req.url);
   const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
-  const status = searchParams.get("status") ?? undefined;
-  const workerIdParam = searchParams.get("workerId") ?? undefined;
+  const rawStatus = searchParams.get("status") ?? "";
+  const status = ALLOWED_PAYOUT_STATUSES.has(rawStatus) ? rawStatus : undefined;
+  const rawWorkerId = searchParams.get("workerId") ?? "";
+  const workerIdParam = rawWorkerId && OID_RE.test(rawWorkerId) ? rawWorkerId : undefined;
 
   const agency = await AgencyProfile.findOne({ providerId: user.userId }, "_id staff").lean();
 
@@ -98,7 +107,12 @@ export const GET = withHandler(async (req: NextRequest) => {
 });
 
 const MarkPaidSchema = z.object({
-  payoutIds: z.array(z.string()).min(1).max(50),
+  payoutIds: z.array(z.string().regex(OID_RE, "Invalid payoutId")).min(1).max(50),
+});
+
+const UpdateShareSchema = z.object({
+  staffId:        z.string().regex(OID_RE, "Invalid staffId"),
+  workerSharePct: z.number().min(0).max(100),
 });
 
 /**
@@ -109,7 +123,7 @@ export const PATCH = withHandler(async (req: NextRequest) => {
   const user = await requireUser();
   if (user.role !== "provider") throw new ForbiddenError();
 
-  const body = await req.json();
+  const body = await req.json().catch(() => ({}));
   const parsed = MarkPaidSchema.safeParse(body);
   if (!parsed.success) throw new ValidationError(parsed.error.errors[0].message);
 
@@ -138,20 +152,11 @@ export const PUT = withHandler(async (req: NextRequest) => {
   const user = await requireUser();
   if (user.role !== "provider") throw new ForbiddenError();
 
-  const { staffId, workerSharePct } = (await req.json()) as {
-    staffId?: string;
-    workerSharePct?: number;
-  };
+  const body = await req.json().catch(() => ({}));
+  const parsed = UpdateShareSchema.safeParse(body);
+  if (!parsed.success) throw new ValidationError(parsed.error.errors[0].message);
 
-  if (!staffId) throw new ValidationError("staffId is required.");
-  if (
-    workerSharePct === undefined ||
-    typeof workerSharePct !== "number" ||
-    workerSharePct < 0 ||
-    workerSharePct > 100
-  ) {
-    throw new ValidationError("workerSharePct must be a number between 0 and 100.");
-  }
+  const { staffId, workerSharePct } = parsed.data;
 
   await connectDB();
 

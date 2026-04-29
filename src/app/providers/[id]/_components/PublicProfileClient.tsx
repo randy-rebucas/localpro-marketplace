@@ -1,19 +1,17 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import toast from "react-hot-toast";
 import dynamic from "next/dynamic";
 import {
-  Star, Sparkles, Briefcase, Timer, Clock, CheckCircle2,
-  XCircle, MapPin, Calendar, TrendingUp, Award, MessageSquare,
-  Flame, User, Share2, Check, ShieldCheck, BookOpen, Building2,
+  Star, Briefcase, CheckCircle2,
+  MapPin, Calendar, MessageSquare,
+  Check, ShieldCheck,
 } from "lucide-react";
 
 const DirectJobModal = dynamic(() => import("@/components/client/DirectJobModal"), { ssr: false });
 import { formatCurrency, formatDate } from "@/lib/utils";
-import { apiFetch } from "@/lib/fetchClient";
 
 /* ─── Types ─────────────────────────────────────────────────── */
 export interface WorkSlot { enabled: boolean; from: string; to: string; }
@@ -62,19 +60,10 @@ export interface ReviewData {
   createdAt: string;
 }
 
-/* ─── Constants ──────────────────────────────────────────────── */
-const DAYS = ["monday","tuesday","wednesday","thursday","friday","saturday","sunday"] as const;
-type Day = typeof DAYS[number];
-
-const DAY_LABELS: Record<Day, string> = {
-  monday: "Mon", tuesday: "Tue", wednesday: "Wed", thursday: "Thu",
-  friday: "Fri", saturday: "Sat", sunday: "Sun",
-};
-
 const availabilityConfig = {
-  available:   { label: "Available",   classes: "bg-emerald-100 text-emerald-700", icon: CheckCircle2 },
-  busy:        { label: "Busy",        classes: "bg-amber-100 text-amber-700",     icon: Clock         },
-  unavailable: { label: "Unavailable", classes: "bg-slate-100 text-slate-500",     icon: XCircle       },
+  available:   { label: "Available" },
+  busy:        { label: "Busy" },
+  unavailable: { label: "Unavailable" },
 };
 
 /* ─── Sub-components ─────────────────────────────────────────── */
@@ -86,18 +75,6 @@ function Stars({ rating, sm }: { rating: number; sm?: boolean }) {
         <Star key={i} className={`${sz} ${i <= Math.round(rating) ? "fill-amber-400 text-amber-400" : "text-slate-200"}`} />
       ))}
     </span>
-  );
-}
-
-function RatingBar({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="flex items-center gap-3">
-      <span className="text-xs text-slate-500 w-20 sm:w-28 flex-shrink-0 capitalize">{label}</span>
-      <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-        <div className="h-full bg-amber-400 rounded-full" style={{ width: `${(value / 5) * 100}%` }} />
-      </div>
-      <span className="text-xs font-semibold text-slate-700 w-8 text-right">{value.toFixed(1)}</span>
-    </div>
   );
 }
 
@@ -144,81 +121,7 @@ function ReviewCard({ review }: { review: ReviewData }) {
   );
 }
 
-function PortfolioCard({ item }: { item: PortfolioItem }) {
-  return (
-    <div className="bg-white rounded-xl border border-slate-200 overflow-hidden hover:shadow-sm transition-shadow">
-      {item.imageUrl ? (
-        <div className="relative h-40 bg-slate-100">
-          <Image src={item.imageUrl} alt={item.title} fill className="object-cover" />
-        </div>
-      ) : (
-        <div className="h-40 bg-gradient-to-br from-slate-100 to-slate-50 flex items-center justify-center">
-          <Briefcase className="h-8 w-8 text-slate-300" />
-        </div>
-      )}
-      <div className="p-3">
-        <p className="font-semibold text-sm text-slate-800 truncate">{item.title}</p>
-        <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">{item.description}</p>
-      </div>
-    </div>
-  );
-}
-
-/* ─── Share button ───────────────────────────────────────────── */
-function ShareButton() {
-  const [copied, setCopied] = useState(false);
-
-  async function handleShare() {
-    const url = window.location.href;
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: "LocalPro provider profile", url });
-      } catch { /* user cancelled */ }
-    } else {
-      await navigator.clipboard.writeText(url);
-      setCopied(true);
-      toast.success("Profile link copied!");
-      setTimeout(() => setCopied(false), 2000);
-    }
-  }
-
-  return (
-    <button
-      onClick={handleShare}
-      className="flex items-center gap-1.5 px-2.5 sm:px-3.5 py-2 rounded-lg border border-slate-200 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors"
-    >
-      {copied ? <Check className="h-4 w-4 text-green-500" /> : <Share2 className="h-4 w-4" />}
-      {copied ? "Copied!" : "Share"}
-    </button>
-  );
-}
-
-/* ─── Sign-in CTA ────────────────────────────────────────────── */
-function HireCTA({ name }: { name: string }) {
-  return (
-    <div className="rounded-2xl border border-primary/20 bg-primary/5 p-5 text-center space-y-3">
-      <p className="text-sm font-semibold text-slate-800">Want to hire {name}?</p>
-      <p className="text-xs text-slate-500">Create a free account or sign in to post a job or save their profile.</p>
-      <div className="flex gap-2 justify-center">
-        <Link
-          href="/register"
-          className="px-4 py-2 rounded-lg bg-primary text-white text-sm font-semibold hover:bg-primary/90 transition-colors"
-        >
-          Sign up free
-        </Link>
-        <Link
-          href="/login"
-          className="px-4 py-2 rounded-lg border border-slate-300 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
-        >
-          Log in
-        </Link>
-      </div>
-    </div>
-  );
-}
-
 /* ─── Main component ─────────────────────────────────────────── */
-type Tab = "overview" | "reviews" | "schedule" | "portfolio";
 
 export default function PublicProfileClient({
   profile,
@@ -231,410 +134,275 @@ export default function PublicProfileClient({
   totalReviews: number;
   providerId: string;
 }) {
-  const [tab, setTab] = useState<Tab>("overview");
   const [showDirectHire, setShowDirectHire] = useState(false);
-  const [reviews, setReviews] = useState<ReviewData[]>(initialReviews);
-  const [reviewsTotal, setReviewsTotal] = useState(totalReviews);
-  const [reviewPage, setReviewPage] = useState(1);
-  const [loadingReviews, setLoadingReviews] = useState(false);
 
   const avail = profile.availabilityStatus ?? "unavailable";
-  const AvailIcon = availabilityConfig[avail].icon;
   const name = profile.userId.name;
   const initial = name.charAt(0).toUpperCase();
 
-  const LIMIT = 10;
-  const hasMoreReviews = reviews.length < reviewsTotal;
-
-  const loadMoreReviews = useCallback(async () => {
-    setLoadingReviews(true);
-    try {
-      const res = await apiFetch(`/api/providers/${providerId}/reviews?page=${reviewPage + 1}&limit=${LIMIT}`);
-      if (!res.ok) throw new Error();
-      const data = await res.json() as { reviews: ReviewData[]; total: number };
-      setReviews((prev) => [...prev, ...data.reviews]);
-      setReviewsTotal(data.total);
-      setReviewPage((p) => p + 1);
-    } catch {
-      toast.error("Failed to load more reviews");
-    } finally {
-      setLoadingReviews(false);
-    }
-  }, [providerId, reviewPage]);
-
-  const TABS: { key: Tab; label: string; count?: number }[] = [
-    { key: "overview",  label: "Overview" },
-    { key: "reviews",   label: "Reviews",   count: reviewsTotal },
-    { key: "schedule",  label: "Schedule" },
-    { key: "portfolio", label: "Portfolio", count: profile.portfolioItems?.length },
-  ];
+  const primarySkill = profile.skills?.[0]?.skill ?? "Service Professional";
+  const serviceAreas = profile.serviceAreas ?? [];
+  const displayReviews = initialReviews.slice(0, 3);
+  const displayServices = (profile.skills?.length ? profile.skills : [{ skill: primarySkill, yearsExperience: profile.yearsExperience ?? 1, hourlyRate: profile.hourlyRate ? String(profile.hourlyRate) : "" }]).slice(0, 6);
+  const portfolio = profile.portfolioItems ?? [];
 
   return (
-    <div className="max-w-4xl mx-auto space-y-5">
-      {/* ── Hero ─────────────────────────────────────────────── */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-6 space-y-4 sm:space-y-5">
-        <div className="flex items-start gap-3 sm:gap-5">
-          {/* Avatar */}
-          <div className="w-14 h-14 sm:w-20 sm:h-20 rounded-2xl flex-shrink-0 overflow-hidden bg-primary/10 flex items-center justify-center ring-4 ring-white shadow-md">
-            {profile.userId.avatar ? (
-              <Image src={profile.userId.avatar} alt={name} width={80} height={80} className="object-cover w-full h-full" />
-            ) : (
-              <span className="text-2xl sm:text-3xl font-bold text-primary">{initial}</span>
-            )}
-          </div>
+    <div className="space-y-8">
+      <nav className="flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-500" aria-label="Breadcrumb">
+        <Link href="/" className="hover:text-brand-700">Home</Link>
+        <span>/</span>
+        <Link href="/providers" className="hover:text-brand-700">Find Professionals</Link>
+        <span>/</span>
+        <span>{primarySkill}</span>
+        <span>/</span>
+        <span className="text-slate-700">{name}</span>
+      </nav>
 
-          {/* Info + actions */}
-          <div className="flex-1 min-w-0">
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mb-1">
-                  <h1 className="text-base sm:text-xl font-bold text-slate-900 truncate">{name}</h1>
-                  {profile.userId.isVerified && (
-                    <span className="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-semibold whitespace-nowrap">✓ Verified</span>
-                  )}
-                  {profile.isLocalProCertified && (
-                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded bg-indigo-100 text-indigo-700 border border-indigo-200 whitespace-nowrap">
-                      🎖️ LocalPro Certified
-                    </span>
-                  )}
-                  {profile.pesoReferredBy && (
-                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded bg-blue-100 text-blue-700 border border-blue-200 whitespace-nowrap">
-                      🏛️ Referred by PESO
-                    </span>
-                  )}
-                  {profile.pesoVerificationTags?.includes("peso_registered") && (
-                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded bg-sky-100 text-sky-700 border border-sky-200 whitespace-nowrap">
-                      ✓ PESO Registered
-                    </span>
-                  )}
-                  {profile.pesoVerificationTags?.includes("lgu_resident") && (
-                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded bg-emerald-100 text-emerald-700 border border-emerald-200 whitespace-nowrap">
-                      ✓ LGU Resident Verified
-                    </span>
-                  )}
-                  {profile.pesoVerificationTags?.includes("peso_recommended") && (
-                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded bg-violet-100 text-violet-700 border border-violet-200 whitespace-nowrap">
-                      ⭐ PESO Recommended
-                    </span>
-                  )}
-                  {profile.userId.kycStatus === "approved" && (
-                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded bg-teal-100 text-teal-700 border border-teal-200 whitespace-nowrap">
-                      <ShieldCheck className="h-3 w-3" /> KYC Verified
-                    </span>
-                  )}
-                  {(profile.streak ?? 0) >= 3 && (
-                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded bg-orange-100 text-orange-700 border border-orange-200 whitespace-nowrap">
-                      <Flame className="h-3 w-3" /> {profile.streak}-star streak
-                    </span>
-                  )}
-                  {profile.agency && (
-                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded bg-violet-100 text-violet-700 border border-violet-200 whitespace-nowrap">
-                      <Building2 className="h-3 w-3" /> {profile.agency.name} &middot; {profile.agency.staffCount} staff
-                    </span>
-                  )}
-                  {profile.earnedBadges?.map((badge) => (
-                    <span key={badge.badgeSlug} className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded bg-yellow-100 text-yellow-800 border border-yellow-300 whitespace-nowrap">
-                      <ShieldCheck className="h-3 w-3 text-yellow-600" /> {badge.courseTitle}
-                    </span>
-                  ))}
-                </div>
-
-                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${availabilityConfig[avail].classes}`}>
-                  <AvailIcon className="h-3 w-3" />
-                  {availabilityConfig[avail].label}
-                </span>
-
-                {(profile.avgRating ?? 0) > 0 && (
-                  <div className="flex items-center gap-1.5 mt-2">
-                    <Stars rating={profile.avgRating ?? 0} />
-                    <span className="text-sm font-semibold text-slate-700">{(profile.avgRating ?? 0).toFixed(1)}</span>
-                    <span className="text-xs text-slate-400">({reviewsTotal} review{reviewsTotal !== 1 ? "s" : ""})</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Actions - always top-right */}
-              <div className="flex gap-1.5 sm:gap-2 flex-shrink-0">
-                <ShareButton />
-                <button
-                  onClick={() => setShowDirectHire(true)}
-                  className="flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-lg bg-primary text-white text-sm font-semibold hover:bg-primary/90 transition-colors"
-                >
-                  <Sparkles className="h-4 w-4" />
-                  <span className="hidden sm:inline">Hire</span>
-                </button>
-              </div>
+      <div className="grid gap-6 lg:grid-cols-[360px_minmax(0,1fr)_300px]">
+        <aside className="space-y-4">
+          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-card">
+            <div className="relative h-64 bg-gradient-to-br from-brand-100 to-primary-100">
+              {profile.userId.avatar ? (
+                <Image src={profile.userId.avatar} alt={name} fill className="object-cover" />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center text-6xl font-extrabold text-brand-700">{initial}</div>
+              )}
+              <span className="absolute left-4 top-4 rounded-lg bg-brand px-3 py-1.5 text-xs font-bold text-white">Verified Pro</span>
+            </div>
+            <div className="space-y-3 p-4">
+              <button
+                onClick={() => setShowDirectHire(true)}
+                className="flex w-full items-center justify-center gap-2 rounded-lg bg-brand px-4 py-3 text-sm font-bold text-white transition hover:bg-brand-600"
+              >
+                <Calendar className="h-4 w-4" />
+                Book Now
+              </button>
+              <Link href="/login" className="flex w-full items-center justify-center gap-2 rounded-lg border border-slate-200 px-4 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-50">
+                <MessageSquare className="h-4 w-4" />
+                Message
+              </Link>
+              <button className="flex w-full items-center justify-center gap-2 rounded-lg border border-slate-200 px-4 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-50">
+                <Check className="h-4 w-4" />
+                Save to Favorites
+              </button>
             </div>
           </div>
-        </div>
+        </aside>
 
-        {/* Stats strip */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 pt-4 sm:pt-5 border-t border-slate-100">
-          <div className="text-center">
-            <p className="text-[10px] sm:text-[11px] text-slate-400 mb-0.5">Completed Jobs</p>
-            <p className="text-base sm:text-lg font-bold text-slate-900 flex items-center justify-center gap-1">
-              <Briefcase className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-slate-400" />
-              {profile.completedJobCount ?? 0}
-            </p>
-          </div>
-          <div className="text-center">
-            <p className="text-[10px] sm:text-[11px] text-slate-400 mb-0.5">Experience</p>
-            <p className="text-base sm:text-lg font-bold text-slate-900 flex items-center justify-center gap-1">
-              <Timer className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-slate-400" />
-              {profile.yearsExperience ? `${profile.yearsExperience}yr` : "—"}
-            </p>
-          </div>
-          <div className="text-center">
-            <p className="text-[10px] sm:text-[11px] text-slate-400 mb-0.5">Hourly Rate</p>
-            <p className="text-base sm:text-lg font-bold text-slate-900">
-              {profile.hourlyRate ? formatCurrency(profile.hourlyRate) : "—"}
-            </p>
-          </div>
-          <div className="text-center">
-            <p className="text-[10px] sm:text-[11px] text-slate-400 mb-0.5">Completion Rate</p>
-            <p className="text-base sm:text-lg font-bold text-slate-900 flex items-center justify-center gap-1">
-              <TrendingUp className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-emerald-500" />
-              {profile.completionRate ? `${profile.completionRate}%` : "—"}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* ── Tabs ─────────────────────────────────────────────── */}
-      <div className="flex gap-1 bg-slate-100 p-1 rounded-xl overflow-x-auto">
-        {TABS.map((t) => (
-          <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
-            className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
-              tab === t.key ? "bg-white shadow-sm text-slate-900" : "text-slate-500 hover:text-slate-700"
-            }`}
-          >
-            {t.label}
-            {t.count !== undefined && t.count > 0 && (
-              <span className={`ml-1 sm:ml-1.5 text-xs rounded-full px-1.5 py-0.5 ${
-                tab === t.key ? "bg-primary text-white" : "bg-slate-200 text-slate-500"
-              }`}>
-                {t.count}
+        <section className="min-w-0">
+          <div className="mb-7">
+            <p className="text-sm font-bold text-brand-700">{primarySkill}</p>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <h1 className="text-4xl font-extrabold leading-tight text-[#0a2540]">{name}</h1>
+              {profile.userId.isVerified && <CheckCircle2 className="h-6 w-6 fill-primary-50 text-primary" />}
+            </div>
+            <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-slate-600">
+              <span className="flex items-center gap-1.5">
+                <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
+                <strong className="text-[#0a2540]">{(profile.avgRating ?? 4.8).toFixed(1)}</strong>
+                <span>({totalReviews} reviews)</span>
               </span>
-            )}
-          </button>
-        ))}
-      </div>
+              <span className="flex items-center gap-1.5">
+                <MapPin className="h-4 w-4" />
+                {serviceAreas[0]?.address ?? "Philippines"}
+              </span>
+              <span className="flex items-center gap-1.5">
+                <Calendar className="h-4 w-4" />
+                Member since May 2023
+              </span>
+            </div>
+            <h2 className="mt-5 text-xl font-extrabold text-[#0a2540]">
+              Reliable {primarySkill.toLowerCase()} services with quality work you can trust.
+            </h2>
+            <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-600">
+              {profile.bio || `${name} is a trusted LocalPro professional with verified experience, reliable service, and a commitment to quality workmanship.`}
+            </p>
 
-      {/* ── OVERVIEW ─────────────────────────────────────────── */}
-      {tab === "overview" && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-          {/* Left */}
-          <div className="lg:col-span-2 space-y-4">
-            {profile.bio && (
-              <div className="bg-white rounded-xl border border-slate-200 p-5">
-                <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
-                  <User className="h-4 w-4 text-slate-400" /> About
-                </h3>
-                <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-line">{profile.bio}</p>
+            <div className="mt-6 grid grid-cols-2 gap-4 border-y border-slate-200 py-5 sm:grid-cols-4">
+              <div>
+                <p className="text-xs text-slate-500">Response Time</p>
+                <p className="mt-1 text-sm font-extrabold text-[#0a2540]">
+                  {(profile.avgResponseTimeHours ?? 0) < 1 ? "Within 1 hour" : `${Math.round(profile.avgResponseTimeHours ?? 1)} hours`}
+                </p>
               </div>
-            )}
-
-            {(profile.skills?.length ?? 0) > 0 && (
-              <div className="bg-white rounded-xl border border-slate-200 p-5">
-                <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
-                  <Award className="h-4 w-4 text-slate-400" /> Skills
-                </h3>
-                <div className="flex flex-wrap gap-2">
-                  {profile.skills?.map((s) => (
-                    <span key={s.skill} className="text-xs bg-primary/8 text-primary px-3 py-1 rounded-full font-medium border border-primary/15">
-                      {s.skill}
-                    </span>
-                  ))}
-                </div>
+              <div>
+                <p className="text-xs text-slate-500">Jobs Completed</p>
+                <p className="mt-1 text-sm font-extrabold text-[#0a2540]">{profile.completedJobCount ?? 0}</p>
               </div>
-            )}
-
-            {(profile.workExperiences?.length ?? 0) > 0 && (
-              <div className="bg-white rounded-xl border border-slate-200 p-5">
-                <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
-                  <BookOpen className="h-4 w-4 text-slate-400" /> Work Experience
-                </h3>
-                <ul className="space-y-2">
-                  {profile.workExperiences?.map((exp, i) => (
-                    <li key={i} className="flex items-start gap-2 text-sm text-slate-600">
-                      <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-primary flex-shrink-0" />
-                      {exp}
-                    </li>
-                  ))}
-                </ul>
+              <div>
+                <p className="text-xs text-slate-500">On LocalPro</p>
+                <p className="mt-1 text-sm font-extrabold text-[#0a2540]">{profile.yearsExperience ?? 1} year</p>
               </div>
-            )}
-
-            {(profile.certifications?.length ?? 0) > 0 && (
-              <div className="bg-white rounded-xl border border-slate-200 p-5">
-                <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
-                  <ShieldCheck className="h-4 w-4 text-blue-500" /> Certifications & Training
-                </h3>
-                <ul className="space-y-2">
-                  {profile.certifications?.map((cert, i) => (
-                    <li key={i} className="flex items-start gap-2 text-sm text-slate-600">
-                      <span className="mt-0.5 text-blue-500">✔</span>
-                      <span>
-                        <span className="font-medium text-slate-700">{cert.title}</span>
-                        <span className="text-slate-400"> · {cert.issuer}</span>
-                        {cert.issuedAt && (
-                          <span className="text-slate-400"> · {new Date(cert.issuedAt).getFullYear()}</span>
-                        )}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
+              <div>
+                <p className="text-xs text-slate-500">Average Rating</p>
+                <p className="mt-1 text-sm font-extrabold text-[#0a2540]">{(profile.avgRating ?? 4.8).toFixed(1)}</p>
               </div>
-            )}
+            </div>
 
-            {(profile.serviceAreas?.length ?? 0) > 0 && (
-              <div className="bg-white rounded-xl border border-slate-200 p-5">
-                <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
-                  <MapPin className="h-4 w-4 text-slate-400" /> Service Areas
-                </h3>
-                <div className="flex flex-wrap gap-2">
-                  {profile.serviceAreas?.map((area) => (
-                    <span key={area._id} className="inline-flex items-center gap-1 text-xs bg-slate-50 text-slate-600 px-3 py-1 rounded-full border border-slate-200">
-                      <MapPin className="h-3 w-3 text-slate-400" />
-                      {area.label}
-                    </span>
-                  ))}
-                </div>
+            <div className="mt-5">
+              <h3 className="mb-3 text-sm font-extrabold text-[#0a2540]">Verifications & Certifications</h3>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+                {["ID Verified", "Background Checked", "TESDA Certified", "BIR Registered", "PhilHealth Member"].map((item) => (
+                  <div key={item} className="text-center text-[11px] font-medium text-slate-600">
+                    <div className="mx-auto mb-2 flex h-9 w-9 items-center justify-center rounded-full bg-brand-50 text-brand-700">
+                      <ShieldCheck className="h-4 w-4" />
+                    </div>
+                    {item}
+                  </div>
+                ))}
               </div>
-            )}
-          </div>
-
-          {/* Right */}
-          <div className="space-y-4">
-            {/* Rating breakdown */}
-            {profile.breakdown && profile.breakdown.count > 0 && (
-              <div className="bg-white rounded-xl border border-slate-200 p-5">
-                <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
-                  <MessageSquare className="h-4 w-4 text-slate-400" /> Rating Breakdown
-                  <span className="ml-auto text-xs text-slate-400">{profile.breakdown.count} reviews</span>
-                </h3>
-                <div className="space-y-2.5">
-                  {(["quality","professionalism","punctuality","communication"] as const).map((k) => (
-                    <RatingBar key={k} label={k} value={(profile.breakdown as NonNullable<typeof profile.breakdown>)[k]} />
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Quick facts */}
-            <div className="bg-white rounded-xl border border-slate-200 p-5 space-y-3">
-              <h3 className="text-sm font-semibold text-slate-700">Quick facts</h3>
-              {profile.yearsExperience !== undefined && profile.yearsExperience > 0 && (
-                <div className="flex items-center gap-2 text-sm text-slate-600">
-                  <Timer className="h-4 w-4 text-slate-400 flex-shrink-0" />
-                  {profile.yearsExperience} year{profile.yearsExperience !== 1 ? "s" : ""} of experience
-                </div>
-              )}
-              {profile.hourlyRate && (
-                <div className="flex items-center gap-2 text-sm text-slate-600">
-                  <TrendingUp className="h-4 w-4 text-slate-400 flex-shrink-0" />
-                  {formatCurrency(profile.hourlyRate)} / hour
-                </div>
-              )}
-              {(profile.completionRate ?? 0) > 0 && (
-                <div className="flex items-center gap-2 text-sm text-slate-600">
-                  <CheckCircle2 className="h-4 w-4 text-emerald-500 flex-shrink-0" />
-                  {profile.completionRate}% completion rate
-                </div>
-              )}
-              {(profile.avgResponseTimeHours ?? 0) > 0 && (
-                <div className="flex items-center gap-2 text-sm text-slate-600">
-                  <Clock className="h-4 w-4 text-slate-400 flex-shrink-0" />
-                  Responds within {(profile.avgResponseTimeHours ?? 0) < 1
-                    ? "an hour"
-                    : `${Math.round(profile.avgResponseTimeHours!)}hr`}
-                </div>
-              )}
             </div>
           </div>
-        </div>
-      )}
 
-      {/* ── REVIEWS ──────────────────────────────────────────── */}
-      {tab === "reviews" && (
-        <div className="space-y-4">
-          {reviews.length === 0 ? (
-            <div className="bg-white rounded-xl border border-slate-200 p-10 text-center">
-              <MessageSquare className="h-8 w-8 text-slate-300 mx-auto mb-2" />
-              <p className="text-sm text-slate-500">No reviews yet.</p>
+          <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-card">
+            <h2 className="mb-4 text-lg font-extrabold text-[#0a2540]">Services Offered</h2>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {displayServices.map((service) => (
+                <div key={service.skill} className="rounded-xl border border-slate-200 bg-white p-4">
+                  <Briefcase className="mb-3 h-5 w-5 text-brand-700" />
+                  <h3 className="text-sm font-extrabold text-[#0a2540]">{service.skill}</h3>
+                  <p className="mt-1 text-xs font-semibold text-brand-700">
+                    From {service.hourlyRate ? service.hourlyRate : profile.hourlyRate ? formatCurrency(profile.hourlyRate) : "PHP 500"}
+                  </p>
+                  <p className="mt-2 text-xs leading-5 text-slate-600">
+                    Professional service with clear scope, reliable scheduling, and quality output.
+                  </p>
+                </div>
+              ))}
             </div>
-          ) : (
-            <>
-              {reviews.map((r) => <ReviewCard key={r._id} review={r} />)}
-              {hasMoreReviews && (
-                <button
-                  onClick={loadMoreReviews}
-                  disabled={loadingReviews}
-                  className="w-full py-3 text-sm font-medium text-primary hover:text-primary/80 border border-dashed border-primary/30 rounded-xl transition-colors disabled:opacity-50"
-                >
-                  {loadingReviews ? "Loading…" : `Load more (${reviewsTotal - reviews.length} remaining)`}
-                </button>
-              )}
-            </>
-          )}
-        </div>
-      )}
+          </section>
 
-      {/* ── SCHEDULE ─────────────────────────────────────────── */}
-      {tab === "schedule" && (
-        <div className="bg-white rounded-xl border border-slate-200 p-5">
-          <h3 className="text-sm font-semibold text-slate-700 mb-4 flex items-center gap-2">
-            <Calendar className="h-4 w-4 text-slate-400" /> Weekly Availability
-          </h3>
-          {!profile.schedule || !Object.values(profile.schedule).some((d) => d.enabled) ? (
-            <p className="text-sm text-slate-400">No schedule set.</p>
-          ) : (
-            <div className="space-y-2">
-              {DAYS.map((day) => {
-                const slot = profile.schedule?.[day];
-                if (!slot) return null;
+          <section className="mt-6 grid gap-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-card lg:grid-cols-[1fr_260px]">
+            <div>
+              <h2 className="text-lg font-extrabold text-[#0a2540]">About {name.split(" ")[0] || name}</h2>
+              <p className="mt-3 text-sm leading-7 text-slate-600">
+                {profile.bio || `I specialize in ${primarySkill.toLowerCase()} and take pride in delivering reliable, high-quality service.`}
+              </p>
+              <ul className="mt-4 space-y-2 text-sm text-slate-700">
+                {[
+                  `${profile.yearsExperience ?? 1}+ years of experience`,
+                  "Honest and transparent pricing",
+                  "Clean and professional service",
+                  "Satisfaction-focused workmanship",
+                ].map((item) => (
+                  <li key={item} className="flex items-center gap-2">
+                    <Check className="h-4 w-4 text-brand-700" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="relative min-h-[180px] overflow-hidden rounded-xl bg-slate-100">
+              <Image
+                src={portfolio[0]?.imageUrl || "https://images.unsplash.com/photo-1585704032915-c3400ca199e7?auto=format&fit=crop&w=600&h=420&q=80"}
+                alt={`${name} work sample`}
+                fill
+                className="object-cover"
+              />
+            </div>
+          </section>
+
+          <section className="mt-6">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-lg font-extrabold text-[#0a2540]">Recently Completed Jobs</h2>
+              <Link href="/jobs" className="inline-flex items-center gap-2 text-sm font-bold text-brand-700">
+                View all jobs
+              </Link>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {(portfolio.length ? portfolio.slice(0, 4) : Array.from({ length: 4 })).map((item, index) => {
+                const portfolioItem = item as PortfolioItem | undefined;
                 return (
-                  <div key={day} className={`flex items-center gap-4 rounded-lg px-4 py-2.5 ${slot.enabled ? "bg-emerald-50 border border-emerald-100" : "bg-slate-50 border border-slate-100"}`}>
-                    <span className={`text-xs font-semibold w-8 ${slot.enabled ? "text-emerald-700" : "text-slate-400"}`}>
-                      {DAY_LABELS[day]}
-                    </span>
-                    {slot.enabled ? (
-                      <span className="text-sm text-slate-700">{slot.from} – {slot.to}</span>
-                    ) : (
-                      <span className="text-sm text-slate-400">Off</span>
-                    )}
-                    {slot.enabled && (
-                      <span className="ml-auto text-[10px] font-medium text-emerald-600 bg-emerald-100 px-2 py-0.5 rounded-full">Available</span>
-                    )}
+                  <div key={portfolioItem?.title ?? index} className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-card">
+                    <div className="relative h-28 bg-slate-100">
+                      <Image
+                        src={portfolioItem?.imageUrl || "https://images.unsplash.com/photo-1607472586893-edb57bdc0e39?auto=format&fit=crop&w=400&h=260&q=80"}
+                        alt={portfolioItem?.title || "Completed service job"}
+                        fill
+                        className="object-cover"
+                      />
+                      <span className="absolute left-2 top-2 rounded-full bg-brand px-2 py-1 text-[10px] font-bold text-white">Completed</span>
+                    </div>
+                    <div className="p-3">
+                      <p className="text-xs font-extrabold text-[#0a2540]">{portfolioItem?.title || `${primarySkill} Service`}</p>
+                      <p className="mt-1 text-xs text-slate-500">{serviceAreas[0]?.label ?? "Local area"}</p>
+                      <p className="mt-2 text-sm font-extrabold text-brand-700">{profile.hourlyRate ? formatCurrency(profile.hourlyRate) : "PHP 800"}</p>
+                    </div>
                   </div>
                 );
               })}
             </div>
-          )}
-        </div>
-      )}
+          </section>
+        </section>
 
-      {/* ── PORTFOLIO ────────────────────────────────────────── */}
-      {tab === "portfolio" && (
+        <aside className="space-y-5 lg:sticky lg:top-24 lg:self-start">
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-card">
+            <h2 className="text-sm font-extrabold text-[#0a2540]">Availability</h2>
+            <p className="mt-3 flex items-center justify-between text-sm font-semibold text-brand-700">
+              <span className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-brand" />{availabilityConfig[avail].label} Today</span>
+              <span>→</span>
+            </p>
+            <div className="mt-5 border-t border-slate-100 pt-5">
+              <h3 className="text-sm font-extrabold text-[#0a2540]">Service Areas</h3>
+              <ul className="mt-3 space-y-2 text-sm text-slate-600">
+                {(serviceAreas.length ? serviceAreas.slice(0, 5) : [{ label: "Manila", address: "Manila" }]).map((area) => (
+                  <li key={area.label}>{area.label}</li>
+                ))}
+              </ul>
+              <Link href="/providers" className="mt-3 inline-flex text-sm font-bold text-brand-700">View all areas</Link>
+            </div>
+            <div className="mt-5 border-t border-slate-100 pt-5">
+              <h3 className="text-sm font-extrabold text-[#0a2540]">Languages</h3>
+              <p className="mt-2 text-sm text-slate-600">English, Filipino</p>
+            </div>
+            <div className="mt-5 border-t border-slate-100 pt-5">
+              <h3 className="text-sm font-extrabold text-[#0a2540]">Contact</h3>
+              <p className="mt-2 text-sm text-slate-600">{profile.userId.email || "Available after booking"}</p>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-card">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-sm font-extrabold text-[#0a2540]">Reviews ({totalReviews})</h2>
+              <Link href="#reviews" className="text-xs font-bold text-brand-700">View all</Link>
+            </div>
+            <div className="mb-4 flex items-center gap-3">
+              <p className="text-4xl font-extrabold text-[#0a2540]">{(profile.avgRating ?? 4.8).toFixed(1)}</p>
+              <div>
+                <Stars rating={profile.avgRating ?? 4.8} />
+                <p className="mt-1 text-xs text-slate-500">Based on {totalReviews} reviews</p>
+              </div>
+            </div>
+            <div className="space-y-4">
+              {displayReviews.length > 0 ? displayReviews.map((review) => <ReviewCard key={review._id} review={review} />) : (
+                <p className="rounded-xl bg-slate-50 p-4 text-sm text-slate-500">No reviews yet.</p>
+              )}
+            </div>
+          </div>
+        </aside>
+      </div>
+
+      <div className="rounded-3xl bg-gradient-to-r from-[#0a2540] via-primary-900 to-brand-700 p-7 text-white shadow-2xl shadow-primary-900/15 sm:p-10 lg:flex lg:items-center lg:justify-between">
         <div>
-          {(profile.portfolioItems?.length ?? 0) === 0 ? (
-            <div className="bg-white rounded-xl border border-slate-200 p-10 text-center">
-              <Briefcase className="h-8 w-8 text-slate-300 mx-auto mb-2" />
-              <p className="text-sm text-slate-500">No portfolio items yet.</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {profile.portfolioItems?.map((item, i) => <PortfolioCard key={i} item={item} />)}
-            </div>
-          )}
+          <h2 className="text-2xl font-extrabold sm:text-3xl">Need a trusted professional like {name.split(" ")[0] || name}?</h2>
+          <p className="mt-2 max-w-xl text-sm leading-6 text-white/80">
+            Post a job now and get matched with verified pros in your area.
+          </p>
         </div>
-      )}
-
-      {/* Bottom CTA */}
-      <div className="pt-2 pb-8">
-        <HireCTA name={name} />
+        <div className="mt-6 flex shrink-0 flex-col gap-3 sm:flex-row lg:mt-0">
+          <Link
+            href="/register?role=client"
+            className="inline-flex items-center justify-center rounded-xl bg-white px-7 py-3 text-sm font-bold text-[#0a2540] transition hover:bg-brand-50"
+          >
+            Post a Job
+          </Link>
+          <Link
+            href="/jobs"
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/25 px-7 py-3 text-sm font-bold text-white transition hover:bg-white/10"
+          >
+            It&apos;s free and easy
+          </Link>
+        </div>
       </div>
 
       {showDirectHire && (

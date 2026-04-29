@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { getCurrentUser } from "@/lib/auth";
+import { redirect } from "next/navigation";
 import { MarketplaceContent } from "./_components/MarketplaceContent";
 import { MarketplaceSkeleton } from "./_components/skeletons";
 
@@ -12,7 +13,7 @@ export default async function MarketplacePage({
   searchParams: Promise<{ ref?: string }>;
 }) {
   const user = await getCurrentUser();
-  if (!user) return null;
+  if (!user) redirect("/login");
 
   const { ref } = await searchParams;
 

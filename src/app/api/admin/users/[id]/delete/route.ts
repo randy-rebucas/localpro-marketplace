@@ -4,6 +4,7 @@ import { withHandler } from "@/lib/utils";
 import { NotFoundError } from "@/lib/errors";
 import { userRepository, activityRepository } from "@/repositories";
 import { cascadeService } from "@/services/cascade.service";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 /**
  * DELETE /api/admin/users/[id]
@@ -19,6 +20,8 @@ export const DELETE = withHandler(async (
 ) => {
   const admin = await requireUser();
   requireRole(admin, "admin");  // only full admins
+  const rl = await checkRateLimit(`admin:${admin.userId}`, { windowMs: 60_000, max: 200 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   const { id } = await params;
   if (id === admin.userId) {

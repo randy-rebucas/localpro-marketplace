@@ -4,6 +4,7 @@ import { requireUser } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { connectDB } from "@/lib/db";
 import { ForbiddenError, NotFoundError } from "@/lib/errors";
+import { checkRateLimit } from "@/lib/rateLimit";
 import { hasAnalyticsAccess } from "@/lib/businessPlan";
 import AgencyProfile from "@/models/AgencyProfile";
 import Job from "@/models/Job";
@@ -15,6 +16,9 @@ import User from "@/models/User";
 export const GET = withHandler(async (req: NextRequest) => {
   const user = await requireUser();
   if (user.role !== "provider") throw new ForbiddenError();
+
+  const rl = await checkRateLimit(`agency-analytics:${user.userId}`, { windowMs: 60_000, max: 30 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   await connectDB();
 

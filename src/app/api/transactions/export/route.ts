@@ -1,18 +1,32 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { requireUser, requireRole } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { connectDB } from "@/lib/db";
 import Transaction from "@/models/Transaction";
-import type { ITransaction, IJob } from "@/types";
+import { checkRateLimit } from "@/lib/rateLimit";
+import type { ITransaction } from "@/types";
 
-export const GET = withHandler(async () => {
+const EXPORT_LIMIT = 5_000;
+
+function csvCell(value: string): string {
+  const s = String(value);
+  // Prefix formula triggers to prevent spreadsheet formula injection
+  const safe = /^[=+\-@\t\r]/.test(s) ? `'${s}` : s;
+  return `"${safe.replace(/"/g, '""')}"`;
+}
+
+export const GET = withHandler(async (req: NextRequest) => {
   const user = await requireUser();
   requireRole(user, "provider");
+
+  const rl = await checkRateLimit(`tx-export:${user.userId}`, { windowMs: 60_000, max: 5 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   await connectDB();
 
   const transactions = await Transaction.find({ payeeId: user.userId })
     .sort({ createdAt: -1 })
+    .limit(EXPORT_LIMIT)
     .populate("jobId", "title")
     .lean() as unknown as (ITransaction & { jobId: { title: string } })[];
 
@@ -28,7 +42,7 @@ export const GET = withHandler(async () => {
   ]);
 
   const csv = [header, ...rows]
-    .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","))
+    .map((row) => row.map(csvCell).join(","))
     .join("\n");
 
   return new NextResponse(csv, {

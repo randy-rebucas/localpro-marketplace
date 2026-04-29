@@ -4,6 +4,7 @@ import { reviewService } from "@/services";
 import { requireUser, requireRole } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { ValidationError } from "@/lib/errors";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 const BreakdownSchema = z.object({
   quality:         z.number().int().min(1).max(5) as z.ZodType<1|2|3|4|5>,
@@ -21,10 +22,18 @@ const CreateReviewSchema = z.object({
 
 export const GET = withHandler(async (req: NextRequest) => {
   const user = await requireUser();
+
+  const rl = await checkRateLimit(`reviews-get:${user.userId}`, { windowMs: 60_000, max: 60 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+
   const { searchParams } = new URL(req.url);
-  const reviews = await reviewService.listReviews(user, {
-    providerId: searchParams.get("providerId") ?? undefined,
-  });
+  const providerId = searchParams.get("providerId") ?? undefined;
+  // Validate format before passing to service to avoid Mongoose CastError on bad input
+  if (providerId && !/^[a-f\d]{24}$/i.test(providerId)) {
+    return NextResponse.json({ reviews: [] });
+  }
+
+  const reviews = await reviewService.listReviews(user, { providerId });
   return NextResponse.json(reviews);
 });
 
@@ -32,7 +41,10 @@ export const POST = withHandler(async (req: NextRequest) => {
   const user = await requireUser();
   requireRole(user, "client");
 
-  const body = await req.json();
+  const rl = await checkRateLimit(`reviews-post:${user.userId}`, { windowMs: 3_600_000, max: 10 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+
+  const body = await req.json().catch(() => ({}));
   const parsed = CreateReviewSchema.safeParse(body);
   if (!parsed.success) throw new ValidationError(parsed.error.errors[0].message);
 

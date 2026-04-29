@@ -12,13 +12,18 @@
  *  - generatedAt  ISO timestamp of when the data was fetched
  */
 
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
+import { checkRateLimit } from "@/lib/rateLimit";
 import Job from "@/models/Job";
 import ProviderProfile from "@/models/ProviderProfile";
 import { announcementRepository, appSettingRepository } from "@/repositories";
 
 export const dynamic = "force-dynamic";
+
+function clientIp(req: NextRequest): string {
+  return req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+}
 
 const BOARD_FEATURE_KEYS = [
   "board.activityFeed",
@@ -36,7 +41,10 @@ const BOARD_FEATURE_KEYS = [
   "board.adsEnabled",
 ] as const;
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const rl = await checkRateLimit(`pub-board:${clientIp(req)}`, { windowMs: 60_000, max: 20 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+
   try {
     await connectDB();
 

@@ -68,7 +68,7 @@ export async function sendCommentPendingApprovalEmail(
                 From: ${escHtml(commenterName)}
               </p>
               <p style="margin:0;color:#334155;font-size:14px;line-height:1.5;word-break:break-word">
-                ${escHtml(commentContent)}${comment.content?.length! > 200 ? '...' : ''}
+                ${escHtml(commentContent)}${(comment.content?.length ?? 0) > 200 ? '...' : ''}
               </p>
             </div>
 

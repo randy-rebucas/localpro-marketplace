@@ -7,6 +7,7 @@ import { getClientTier, pointsToCredits } from "@/lib/loyalty";
 import { formatCurrency, formatRelativeTime } from "@/lib/utils";
 import { Gift, Star, Users, Wallet, Copy, Check, Trophy } from "lucide-react";
 import type { ClientTier, ILoyaltyAccount, ILoyaltyTransaction } from "@/types";
+import { apiFetch } from "@/lib/fetchClient";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -60,7 +61,7 @@ function RedeemModal({
     setLoading(true);
     setError("");
     try {
-      const res = await fetch("/api/loyalty/redeem", {
+      const res = await apiFetch("/api/loyalty/redeem", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ points: pts }),

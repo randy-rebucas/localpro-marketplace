@@ -71,6 +71,16 @@ export class ProviderProfileRepository extends BaseRepository<ProviderProfileDoc
     );
   }
 
+  /** Batch fetch enriched profile fields for a list of provider user IDs (used by favorites list). */
+  async findByUserIds(
+    userIds: string[]
+  ): Promise<ProviderProfileDocument[]> {
+    await this.connect();
+    return ProviderProfile.find({ userId: { $in: userIds } })
+      .select("userId bio skills yearsExperience hourlyRate avgRating completedJobCount availabilityStatus avgResponseTimeHours completionRate isLocalProCertified")
+      .lean() as unknown as ProviderProfileDocument[];
+  }
+
   /** Batch fetch rating/completedJobCount/isLocalProCertified for a list of provider user IDs. */
   async findStatsByUserIds(
     userIds: string[]

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireUser, requireRole } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { ValidationError } from "@/lib/errors";
+import { checkRateLimit } from "@/lib/rateLimit";
 import { connectDB } from "@/lib/db";
 import LivelihoodGroup from "@/models/LivelihoodGroup";
 
@@ -17,13 +18,18 @@ const CreateGroupSchema = z.object({
   status:        z.enum(["active", "inactive"]).optional(),
 });
 
-export const GET = withHandler(async () => {
+export const GET = withHandler(async (_req: NextRequest) => {
   const user = await requireUser();
   requireRole(user, "peso");
+
+  const rl = await checkRateLimit(`peso-groups:${user.userId}`, { windowMs: 60_000, max: 60 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+
   await connectDB();
 
   const groups = await LivelihoodGroup.find({ createdBy: user.userId })
     .sort({ createdAt: -1 })
+    .limit(500)
     .lean();
 
   return NextResponse.json({ data: groups, total: groups.length });
@@ -33,7 +39,7 @@ export const POST = withHandler(async (req: NextRequest) => {
   const user = await requireUser();
   requireRole(user, "peso");
 
-  const parsed = CreateGroupSchema.safeParse(await req.json());
+  const parsed = CreateGroupSchema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) throw new ValidationError(parsed.error.errors[0].message);
 
   await connectDB();

@@ -8,9 +8,12 @@ import { userRepository } from "@/repositories/user.repository";
 import { providerProfileRepository } from "@/repositories/providerProfile.repository";
 import { SkillEntrySchema } from "@/lib/validation";
 
+import { checkRateLimit } from "@/lib/rateLimit";
 export const GET = withHandler(async (req: NextRequest) => {
   const user = await requireUser();
   requireCapability(user, "manage_users");
+  const rl = await checkRateLimit(`admin:${user.userId}`, { windowMs: 60_000, max: 200 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   const { searchParams } = new URL(req.url);
   const page = Math.max(1, Number(searchParams.get("page") ?? 1));
@@ -44,6 +47,8 @@ const CreateUserSchema = z.object({
 export const POST = withHandler(async (req: NextRequest) => {
   const admin = await requireUser();
   requireCapability(admin, "manage_users");
+  const rl2 = await checkRateLimit(`admin:${admin.userId}`, { windowMs: 60_000, max: 200 });
+  if (!rl2.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   const parsed = CreateUserSchema.safeParse(await req.json());
   if (!parsed.success) throw new ValidationError(parsed.error.errors[0].message);

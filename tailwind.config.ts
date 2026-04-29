@@ -45,6 +45,10 @@ const config: Config = {
           muted: "#f1f5f9",
         },
       },
+      maxWidth: {
+        /** Public marketing shell (header / footer / main sections) */
+        site: "1200px",
+      },
       fontFamily: {
         // Picks up the --font-inter CSS variable injected by next/font
         sans: ["var(--font-inter)", "system-ui", "sans-serif"],

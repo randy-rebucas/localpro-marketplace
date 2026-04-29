@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
+import { checkRateLimit } from "@/lib/rateLimit";
 import { jobRepository, userRepository } from "@/repositories";
 
 export interface SearchResult {
@@ -14,8 +15,11 @@ export interface SearchResult {
 export const GET = withHandler(async (req: NextRequest) => {
   const user = await requireUser();
 
-  const q = new URL(req.url).searchParams.get("q")?.trim();
-  if (!q || q.length < 2) {
+  const rl = await checkRateLimit(`search:${user.userId}`, { windowMs: 60_000, max: 60 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+
+  const q = (new URL(req.url).searchParams.get("q") ?? "").trim().slice(0, 100);
+  if (q.length < 2) {
     return NextResponse.json({ results: [] });
   }
 

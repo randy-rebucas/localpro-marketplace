@@ -5,6 +5,7 @@ import { requireUser, requireCapability } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { userRepository, providerProfileRepository } from "@/repositories";
 
+import { checkRateLimit } from "@/lib/rateLimit";
 const RowSchema = z.object({
   name:     z.string().min(2, "Name must be at least 2 chars").max(100),
   email:    z.string().email("Invalid email"),
@@ -45,6 +46,8 @@ const MAX_ROWS = 500;
 export const POST = withHandler(async (req: NextRequest) => {
   const admin = await requireUser();
   requireCapability(admin, "manage_users");
+  const rl = await checkRateLimit(`admin:${admin.userId}`, { windowMs: 60_000, max: 200 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   const body = await req.json();
   if (!Array.isArray(body)) {

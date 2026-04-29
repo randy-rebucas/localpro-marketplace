@@ -3,7 +3,8 @@ import { messageBus } from "@/lib/events";
 import { requireUser } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { jobRepository } from "@/repositories";
-import { ForbiddenError, NotFoundError } from "@/lib/errors";
+import { ForbiddenError, NotFoundError, assertObjectId } from "@/lib/errors";
+import { checkRateLimit } from "@/lib/rateLimit";
 import type { IJob } from "@/types";
 
 export const dynamic = "force-dynamic";
@@ -13,9 +14,14 @@ export const GET = withHandler(async (
   { params }: { params: Promise<{ threadId: string }> }
 ) => {
   const user = await requireUser();
-  const { threadId } = await params;
 
-  // Verify participant
+  const rl = await checkRateLimit(`msg-stream:${user.userId}`, { windowMs: 60_000, max: 5 });
+  if (!rl.ok) return new Response("Too many requests", { status: 429 });
+
+  const { threadId } = await params;
+  assertObjectId(threadId, "threadId");
+
+  // Verify participant before opening the stream
   const job = await jobRepository.findById(threadId);
   if (!job) throw new NotFoundError("Job");
 
@@ -35,10 +41,12 @@ export const GET = withHandler(async (
       const enqueue = (data: unknown) => {
         try {
           controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
-        } catch {}
+        } catch {
+          cleanup?.();
+        }
       };
 
-      enqueue({ type: "connected", threadId });
+      enqueue({ type: "connected" });
 
       const onMessage = (payload: unknown) => enqueue(payload);
       messageBus.on(eventKey, onMessage);
@@ -69,7 +77,6 @@ export const GET = withHandler(async (
     headers: {
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache, no-transform",
-      Connection: "keep-alive",
       "X-Accel-Buffering": "no",
     },
   });

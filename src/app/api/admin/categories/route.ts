@@ -5,6 +5,7 @@ import { requireUser, requireCapability } from "@/lib/auth";
 import { categoryRepository } from "@/repositories";
 import { ValidationError, ConflictError } from "@/lib/errors";
 
+import { checkRateLimit } from "@/lib/rateLimit";
 const CreateCategorySchema = z.object({
   name:        z.string().min(1, "Name is required").max(60),
   icon:        z.string().optional(),
@@ -16,6 +17,8 @@ const CreateCategorySchema = z.object({
 export const GET = withHandler(async () => {
   const user = await requireUser();
   requireCapability(user, "manage_categories");
+  const rl = await checkRateLimit(`admin:${user.userId}`, { windowMs: 60_000, max: 200 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   const categories = await categoryRepository.findAll();
   return NextResponse.json(categories);
@@ -25,6 +28,8 @@ export const GET = withHandler(async () => {
 export const POST = withHandler(async (req: NextRequest) => {
   const user = await requireUser();
   requireCapability(user, "manage_categories");
+  const rl = await checkRateLimit(`admin:${user.userId}`, { windowMs: 60_000, max: 200 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   const body = await req.json();
   const parsed = CreateCategorySchema.safeParse(body);

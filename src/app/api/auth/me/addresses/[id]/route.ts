@@ -5,6 +5,7 @@ import { withHandler } from "@/lib/utils";
 import { NotFoundError, ValidationError, assertObjectId } from "@/lib/errors";
 import User from "@/models/User";
 import { connectDB } from "@/lib/db";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 const CoordSchema = z.object({
   lat: z.number(),
@@ -23,6 +24,8 @@ type Ctx = { params: Promise<{ id: string }> };
 /** PATCH /api/auth/me/addresses/[id] — update label/address or set as default */
 export const PATCH = withHandler(async (req: NextRequest, ctx: Ctx) => {
   const tokenUser = await requireUser();
+  const rl = await checkRateLimit(`auth:addresses:${tokenUser.userId}`, { windowMs: 60_000, max: 20 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   const { id } = await ctx.params;
   assertObjectId(id, "addressId");
   const body = await req.json();
@@ -56,6 +59,8 @@ export const PATCH = withHandler(async (req: NextRequest, ctx: Ctx) => {
 /** DELETE /api/auth/me/addresses/[id] — remove a saved address */
 export const DELETE = withHandler(async (_req: NextRequest, ctx: Ctx) => {
   const tokenUser = await requireUser();
+  const rl = await checkRateLimit(`auth:addresses:${tokenUser.userId}`, { windowMs: 60_000, max: 20 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   const { id } = await ctx.params;
   assertObjectId(id, "addressId");
 

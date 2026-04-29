@@ -141,7 +141,7 @@ export class ReviewService {
 
     await activityRepository.log({
       userId: user.userId,
-      eventType: "review_responded" as never,
+      eventType: "review_responded",
       jobId: r.jobId.toString(),
       metadata: { reviewId: r._id.toString() },
     });
@@ -186,7 +186,7 @@ export class ReviewService {
 
     await activityRepository.log({
       userId: user.userId,
-      eventType: action.hide ? "review_hidden" as never : "review_unhidden" as never,
+      eventType: action.hide ? "review_hidden" : "review_unhidden",
       jobId: r.jobId.toString(),
       metadata: { reviewId: r._id.toString(), reason: action.reason },
     });

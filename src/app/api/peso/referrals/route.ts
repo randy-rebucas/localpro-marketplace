@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireUser, requireRole } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { ValidationError } from "@/lib/errors";
+import { checkRateLimit } from "@/lib/rateLimit";
 import { pesoService } from "@/services/peso.service";
 import { SkillEntrySchema } from "@/lib/validation";
 
@@ -19,7 +20,10 @@ export const POST = withHandler(async (req: NextRequest) => {
   const user = await requireUser();
   requireRole(user, "peso");
 
-  const parsed = ReferSchema.safeParse(await req.json());
+  const rl = await checkRateLimit(`peso-referrals:${user.userId}`, { windowMs: 3_600_000, max: 30 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+
+  const parsed = ReferSchema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) throw new ValidationError(parsed.error.errors[0].message);
 
   const result = await pesoService.referProvider(user.userId, parsed.data);

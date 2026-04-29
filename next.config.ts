@@ -31,7 +31,7 @@ const securityHeaders = [
       "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://maps.googleapis.com https://js.paymongo.com https://www.googletagmanager.com https://vercel.live https://*.vercel.live https://va.vercel-scripts.com",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://vercel.live https://*.vercel.live",
       "font-src 'self' data: https://fonts.gstatic.com https://vercel.live https://*.vercel.live",
-      "img-src 'self' data: blob: https://res.cloudinary.com https://maps.googleapis.com https://maps.gstatic.com https://avatars.githubusercontent.com https://lh3.googleusercontent.com https://www.google-analytics.com https://www.googletagmanager.com https://graph.facebook.com https://platform-lookaside.fbsbx.com https://vercel.live https://*.vercel.live https://api.qrserver.com",
+      "img-src 'self' data: blob: https://res.cloudinary.com https://images.unsplash.com https://maps.googleapis.com https://maps.gstatic.com https://avatars.githubusercontent.com https://lh3.googleusercontent.com https://www.google-analytics.com https://www.googletagmanager.com https://graph.facebook.com https://platform-lookaside.fbsbx.com https://vercel.live https://*.vercel.live https://api.qrserver.com https://tools.applemediaservices.com https://toolbox.marketingtools.apple.com https://play.google.com",
       "connect-src 'self' https://api.paymongo.com https://maps.googleapis.com https://www.google-analytics.com https://analytics.google.com https://stats.g.doubleclick.net https://vitals.vercel-insights.com https://vercel.live https://*.vercel.live https://va.vercel-scripts.com",
       "frame-src https://js.paymongo.com https://checkout.paymongo.com https://www.googletagmanager.com https://vercel.live https://*.vercel.live",
       // M-8: CSP violation reporting — events are logged via /api/csp-report and forwarded to Sentry
@@ -97,6 +97,7 @@ const nextConfig: NextConfig = {
     // Cache optimized images for 7 days (default is 60 s)
     minimumCacheTTL: 60 * 60 * 24 * 7,
     remotePatterns: [
+      { protocol: "https", hostname: "images.unsplash.com" },
       { protocol: "https", hostname: "avatars.githubusercontent.com" },
       { protocol: "https", hostname: "lh3.googleusercontent.com" },
       { protocol: "https", hostname: "res.cloudinary.com" },

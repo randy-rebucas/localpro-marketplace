@@ -2,11 +2,16 @@ import { NextRequest } from "next/server";
 import { notificationBus } from "@/lib/events";
 import { requireUser } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 export const dynamic = "force-dynamic";
 
 export const GET = withHandler(async (req: NextRequest) => {
   const user = await requireUser();
+
+  const rl = await checkRateLimit(`notification-stream:${user.userId}`, { windowMs: 60_000, max: 5 });
+  if (!rl.ok) return new Response("Too many requests", { status: 429 });
+
   const encoder = new TextEncoder();
   const eventKey = `notification:${user.userId}`;
 
@@ -20,12 +25,12 @@ export const GET = withHandler(async (req: NextRequest) => {
             encoder.encode(`data: ${JSON.stringify(data)}\n\n`)
           );
         } catch {
-          // controller already closed
+          cleanup?.();
         }
       };
 
       // Initial connection confirmation
-      enqueue({ type: "connected", userId: user.userId });
+      enqueue({ type: "connected" });
 
       const onNotification = (payload: unknown) => enqueue(payload);
       notificationBus.on(eventKey, onNotification);
@@ -63,7 +68,6 @@ export const GET = withHandler(async (req: NextRequest) => {
     headers: {
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache, no-transform",
-      Connection: "keep-alive",
       "X-Accel-Buffering": "no",
     },
   });

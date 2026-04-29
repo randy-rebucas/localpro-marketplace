@@ -76,6 +76,24 @@ export class LoyaltyRepository {
     await LoyaltyAccount.findOneAndUpdate({ userId }, { $inc: { credits: amount } });
   }
 
+  /**
+   * Atomically deducts points AND adds credits in a single write.
+   * Prevents the partial-state window where points are gone but credits not yet added.
+   * Returns null (without throwing) if balance is insufficient — caller should check.
+   */
+  async atomicRedeemPoints(
+    userId: string,
+    pts: number,
+    credits: number
+  ): Promise<LoyaltyAccountDocument | null> {
+    await this.connect();
+    return LoyaltyAccount.findOneAndUpdate(
+      { userId, points: { $gte: pts } },
+      { $inc: { points: -pts, credits } },
+      { new: true }
+    );
+  }
+
   async deductCredits(userId: string, amount: number): Promise<LoyaltyAccountDocument> {
     await this.connect();
     const account = await LoyaltyAccount.findOneAndUpdate(

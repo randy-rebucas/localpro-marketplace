@@ -3,6 +3,7 @@ import { requireUser } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { trainingService } from "@/services/training.service";
 
+import { checkRateLimit } from "@/lib/rateLimit";
 /**
  * POST /api/provider/training/[id]/enroll
  * Enroll in a course using the provider's platform wallet.
@@ -12,6 +13,8 @@ export const POST = withHandler(async (
   { params }: { params: Promise<{ id: string }> }
 ) => {
   const user = await requireUser();
+  const rl = await checkRateLimit(`provider:training:${user.userId}`, { windowMs: 60_000, max: 30 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   const { id } = await params;
   const result = await trainingService.enrollFromWallet(user, id);
   return NextResponse.json(result, { status: 201 });

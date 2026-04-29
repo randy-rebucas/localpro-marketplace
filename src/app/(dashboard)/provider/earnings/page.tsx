@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { getCurrentUser } from "@/lib/auth";
+import { redirect } from "next/navigation";
 import Link from "next/link";
 import ExportEarningsButton from "@/components/payment/ExportEarningsButton";
 import { EarningsContent } from "./_components/EarningsContent";
@@ -10,7 +11,7 @@ export const metadata: Metadata = { title: "Earnings" };
 
 export default async function EarningsPage() {
   const user = await getCurrentUser();
-  if (!user) return null;
+  if (!user) redirect("/login");
 
   return (
     <div className="space-y-6">

@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { requireUser, requireRole } from "@/lib/auth";
+import { requireUser, requireCapability } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { ValidationError } from "@/lib/errors";
 import { walletService } from "@/services/wallet.service";
 import { walletRepository } from "@/repositories/wallet.repository";
 
+import { checkRateLimit } from "@/lib/rateLimit";
 const UpdateSchema = z.object({
   status: z.enum(["processing", "completed", "rejected"]),
   notes:  z.string().optional(),
@@ -17,7 +18,9 @@ export const PATCH = withHandler(async (
   { params }: { params: Promise<{ id: string }> }
 ) => {
   const user = await requireUser();
-  requireRole(user, "admin");
+  requireCapability(user, "manage_payouts");
+  const rl = await checkRateLimit(`admin:${user.userId}`, { windowMs: 60_000, max: 200 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   const { id } = await params;
   const body = await req.json().catch(() => ({}));
@@ -34,7 +37,9 @@ export const GET = withHandler(async (
   { params }: { params: Promise<{ id: string }> }
 ) => {
   const user = await requireUser();
-  requireRole(user, "admin");
+  requireCapability(user, "manage_payouts");
+  const rl = await checkRateLimit(`admin:${user.userId}`, { windowMs: 60_000, max: 200 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   const { id } = await params;
   const withdrawal = await walletRepository.findWithdrawalById(id);

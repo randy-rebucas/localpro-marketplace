@@ -139,6 +139,8 @@ export interface CheckoutSessionData {
   paymentIntentId: string | null;
   /** Resolved payment intent status: "succeeded" | "awaiting_payment_method" | etc. */
   paymentIntentStatus: string | null;
+  /** Metadata attached at session creation (e.g. type, userId, jobId) */
+  metadata: Record<string, string>;
 }
 
 export async function createCheckoutSession(
@@ -188,6 +190,7 @@ export async function createCheckoutSession(
     referenceNumber: res.data.attributes.reference_number,
     paymentIntentId: res.data.attributes.payment_intent?.id ?? null,
     paymentIntentStatus: null, // not available at creation time
+    metadata: input.metadata ?? {},
   };
 }
 
@@ -199,6 +202,7 @@ export async function getCheckoutSession(id: string): Promise<CheckoutSessionDat
         checkout_url: string;
         status: string;
         reference_number: string;
+        metadata?: Record<string, string>;
         // PayMongo may return either just the id or the full expanded object
         payment_intent: { id: string; attributes?: { status: string } } | null;
       };
@@ -214,6 +218,7 @@ export async function getCheckoutSession(id: string): Promise<CheckoutSessionDat
     referenceNumber: res.data.attributes.reference_number,
     paymentIntentId: pi?.id ?? null,
     paymentIntentStatus: pi?.attributes?.status ?? null,
+    metadata: res.data.attributes.metadata ?? {},
   };
 }
 
@@ -369,7 +374,8 @@ export async function getPaymentMethodDetails(
       expMonth: d.exp_month ?? 0,
       expYear: d.exp_year ?? 0,
     };
-  } catch {
+  } catch (err) {
+    console.error("[PAYMONGO] getPaymentMethodDetails failed:", err);
     return null;
   }
 }
@@ -458,11 +464,14 @@ export function verifyWebhookSignature(
     .update(`${timestamp}.${rawBody}`)
     .digest("hex");
 
+  const expectedBuf = Buffer.from(expected, "utf8");
+  const providedBuf = Buffer.from(sig, "utf8");
+  if (expectedBuf.length !== providedBuf.length) {
+    console.error("[PAYMONGO] Signature length mismatch");
+    return false;
+  }
   try {
-    return crypto.timingSafeEqual(
-      Buffer.from(expected, "utf8"),
-      Buffer.from(sig, "utf8")
-    );
+    return crypto.timingSafeEqual(expectedBuf, providedBuf);
   } catch (err) {
     console.error("[PAYMONGO] timingSafeEqual failed:", err);
     return false;

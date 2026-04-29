@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { getCurrentUser } from "@/lib/auth";
+import { redirect } from "next/navigation";
 import dynamic from "next/dynamic";
 
 const NotificationsPage = dynamic(
@@ -31,6 +33,9 @@ const NotificationsPage = dynamic(
 
 export const metadata: Metadata = { title: "Notifications" };
 
-export default function ClientNotificationsPage() {
+export default async function ClientNotificationsPage() {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+
   return <NotificationsPage />;
 }

@@ -3,6 +3,7 @@ import OpenAI from "openai";
 import { requireUser } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { ValidationError } from "@/lib/errors";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 function getClient(): OpenAI | null {
   if (!process.env.OPENAI_API_KEY) return null;
@@ -11,7 +12,9 @@ function getClient(): OpenAI | null {
 
 /** POST /api/ai/classify-category */
 export const POST = withHandler(async (req: NextRequest) => {
-  await requireUser();
+  const user = await requireUser();
+  const rl = await checkRateLimit(`ai:classify:${user.userId}`, { windowMs: 60_000, max: 20 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   const { title, description, availableCategories } = await req.json();
 

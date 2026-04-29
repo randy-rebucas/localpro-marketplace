@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Plus, Pencil, Trash2, Megaphone, ToggleLeft, ToggleRight } from "lucide-react";
 import toast from "react-hot-toast";
+import { apiFetch } from "@/lib/fetchClient";
 import type { AnnouncementTarget, AnnouncementType } from "@/types";
 
 interface Announcement {
@@ -110,7 +111,7 @@ export default function AnnouncementsClient({ initialAnnouncements }: Props) {
       };
 
       if (editing) {
-        const res = await fetch(`/api/admin/announcements/${editing._id}`, {
+        const res = await apiFetch(`/api/admin/announcements/${editing._id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
@@ -120,7 +121,7 @@ export default function AnnouncementsClient({ initialAnnouncements }: Props) {
         setItems((prev) => prev.map((a) => (a._id === editing._id ? data.announcement : a)));
         toast.success("Announcement updated");
       } else {
-        const res = await fetch("/api/admin/announcements", {
+        const res = await apiFetch("/api/admin/announcements", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
@@ -140,7 +141,7 @@ export default function AnnouncementsClient({ initialAnnouncements }: Props) {
 
   async function handleToggle(a: Announcement) {
     try {
-      const res = await fetch(`/api/admin/announcements/${a._id}`, {
+      const res = await apiFetch(`/api/admin/announcements/${a._id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ isActive: !a.isActive }),
@@ -157,7 +158,7 @@ export default function AnnouncementsClient({ initialAnnouncements }: Props) {
     if (!confirm("Delete this announcement?")) return;
     setDeletingId(id);
     try {
-      const res = await fetch(`/api/admin/announcements/${id}`, { method: "DELETE" });
+      const res = await apiFetch(`/api/admin/announcements/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error();
       setItems((prev) => prev.filter((a) => a._id !== id));
       toast.success("Deleted");

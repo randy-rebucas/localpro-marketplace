@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { userRepository } from "@/repositories/user.repository";
 import { UserCog } from "lucide-react";
@@ -8,7 +9,7 @@ export const metadata: Metadata = { title: "Staff Management" };
 
 export default async function AdminStaffPage() {
   const user = await getCurrentUser();
-  if (!user || user.role !== "admin") return null;
+  if (!user || user.role !== "admin") redirect("/login");
 
   const rawStaff = await userRepository.findAllStaff();
 

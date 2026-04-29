@@ -1,22 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireUser } from "@/lib/auth";
+import { requireUser, requireCsrfToken } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { connectDB } from "@/lib/db";
 import { ForbiddenError, NotFoundError, ValidationError } from "@/lib/errors";
 import { captureOrder, getOrder } from "@/lib/paypal";
 import AgencyProfile from "@/models/AgencyProfile";
+import { checkRateLimit, SENSITIVE_LIMITS } from "@/lib/rateLimit";
 
 /**
  * POST /api/provider/agency/billing/confirm
  *
- * Called client-side after returning from PayPal checkout (`?plan_success=1&token=ORDER_ID`).
- * Captures the PayPal order and activates the agency subscription plan if payment succeeded.
- *
- * Body: { orderId: string }
+ * Called client-side after returning from PayPal checkout.
+ * Captures the PayPal order and activates the agency subscription plan.
  */
 export const POST = withHandler(async (req: NextRequest) => {
   const user = await requireUser();
   if (user.role !== "provider") throw new ForbiddenError();
+  await requireCsrfToken(req, user);
+  const rl = await checkRateLimit(`agency:billing:confirm:${user.userId}`, SENSITIVE_LIMITS.payment);
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   const body = await req.json() as { orderId?: string };
   const { orderId } = body;
@@ -27,12 +29,10 @@ export const POST = withHandler(async (req: NextRequest) => {
   const agency = await AgencyProfile.findOne({ providerId: user.userId });
   if (!agency) throw new NotFoundError("AgencyProfile");
 
-  // Validate the returned PayPal order against what we stored at checkout initiation
   if (agency.pendingPlanSessionId && orderId !== String(agency.pendingPlanSessionId)) {
     throw new ValidationError("Order ID does not match the pending checkout session.");
   }
 
-  // If already activated (no pending order), return current state
   if (!agency.pendingPlanSessionId && !agency.pendingPlan) {
     return NextResponse.json({
       activated:     false,
@@ -43,7 +43,6 @@ export const POST = withHandler(async (req: NextRequest) => {
     });
   }
 
-  // Capture the PayPal order
   let captureStatus   = "";
   let captureMetadata: Record<string, string> = {};
 
@@ -58,16 +57,18 @@ export const POST = withHandler(async (req: NextRequest) => {
       msg.includes("INSTRUMENT_DECLINED") ||
       msg.includes("already been captured");
 
-    if (!alreadyCaptured) throw new Error(`PayPal capture failed: ${msg}`);
+    if (!alreadyCaptured) {
+      console.error("[AGENCY/BILLING/CONFIRM] PayPal capture failed:", msg);
+      throw new ValidationError("Payment capture failed. Please try again or contact support.");
+    }
 
     try {
       const order       = await getOrder(orderId);
       captureStatus     = order.status;
       captureMetadata   = order.metadata;
     } catch (innerErr) {
-      throw new Error(
-        `PayPal order lookup failed: ${innerErr instanceof Error ? innerErr.message : String(innerErr)}`
-      );
+      console.error("[AGENCY/BILLING/CONFIRM] PayPal order lookup failed:", innerErr);
+      throw new ValidationError("Could not verify payment status. Please contact support.");
     }
   }
 
@@ -75,12 +76,11 @@ export const POST = withHandler(async (req: NextRequest) => {
     return NextResponse.json({ activated: false, alreadyActive: false, captureStatus });
   }
 
-  // Determine target plan from metadata or pending field
   const targetPlan =
     captureMetadata.plan ??
     (agency.pendingPlan ?? null);
 
-  if (!targetPlan) throw new Error("Could not determine target plan from PayPal order.");
+  if (!targetPlan) throw new ValidationError("Could not determine target plan from PayPal order.");
 
   const now     = new Date();
   const expires = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
@@ -97,10 +97,6 @@ export const POST = withHandler(async (req: NextRequest) => {
         pendingPlan:          null,
       },
     }
-  );
-
-  console.log(
-    `[AGENCY/BILLING/CONFIRM] Plan "${targetPlan}" activated for agency ${agency._id} via PayPal order ${orderId}`
   );
 
   return NextResponse.json({

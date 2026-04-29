@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Metadata } from "next";
+import { apiFetch } from "@/lib/fetchClient";
 import { 
   Check, 
   X, 
@@ -120,7 +121,7 @@ export default function AdminCommentsPage() {
     setActionLoading((prev) => ({ ...prev, [commentId]: true }));
 
     try {
-      const res = await fetch(`/api/admin/comments/${commentId}`, {
+      const res = await apiFetch(`/api/admin/comments/${commentId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action }),
@@ -149,7 +150,7 @@ export default function AdminCommentsPage() {
     setActionLoading((prev) => ({ ...prev, [commentId]: true }));
 
     try {
-      const res = await fetch(`/api/admin/comments/${commentId}`, {
+      const res = await apiFetch(`/api/admin/comments/${commentId}`, {
         method: "DELETE",
       });
 

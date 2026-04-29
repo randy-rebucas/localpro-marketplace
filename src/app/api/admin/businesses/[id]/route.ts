@@ -12,6 +12,7 @@ import BusinessOrganization from "@/models/BusinessOrganization";
 import BusinessMember from "@/models/BusinessMember";
 import User from "@/models/User";
 
+import { checkRateLimit } from "@/lib/rateLimit";
 type RouteCtx = { params: Promise<{ id: string }> };
 
 export const GET = withHandler(async (
@@ -20,6 +21,8 @@ export const GET = withHandler(async (
 ) => {
   const admin = await requireUser();
   requireCapability(admin, "manage_businesses");
+  const rl = await checkRateLimit(`admin:${admin.userId}`, { windowMs: 60_000, max: 200 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   await connectDB();
 
@@ -50,6 +53,8 @@ export const PATCH = withHandler(async (
 ) => {
   const admin = await requireUser();
   requireCapability(admin, "manage_businesses");
+  const rl = await checkRateLimit(`admin:${admin.userId}`, { windowMs: 60_000, max: 200 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   await connectDB();
 

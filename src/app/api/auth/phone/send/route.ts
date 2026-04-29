@@ -5,6 +5,7 @@ import User from "@/models/User";
 import { sendOtp } from "@/lib/twilio";
 import { ValidationError } from "@/lib/errors";
 import { randomBytes } from "crypto";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 /**
  * POST /api/auth/phone/send
@@ -14,6 +15,11 @@ import { randomBytes } from "crypto";
  * Twilio manages the code — nothing is stored in the DB.
  */
 export const POST = withHandler(async (req: NextRequest) => {
+  const ip = req.headers.get("x-forwarded-for") ?? "unknown";
+  // 5 OTP sends per hour per IP — fail-closed to prevent SMS billing abuse
+  const rl = await checkRateLimit(`auth:phone-send:${ip}`, { windowMs: 60 * 60_000, max: 5 }, { failOpen: false });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+
   const { phone } = await req.json();
 
   if (!phone || !/^\+?[1-9]\d{6,14}$/.test(String(phone).replace(/\s/g, ""))) {
@@ -25,8 +31,6 @@ export const POST = withHandler(async (req: NextRequest) => {
   await connectDB();
 
   // Atomically ensure a user record exists for this phone number.
-  // Using upsert avoids a race condition where two rapid requests both
-  // see no existing user and both try to INSERT, causing a duplicate-key error.
   await User.findOneAndUpdate(
     { phone: normalizedPhone },
     {

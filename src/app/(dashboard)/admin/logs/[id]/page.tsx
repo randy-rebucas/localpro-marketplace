@@ -12,6 +12,7 @@ import {
   Code2,
   ChevronRight,
   Hash,
+  Globe,
 } from "lucide-react";
 import { EventBadge, EVENT_CONFIG, RolePill } from "../page";
 
@@ -119,6 +120,12 @@ export default async function AdminLogDetailPage({
               <span className="text-slate-300">·</span>
               <span className="italic">{formatRelativeTime(log.createdAt)}</span>
             </p>
+            {log.ipAddress && (
+              <p className="text-[11px] text-slate-400 mt-1 flex items-center gap-1">
+                <Globe className="h-3 w-3" />
+                <span className="font-mono">{log.ipAddress}</span>
+              </p>
+            )}
           </div>
         </div>
       </div>

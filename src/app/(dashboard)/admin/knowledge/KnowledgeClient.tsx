@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import { Plus, Pencil, Trash2, BookOpen, Eye, EyeOff, Search } from "lucide-react";
 import toast from "react-hot-toast";
+import { apiFetch } from "@/lib/fetchClient";
 import type { KnowledgeAudience } from "@/types";
 
 interface Article {
@@ -120,7 +121,7 @@ export default function KnowledgeClient({ initialArticles }: Props) {
       const payload = { ...form, title: form.title.trim(), excerpt: form.excerpt.trim(), group: form.group.trim() };
 
       if (editing) {
-        const res = await fetch(`/api/admin/knowledge/${editing._id}`, {
+        const res = await apiFetch(`/api/admin/knowledge/${editing._id}`, {
           method:  "PUT",
           headers: { "Content-Type": "application/json" },
           body:    JSON.stringify(payload),
@@ -130,7 +131,7 @@ export default function KnowledgeClient({ initialArticles }: Props) {
         setItems((prev) => prev.map((a) => (a._id === editing._id ? data.article : a)));
         toast.success("Article updated");
       } else {
-        const res = await fetch("/api/admin/knowledge", {
+        const res = await apiFetch("/api/admin/knowledge", {
           method:  "POST",
           headers: { "Content-Type": "application/json" },
           body:    JSON.stringify(payload),
@@ -150,7 +151,7 @@ export default function KnowledgeClient({ initialArticles }: Props) {
 
   async function handleTogglePublish(a: Article) {
     try {
-      const res = await fetch(`/api/admin/knowledge/${a._id}`, {
+      const res = await apiFetch(`/api/admin/knowledge/${a._id}`, {
         method:  "PUT",
         headers: { "Content-Type": "application/json" },
         body:    JSON.stringify({ isPublished: !a.isPublished }),
@@ -167,7 +168,7 @@ export default function KnowledgeClient({ initialArticles }: Props) {
     if (!confirm("Delete this article permanently?")) return;
     setDeletingId(id);
     try {
-      const res = await fetch(`/api/admin/knowledge/${id}`, { method: "DELETE" });
+      const res = await apiFetch(`/api/admin/knowledge/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error();
       setItems((prev) => prev.filter((a) => a._id !== id));
       toast.success("Article deleted");

@@ -3,6 +3,7 @@ import { requireUser, requireCapability } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { jobRepository, userRepository } from "@/repositories";
 
+import { checkRateLimit } from "@/lib/rateLimit";
 /**
  * GET /api/admin/fraud
  * Returns:
@@ -12,6 +13,8 @@ import { jobRepository, userRepository } from "@/repositories";
 export const GET = withHandler(async () => {
   const admin = await requireUser();
   requireCapability(admin, "manage_jobs");
+  const rl = await checkRateLimit(`admin:${admin.userId}`, { windowMs: 60_000, max: 200 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   const [flaggedJobs, suspiciousUsers] = await Promise.all([
     jobRepository.findFlaggedJobs({ riskThreshold: 50, limit: 100 }),

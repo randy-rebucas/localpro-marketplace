@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { getCurrentUser } from "@/lib/auth";
 import AIMetricsDisplay from "@/components/admin/AIMetricsDisplay";
@@ -10,9 +11,7 @@ export const metadata: Metadata = { title: "AI Agent Metrics" };
 
 export default async function AIMetricsPage() {
   const user = await getCurrentUser();
-  if (!user) {
-    throw new Error("Not authenticated");
-  }
+  if (!user) redirect("/login");
 
   return (
     <div className="space-y-6">

@@ -16,6 +16,11 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RegisterPage() {
-  return <RegisterForm />;
+type SearchParams = Promise<Record<string, string | string[] | undefined>>;
+
+export default async function RegisterPage({ searchParams }: { searchParams: SearchParams }) {
+  const params = await searchParams;
+  const defaultRole = params.role === "provider" ? "provider" : "client";
+  const refCode = typeof params.ref === "string" ? params.ref : "";
+  return <RegisterForm defaultRole={defaultRole} refCode={refCode} />;
 }

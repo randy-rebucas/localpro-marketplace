@@ -1,22 +1,22 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { withHandler, apiError, apiResponse } from "@/lib/utils";
-import { requireUser, requireRole } from "@/lib/auth";
-import { assertObjectId, NotFoundError, UnprocessableError, ConflictError } from "@/lib/errors";
+import { requireUser, requireRole, requireCsrfToken } from "@/lib/auth";
+import { assertObjectId } from "@/lib/errors";
 import { jobRepository, quoteRepository, userRepository } from "@/repositories";
 import { providerMatcherService } from "@/services/provider-matcher.service";
 import { notificationService } from "@/services/notification.service";
-import { pushStatusUpdate, pushStatusUpdateMany } from "@/lib/events";
-import type { TokenPayload } from "@/lib/auth";
+import { pushStatusUpdateMany } from "@/lib/events";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 /**
  * Business Operations: Auto-Dispatch Handler
- * 
+ *
  * Automatically assigns a job to the best matching provider based on:
  * - Skill match
  * - Rating & historical performance
  * - Availability & location
  * - Capacity constraints
- * 
+ *
  * Used by operations team or admin for intelligent job assignment
  * when client hasn't received suitable quotes or needs expedited assignment.
  */
@@ -29,9 +29,13 @@ interface DispatchInput {
 
 export const POST = withHandler(async (req: NextRequest) => {
   const user = await requireUser();
-  
+
   // Only admins and designated operations team can dispatch jobs
   requireRole(user, "admin");
+  requireCsrfToken(req, user);
+
+  const rl = await checkRateLimit(`dispatch:${user.userId}`, { windowMs: 60_000, max: 20 });
+  if (!rl.ok) return apiError("Too many requests", 429);
 
   const body = await req.json();
   const { jobId, providerId, proposedAmount } = body as DispatchInput;
@@ -42,6 +46,12 @@ export const POST = withHandler(async (req: NextRequest) => {
 
   assertObjectId(jobId, "jobId");
 
+  if (proposedAmount !== undefined) {
+    if (typeof proposedAmount !== "number" || proposedAmount <= 0) {
+      return apiError("proposedAmount must be a positive number", 400);
+    }
+  }
+
   // Fetch the job
   const job = await jobRepository.getDocById(jobId);
   if (!job) {
@@ -49,7 +59,7 @@ export const POST = withHandler(async (req: NextRequest) => {
   }
 
   const jobData = job as any;
-  
+
   // Job must be in "open" status to be dispatched
   if (jobData.status !== "open") {
     return apiError(`Job status is "${jobData.status}". Only open jobs can be dispatched.`, 409);
@@ -62,24 +72,26 @@ export const POST = withHandler(async (req: NextRequest) => {
   }
 
   let assignedProviderId: string;
+  let assignedProvider: any = null;
 
   if (providerId) {
     // Manual assignment: validate provider exists and is eligible
     assertObjectId(providerId, "providerId");
-    
+
     const provider = await userRepository.findById(providerId);
     if (!provider) {
       return apiError("Provider not found", 404);
     }
 
     const providerData = provider as any;
-    
-    // Ensure provider is approved and active
-    if (providerData.status !== "approved") {
-      return apiError(`Provider status is "${providerData.status}". Cannot assign non-approved provider.`, 409);
+
+    // approvalStatus is the field that tracks admin-approval state on User
+    if (providerData.approvalStatus !== "approved") {
+      return apiError(`Provider approval status is "${providerData.approvalStatus}". Cannot assign non-approved provider.`, 409);
     }
 
     assignedProviderId = providerId;
+    assignedProvider = provider;
   } else {
     // Auto-match: find best candidate
     const candidates = await providerMatcherService.findProvidersForJob(jobData, 3);
@@ -111,47 +123,30 @@ export const POST = withHandler(async (req: NextRequest) => {
 
   // Post-assignment housekeeping
   try {
-    // Reject all other quotes for this job
-    const pendingQuotes = await quoteRepository.findForJob(jobId);
-    for (const quote of pendingQuotes) {
-      if ((quote as any).status === "pending" && (quote as any).providerId.toString() !== assignedProviderId) {
-        await quoteRepository.updateById((quote as any)._id, {
-          status: "rejected",
-          rejectionReason: "Job assigned to another provider via operations dispatch",
-        });
-      }
-    }
+    // Bulk-reject all pending quotes for this job
+    await quoteRepository.rejectAllPending(jobId);
 
     // Notify assigned provider
-    const provider = await userRepository.findById(assignedProviderId);
-    if (provider) {
-      await notificationService.push({
-        userId: assignedProviderId,
-        type: "agency_job_assigned",
-        title: "Job Assigned",
-        message: `You have been assigned a job: "${jobData.title}"`,
-      }).catch(err => console.error("[Dispatch] Notification error:", err));
-    }
+    await notificationService.push({
+      userId: assignedProviderId,
+      type: "agency_job_assigned",
+      title: "Job Assigned",
+      message: `You have been assigned a job: "${jobData.title}"`,
+    }).catch((err: Error) => console.error("[Dispatch] Provider notification error:", err));
 
     // Notify client
-    const client = await userRepository.findById(jobData.clientId);
-    if (client) {
-      await notificationService.push({
-        userId: jobData.clientId,
-        type: "payment_confirmed",
-        title: "Provider Assigned",
-        message: `A provider has been assigned to your job "${jobData.title}"`,
-      }).catch((err: Error) => console.error("[Dispatch] Client notification error:", err));
-    }
+    await notificationService.push({
+      userId: jobData.clientId,
+      type: "system_notice",
+      title: "Provider Assigned",
+      message: `A provider has been assigned to your job "${jobData.title}"`,
+    }).catch((err: Error) => console.error("[Dispatch] Client notification error:", err));
 
-    // Push real-time status update
-    if (assignedProviderId) {
-      pushStatusUpdate(assignedProviderId, {
-        entity: "job",
-        id: jobId,
-        status: "assigned",
-      });
-    }
+    // Push real-time status update to both provider and client
+    pushStatusUpdateMany(
+      [assignedProviderId, jobData.clientId?.toString()].filter(Boolean) as string[],
+      { entity: "job", id: jobId, status: "assigned" }
+    );
   } catch (err) {
     console.error("[Dispatch] Post-assignment error:", err);
     // Don't fail the dispatch if housekeeping fails; assignment already happened

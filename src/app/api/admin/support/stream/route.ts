@@ -1,14 +1,17 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { supportBus } from "@/lib/events";
 import { requireUser, requireCapability } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 
+import { checkRateLimit } from "@/lib/rateLimit";
 export const dynamic = "force-dynamic";
 
 /** GET /api/admin/support/stream — SSE stream for admin support inbox */
 export const GET = withHandler(async (req: NextRequest) => {
   const user = await requireUser();
   requireCapability(user, "manage_support");
+  const rl = await checkRateLimit(`admin:${user.userId}`, { windowMs: 60_000, max: 200 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   const encoder = new TextEncoder();
   const eventKey = "support:admin";
 

@@ -169,7 +169,29 @@ export class WalletRepository {
     const update: Record<string, unknown> = { status };
     if (notes !== undefined) update.notes = notes;
     if (status === "processing" || status === "completed") update.processedAt = new Date();
-    return WalletWithdrawal.findByIdAndUpdate(id, update, { new: true }).lean() as unknown as WalletWithdrawalDocument | null;
+    return WalletWithdrawal.findByIdAndUpdate(id, { $set: update }, { new: true }).lean() as unknown as WalletWithdrawalDocument | null;
+  }
+
+  /**
+   * Atomically transitions a withdrawal to "completed" or "rejected"
+   * only if it is still in an in-flight status (pending or processing).
+   * Returns the updated document if the transition happened, null if
+   * it was already in the target status (concurrent request won the race).
+   */
+  async atomicTransitionWithdrawalStatus(
+    id: string,
+    targetStatus: "completed" | "rejected",
+    notes?: string
+  ): Promise<WalletWithdrawalDocument | null> {
+    await connectDB();
+    const update: Record<string, unknown> = { status: targetStatus };
+    if (notes !== undefined) update.notes = notes;
+    update.processedAt = new Date();
+    return WalletWithdrawal.findOneAndUpdate(
+      { _id: id, status: { $in: ["pending", "processing"] } },
+      { $set: update },
+      { new: true }
+    ).lean() as unknown as WalletWithdrawalDocument | null;
   }
 
   // Admin: all withdrawal requests (paginated)
@@ -205,13 +227,13 @@ export class WalletRepository {
 
   async setWithdrawalLedgerJournalId(id: string, journalId: string): Promise<void> {
     await connectDB();
-    await WalletWithdrawal.findByIdAndUpdate(id, { ledgerJournalId: journalId });
+    await WalletWithdrawal.findByIdAndUpdate(id, { $set: { ledgerJournalId: journalId } });
   }
 
   /** Stamp a ledger journal ID onto an existing WalletTransaction record. */
   async setTransactionLedgerJournalId(txId: string, journalId: string): Promise<void> {
     await connectDB();
-    await WalletTransaction.findByIdAndUpdate(txId, { ledgerJournalId: journalId });
+    await WalletTransaction.findByIdAndUpdate(txId, { $set: { ledgerJournalId: journalId } });
   }
 
   /**

@@ -5,6 +5,7 @@ import { CreditCard, Trash2, CheckCircle2, Info, ShieldCheck } from "lucide-reac
 import toast from "react-hot-toast";
 import Card, { CardBody } from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
+import { apiFetch } from "@/lib/fetchClient";
 
 interface SavedMethod { last4: string; brand: string; }
 
@@ -30,7 +31,7 @@ export function SavedCardClient() {
     if (!confirm("Remove your saved card? Auto-pay will fall back to manual funding.")) return;
     try {
       setRemoving(true);
-      const res = await fetch("/api/recurring/saved-method", { method: "DELETE" });
+      const res = await apiFetch("/api/recurring/saved-method", { method: "DELETE" });
       if (!res.ok) throw new Error("Failed to remove");
       setMethod(null);
       toast.success("Saved card removed.");

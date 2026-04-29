@@ -9,6 +9,7 @@ import { pushStatusUpdateMany, pushNotification } from "@/lib/events";
 import { ledgerService } from "@/services/ledger.service";
 import type { IJob } from "@/types";
 
+import { checkRateLimit } from "@/lib/rateLimit";
 const OverrideSchema = z.object({
   action: z.enum(["release", "refund", "reopen"]),
   reason: z.string().min(5, "Reason must be at least 5 characters"),
@@ -20,6 +21,8 @@ export const POST = withHandler(async (
 ) => {
   const user = await requireUser();
   requireRole(user, "admin");
+  const rl = await checkRateLimit(`admin:${user.userId}`, { windowMs: 60_000, max: 200 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   const { id } = await params;
   assertObjectId(id, "jobId");

@@ -1,91 +1,61 @@
 import { NextRequest, NextResponse } from "next/server";
+import { withHandler } from "@/lib/utils";
 import { requireUser } from "@/lib/auth";
-import { connectDB } from "@/lib/db";
-import Job from "@/models/Job";
+import { jobRepository } from "@/repositories";
 import { enqueueNotification } from "@/lib/notification-queue";
+import { checkRateLimit } from "@/lib/rateLimit";
+import { assertObjectId, NotFoundError, ForbiddenError, ValidationError } from "@/lib/errors";
 
-export async function POST(req: NextRequest) {
-  try {
-    const user = await requireUser();
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+export const POST = withHandler(async (req: NextRequest) => {
+  const user = await requireUser();
+  const rl = await checkRateLimit(`ai:escalate-dispute:${user.userId}`, { windowMs: 60_000, max: 5 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
-    await connectDB();
+  const body = await req.json();
+  const { jobId, reason, severity } = body;
 
-    const body = await req.json();
-    const { jobId, reason, severity } = body;
+  assertObjectId(jobId, "jobId");
+  if (!reason || typeof reason !== "string" || reason.trim().length < 5) {
+    throw new ValidationError("A dispute reason is required");
+  }
 
-    // Validate required fields
-    if (!jobId || !reason) {
-      return NextResponse.json(
-        { error: "Missing jobId or dispute reason" },
-        { status: 400 }
-      );
-    }
+  const job = await jobRepository.findById(jobId) as any;
+  if (!job) throw new NotFoundError("Job not found");
 
-    // Fetch the job
-    const job = await Job.findById(jobId);
-    if (!job) {
-      return NextResponse.json({ error: "Job not found" }, { status: 404 });
-    }
+  if (job.clientId.toString() !== user.userId) {
+    throw new ForbiddenError("You do not have permission to escalate this dispute");
+  }
 
-    // Verify user owns this job
-    if (job.clientId.toString() !== user.userId.toString()) {
-      return NextResponse.json(
-        { error: "You do not have permission to escalate this dispute" },
-        { status: 403 }
-      );
-    }
+  if (job.status === "disputed") {
+    throw new ValidationError("This job is already under dispute resolution");
+  }
 
-    // Check if job is already in dispute
-    if (job.status === "disputed") {
-      return NextResponse.json(
-        { error: "This job is already under dispute resolution" },
-        { status: 400 }
-      );
-    }
+  await jobRepository.updateById(job._id, { status: "disputed" });
 
-    // Update job with dispute info
-    job.status = "disputed";
-    // Note: Full dispute tracking stored in separate Dispute model (future implementation)
-    // For now, we're simply marking the job as disputed
-    // updatedAt timestamp will be automatically set by Mongoose
-    await job.save();
+  await enqueueNotification({
+    userId: "support-team",
+    channel: "email",
+    category: "DISPUTE",
+    subject: `Dispute Escalation for Job ${jobId}`,
+    body: `Dispute reason: ${reason.slice(0, 500)}\nSeverity: ${severity || "medium"}`,
+    immediate: true,
+  });
 
-    // Notify support team
+  if (job.providerId) {
     await enqueueNotification({
-      userId: "support-team",
-      channel: "email",
+      userId: job.providerId.toString(),
+      channel: "push",
       category: "DISPUTE",
-      subject: `Dispute Escalation for Job ${jobId}`,
-      body: `Dispute reason: ${reason}\nSeverity: ${severity || "medium"}`,
+      subject: "Job Dispute Escalated",
+      body: "A dispute has been escalated for your job. Our support team will review it shortly.",
       immediate: true,
     });
-
-    // Notify provider
-    if (job.providerId) {
-      await enqueueNotification({
-        userId: job.providerId.toString(),
-        channel: "push",
-        category: "DISPUTE",
-        subject: "Job Dispute Escalated",
-        body: `A dispute has been escalated for your job: ${reason}`,
-        immediate: true,
-      });
-    }
-
-    return NextResponse.json({
-      message: `Your dispute has been escalated to our support team. A support specialist will contact you within 24 hours to help resolve this matter.\n\nDispute ID: ESC-${jobId.slice(-8).toUpperCase()}\nSeverity: ${severity || "medium"}\n\nYou can track the status in your account dashboard.`,
-      disputeId: `ESC-${jobId.slice(-8).toUpperCase()}`,
-      jobStatus: "disputed",
-      nextAction: "DISPUTE_ESCALATED",
-    });
-  } catch (error) {
-    console.error("[AI Chat] Dispute escalation failed:", error);
-    return NextResponse.json(
-      { error: "Failed to escalate dispute" },
-      { status: 500 }
-    );
   }
-}
+
+  return NextResponse.json({
+    message: `Your dispute has been escalated to our support team. A support specialist will contact you within 24 hours to help resolve this matter.\n\nDispute ID: ESC-${jobId.slice(-8).toUpperCase()}\nSeverity: ${severity || "medium"}\n\nYou can track the status in your account dashboard.`,
+    disputeId: `ESC-${jobId.slice(-8).toUpperCase()}`,
+    jobStatus: "disputed",
+    nextAction: "DISPUTE_ESCALATED",
+  });
+});

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { UserCog, Plus, Pencil, Ban, CheckCircle2, X, Eye, EyeOff } from "lucide-react";
 import toast from "react-hot-toast";
+import { apiFetch } from "@/lib/fetchClient";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -137,7 +138,7 @@ function AddStaffModal({
     }
     setLoading(true);
     try {
-      const res = await fetch("/api/admin/staff", {
+      const res = await apiFetch("/api/admin/staff", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, email, password, capabilities }),
@@ -262,7 +263,7 @@ function EditStaffModal({
     }
     setLoading(true);
     try {
-      const res = await fetch(`/api/admin/staff/${staff._id}`, {
+      const res = await apiFetch(`/api/admin/staff/${staff._id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ capabilities, isSuspended }),
@@ -363,7 +364,7 @@ export default function StaffClient({ initialStaff }: { initialStaff: StaffMembe
     if (!confirm(`Deactivate ${s.name}? They will no longer be able to log in.`)) return;
     setDeactivating(s._id);
     try {
-      const res = await fetch(`/api/admin/staff/${s._id}`, { method: "DELETE" });
+      const res = await apiFetch(`/api/admin/staff/${s._id}`, { method: "DELETE" });
       if (!res.ok) {
         const data = await res.json();
         throw new Error(data.error ?? "Failed to deactivate");
@@ -381,7 +382,7 @@ export default function StaffClient({ initialStaff }: { initialStaff: StaffMembe
 
   async function handleReactivate(s: StaffMember) {
     try {
-      const res = await fetch(`/api/admin/staff/${s._id}`, {
+      const res = await apiFetch(`/api/admin/staff/${s._id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ isSuspended: false }),

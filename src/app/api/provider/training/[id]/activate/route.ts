@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
+import { assertObjectId } from "@/lib/errors";
+import { checkRateLimit } from "@/lib/rateLimit";
 import { trainingService } from "@/services/training.service";
 
 /**
@@ -16,8 +18,14 @@ export const POST = withHandler(async (
   { params }: { params: Promise<{ id: string }> }
 ) => {
   const user = await requireUser();
+
+  const rl = await checkRateLimit(`training-activate:${user.userId}`, { windowMs: 3_600_000, max: 10 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+
   const { id } = await params;
-  const body = await req.json() as { sessionId?: string };
+  assertObjectId(id, "trainingId");
+
+  const body = await req.json().catch(() => ({})) as { sessionId?: string };
 
   if (!body.sessionId) {
     return NextResponse.json({ error: "sessionId is required." }, { status: 400 });

@@ -5,8 +5,11 @@ import { requireUser } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { connectDB } from "@/lib/db";
 import { ForbiddenError, NotFoundError, ValidationError } from "@/lib/errors";
+import { checkRateLimit } from "@/lib/rateLimit";
 import { isAtServiceLimit, getServiceLimit, PLAN_LABELS } from "@/lib/businessPlan";
 import AgencyProfile from "@/models/AgencyProfile";
+
+const OID_RE = /^[a-f\d]{24}$/i;
 
 const ServiceSchema = z.object({
   title:       z.string().min(2).max(200),
@@ -21,7 +24,7 @@ const ServiceSchema = z.object({
 // Do NOT derive from ServiceSchema.partial() — it carries .default() values
 // which would cause Zod to inject "" / 0 for omitted fields, wiping real data.
 const UpdateSchema = z.object({
-  serviceId:   z.string(),
+  serviceId:   z.string().regex(OID_RE, "Invalid serviceId"),
   title:       z.string().min(2).max(200).optional(),
   description: z.string().max(1000).optional(),
   category:    z.string().max(100).optional(),
@@ -42,8 +45,12 @@ function toOid(id: string) {
 }
 
 /** GET /api/provider/agency/services */
-export const GET = withHandler(async () => {
+export const GET = withHandler(async (_req: NextRequest) => {
   const user = await requireProvider();
+
+  const rl = await checkRateLimit(`agency-services:${user.userId}`, { windowMs: 60_000, max: 60 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+
   await connectDB();
   const agency = await AgencyProfile.findOne(
     { providerId: toOid(user.userId) },
@@ -55,7 +62,7 @@ export const GET = withHandler(async () => {
 /** POST /api/provider/agency/services — add a service */
 export const POST = withHandler(async (req: NextRequest) => {
   const user = await requireProvider();
-  const body = await req.json();
+  const body = await req.json().catch(() => ({}));
   const parsed = ServiceSchema.safeParse(body);
   if (!parsed.success) throw new ValidationError(parsed.error.errors[0].message);
 
@@ -109,7 +116,7 @@ export const POST = withHandler(async (req: NextRequest) => {
 /** PATCH /api/provider/agency/services — update a service */
 export const PATCH = withHandler(async (req: NextRequest) => {
   const user = await requireProvider();
-  const body = await req.json();
+  const body = await req.json().catch(() => ({}));
   const parsed = UpdateSchema.safeParse(body);
   if (!parsed.success) throw new ValidationError(parsed.error.errors[0].message);
 
@@ -140,6 +147,7 @@ export const DELETE = withHandler(async (req: NextRequest) => {
 
   const serviceId = new URL(req.url).searchParams.get("serviceId");
   if (!serviceId) throw new ValidationError("serviceId is required.");
+  if (!OID_RE.test(serviceId)) throw new ValidationError("Invalid serviceId.");
 
   const result = await AgencyProfile.collection.updateOne(
     { providerId: toOid(user.userId) },

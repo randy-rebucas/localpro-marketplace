@@ -6,31 +6,32 @@
  * No payment required — it's free.
  */
 
-import { NextResponse } from "next/server";
-import { requireUser } from "@/lib/auth";
+import { NextRequest, NextResponse } from "next/server";
+import { requireUser, requireCsrfToken } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
-import { connectDB } from "@/lib/db";
-import User from "@/models/User";
 import { ForbiddenError, NotFoundError } from "@/lib/errors";
+import { checkRateLimit } from "@/lib/rateLimit";
+import { userRepository } from "@/repositories/user.repository";
 
-export const POST = withHandler(async () => {
-  const tokenUser = await requireUser();
+export const POST = withHandler(async (req: NextRequest) => {
+  const user = await requireUser();
+  requireCsrfToken(req, user);
 
-  if (tokenUser.role !== "client") {
+  const rl = await checkRateLimit(`upgrade-business:${user.userId}`, { windowMs: 60_000, max: 5 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+
+  if (user.role !== "client") {
     throw new ForbiddenError("Only client accounts can upgrade to Business.");
   }
 
-  await connectDB();
+  const existing = await userRepository.findById(user.userId);
+  if (!existing) throw new NotFoundError("User");
 
-  const user = await User.findById(tokenUser.userId);
-  if (!user) throw new NotFoundError("User");
-
-  if (user.accountType === "business") {
-    return NextResponse.json({ message: "Already a Business account." }, { status: 200 });
+  if (existing.accountType === "business") {
+    return NextResponse.json({ message: "Already a Business account." });
   }
 
-  user.accountType = "business";
-  await user.save();
+  await userRepository.updateById(user.userId, { accountType: "business" });
 
   return NextResponse.json({ message: "Business account activated.", accountType: "business" });
 });

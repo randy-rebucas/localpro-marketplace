@@ -1,15 +1,19 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { requireUser, requireRole } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
-import { pesoService } from "@/services/peso.service";
-import { uploadToCloudinary } from "@/lib/cloudinary";
 import { ValidationError } from "@/lib/errors";
+import { checkRateLimit } from "@/lib/rateLimit";
+import { uploadToCloudinary } from "@/lib/cloudinary";
+import { pesoService } from "@/services/peso.service";
 
 const MAX_BYTES = 2 * 1024 * 1024; // 2 MB
 
-export const POST = withHandler(async (req: Request) => {
+export const POST = withHandler(async (req: NextRequest) => {
   const user = await requireUser();
   requireRole(user, "peso");
+
+  const rl = await checkRateLimit(`peso-logo:${user.userId}`, { windowMs: 3_600_000, max: 10 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   const formData = await req.formData();
   const file = formData.get("logo");
@@ -30,7 +34,7 @@ export const POST = withHandler(async (req: Request) => {
   return NextResponse.json(updated);
 });
 
-export const DELETE = withHandler(async () => {
+export const DELETE = withHandler(async (_req: NextRequest) => {
   const user = await requireUser();
   requireRole(user, "peso");
 

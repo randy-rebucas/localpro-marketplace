@@ -5,6 +5,7 @@ import { withHandler } from "@/lib/utils";
 import { ValidationError } from "@/lib/errors";
 import { providerProfileRepository } from "@/repositories";
 import { getProviderTier } from "@/lib/tier";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 function getClient(): OpenAI | null {
   if (!process.env.OPENAI_API_KEY) return null;
@@ -15,6 +16,8 @@ function getClient(): OpenAI | null {
 export const POST = withHandler(async (req: NextRequest) => {
   const user = await requireUser();
   requireRole(user, "provider");
+  const rl = await checkRateLimit(`ai:quote-msg:${user.userId}`, { windowMs: 60_000, max: 20 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   const { jobTitle, jobDescription, jobBudget, category } = await req.json();
 

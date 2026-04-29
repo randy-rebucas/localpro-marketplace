@@ -7,6 +7,10 @@ import { checkRateLimit } from "@/lib/rateLimit";
 /** GET /api/payouts — list provider's payouts + available balance */
 export const GET = withHandler(async (_req: NextRequest) => {
   const user = await requireUser();
+
+  const rl = await checkRateLimit(`payouts-get:${user.userId}`, { windowMs: 60_000, max: 30 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+
   const result = await payoutService.listProviderPayouts(user);
   return NextResponse.json(result);
 });
@@ -31,7 +35,7 @@ export const POST = withHandler(async (req: NextRequest) => {
     );
   }
 
-  const body = await req.json();
+  const body = await req.json().catch(() => ({}));
   const payout = await payoutService.requestPayout(user, body);
   return NextResponse.json(payout, { status: 201 });
 });

@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireUser, requireRole } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
+import { checkRateLimit } from "@/lib/rateLimit";
 import { pesoRepository } from "@/repositories/peso.repository";
 
-/** Escape a CSV cell: wrap in quotes if it contains a comma, quote, or newline. */
 function csvCell(value: string | number | null | undefined): string {
   const s = String(value ?? "");
-  if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
-  return s;
+  const safe = /^[=+\-@\t\r]/.test(s) ? `'${s}` : s;
+  return `"${safe.replace(/"/g, '""')}"`;
 }
 
 function csvRow(cells: (string | number | null | undefined)[]): string {
@@ -20,12 +20,16 @@ export const GET = withHandler(async (req: NextRequest) => {
   const user = await requireUser();
   requireRole(user, "peso");
 
+  const rl = await checkRateLimit(`peso-wf-export:${user.userId}`, { windowMs: 60_000, max: 5 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+
   const { searchParams } = new URL(req.url);
-  const barangay = searchParams.get("barangay") ?? undefined;
-  const skill = searchParams.get("skill") ?? undefined;
+  const barangay        = searchParams.get("barangay")        ?? undefined;
+  const skill           = searchParams.get("skill")           ?? undefined;
   const verificationTag = searchParams.get("verificationTag") ?? undefined;
-  const minRating = searchParams.get("minRating")
-    ? Number(searchParams.get("minRating"))
+  const rawMinRating    = searchParams.get("minRating");
+  const minRating       = rawMinRating !== null
+    ? (isNaN(Number(rawMinRating)) ? undefined : Math.max(0, Math.min(5, Number(rawMinRating))))
     : undefined;
 
   const result = await pesoRepository.getProviderRegistry({

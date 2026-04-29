@@ -11,6 +11,7 @@ import { withHandler } from "@/lib/utils";
 import { appSettingRepository } from "@/repositories";
 import { pushSettingsUpdate } from "@/lib/events";
 
+import { checkRateLimit } from "@/lib/rateLimit";
 /** Server-side defaults — mirrors client DEFAULTS so GET always returns all keys. */
 const DEFAULTS: Record<string, unknown> = {
   // General
@@ -57,6 +58,8 @@ export const GET = withHandler(async () => {
 export const PATCH = withHandler(async (req: NextRequest) => {
   const user = await requireUser();
   requireRole(user, "admin");
+  const rl = await checkRateLimit(`admin:${user.userId}`, { windowMs: 60_000, max: 200 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   const body: Record<string, unknown> = await req.json();
   const updated = await appSettingRepository.upsertMany(body, user.userId);

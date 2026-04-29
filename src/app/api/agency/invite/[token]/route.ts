@@ -2,14 +2,19 @@ import { NextRequest, NextResponse } from "next/server";
 import { withHandler } from "@/lib/utils";
 import { connectDB } from "@/lib/db";
 import { NotFoundError, ValidationError } from "@/lib/errors";
+import { checkRateLimit } from "@/lib/rateLimit";
 import AgencyInvite from "@/models/AgencyInvite";
 import User from "@/models/User";
 
 /** GET /api/agency/invite/[token] — public: fetch invite details for the acceptance page */
 export const GET = withHandler(async (
-  _req: NextRequest,
+  req: NextRequest,
   ctx: { params: Promise<{ token: string }> }
 ) => {
+  const ip = req.headers.get("x-forwarded-for") ?? "unknown";
+  const rl = await checkRateLimit(`agency-invite:${ip}`, { windowMs: 60_000, max: 20 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+
   const { token } = await ctx.params;
   if (!token) throw new ValidationError("Invalid invite link.");
 
@@ -18,19 +23,13 @@ export const GET = withHandler(async (
   const invite = await AgencyInvite.findOne({ token }).lean();
   if (!invite) throw new NotFoundError("Invite not found or has already been used.");
 
-  if (invite.acceptedAt) {
-    throw new ValidationError("This invite has already been accepted.");
-  }
+  if (invite.acceptedAt) throw new ValidationError("This invite has already been accepted.");
 
   if (invite.expiresAt < new Date()) {
     throw new ValidationError("This invite link has expired. Please ask the agency to send a new one.");
   }
 
-  // Check if the invited email already has an account so the UI can direct to login
-  const existingUser = await User.findOne(
-    { email: invite.invitedEmail },
-    "_id name role"
-  ).lean();
+  const existingUser = await User.findOne({ email: invite.invitedEmail }, "_id name role").lean();
 
   return NextResponse.json({
     invite: {

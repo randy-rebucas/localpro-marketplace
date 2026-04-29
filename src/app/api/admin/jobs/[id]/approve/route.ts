@@ -5,6 +5,7 @@ import { requireUser, requireCapability } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { ValidationError, assertObjectId } from "@/lib/errors";
 
+import { checkRateLimit } from "@/lib/rateLimit";
 const ApproveSchema = z.object({
   riskScore: z.number().min(0).max(100).optional(),
 });
@@ -15,6 +16,8 @@ export const PATCH = withHandler(async (
 ) => {
   const user = await requireUser();
   requireCapability(user, "manage_jobs");
+  const rl = await checkRateLimit(`admin:${user.userId}`, { windowMs: 60_000, max: 200 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   const { id } = await params;
   assertObjectId(id, "jobId");

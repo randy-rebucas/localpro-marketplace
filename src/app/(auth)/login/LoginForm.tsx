@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
+import { Eye, EyeOff, Lock, Mail } from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
 
 export default function LoginForm() {
@@ -13,6 +14,7 @@ export default function LoginForm() {
 
   const { setUser } = useAuthStore();
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [form, setForm] = useState({ email: "", password: "" });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -63,70 +65,134 @@ export default function LoginForm() {
 
   return (
     <>
-      <h2 className="text-2xl font-bold text-slate-900 mb-1">Welcome back</h2>
-      <p className="text-slate-500 text-sm mb-6">Sign in to your account</p>
+      <h2 className="mb-1 text-4xl font-extrabold tracking-tight text-[#0a2440]">Welcome back!</h2>
+      <p className="mb-6 text-base text-slate-600">Log in to your account to continue</p>
+
+
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label htmlFor="email" className="label block mb-1">
-            Email address
-          </label>
-          <input
-            id="email"
-            type="email"
-            className={`input w-full ${errors.email ? "border-red-400 focus-visible:ring-red-400" : ""}`}
-            placeholder="you@example.com"
-            value={form.email}
-            onChange={(e) => setForm({ ...form, email: e.target.value })}
-            disabled={isLoading}
-            autoComplete="email"
-          />
+          <label htmlFor="email" className="mb-1 block text-sm font-medium text-slate-600">Email address</label>
+          <div className="relative">
+            <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <input
+              id="email"
+              type="email"
+              className={`w-full rounded-lg border bg-white py-2.5 pl-10 pr-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 ${errors.email ? "border-red-400 focus:border-red-400 focus:ring-red-100" : "border-slate-200"}`}
+              placeholder="Email address"
+              value={form.email}
+              onChange={(e) => setForm({ ...form, email: e.target.value })}
+              disabled={isLoading}
+              autoComplete="email"
+            />
+          </div>
           {errors.email && (
             <p className="mt-1 text-xs text-red-500">{errors.email}</p>
           )}
         </div>
 
         <div>
-          <div className="flex items-center justify-between mb-1">
-            <label htmlFor="password" className="label">Password</label>
+          <div className="mb-1 flex items-center justify-between">
+            <label htmlFor="password" className="text-sm font-medium text-slate-600">Password</label>
             <Link
               href="/forgot-password"
-              className="text-xs text-primary hover:text-primary-700 transition-colors"
+              className="text-xs font-semibold text-emerald-700 hover:text-emerald-800 transition-colors"
             >
               Forgot password?
             </Link>
           </div>
-          <input
-            id="password"
-            type="password"
-            className={`input w-full ${errors.password ? "border-red-400 focus-visible:ring-red-400" : ""}`}
-            placeholder="••••••••"
-            value={form.password}
-            onChange={(e) => setForm({ ...form, password: e.target.value })}
-            disabled={isLoading}
-            autoComplete="current-password"
-          />
+          <div className="relative">
+            <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <input
+              id="password"
+              type={showPassword ? "text" : "password"}
+              className={`w-full rounded-lg border bg-white py-2.5 pl-10 pr-11 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 ${errors.password ? "border-red-400 focus:border-red-400 focus:ring-red-100" : "border-slate-200"}`}
+              placeholder="Password"
+              value={form.password}
+              onChange={(e) => setForm({ ...form, password: e.target.value })}
+              disabled={isLoading}
+              autoComplete="current-password"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((prev) => !prev)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+              aria-label={showPassword ? "Hide password" : "Show password"}
+            >
+              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
+          </div>
           {errors.password && (
             <p className="mt-1 text-xs text-red-500">{errors.password}</p>
           )}
         </div>
 
+        <label className="inline-flex items-center gap-2 text-sm text-slate-600">
+          <input type="checkbox" className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500" />
+          Remember me
+        </label>
+
         <button
           type="submit"
-          className="btn-primary w-full py-2.5"
+          className="w-full rounded-lg bg-emerald-700 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-70"
           disabled={isLoading}
         >
-          {isLoading ? "Signing in..." : "Sign in"}
+          {isLoading ? "Logging in..." : "Log In"}
         </button>
       </form>
+
+      <div className="my-5 flex items-center gap-3 text-slate-400">
+        <div className="h-px flex-1 bg-slate-200" />
+        <span className="text-xs font-medium">or continue with</span>
+        <div className="h-px flex-1 bg-slate-200" />
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <button
+          type="button"
+          className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+        >
+          <svg viewBox="0 0 48 48" aria-hidden className="h-4 w-4">
+            <path
+              fill="#EA4335"
+              d="M24 9.5c3.54 0 6.7 1.22 9.2 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"
+            />
+            <path
+              fill="#4285F4"
+              d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"
+            />
+            <path
+              fill="#FBBC05"
+              d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"
+            />
+            <path
+              fill="#34A853"
+              d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"
+            />
+          </svg>
+          Google
+        </button>
+        <button
+          type="button"
+          className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden className="h-4 w-4">
+            <path
+              fill="#1877F2"
+              d="M24 12a12 12 0 1 0-13.88 11.85V15.47H7.08V12h3.04V9.41c0-3 1.79-4.66 4.53-4.66 1.31 0 2.68.23 2.68.23v2.95h-1.51c-1.49 0-1.95.93-1.95 1.88V12h3.32l-.53 3.47h-2.79v8.38A12 12 0 0 0 24 12z"
+            />
+          </svg>
+          Facebook
+        </button>
+      </div>
 
       <p className="mt-6 text-center text-sm text-slate-500">
         Don&apos;t have an account?{" "}
         <Link
           href="/register"
-          className="font-medium text-primary hover:text-primary-700 transition-colors"
+          className="font-semibold text-emerald-700 hover:text-emerald-800 transition-colors"
         >
-          Create one
+          Sign up
         </Link>
       </p>
 

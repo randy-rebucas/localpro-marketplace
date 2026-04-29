@@ -14,8 +14,6 @@ import {
   chargeWithSavedMethod,
   type RefundReason,
 } from "@/lib/paymongo";
-import { connectDB } from "@/lib/db";
-import User from "@/models/User";
 import { calculateCommission, calculateEscrowFee, calculateClientFees } from "@/lib/commission";
 import { getEffectiveCommissionRate } from "@/lib/serverCommission";
 import { getPaymentSettings } from "@/lib/appSettings";
@@ -43,10 +41,12 @@ export class PaymentService {
    * a controlled path for exceptional adjustments.
    */
   async initiateEscrowPayment(user: TokenPayload, jobId: string, overrideAmount?: number) {
+    if (overrideAmount !== undefined && user.role !== "admin") throw new ForbiddenError();
+
     const jobDoc = await jobRepository.getDocById(jobId);
     if (!jobDoc) throw new NotFoundError("Job");
 
-    const job = jobDoc as unknown as IJob & { save(): Promise<void> };
+    const job = jobDoc as unknown as IJob;
     if (job.clientId.toString() !== user.userId) throw new ForbiddenError();
 
     // L11: Reject escrow funding for jobs whose schedule date is in the past.
@@ -93,12 +93,7 @@ export class PaymentService {
 
     // ── Development fallback (no PayMongo key set) ─────────────────────────
     if (!process.env.PAYMONGO_SECRET_KEY) {
-      job.escrowStatus = "funded";
-      // Persist fee snapshot so the Job record is self-contained
-      (job as unknown as { escrowFee: number }).escrowFee = escrowFee;
-      (job as unknown as { processingFee: number }).processingFee = processingFee;
-      (job as unknown as { platformServiceFee: number }).platformServiceFee = platformServiceFee;
-      await jobDoc.save();
+      await jobRepository.fundEscrow(jobDoc._id.toString(), { escrowFee, processingFee, platformServiceFee });
 
       const rate = await getEffectiveCommissionRate(job.category, user.userId);
       const { commission, netAmount } = calculateCommission(amount, rate);
@@ -318,13 +313,13 @@ export class PaymentService {
     const jobDoc = await jobRepository.getDocById(p.jobId.toString());
     if (!jobDoc) return;
 
-    const job = jobDoc as unknown as IJob & { save(): Promise<void> };
-    job.escrowStatus = "funded";
-    // Persist fee snapshot on the Job record for auditability
-    (job as unknown as { escrowFee: number }).escrowFee = p.escrowFee ?? 0;
-    (job as unknown as { processingFee: number }).processingFee = p.processingFee ?? 0;
-    (job as unknown as { platformServiceFee: number }).platformServiceFee = p.platformServiceFee ?? 0;
-    await jobDoc.save({ session });
+    const job = jobDoc as unknown as IJob;
+
+    await jobRepository.fundEscrow(
+      p.jobId.toString(),
+      { escrowFee: p.escrowFee ?? 0, processingFee: p.processingFee ?? 0, platformServiceFee: p.platformServiceFee ?? 0 },
+      session
+    );
 
     const rate = await getEffectiveCommissionRate(job.category, p.clientId.toString());
     const { commission, netAmount } = calculateCommission(p.amount, rate);
@@ -351,9 +346,7 @@ export class PaymentService {
         providerId: p.providerId?.toString(),
         initiatedBy: p.clientId.toString(),
       },
-      (p.escrowFee ?? 0) + (p.processingFee ?? 0) + (p.urgencyFee ?? 0) + (p.platformServiceFee ?? 0) > 0
-        ? p.amount + (p.escrowFee ?? 0) + (p.processingFee ?? 0) + (p.urgencyFee ?? 0) + (p.platformServiceFee ?? 0)
-        : p.amount,
+      p.amount + (p.escrowFee ?? 0) + (p.processingFee ?? 0) + (p.urgencyFee ?? 0) + (p.platformServiceFee ?? 0),
       p.escrowFee ?? 0,
       p.processingFee ?? 0,
       p.urgencyFee ?? 0,
@@ -433,7 +426,7 @@ export class PaymentService {
     const jobDoc = await jobRepository.getDocById(jobId);
     if (!jobDoc) return { success: false, reason: "Job not found" };
 
-    const job = jobDoc as unknown as IJob & { save(): Promise<void> };
+    const job = jobDoc as unknown as IJob;
     const check = canTransitionEscrow(job, "funded");
     if (!check.allowed) return { success: false, reason: check.reason ?? "Cannot fund escrow" };
 
@@ -464,15 +457,10 @@ export class PaymentService {
     if (!result.success) return result;
 
     // Mark escrow funded and persist fee snapshot
-    job.escrowStatus = "funded";
-    (job as unknown as { escrowFee: number }).escrowFee = escrowFee;
-    (job as unknown as { processingFee: number }).processingFee = processingFee;
-    (job as unknown as { platformServiceFee: number }).platformServiceFee = platformServiceFee;
-    await jobDoc.save();
+    await jobRepository.fundEscrow(jobDoc._id.toString(), { escrowFee, processingFee, platformServiceFee });
 
     const rate = await getEffectiveCommissionRate(job.category, clientId);
     const { commission, netAmount } = calculateCommission(job.budget, rate);
-    await connectDB();
     const tx = await transactionRepository.create({
       jobId: job._id,
       payerId: clientId,

@@ -1,15 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { requireUser, requireRole } from "@/lib/auth";
+import { requireUser, requireRole, requireCsrfToken } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
-import { connectDB } from "@/lib/db";
-import Job from "@/models/Job";
-import Transaction from "@/models/Transaction";
-import ProviderProfile from "@/models/ProviderProfile";
 import { calculateCommission } from "@/lib/commission";
 import { getEffectiveCommissionRate } from "@/lib/serverCommission";
 import { pushStatusUpdateMany } from "@/lib/events";
-import { activityRepository, paymentRepository, transactionRepository } from "@/repositories";
+import {
+  jobRepository,
+  activityRepository,
+  paymentRepository,
+  transactionRepository,
+  providerProfileRepository,
+} from "@/repositories";
+import { ledgerRepository } from "@/repositories/ledger.repository";
 import {
   NotFoundError,
   ForbiddenError,
@@ -18,6 +21,7 @@ import {
   assertObjectId,
 } from "@/lib/errors";
 import { ledgerService } from "@/services/ledger.service";
+import { checkRateLimit } from "@/lib/rateLimit";
 import type { IJob } from "@/types";
 
 export const POST = withHandler(async (
@@ -26,9 +30,14 @@ export const POST = withHandler(async (
 ) => {
   const user = await requireUser();
   requireRole(user, "client");
+  requireCsrfToken(req, user);
 
   const { id } = await params;
   assertObjectId(id, "jobId");
+
+  const rl = await checkRateLimit(`job-partial-release:${user.userId}`, { windowMs: 60_000, max: 10 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+
   const body = await req.json();
 
   // M-1: Strict Zod validation — prevents Infinity, NaN, and floating-point drift
@@ -41,12 +50,10 @@ export const POST = withHandler(async (
   }
   const releaseAmount = parsed.data.amount;
 
-  await connectDB();
-
-  const jobDoc = await Job.findOne({ _id: id, clientId: user.userId });
+  const jobDoc = await jobRepository.getDocById(id);
   if (!jobDoc) throw new NotFoundError("Job");
 
-  const job = jobDoc as unknown as IJob & { save(): Promise<void> };
+  const job = jobDoc as unknown as IJob;
 
   if (job.clientId.toString() !== user.userId) throw new ForbiddenError();
   if (job.status !== "completed") throw new UnprocessableError("Job must be marked as completed by the provider first");
@@ -62,15 +69,12 @@ export const POST = withHandler(async (
   const { commission, netAmount } = calculateCommission(releaseAmount, commissionRate);
 
   // Save partial release and close escrow
-  await Job.collection.updateOne(
-    { _id: jobDoc._id },
-    { $set: { escrowStatus: "released", partialReleaseAmount: releaseAmount } }
-  );
+  await jobRepository.updateById(id, { $set: { escrowStatus: "released", partialReleaseAmount: releaseAmount } });
 
   // Resolve the original pending transaction created at escrow funding time,
   // then create a new completed transaction recording the actual partial payout.
   await transactionRepository.setPending(id, "refunded");
-  const partialTx = await Transaction.create({
+  const partialTx = await transactionRepository.create({
     jobId: job._id,
     payerId: user.userId,
     payeeId: job.providerId,
@@ -85,12 +89,12 @@ export const POST = withHandler(async (
   // Post double-entry ledger journal for the partial release
   try {
     const refundedAmount = fundedAmount - releaseAmount;
-    const journalId = `partial-release-${job._id!.toString()}`;
+    const journalId = `partial-release-${String(job._id)}`;
     await ledgerService.postPartialRelease(
       {
         journalId,
         entityType: "job",
-        entityId: job._id!.toString(),
+        entityId: String(job._id),
         clientId: job.clientId.toString(),
         providerId: job.providerId?.toString(),
         initiatedBy: user.userId,
@@ -100,7 +104,7 @@ export const POST = withHandler(async (
       netAmount,
       refundedAmount
     );
-    await Transaction.updateOne({ _id: partialTx._id }, { ledgerJournalId: journalId });
+    await transactionRepository.updateById(String(partialTx._id), { ledgerJournalId: journalId });
   } catch {
     // Non-critical — do not fail partial release if ledger write fails
   }
@@ -109,14 +113,11 @@ export const POST = withHandler(async (
   if (job.providerId) {
     const providerId = job.providerId.toString();
     const [completedCount, totalCount] = await Promise.all([
-      Job.countDocuments({ providerId, status: "completed" }),
-      Job.countDocuments({ providerId, status: { $in: ["completed", "cancelled", "refunded"] } }),
+      jobRepository.countByProvider(providerId, ["completed"]),
+      jobRepository.countByProvider(providerId, ["completed", "cancelled", "refunded"]),
     ]);
     const completionRate = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 100;
-    await ProviderProfile.updateOne(
-      { userId: providerId },
-      { $set: { completedJobCount: completedCount, completionRate } }
-    );
+    await providerProfileRepository.updateCompletionStats(providerId, completedCount, completionRate);
   }
 
   await activityRepository.log({

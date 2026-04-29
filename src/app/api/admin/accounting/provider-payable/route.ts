@@ -3,6 +3,7 @@ import { requireUser, requireRole } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { transactionRepository, payoutRepository, userRepository } from "@/repositories";
 
+import { checkRateLimit } from "@/lib/rateLimit";
 /**
  * GET /api/admin/accounting/provider-payable?currency=PHP
  *
@@ -16,6 +17,8 @@ import { transactionRepository, payoutRepository, userRepository } from "@/repos
 export const GET = withHandler(async (req: NextRequest) => {
   const user = await requireUser();
   requireRole(user, "admin");
+  const rl = await checkRateLimit(`admin:${user.userId}`, { windowMs: 60_000, max: 200 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   const currency = new URL(req.url).searchParams.get("currency") ?? "PHP";
 

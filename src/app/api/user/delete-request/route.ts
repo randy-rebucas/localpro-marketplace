@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { checkRateLimit } from "@/lib/rateLimit";
+import { activityRepository } from "@/repositories";
 import { connectDB } from "@/lib/db";
 import User from "@/models/User";
-import ActivityLog from "@/models/ActivityLog";
 import { sendEmail } from "@/lib/email";
 
 /**
@@ -22,7 +22,7 @@ export const POST = withHandler(async (req: NextRequest) => {
 
   // 1 request per 7 days per user
   const rl = await checkRateLimit(`user-delete-req:${currentUser.userId}`, {
-    windowMs: 7 * 24 * 60 * 60_000,
+    windowMs: 7 * 24 * 60_000 * 60,
     max:      1,
   });
   if (!rl.ok) {
@@ -32,8 +32,13 @@ export const POST = withHandler(async (req: NextRequest) => {
     );
   }
 
-  const body = await req.json() as { reason?: string };
+  const body = await req.json().catch(() => ({})) as { reason?: unknown };
   const reason = typeof body.reason === "string" ? body.reason.slice(0, 500) : "No reason provided";
+
+  // First IP in x-forwarded-for is the original client (the last entry is added by our own proxy)
+  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
+    ?? req.headers.get("x-real-ip")
+    ?? "unknown";
 
   await connectDB();
 
@@ -43,12 +48,12 @@ export const POST = withHandler(async (req: NextRequest) => {
   }
 
   // Log to ActivityLog for admin visibility
-  await ActivityLog.create({
+  activityRepository.log({
     userId:    currentUser.userId,
-    action:    "account_deletion_requested",
-    details:   { reason, requestedAt: new Date().toISOString() },
-    ipAddress: req.headers.get("x-real-ip") ?? req.headers.get("x-forwarded-for")?.split(",").at(-1)?.trim() ?? "unknown",
-  });
+    eventType: "user_deletion_requested",
+    ipAddress: ip,
+    metadata:  { reason, requestedAt: new Date().toISOString() },
+  }).catch((err: unknown) => console.error("[delete-request] ActivityLog failed", err));
 
   // Sanitise all user-controlled strings before embedding in HTML
   const esc = (s: string) =>
@@ -62,7 +67,7 @@ export const POST = withHandler(async (req: NextRequest) => {
   const adminEmail = process.env.ADMIN_SUPPORT_EMAIL ?? process.env.EMAIL_FROM ?? "support@localpro.asia";
   await sendEmail(
     adminEmail,
-    `[Action Required] Account deletion request \u2014 ${safeName} (${safeEmail})`,
+    `[Action Required] Account deletion request — ${safeName} (${safeEmail})`,
     `
       <p>A user has submitted an account deletion request.</p>
       <table>

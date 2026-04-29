@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { requireUser } from "@/lib/auth";
+import { requireUser, requireCsrfToken } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { ValidationError } from "@/lib/errors";
 import { walletService } from "@/services/wallet.service";
+import { checkRateLimit, SENSITIVE_LIMITS } from "@/lib/rateLimit";
 
 const TopUpSchema = z.object({
   amount: z
@@ -12,14 +13,12 @@ const TopUpSchema = z.object({
     .max(100_000, "Maximum top-up amount is ₱100,000"),
 });
 
-/** POST /api/wallet/topup
- *
- * Creates a PayMongo checkout session for a wallet top-up.
- * Returns the checkout URL to redirect the client.
- * The wallet is credited via webhook (checkout_session.payment.paid with metadata.type === "wallet_topup").
- */
+/** POST /api/wallet/topup */
 export const POST = withHandler(async (req: NextRequest) => {
   const user = await requireUser();
+  await requireCsrfToken(req, user);
+  const rl = await checkRateLimit(`wallet:topup:${user.userId}`, SENSITIVE_LIMITS.payment);
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   const body = await req.json().catch(() => ({}));
   const parsed = TopUpSchema.safeParse(body);

@@ -2,116 +2,81 @@ import { NextRequest, NextResponse } from "next/server";
 import { blogCommentRepository } from "@/repositories/blog-comment.repository";
 import { blogRepository } from "@/repositories";
 import { sendCommentApprovedEmail, sendCommentRejectedEmail } from "@/lib/blog-notifications";
-import { requireUser, requireCapability } from "@/lib/auth";
+import { requireUser, requireCapability, requireCsrfToken } from "@/lib/auth";
+import { withHandler } from "@/lib/utils";
+import { ValidationError, NotFoundError, assertObjectId } from "@/lib/errors";
+import { checkRateLimit } from "@/lib/rateLimit";
 import { z } from "zod";
 
-/**
- * PATCH /api/admin/comments/[commentId]
- * Approve, reject, or spam flag a comment (admin)
- */
 const updateCommentSchema = z.object({
   action: z.enum(["approve", "reject", "spam"]),
 });
 
-export async function PATCH(
+/** PATCH /api/admin/comments/[commentId] */
+export const PATCH = withHandler(async (
   req: NextRequest,
   { params }: { params: Promise<{ commentId: string }> }
-) {
-  try {
-    const user = await requireUser();
-    requireCapability(user, "manage_blogs");
-    const { commentId } = await params;
-    const body = await req.json();
+) => {
+  const user = await requireUser();
+  requireCapability(user, "manage_blogs");
+  await requireCsrfToken(req, user);
+  const rl = await checkRateLimit(`admin:${user.userId}`, { windowMs: 60_000, max: 200 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
-    const validated = updateCommentSchema.parse(body);
+  const { commentId } = await params;
+  assertObjectId(commentId, "commentId");
 
-    let comment;
-    switch (validated.action) {
-      case "approve":
-        comment = await blogCommentRepository.approve(commentId);
-        break;
-      case "reject":
-        comment = await blogCommentRepository.reject(commentId);
-        break;
-      case "spam":
-        comment = await blogCommentRepository.markAsSpam(commentId);
-        break;
-    }
+  const body = await req.json();
+  const validated = updateCommentSchema.safeParse(body);
+  if (!validated.success) throw new ValidationError(validated.error.errors[0].message);
 
-    if (!comment) {
-      return NextResponse.json(
-        { error: "Comment not found" },
-        { status: 404 }
-      );
-    }
+  let comment;
+  switch (validated.data.action) {
+    case "approve":
+      comment = await blogCommentRepository.approve(commentId);
+      break;
+    case "reject":
+      comment = await blogCommentRepository.reject(commentId);
+      break;
+    case "spam":
+      comment = await blogCommentRepository.markAsSpam(commentId);
+      break;
+  }
 
-    // Send notification email asynchronously
-    (async () => {
-      try {
-        // Fetch blog details
-        const blog = await blogRepository.findById(comment.blog?.toString() || "");
-        if (!blog || !comment.authorEmail) {
-          return; // Can't send notification
-        }
+  if (!comment) throw new NotFoundError("Comment");
 
-        if (validated.action === "approve") {
-          await sendCommentApprovedEmail(blog, comment, comment.authorEmail);
-        } else if (validated.action === "reject") {
-          await sendCommentRejectedEmail(blog, comment, comment.authorEmail);
-        }
-      } catch (error) {
-        console.error("Error sending comment notification email:", error);
-        // Don't fail the request if email fails
+  (async () => {
+    try {
+      const blog = await blogRepository.findById(comment.blog?.toString() || "");
+      if (!blog || !comment.authorEmail) return;
+      if (validated.data.action === "approve") {
+        await sendCommentApprovedEmail(blog, comment, comment.authorEmail);
+      } else if (validated.data.action === "reject") {
+        await sendCommentRejectedEmail(blog, comment, comment.authorEmail);
       }
-    })();
-
-    return NextResponse.json({
-      message: `Comment ${validated.action}ed`,
-      comment,
-    });
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: "Invalid request", details: error.errors },
-        { status: 400 }
-      );
+    } catch {
+      // non-fatal email
     }
-    console.error("Error updating comment:", error);
-    return NextResponse.json(
-      { error: "Failed to update comment" },
-      { status: 500 }
-    );
-  }
-}
+  })();
 
-/**
- * DELETE /api/admin/comments/[commentId]
- * Delete a comment (admin)
- */
-export async function DELETE(
-  req: NextRequest,
+  return NextResponse.json({ message: `Comment ${validated.data.action}ed`, comment });
+});
+
+/** DELETE /api/admin/comments/[commentId] */
+export const DELETE = withHandler(async (
+  _req: NextRequest,
   { params }: { params: Promise<{ commentId: string }> }
-) {
-  try {
-    const user = await requireUser();
-    requireCapability(user, "manage_blogs");
-    const { commentId } = await params;
+) => {
+  const user = await requireUser();
+  requireCapability(user, "manage_blogs");
+  const rl = await checkRateLimit(`admin:${user.userId}`, { windowMs: 60_000, max: 200 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
-    const comment = await blogCommentRepository.delete(commentId);
+  const { commentId } = await params;
+  assertObjectId(commentId, "commentId");
 
-    if (!comment) {
-      return NextResponse.json(
-        { error: "Comment not found" },
-        { status: 404 }
-      );
-    }
+  const comment = await blogCommentRepository.delete(commentId);
+  if (!comment) throw new NotFoundError("Comment");
 
-    return NextResponse.json({ message: "Comment deleted" });
-  } catch (error) {
-    console.error("Error deleting comment:", error);
-    return NextResponse.json(
-      { error: "Failed to delete comment" },
-      { status: 500 }
-    );
-  }
-}
+  return NextResponse.json({ message: "Comment deleted" });
+});

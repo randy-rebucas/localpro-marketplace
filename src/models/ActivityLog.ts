@@ -16,33 +16,31 @@ const ActivityLogSchema = new Schema<ActivityLogDocument>(
     eventType: {
       type: String,
       enum: [
-        "job_created",
-        "job_approved",
-        "job_rejected",
-        "quote_submitted",
-        "quote_accepted",
-        "escrow_funded",
-        "job_started",
-        "job_completed",
-        "escrow_released",
-        "dispute_opened",
-        "dispute_resolved",
-        "review_submitted",
-        "job_expired",
-        "quote_expired",
-        "payout_requested",
-        "payout_updated",
-        "consultation_requested",
-        "consultation_accepted",
-        "consultation_declined",
-        "consultation_converted_to_job",
-        "consultation_stale_accepted",
-        "recurring_created",
-        "recurring_cancelled",
-        "recurring_job_spawned",
-        "job_cancelled",
-        "provider_withdrew",
-        "admin_ledger_entry",
+        // Job lifecycle
+        "job_created", "job_approved", "job_rejected", "job_started",
+        "job_completed", "job_expired", "job_cancelled", "job_reopened",
+        // Quotes
+        "quote_submitted", "quote_accepted", "quote_expired", "quote_revised",
+        // Escrow / Payments
+        "escrow_funded", "escrow_released", "provider_withdrew",
+        "payout_requested", "payout_updated",
+        // Disputes
+        "dispute_opened", "dispute_resolved",
+        // Reviews
+        "review_submitted", "review_responded", "review_hidden", "review_unhidden",
+        // Consultations
+        "consultation_requested", "consultation_accepted", "consultation_declined",
+        "consultation_converted_to_job", "consultation_stale_accepted",
+        // Recurring
+        "recurring_created", "recurring_cancelled", "recurring_job_spawned",
+        // User / Auth
+        "user_registered", "user_login", "user_login_failed", "email_verified",
+        "user_deleted", "user_deletion_requested", "user_data_exported",
+        "user_password_reset", "user_unlocked",
+        // Admin actions
+        "admin_ledger_entry", "admin_impersonation",
+        "account_suspended", "account_unsuspended",
+        "provider_approved", "provider_rejected", "role_changed",
       ] as ActivityEventType[],
       required: true,
     },
@@ -52,6 +50,10 @@ const ActivityLogSchema = new Schema<ActivityLogDocument>(
     },
     metadata: {
       type: Schema.Types.Mixed,
+    },
+    ipAddress: {
+      type: String,
+      default: null,
     },
   },
   { timestamps: { createdAt: true, updatedAt: false } }

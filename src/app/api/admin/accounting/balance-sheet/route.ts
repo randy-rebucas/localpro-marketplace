@@ -4,6 +4,7 @@ import { withHandler } from "@/lib/utils";
 import { ledgerRepository } from "@/repositories/ledger.repository";
 import type { AccountCode } from "@/models/LedgerEntry";
 
+import { checkRateLimit } from "@/lib/rateLimit";
 const ASSET_CODES:     AccountCode[] = ["1000", "1100", "1200"];
 const LIABILITY_CODES: AccountCode[] = ["2000", "2100", "2200", "2300", "2400"];
 const EQUITY_CODES:    AccountCode[] = ["3000"];
@@ -61,6 +62,8 @@ async function sumGroup(codes: AccountCode[], currency: string): Promise<
 export const GET = withHandler(async (req) => {
   const user = await requireUser();
   requireRole(user, "admin");
+  const rl = await checkRateLimit(`admin:${user.userId}`, { windowMs: 60_000, max: 200 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   const currency = new URL(req.url).searchParams.get("currency") ?? "PHP";
 

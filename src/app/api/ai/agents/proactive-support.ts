@@ -2,12 +2,17 @@
  * Proactive Support Agent
  * Prevents issues before they happen with AI recommendations
  * POST /api/ai/agents/proactive-support
+ * Internal endpoint — requires INTERNAL_API_KEY bearer token
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
+import { withHandler } from "@/lib/utils";
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+function getClient(): OpenAI | null {
+  if (!process.env.OPENAI_API_KEY) return null;
+  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+}
 
 interface ProactiveSupportInput {
   jobId: string;
@@ -17,7 +22,7 @@ interface ProactiveSupportInput {
     budget: number;
     category: string;
     urgency: "low" | "medium" | "high";
-    estimatedDuration: string; // e.g., "2 hours", "1 day"
+    estimatedDuration: string;
   };
   clientProfile: {
     firstTimeClient: boolean;
@@ -26,9 +31,9 @@ interface ProactiveSupportInput {
   };
   providerProfile: {
     specialization: string[];
-    experience: number; // years
+    experience: number;
     averageRating: number;
-    completionRate: number; // 0-100
+    completionRate: number;
   };
   riskFactors: {
     budgetMismatch: boolean;
@@ -38,31 +43,28 @@ interface ProactiveSupportInput {
   };
 }
 
-interface ProactiveRecommendation {
-  riskLevel: "low" | "medium" | "high";
-  confidence: number; // 0-100
-  potentialIssues: string[];
-  preventiveTips: {
-    forClient: string[];
-    forProvider: string[];
-  };
-  escalationScore: number; // 0-100, if >70 send proactive support
-  shouldNotify: boolean;
-}
+export const POST = withHandler(async (req: NextRequest) => {
+  const internalKey = process.env.INTERNAL_API_KEY;
+  const auth = req.headers.get("authorization");
+  if (!internalKey || auth !== `Bearer ${internalKey}`) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
-export async function POST(req: NextRequest) {
-  try {
-    const input: ProactiveSupportInput = await req.json();
+  const client = getClient();
+  if (!client) {
+    return NextResponse.json({ error: "AI service not configured" }, { status: 503 });
+  }
 
-    // Quick risk assessment
-    let quickRiskScore = 0;
-    if (input.riskFactors.budgetMismatch) quickRiskScore += 25;
-    if (input.riskFactors.complexityHigh) quickRiskScore += 25;
-    if (input.riskFactors.urgencyHigh) quickRiskScore += 20;
-    if (input.riskFactors.clientConcerned) quickRiskScore += 20;
-    if (input.clientProfile.firstTimeClient && input.riskFactors.complexityHigh) quickRiskScore += 10;
+  const input: ProactiveSupportInput = await req.json();
 
-    const prompt = `You are a proactive support specialist for a skilled trades marketplace. Identify risks and suggest prevention.
+  let quickRiskScore = 0;
+  if (input.riskFactors.budgetMismatch) quickRiskScore += 25;
+  if (input.riskFactors.complexityHigh) quickRiskScore += 25;
+  if (input.riskFactors.urgencyHigh) quickRiskScore += 20;
+  if (input.riskFactors.clientConcerned) quickRiskScore += 20;
+  if (input.clientProfile.firstTimeClient && input.riskFactors.complexityHigh) quickRiskScore += 10;
+
+  const prompt = `You are a proactive support specialist for a skilled trades marketplace. Identify risks and suggest prevention.
 
 Job: ${input.jobData.title}
 Budget: ₱${input.jobData.budget}
@@ -72,19 +74,8 @@ Duration: ${input.jobData.estimatedDuration}
 Client: ${input.clientProfile.firstTimeClient ? "First-time" : "Experienced"} (${input.clientProfile.previousJobs} jobs, ${input.clientProfile.averageRating} rating)
 Provider: ${input.providerProfile.specialization.join("/")} specialist, ${input.providerProfile.experience} years exp (${input.providerProfile.averageRating} rating)
 
-Risk Factors: ${Object.entries(input.riskFactors)
-      .filter(([, v]) => v)
-      .map(([k]) => k)
-      .join(", ") || "None"}
-
+Risk Factors: ${Object.entries(input.riskFactors).filter(([, v]) => v).map(([k]) => k).join(", ") || "None"}
 Quick Risk Score: ${quickRiskScore}
-
-Common Issues for Similar Jobs:
-1. Scope creep (client wants more than quoted)
-2. Miscommunication on quality standards
-3. Budget overruns due to unforeseen issues
-4. Scheduling conflicts
-5. Material/supply delays
 
 Provide prevention tips:
 {
@@ -96,49 +87,29 @@ Provide prevention tips:
   },
   "escalationScore": <0-100>,
   "shouldNotify": <true/false>
-}
+}`;
 
-If escalationScore > 70, shouldNotify = true (send proactive support tip)`;
+  const completion = await client.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [
+      { role: "system", content: "You are a proactive support expert. Identify risks early and suggest practical prevention. Return valid JSON." },
+      { role: "user", content: prompt },
+    ],
+    temperature: 0.2,
+  });
 
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        {
-          role: "system",
-          content:
-            "You are a proactive support expert. Identify risks early and suggest practical prevention. Return valid JSON.",
-        },
-        {
-          role: "user",
-          content: prompt,
-        },
-      ],
-      temperature: 0.2,
-    });
+  const content = completion.choices[0]?.message?.content || "{}";
+  const recommendation = JSON.parse(content);
 
-    const content = completion.choices[0]?.message?.content || "{}";
-    const recommendation = JSON.parse(content) as ProactiveRecommendation;
-
-    // Adjust based on quick risk score
-    if (quickRiskScore > 50 && recommendation.riskLevel === "low") {
-      recommendation.riskLevel = "medium";
-      recommendation.escalationScore = Math.max(recommendation.escalationScore, 60);
-    }
-    if (quickRiskScore > 70) {
-      recommendation.riskLevel = "high";
-      recommendation.escalationScore = Math.max(recommendation.escalationScore, 75);
-      recommendation.shouldNotify = true;
-    }
-
-    return NextResponse.json({
-      success: true,
-      recommendation,
-    });
-  } catch (error) {
-    console.error("[Proactive Support] Error:", error);
-    return NextResponse.json(
-      { error: "Proactive support analysis failed", details: String(error) },
-      { status: 500 }
-    );
+  if (quickRiskScore > 50 && recommendation.riskLevel === "low") {
+    recommendation.riskLevel = "medium";
+    recommendation.escalationScore = Math.max(recommendation.escalationScore, 60);
   }
-}
+  if (quickRiskScore > 70) {
+    recommendation.riskLevel = "high";
+    recommendation.escalationScore = Math.max(recommendation.escalationScore, 75);
+    recommendation.shouldNotify = true;
+  }
+
+  return NextResponse.json({ success: true, recommendation });
+});

@@ -1,11 +1,15 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { withHandler } from "@/lib/utils";
 import { requireUser } from "@/lib/auth";
+import { checkRateLimit } from "@/lib/rateLimit";
 import { jobRepository } from "@/repositories/job.repository";
 import { getNextDueDate, MAINTENANCE_SCHEDULE } from "@/lib/recommendations";
 
-export const GET = withHandler(async () => {
+export const GET = withHandler(async (req: NextRequest) => {
   const user = await requireUser();
+
+  const rl = await checkRateLimit(`recommendations:${user.userId}`, { windowMs: 60_000, max: 30 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   const categoryHistory = await jobRepository.findLastCompletedByCategory(user.userId);
 

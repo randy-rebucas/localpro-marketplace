@@ -4,6 +4,7 @@ import { withHandler } from "@/lib/utils";
 import { NotFoundError, assertObjectId } from "@/lib/errors";
 import { userRepository, activityRepository, jobRepository, reviewRepository, messageRepository } from "@/repositories";
 
+import { checkRateLimit } from "@/lib/rateLimit";
 /**
  * GET /api/admin/users/[id]/gdpr-export
  *
@@ -16,6 +17,8 @@ export const GET = withHandler(async (
 ) => {
   const admin = await requireUser();
   requireCapability(admin, "manage_users");
+  const rl = await checkRateLimit(`admin:${admin.userId}`, { windowMs: 60_000, max: 200 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   const { id } = await params;
   assertObjectId(id, "userId");

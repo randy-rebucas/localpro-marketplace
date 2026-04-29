@@ -3,6 +3,7 @@ import { requireUser } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { connectDB } from "@/lib/db";
 import { ForbiddenError, NotFoundError, ValidationError } from "@/lib/errors";
+import { checkRateLimit } from "@/lib/rateLimit";
 import { createOrder } from "@/lib/paypal";
 import AgencyProfile from "@/models/AgencyProfile";
 
@@ -24,7 +25,10 @@ export const POST = withHandler(async (req: NextRequest) => {
   const user = await requireUser();
   if (user.role !== "provider") throw new ForbiddenError();
 
-  const body = await req.json() as { plan?: string };
+  const rl = await checkRateLimit(`agency-checkout:${user.userId}`, { windowMs: 3_600_000, max: 5 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+
+  const body = await req.json().catch(() => ({})) as { plan?: string };
   const { plan } = body;
 
   if (!plan || !["growth", "pro", "enterprise"].includes(plan)) {

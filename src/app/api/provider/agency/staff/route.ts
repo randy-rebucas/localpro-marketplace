@@ -5,19 +5,22 @@ import { requireUser } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { connectDB } from "@/lib/db";
 import { ForbiddenError, NotFoundError, ValidationError, ConflictError } from "@/lib/errors";
+import { checkRateLimit } from "@/lib/rateLimit";
 import { isAtMemberLimit, getMemberLimit, PLAN_LABELS } from "@/lib/businessPlan";
 import AgencyProfile from "@/models/AgencyProfile";
 import User from "@/models/User";
 
+const OID_RE = /^[a-f\d]{24}$/i;
+
 const AddSchema = z.object({
-  agencyId: z.string(),
-  userId:   z.string(),
+  agencyId: z.string().regex(OID_RE, "Invalid agencyId").optional(),
+  userId:   z.string().regex(OID_RE, "Invalid userId"),
   role:     z.enum(["worker", "dispatcher", "supervisor", "finance"]).default("worker"),
 });
 
 const UpdateSchema = z.object({
-  agencyId: z.string(),
-  staffId:  z.string(),
+  agencyId: z.string().regex(OID_RE, "Invalid agencyId").optional(),
+  staffId:  z.string().regex(OID_RE, "Invalid staffId"),
   role:     z.enum(["worker", "dispatcher", "supervisor", "finance"]),
 });
 
@@ -51,7 +54,10 @@ export const POST = withHandler(async (req: NextRequest) => {
   const user = await requireUser();
   if (user.role !== "provider") throw new ForbiddenError();
 
-  const body = await req.json();
+  const rl = await checkRateLimit(`agency-staff:${user.userId}`, { windowMs: 60_000, max: 30 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+
+  const body = await req.json().catch(() => ({}));
   const parsed = AddSchema.safeParse(body);
   if (!parsed.success) throw new ValidationError(parsed.error.errors[0].message);
 
@@ -97,7 +103,7 @@ export const PATCH = withHandler(async (req: NextRequest) => {
   const user = await requireUser();
   if (user.role !== "provider") throw new ForbiddenError();
 
-  const body = await req.json();
+  const body = await req.json().catch(() => ({}));
   const parsed = UpdateSchema.safeParse(body);
   if (!parsed.success) throw new ValidationError(parsed.error.errors[0].message);
 

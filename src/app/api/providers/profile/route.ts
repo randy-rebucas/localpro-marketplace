@@ -4,6 +4,7 @@ import { providerProfileService } from "@/services";
 import { requireUser, requireRole } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { ValidationError } from "@/lib/errors";
+import { checkRateLimit } from "@/lib/rateLimit";
 import { SkillEntrySchema } from "@/lib/validation";
 
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
@@ -18,7 +19,7 @@ const UpdateProfileSchema = z.object({
   bio: z.string().max(1000).optional(),
   skills: z.array(SkillEntrySchema).max(20).optional(),
   yearsExperience: z.number().int().min(0).max(50).optional(),
-  hourlyRate: z.number().positive().optional(),
+  hourlyRate: z.number().positive().max(100_000).optional(),
   availabilityStatus: z.enum(["available", "busy", "unavailable"]).optional(),
   schedule: z.object({
     mon: WorkSlotSchema,
@@ -42,9 +43,13 @@ const UpdateProfileSchema = z.object({
   maxConcurrentJobs: z.number().int().min(1).max(20).optional(),
 });
 
-export const GET = withHandler(async () => {
+export const GET = withHandler(async (req: NextRequest) => {
   const user = await requireUser();
   requireRole(user, "provider");
+
+  const rl = await checkRateLimit(`profile-get:${user.userId}`, { windowMs: 60_000, max: 60 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+
   const profile = await providerProfileService.getProfile(user.userId);
   return NextResponse.json(profile);
 });
@@ -53,7 +58,10 @@ export const PUT = withHandler(async (req: NextRequest) => {
   const user = await requireUser();
   requireRole(user, "provider");
 
-  const body = await req.json();
+  const rl = await checkRateLimit(`profile-put:${user.userId}`, { windowMs: 60_000, max: 20 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+
+  const body = await req.json().catch(() => ({}));
   const parsed = UpdateProfileSchema.safeParse(body);
   if (!parsed.success) throw new ValidationError(parsed.error.errors[0].message);
 

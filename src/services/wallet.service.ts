@@ -251,12 +251,13 @@ export class WalletService {
 
     const { createCheckoutSession } = await import("@/lib/paymongo");
 
+    const walletPath = user.role === "provider" ? "/provider/wallet" : "/client/wallet";
     const session = await createCheckoutSession({
       amountPHP,
       description: `Wallet top-up — ₱${amountPHP.toLocaleString()}`,
       lineItemName: "Wallet Top-Up",
-      successUrl: `${baseUrl}/api/payment-return?to=${encodeURIComponent(`/client/wallet?topup=success`)}`,
-      cancelUrl:  `${baseUrl}/client/wallet?topup=cancelled`,
+      successUrl: `${baseUrl}/api/payment-return?to=${encodeURIComponent(`${walletPath}?topup=success`)}`,
+      cancelUrl:  `${baseUrl}${walletPath}?topup=cancelled`,
       metadata: {
         type:       "wallet_topup",
         userId:     user.userId,
@@ -275,6 +276,13 @@ export class WalletService {
   async topUpVerifyAndConfirm(userId: string, sessionId: string): Promise<"credited" | "already_done" | "not_paid"> {
     const { getCheckoutSession } = await import("@/lib/paymongo");
     const session = await getCheckoutSession(sessionId);
+
+    // Security: verify the session belongs to the calling user.
+    // Prevents user B from submitting user A's sessionId and stealing the credit.
+    const sessionOwner = session.metadata?.userId;
+    if (sessionOwner && sessionOwner !== userId) {
+      return "not_paid"; // silently reject — do not reveal session existence
+    }
 
     const isPaid =
       session.paymentIntentStatus === "succeeded" ||
@@ -305,7 +313,7 @@ export class WalletService {
     if (amountPHP <= 0) return "not_paid";
 
     await this.topUpConfirm(userId, amountPHP, sessionId, userId);
-    return existing ? "already_done" : "credited"; // wallet existed → ledger retry, else fresh credit
+    return existing ? "credited" : "credited"; // partial-failure recovery or fresh credit
   }
 
   /**
@@ -499,8 +507,14 @@ export class WalletService {
       status: string;
     };
 
-    // If rejecting, release the reservation back to the wallet
-    if (status === "rejected" && w.status !== "rejected") {
+    // If rejecting: atomically transition status first (prevents double-reversal on concurrent requests)
+    if (status === "rejected") {
+      const transitioned = await walletRepository.atomicTransitionWithdrawalStatus(withdrawalId, "rejected", notes);
+      if (!transitioned) {
+        // Already completed or rejected — nothing to do
+        return walletRepository.findWithdrawalById(withdrawalId);
+      }
+
       await walletRepository.releaseReservation(w.userId.toString(), w.amount);
       const { txDoc: reversedTxDoc } = await walletRepository.applyTransaction(
         w.userId.toString(),
@@ -524,7 +538,6 @@ export class WalletService {
         withdrawalId,
         `wallet-withdraw-reversed-${withdrawalId}`
       );
-      // Stamp journalId on the reversal WalletTransaction for traceability
       try {
         await walletRepository.setTransactionLedgerJournalId(
           (reversedTxDoc as unknown as { _id: { toString(): string } })._id.toString(),
@@ -532,7 +545,6 @@ export class WalletService {
         );
       } catch { /* non-critical */ }
 
-      // Notify user
       const note = await notificationRepository.create({
         userId: w.userId.toString(),
         type: "wallet_withdrawal_update" as never,
@@ -541,8 +553,24 @@ export class WalletService {
         data: {},
       });
       pushNotification(w.userId.toString(), note);
-    } else if (status === "completed" && w.status !== "completed") {
-      // Commit the reservation: deduct balance + release reservedAmount atomically, create WalletTransaction
+
+      await activityRepository.log({
+        userId: admin.userId,
+        eventType: "payout_updated" as never,
+        metadata: { source: "wallet_withdrawal", withdrawalId, status, notes },
+      });
+
+      return transitioned;
+
+    } else if (status === "completed") {
+      // Atomically transition status (prevents double-debit on concurrent requests)
+      const transitioned = await walletRepository.atomicTransitionWithdrawalStatus(withdrawalId, "completed", notes);
+      if (!transitioned) {
+        // Already completed — nothing to do
+        return walletRepository.findWithdrawalById(withdrawalId);
+      }
+
+      // Commit: deduct balance + release reservedAmount + create WalletTransaction
       const { txDoc: completedTxDoc } = await walletRepository.commitReservationWithTx(
         w.userId.toString(),
         w.amount,
@@ -563,7 +591,6 @@ export class WalletService {
         withdrawalId,
         `wallet-withdraw-completed-${withdrawalId}`
       );
-      // Stamp journalId on the withdrawal WalletTransaction for traceability
       try {
         await walletRepository.setTransactionLedgerJournalId(
           (completedTxDoc as unknown as { _id: { toString(): string } })._id.toString(),
@@ -579,8 +606,17 @@ export class WalletService {
         data: {},
       });
       pushNotification(w.userId.toString(), note);
+
+      await activityRepository.log({
+        userId: admin.userId,
+        eventType: "payout_updated" as never,
+        metadata: { source: "wallet_withdrawal", withdrawalId, status, notes },
+      });
+
+      return transitioned;
     }
 
+    // "processing" — no wallet change, just a status update
     const updated = await walletRepository.updateWithdrawalStatus(withdrawalId, status, notes);
 
     await activityRepository.log({

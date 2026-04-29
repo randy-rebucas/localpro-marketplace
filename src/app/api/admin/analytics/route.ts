@@ -3,6 +3,7 @@ import { blogAnalyticsRepository } from "@/repositories/blog-analytics.repositor
 import { requireUser, requireCapability } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 
+import { checkRateLimit } from "@/lib/rateLimit";
 /**
  * GET /api/admin/analytics
  * Get blog analytics dashboard (admin)
@@ -17,6 +18,8 @@ import { withHandler } from "@/lib/utils";
 export const GET = withHandler(async (req: NextRequest) => {
   const user = await requireUser();
   requireCapability(user, "manage_blogs");
+  const rl = await checkRateLimit(`admin:${user.userId}`, { windowMs: 60_000, max: 200 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   const searchParams = req.nextUrl.searchParams;
   const blogId = searchParams.get("blogId");

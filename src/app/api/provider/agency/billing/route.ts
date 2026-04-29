@@ -4,6 +4,7 @@ import { requireUser } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { connectDB } from "@/lib/db";
 import { ForbiddenError } from "@/lib/errors";
+import { checkRateLimit } from "@/lib/rateLimit";
 import { BASE_COMMISSION_RATE } from "@/lib/commission";
 import AgencyProfile from "@/models/AgencyProfile";
 import Transaction from "@/models/Transaction";
@@ -13,6 +14,9 @@ import Job from "@/models/Job";
 export const GET = withHandler(async (req: NextRequest) => {
   const user = await requireUser();
   if (user.role !== "provider") throw new ForbiddenError();
+
+  const rl = await checkRateLimit(`agency-billing:${user.userId}`, { windowMs: 60_000, max: 30 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   await connectDB();
 

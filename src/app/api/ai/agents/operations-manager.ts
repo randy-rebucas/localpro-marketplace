@@ -5,11 +5,10 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
-import { connectDB } from "@/lib/db";
 import { withHandler } from "@/lib/utils";
 import { requireUser, requireCapability } from "@/lib/auth";
 import { AIDecisionService } from "@/services/ai-decision.service";
-import mongoose from "mongoose";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 interface OpsManagerInput {
   operationType: "job_validation" | "provider_approval" | "payout_verification";
@@ -292,9 +291,10 @@ async function evaluatePayoutVerification(
  * POST /api/ai/agents/operations-manager
  */
 export const POST = withHandler(async (req: NextRequest) => {
-  await connectDB();
   const user = await requireUser();
   requireCapability(user, "manage_operations");
+  const rl = await checkRateLimit(`ai:ops-mgr:${user.userId}`, { windowMs: 60_000, max: 10 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   const body = await req.json();
   const input: OpsManagerInput = body;

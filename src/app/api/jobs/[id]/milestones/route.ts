@@ -1,9 +1,10 @@
-import { type NextRequest } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { requireUser } from "@/lib/auth";
+import { requireUser, requireCsrfToken } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { jobRepository, paymentRepository } from "@/repositories";
 import { NotFoundError, ForbiddenError, UnprocessableError, ValidationError, assertObjectId } from "@/lib/errors";
+import { checkRateLimit } from "@/lib/rateLimit";
 import type { IJob, IMilestone } from "@/types";
 
 const AddMilestoneSchema = z.object({
@@ -18,10 +19,13 @@ type Ctx = { params: Promise<{ id: string }> };
  * GET /api/jobs/:id/milestones
  * Returns the milestone list for a job. Accessible by client, provider, or admin.
  */
-export const GET = withHandler(async (_req: NextRequest, { params }: Ctx) => {
+export const GET = withHandler(async (req: NextRequest, { params }: Ctx) => {
   const { id } = await params;
   assertObjectId(id, "jobId");
   const user = await requireUser();
+
+  const rl = await checkRateLimit(`job-milestones-get:${user.userId}`, { windowMs: 60_000, max: 60 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   const jobDoc = await jobRepository.getDocById(id);
   if (!jobDoc) throw new NotFoundError("Job");
@@ -48,6 +52,10 @@ export const POST = withHandler(async (req: NextRequest, { params }: Ctx) => {
   const { id } = await params;
   assertObjectId(id, "jobId");
   const user = await requireUser();
+  requireCsrfToken(req, user);
+
+  const rl = await checkRateLimit(`job-milestones-post:${user.userId}`, { windowMs: 60_000, max: 20 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   const body = await req.json();
   const parsed = AddMilestoneSchema.safeParse(body);
@@ -62,7 +70,6 @@ export const POST = withHandler(async (req: NextRequest, { params }: Ctx) => {
     _id: { toString(): string };
     clientId: { toString(): string };
     milestones: IMilestone[];
-    save(): Promise<void>;
   };
 
   if (job.clientId.toString() !== user.userId) throw new ForbiddenError();
@@ -97,8 +104,7 @@ export const POST = withHandler(async (req: NextRequest, { params }: Ctx) => {
     releasedAt:  undefined,
   } as unknown as IMilestone);
 
-  (jobDoc as unknown as { milestones: IMilestone[] }).milestones = existing;
-  await jobDoc.save();
+  await jobRepository.updateById(id, { $set: { milestones: existing } });
 
   return Response.json(
     { milestone: existing[existing.length - 1] },

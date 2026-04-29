@@ -7,6 +7,7 @@ import { withHandler } from "@/lib/utils";
 import { connectDB } from "@/lib/db";
 import { ValidationError, NotFoundError } from "@/lib/errors";
 import AgencyProfile from "@/models/AgencyProfile";
+import { checkRateLimit, SENSITIVE_LIMITS } from "@/lib/rateLimit";
 
 const UpdateMeSchema = z.object({
   name: z.string().min(2).max(100).optional(),
@@ -23,6 +24,9 @@ const UpdateMeSchema = z.object({
 export const PUT = withHandler(async (req: NextRequest) => {
   const tokenUser = await requireUser();
   requireCsrfToken(req, tokenUser);
+  const rl = await checkRateLimit(`auth:me:put:${tokenUser.userId}`, SENSITIVE_LIMITS.passwordChange);
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+
   const body = await req.json();
   const parsed = UpdateMeSchema.safeParse(body);
   if (!parsed.success) throw new ValidationError(parsed.error.errors[0].message);
@@ -43,7 +47,6 @@ export const PUT = withHandler(async (req: NextRequest) => {
 
   await user.save();
 
-  // Invalidate all existing access tokens after a password change
   if (parsed.data.newPassword) {
     await revokeAllUserTokens(tokenUser.userId);
   }
@@ -61,13 +64,13 @@ export const PUT = withHandler(async (req: NextRequest) => {
 
 export const GET = withHandler(async () => {
   const tokenUser = await requireUser();
+  const rl = await checkRateLimit(`auth:me:get:${tokenUser.userId}`, { windowMs: 60_000, max: 60 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   await connectDB();
   const user = await userRepository.findById(tokenUser.userId);
   if (!user) throw new NotFoundError("User");
 
-  // For providers: derive agencyId from a live AgencyProfile staff lookup
-  // This is the source of truth — avoids stale values on the user document.
   let agencyId: string | null = null;
   if (user.role === "provider") {
     const agency = await AgencyProfile.findOne(

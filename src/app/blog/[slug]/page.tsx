@@ -2,62 +2,107 @@ import React from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Metadata } from "next";
-import { Calendar, User, Share2, Tag, ArrowRight } from "lucide-react";
 import { connectDB } from "@/lib/db";
 import { blogRepository } from "@/repositories";
 import { blogCommentRepository } from "@/repositories/blog-comment.repository";
 import { generateBlogArticleSchema } from "@/lib/blog-schema";
-import BlogFeaturedImage from "@/components/blog/BlogFeaturedImage";
 import BlogContent from "./BlogContent";
 import ShareSection from "./ShareSection";
 import BlogComments from "./BlogComments";
 import AnalyticsTracker from "./AnalyticsTracker";
 
+/* ── helpers (mirrors blog/page.tsx) ────────────────────────── */
+
+const CATEGORY_LABEL: Record<string, string> = {
+  news:               "NEWS & UPDATES",
+  tutorial:           "TIPS & GUIDES",
+  "tips-tricks":      "TIPS & GUIDES",
+  "service-update":   "FOR BUSINESSES",
+  "industry-insights":"FOR PROS",
+  announcement:       "NEWS & UPDATES",
+  "for-homeowners":   "FOR HOMEOWNERS",
+  "for-businesses":   "FOR BUSINESSES",
+  "for-pros":         "FOR PROS",
+  "news-updates":     "NEWS & UPDATES",
+  "tips-guides":      "TIPS & GUIDES",
+};
+
+const CATEGORY_COLOR: Record<string, string> = {
+  "FOR HOMEOWNERS": "text-emerald-600",
+  "FOR BUSINESSES": "text-blue-600",
+  "FOR PROS":       "text-violet-600",
+  "NEWS & UPDATES": "text-amber-600",
+  "TIPS & GUIDES":  "text-rose-600",
+};
+
+const CARD_GRADIENTS = [
+  "from-emerald-100 to-emerald-200",
+  "from-blue-100 to-blue-200",
+  "from-violet-100 to-violet-200",
+  "from-amber-100 to-amber-200",
+  "from-rose-100 to-rose-200",
+];
+
+function catLabel(cat?: string) {
+  if (!cat) return "";
+  return CATEGORY_LABEL[cat] ?? cat.toUpperCase();
+}
+
+function catColor(label: string) {
+  return CATEGORY_COLOR[label] ?? "text-primary";
+}
+
+function readTime(content: string) {
+  const words = content?.trim().split(/\s+/).length ?? 0;
+  return `${Math.max(1, Math.round(words / 200))} min read`;
+}
+
+function formatDate(d: Date | string | undefined) {
+  if (!d) return "";
+  return new Date(d).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+}
+
+function authorName(author: unknown) {
+  if (author && typeof author === "object" && "name" in author)
+    return (author as { name: string }).name;
+  return "LocalPro Team";
+}
+
+function ThumbPlaceholder({ idx }: { idx: number }) {
+  const g = CARD_GRADIENTS[idx % CARD_GRADIENTS.length];
+  return (
+    <div className={`h-full w-full bg-gradient-to-br ${g} flex items-center justify-center`}>
+      <svg viewBox="0 0 48 48" className="h-6 w-6 text-white/50" fill="currentColor">
+        <path d="M4 38l10-14 7 9 10-13L44 38H4z" opacity=".6" />
+        <circle cx="15" cy="16" r="4" opacity=".4" />
+      </svg>
+    </div>
+  );
+}
+
+/* ── ISR ─────────────────────────────────────────────────────── */
+
+export const revalidate = 3600;
+
 interface PageProps {
   params: Promise<{ slug: string }>;
 }
 
-/**
- * Enable ISR (Incremental Static Regeneration)
- * Pages are regenerated every 3600 seconds (1 hour) in the background
- * This ensures new blogs appear without full rebuild
- */
-export const revalidate = 3600;
-
-/**
- * Generate static params for published blog articles
- * Generates params for frequently accessed blogs to improve initial build time
- * Other blogs will be rendered on-demand and cached
- */
 export async function generateStaticParams() {
   try {
     await connectDB();
-    // Fetch published blogs for static generation
-    // Increased limit to cover more blogs at build time
     const result = await blogRepository.findPublished(1, 50);
-    const params = (result.blogs || []).map((blog) => ({
-      slug: blog.slug,
-    }));
-    
-    console.log(`Generated static params for ${params.length} blog articles`);
-    return params;
-  } catch (error) {
-    console.error("Error generating static params for blogs:", error);
-    // Return empty array - pages will be generated on-demand
+    return (result.blogs || []).map((b) => ({ slug: b.slug }));
+  } catch {
     return [];
   }
 }
 
-/**
- * Generate static metadata for blog articles
- */
 export async function generateMetadata(props: PageProps): Promise<Metadata> {
   const { slug } = await props.params;
-
   try {
     const blog = await blogRepository.findBySlug(slug);
     if (!blog) return { title: "Article Not Found" };
-
     return {
       title: `${blog.title} | LocalPro Blog`,
       description: blog.metaDescription || blog.excerpt,
@@ -65,9 +110,7 @@ export async function generateMetadata(props: PageProps): Promise<Metadata> {
       openGraph: {
         title: blog.title,
         description: blog.excerpt || blog.content?.substring(0, 150),
-        images: blog.featuredImage
-          ? [{ url: blog.featuredImage }]
-          : undefined,
+        images: blog.featuredImage ? [{ url: blog.featuredImage }] : undefined,
       },
     };
   } catch {
@@ -75,16 +118,8 @@ export async function generateMetadata(props: PageProps): Promise<Metadata> {
   }
 }
 
-/**
- * Individual Blog Article Page
- * 
- * - Server-rendered for SEO
- * - Markdown content rendering
- * - Author and publication info
- * - Social sharing
- * - ISR: Pages cache for 1 hour, regenerate in background
- * - Dynamic rendering: Unmapped slugs render on-demand and cache
- */
+/* ── Page ────────────────────────────────────────────────────── */
+
 export default async function BlogArticlePage(props: PageProps) {
   const { slug } = await props.params;
 
@@ -93,249 +128,382 @@ export default async function BlogArticlePage(props: PageProps) {
 
     if (!blog) {
       console.warn(`[Blog 404] Slug not found: "${slug}"`);
-      console.warn(`Conditions: Looking for published blog with valid publishedAt date`);
       notFound();
     }
 
-    // Require status to be published (publishedAt is auto-set but may be missing on old blogs)
     if (blog.status !== "published") {
-      console.warn(`[Blog 404] Blog found but not published: slug="${slug}", status="${blog.status}"`);
+      console.warn(`[Blog 404] Not published: slug="${slug}", status="${blog.status}"`);
       notFound();
     }
 
-    // Auto-set publishedAt if missing (for backward compatibility with older blogs)
     const publishedAt = blog.publishedAt || new Date();
+    const blogId = blog._id?.toString() || "";
+    const label = catLabel(blog.category);
 
-    // Format date
-    const publishDate = new Date(publishedAt).toLocaleDateString(
-      "en-US",
-      { year: "numeric", month: "long", day: "numeric" }
-    );
+    const [related, popularResult, prevBlog, nextBlog, commentsResult, commentCount] =
+      await Promise.all([
+        blogRepository.findRelated(blogId, blog.category, blog.keywords, 3),
+        blogRepository.findPublished({ page: 1, limit: 5 }),
+        blogRepository.findPrevious(publishedAt, blogId),
+        blogRepository.findNext(publishedAt, blogId),
+        blogCommentRepository.getApprovedComments(blogId, 1, 20),
+        blogCommentRepository.getCommentCount(blogId),
+      ]);
 
-    // Get related articles (same category/tags)
-    const related = await blogRepository.findRelated(
-      blog._id?.toString() || "",
-      blog.category,
-      blog.keywords,
-      3
-    );
-
-    // Get comments for this blog
-    const commentsResult = await blogCommentRepository.getApprovedComments(
-      blog._id?.toString() || "",
-      1,
-      20
-    );
-    const commentCount = await blogCommentRepository.getCommentCount(
-      blog._id?.toString() || ""
-    );
+    const popularArticles = popularResult.blogs ?? [];
 
     return (
-      <div className="bg-gradient-to-br from-slate-50 via-white to-slate-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
-        {/* JSON-LD Schema Markup for SEO */}
+      <>
+        {/* JSON-LD */}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
             __html: JSON.stringify(
-              generateBlogArticleSchema(blog, process.env.NEXT_PUBLIC_APP_URL || "https://localpro.com")
+              generateBlogArticleSchema(
+                blog,
+                process.env.NEXT_PUBLIC_APP_URL || "https://localpro.asia"
+              )
             )
               .replace(/</g, "\\u003c")
               .replace(/>/g, "\\u003e")
               .replace(/\//g, "\\u002f"),
           }}
         />
-        {/* Featured Image */}
-        {blog.featuredImage && (
-          <div className="relative h-96 md:h-[500px] lg:h-[600px] overflow-hidden bg-gradient-to-br from-slate-200 to-slate-300 dark:from-slate-800 dark:to-slate-900">
-            <img
-              src={blog.featuredImage}
-              alt={blog.title}
-              className="w-full h-full object-cover"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
-          </div>
-        )}
 
-        {/* Article Content */}
-        <article className="py-16 px-4 sm:px-6 lg:px-8">
-          <AnalyticsTracker blogId={blog._id?.toString() || ""} />
-          <div className="max-w-3xl mx-auto">
-            {/* Header */}
-            <header className="mb-16">
-              {/* Category Badge */}
+        {/* Breadcrumb */}
+        <nav className="bg-slate-50 border-b border-slate-200 py-3">
+          <div className="max-w-site mx-auto px-4 sm:px-6 lg:px-8">
+            <ol className="flex items-center gap-1.5 text-xs text-slate-400 flex-wrap">
+              <li>
+                <Link href="/" className="hover:text-primary transition-colors">Home</Link>
+              </li>
+              <li>/</li>
+              <li>
+                <Link href="/blog" className="hover:text-primary transition-colors">Blog</Link>
+              </li>
               {blog.category && (
-                <div className="mb-6">
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 text-xs font-bold uppercase tracking-wide">
-                    <Tag className="w-3.5 h-3.5" />
-                    {blog.category}
-                  </span>
-                </div>
+                <>
+                  <li>/</li>
+                  <li>
+                    <Link
+                      href={`/blog?category=${blog.category}`}
+                      className="hover:text-primary transition-colors"
+                    >
+                      {label}
+                    </Link>
+                  </li>
+                </>
+              )}
+              <li>/</li>
+              <li className="text-slate-600 font-medium truncate max-w-[200px] sm:max-w-xs">
+                {blog.title}
+              </li>
+            </ol>
+          </div>
+        </nav>
+
+        {/* Main layout */}
+        <div className="max-w-site mx-auto px-4 sm:px-6 lg:px-8 py-10">
+          <div className="flex gap-10 items-start">
+
+            {/* ── Article column ── */}
+            <article className="flex-1 min-w-0">
+              <AnalyticsTracker blogId={blogId} />
+
+              {/* Category label */}
+              {label && (
+                <p className={`text-[11px] font-bold uppercase tracking-widest mb-3 ${catColor(label)}`}>
+                  {label}
+                </p>
               )}
 
               {/* Title */}
-              <h1 className="text-5xl md:text-7xl font-black text-slate-900 dark:text-white mb-6 leading-tight tracking-tight">
+              <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 leading-tight mb-4">
                 {blog.title}
               </h1>
 
               {/* Excerpt */}
               {blog.excerpt && (
-                <p className="text-xl md:text-2xl text-slate-600 dark:text-slate-300 mb-10 leading-relaxed font-medium">
+                <p className="text-slate-500 text-base sm:text-lg leading-relaxed mb-6">
                   {blog.excerpt}
                 </p>
               )}
 
-              {/* Meta Information */}
-              <div className="flex flex-col sm:flex-row sm:items-center gap-8 pt-10 border-t border-slate-200 dark:border-slate-800">
-                {/* Author */}
-                <Link
-                  href={blog.author && typeof blog.author === "object" && "_id" in blog.author ? `/authors/${blog.author._id}` : "/blog"}
-                  className="flex items-center gap-4 group hover:opacity-80 transition-opacity"
-                >
-                  <div className="w-14 h-14 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center flex-shrink-0 shadow-md">
-                    <User className="w-7 h-7 text-white" />
-                  </div>
-                  <div>
-                    <p className="font-bold text-slate-900 dark:text-white text-base group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                      {blog.author && typeof blog.author === "object" && "name" in blog.author
-                        ? blog.author.name 
-                        : "LocalPro Staff"}
-                    </p>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Author</p>
-                  </div>
-                </Link>
-
-                {/* Date & Read Time */}
-                <div className="flex items-center gap-6 sm:ml-auto">
-                  <div className="flex items-center gap-2.5 text-slate-600 dark:text-slate-400 font-medium">
-                    <Calendar className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />
-                    <time>{publishDate}</time>
-                  </div>
-                  <div className="text-slate-600 dark:text-slate-400 text-sm font-medium">
-                    {Math.ceil(blog.content.split(/\s+/).length / 200)} min read
-                  </div>
+              {/* Author + meta row */}
+              <div className="flex items-center gap-3 mb-7 pb-6 border-b border-slate-100">
+                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                  <span className="text-primary font-bold text-[11px]">LP</span>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-slate-800">{authorName(blog.author)}</p>
+                  <p className="text-xs text-slate-400">
+                    {formatDate(publishedAt)} &middot; {readTime(blog.content)}
+                  </p>
                 </div>
               </div>
-            </header>
 
-            {/* Content */}
-            <div className="mb-16">
-              <BlogContent content={blog.content} />
-            </div>
+              {/* Featured image */}
+              {blog.featuredImage && (
+                <div className="rounded-xl overflow-hidden mb-8 bg-slate-100 shadow-sm">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={blog.featuredImage}
+                    alt={blog.title}
+                    className="w-full h-64 sm:h-80 object-cover"
+                  />
+                </div>
+              )}
 
-            {/* Tags/Keywords */}
-            {blog.keywords && blog.keywords.length > 0 && (
-              <div className="py-10 border-t border-slate-200 dark:border-slate-800">
-                <p className="text-sm font-bold text-slate-700 dark:text-slate-300 mb-5 uppercase tracking-wide">Tags</p>
-                <div className="flex flex-wrap gap-2.5">
-                  {blog.keywords.map((keyword) => (
+              {/* Article body */}
+              <div className="mb-8">
+                <BlogContent content={blog.content} />
+              </div>
+
+              {/* CTA box */}
+              <div className="rounded-xl bg-emerald-50 border border-emerald-100 p-5 mb-8 flex gap-4 items-start">
+                <div className="h-11 w-11 rounded-xl bg-emerald-500 flex items-center justify-center shrink-0">
+                  <svg
+                    viewBox="0 0 24 24"
+                    className="h-5 w-5 text-white"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="font-bold text-slate-900 text-sm mb-1">When in doubt, call a pro.</p>
+                  <p className="text-xs text-slate-500 leading-relaxed">
+                    Need help with a home service? Browse thousands of verified local professionals on LocalPro.
+                  </p>
+                  <Link
+                    href="/"
+                    className="inline-block mt-2.5 text-xs font-semibold text-emerald-600 hover:underline"
+                  >
+                    Find a Local Pro →
+                  </Link>
+                </div>
+              </div>
+
+              {/* Tags */}
+              {blog.keywords && blog.keywords.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-6">
+                  {blog.keywords.map((k) => (
                     <Link
-                      key={keyword}
-                      href={`/blog?search=${encodeURIComponent(keyword)}`}
-                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 hover:border-blue-400 dark:hover:border-blue-500 text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 text-sm font-semibold transition-all duration-200 hover:bg-blue-50 dark:hover:bg-blue-950/30"
+                      key={k}
+                      href={`/blog?search=${encodeURIComponent(k)}`}
+                      className="px-3 py-1 rounded-full bg-slate-100 text-xs font-medium text-slate-600 hover:bg-primary/10 hover:text-primary transition-colors"
                     >
-                      #{keyword}
+                      #{k}
                     </Link>
                   ))}
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* Share Section */}
-            <ShareSection title={blog.title} slug={blog.slug} />
+              {/* Share */}
+              <ShareSection title={blog.title} slug={blog.slug} />
 
-            {/* Comments Section */}
-            <BlogComments
-              blogId={blog._id?.toString() || ""}
-              initialComments={
-                commentsResult.comments as unknown as Array<{
-                  _id: string;
-                  authorName: string;
-                  content: string;
-                  likes: number;
-                  createdAt: string;
-                }>
-              }
-              totalComments={commentCount}
-            />
-
-            {/* Related Articles */}
-            {related.length > 0 && (
-              <div className="mt-20 pt-14 border-t border-slate-200 dark:border-slate-800">
-                <h2 className="text-4xl font-black text-slate-900 dark:text-white mb-12 tracking-tight">
-                  Related Articles
-                </h2>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  {related.map((relatedBlog) => (
+              {/* Prev / Next navigation */}
+              {(prevBlog || nextBlog) && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-8 pt-8 border-t border-slate-100">
+                  {prevBlog ? (
                     <Link
-                      key={relatedBlog._id?.toString() || relatedBlog.slug}
-                      href={`/blog/${relatedBlog.slug}`}
-                      className="group h-full"
+                      href={`/blog/${prevBlog.slug}`}
+                      className="group rounded-xl border border-slate-200 p-4 hover:border-primary/30 hover:shadow-sm transition-all"
                     >
-                      <div className="h-full rounded-xl overflow-hidden bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col">
-                        {relatedBlog.featuredImage && (
-                          <div className="relative h-40 overflow-hidden bg-slate-200 dark:bg-slate-700">
-                            <img
-                              src={relatedBlog.featuredImage}
-                              alt={relatedBlog.title}
-                              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                            />
-                          </div>
-                        )}
-                        <div className="p-5 flex-1 flex flex-col">
-                          {relatedBlog.category && (
-                            <div className="mb-3">
-                              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 text-xs font-semibold">
-                                {relatedBlog.category}
-                              </span>
-                            </div>
-                          )}
-                          <h3 className="font-bold text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-2 mb-2">
-                            {relatedBlog.title}
-                          </h3>
-                          <p className="text-sm text-slate-600 dark:text-slate-400 line-clamp-2 flex-1">
-                            {relatedBlog.excerpt}
-                          </p>
-                          <div className="pt-4 mt-auto">
-                            <span className="text-sm text-blue-600 dark:text-blue-400 font-medium group-hover:underline">
-                              Read More →
-                            </span>
-                          </div>
+                      <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest mb-2">
+                        ← Previous Article
+                      </p>
+                      {prevBlog.featuredImage && (
+                        <div className="h-20 w-full rounded-lg overflow-hidden mb-2 bg-slate-100">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={prevBlog.featuredImage}
+                            alt={prevBlog.title}
+                            className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
                         </div>
-                      </div>
+                      )}
+                      <p className="text-sm font-semibold text-slate-800 group-hover:text-primary transition-colors line-clamp-2">
+                        {prevBlog.title}
+                      </p>
                     </Link>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </article>
+                  ) : (
+                    <div />
+                  )}
 
-        {/* CTA Section */}
-        <div className="px-4 sm:px-6 lg:px-8 py-16 bg-gradient-to-r from-blue-600 to-indigo-600">
-          <div className="max-w-3xl mx-auto text-center">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-              Ready to grow with LocalPro?
-            </h2>
-            <p className="text-blue-100 text-lg mb-8">
-              Join thousands of service professionals and home service businesses
-            </p>
-            <button className="inline-flex items-center gap-2 px-8 py-4 rounded-lg bg-white text-blue-600 font-semibold hover:bg-blue-50 transition-colors shadow-lg">
-              Get Started Today
-              <ArrowRight className="w-5 h-5" />
-            </button>
+                  {nextBlog ? (
+                    <Link
+                      href={`/blog/${nextBlog.slug}`}
+                      className="group rounded-xl border border-slate-200 p-4 hover:border-primary/30 hover:shadow-sm transition-all text-right"
+                    >
+                      <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest mb-2">
+                        Next Article →
+                      </p>
+                      {nextBlog.featuredImage && (
+                        <div className="h-20 w-full rounded-lg overflow-hidden mb-2 bg-slate-100">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={nextBlog.featuredImage}
+                            alt={nextBlog.title}
+                            className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
+                        </div>
+                      )}
+                      <p className="text-sm font-semibold text-slate-800 group-hover:text-primary transition-colors line-clamp-2">
+                        {nextBlog.title}
+                      </p>
+                    </Link>
+                  ) : (
+                    <div />
+                  )}
+                </div>
+              )}
+
+              {/* Comments */}
+              <BlogComments
+                blogId={blogId}
+                initialComments={
+                  commentsResult.comments as unknown as Array<{
+                    _id: string;
+                    authorName: string;
+                    content: string;
+                    likes: number;
+                    createdAt: string;
+                  }>
+                }
+                totalComments={commentCount}
+              />
+
+              {/* Related articles */}
+              {related.length > 0 && (
+                <div className="mt-12 pt-10 border-t border-slate-100">
+                  <h2 className="text-lg font-extrabold text-slate-900 mb-5">You might also like</h2>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    {related.map((rb, idx) => {
+                      const rl = catLabel(rb.category);
+                      return (
+                        <Link
+                          key={rb._id?.toString() ?? rb.slug}
+                          href={`/blog/${rb.slug}`}
+                          className="group rounded-xl border border-slate-200 overflow-hidden hover:shadow-md hover:-translate-y-0.5 transition-all"
+                        >
+                          <div className="h-36 bg-slate-100 overflow-hidden">
+                            {rb.featuredImage ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src={rb.featuredImage}
+                                alt={rb.title}
+                                className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
+                              />
+                            ) : (
+                              <ThumbPlaceholder idx={idx} />
+                            )}
+                          </div>
+                          <div className="p-4">
+                            {rl && (
+                              <p className={`text-[10px] font-bold uppercase tracking-widest mb-1 ${catColor(rl)}`}>
+                                {rl}
+                              </p>
+                            )}
+                            <p className="text-sm font-semibold text-slate-800 group-hover:text-primary transition-colors line-clamp-2">
+                              {rb.title}
+                            </p>
+                          </div>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </article>
+
+            {/* ── Sidebar ── */}
+            <aside className="hidden lg:flex flex-col gap-6 w-[280px] shrink-0 sticky top-[5.5rem]">
+
+              {/* About */}
+              <div className="rounded-xl border border-slate-200 p-5">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                    <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4 text-primary" stroke="currentColor" strokeWidth="2">
+                      <path d="M12 20h9" strokeLinecap="round" />
+                      <path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z" strokeLinejoin="round" />
+                    </svg>
+                  </div>
+                  <h2 className="text-sm font-bold text-slate-900">About LocalPro Blog</h2>
+                </div>
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  We share helpful tips, inspiring stories, and important updates to help you make informed decisions and get the most out of LocalPro.
+                </p>
+              </div>
+
+              {/* Popular Articles */}
+              {popularArticles.length > 0 && (
+                <div className="rounded-xl border border-slate-200 p-5">
+                  <h2 className="text-sm font-bold text-slate-900 mb-4">Popular Articles</h2>
+                  <ul className="space-y-4">
+                    {popularArticles.map((pb: any, idx: number) => (
+                      <li key={pb._id?.toString() ?? pb.slug}>
+                        <Link href={`/blog/${pb.slug}`} className="group flex gap-3 items-start">
+                          <div className="h-14 w-14 rounded-lg overflow-hidden shrink-0 bg-slate-100">
+                            {pb.featuredImage ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src={pb.featuredImage}
+                                alt=""
+                                className="h-full w-full object-cover"
+                              />
+                            ) : (
+                              <ThumbPlaceholder idx={idx} />
+                            )}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-xs font-semibold text-slate-800 leading-snug line-clamp-2 group-hover:text-primary transition-colors">
+                              {pb.title}
+                            </p>
+                            <p className="text-[11px] text-slate-400 mt-0.5">{formatDate(pb.publishedAt)}</p>
+                          </div>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Newsletter */}
+              <div className="rounded-xl bg-[#0c2340] p-5">
+                <h2 className="text-sm font-bold text-white mb-1">Stay Updated</h2>
+                <p className="text-xs text-slate-300 leading-relaxed mb-4">
+                  Subscribe to get the latest tips, stories, and updates straight to your inbox.
+                </p>
+                <form action="/api/newsletter" method="post" className="space-y-2">
+                  <input
+                    type="email"
+                    name="email"
+                    placeholder="Enter your email address"
+                    required
+                    className="w-full px-3 py-2.5 rounded-lg text-xs bg-white/10 border border-white/20 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  />
+                  <button
+                    type="submit"
+                    className="w-full py-2.5 rounded-lg bg-primary hover:bg-primary-600 text-white text-xs font-bold transition-colors"
+                  >
+                    Subscribe
+                  </button>
+                </form>
+                <p className="text-[10px] text-slate-400 mt-2 text-center">No spam. Unsubscribe anytime.</p>
+              </div>
+            </aside>
+
           </div>
         </div>
-      </div>
+      </>
     );
   } catch (error) {
     console.error("Error loading article:", error);
-    console.error("Stack trace:", error instanceof Error ? error.stack : "No stack trace");
-    
-    // In development, provide more debugging info
-    if (process.env.NODE_ENV === "development") {
-      console.error(`Development mode: Check that the blog slug "${slug}" exists, is published, and has a publishedAt date.`);
-    }
-    
     return notFound();
   }
 }

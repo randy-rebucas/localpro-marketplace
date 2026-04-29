@@ -4,6 +4,7 @@ import { withHandler } from "@/lib/utils";
 import { ValidationError, NotFoundError } from "@/lib/errors";
 import { uploadToCloudinary, deleteFromCloudinary } from "@/lib/cloudinary";
 import { userRepository } from "@/repositories";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const ALLOWED_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp"];
@@ -44,6 +45,8 @@ function verifyMagicBytes(buf: Buffer, mimeType: string): boolean {
 export const POST = withHandler(async (req: NextRequest) => {
   const tokenUser = await requireUser();
   requireCsrfToken(req, tokenUser);
+  const rl = await checkRateLimit(`auth:avatar:${tokenUser.userId}`, { windowMs: 60 * 60_000, max: 10 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   const formData = await req.formData();
   const file = formData.get("file") as File | null;

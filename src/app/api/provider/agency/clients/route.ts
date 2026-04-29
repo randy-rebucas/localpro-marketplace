@@ -1,17 +1,21 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { connectDB } from "@/lib/db";
 import { ForbiddenError } from "@/lib/errors";
+import { checkRateLimit } from "@/lib/rateLimit";
 import AgencyProfile from "@/models/AgencyProfile";
 import Job from "@/models/Job";
 
 /** GET /api/provider/agency/clients
  *  Returns unique clients who have booked jobs with this agency (owner + all staff).
  */
-export const GET = withHandler(async () => {
+export const GET = withHandler(async (_req: NextRequest) => {
   const user = await requireUser();
   if (user.role !== "provider") throw new ForbiddenError();
+
+  const rl = await checkRateLimit(`agency-clients:${user.userId}`, { windowMs: 60_000, max: 60 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   await connectDB();
 

@@ -1,8 +1,10 @@
+import { NextResponse } from "next/server";
 import { withHandler, apiResponse } from "@/lib/utils";
 import { requireUser, requireCapability } from "@/lib/auth";
 import { uploadToCloudinary } from "@/lib/cloudinary";
 import { UnprocessableError } from "@/lib/errors";
 
+import { checkRateLimit } from "@/lib/rateLimit";
 // Known magic bytes for allowed image formats
 const IMAGE_MAGIC_BYTES: Array<{ mime: string; bytes: number[]; offset?: number }> = [
   { mime: "image/jpeg", bytes: [0xff, 0xd8, 0xff] },
@@ -30,6 +32,8 @@ function validateImageMagicBytes(buffer: Buffer): boolean {
 export const POST = withHandler(async (req) => {
   const user = await requireUser();
   requireCapability(user, "manage_blogs");
+  const rl = await checkRateLimit(`admin:${user.userId}`, { windowMs: 60_000, max: 200 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   // Parse multipart form data
   const formData = await req.formData();

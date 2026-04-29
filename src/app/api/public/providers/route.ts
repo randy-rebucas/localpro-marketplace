@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
+import { checkRateLimit } from "@/lib/rateLimit";
 import ProviderProfile from "@/models/ProviderProfile";
 
 const PAGE_SIZE = 24;
@@ -21,14 +22,25 @@ interface ProviderCard {
  * Public endpoint to browse service providers with filtering
  * Query params: q (search), skill, page
  */
+function clientIp(req: NextRequest): string {
+  return req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+}
+
+function escapeRegex(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 export async function GET(request: NextRequest) {
+  const rl = await checkRateLimit(`pub-providers:${clientIp(request)}`, { windowMs: 60_000, max: 30 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+
   try {
     await connectDB();
 
     const searchParams = request.nextUrl.searchParams;
-    const search = searchParams.get("q")?.trim() ?? "";
-    const skill = searchParams.get("skill")?.trim() ?? "";
-    const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
+    const search = (searchParams.get("q") ?? "").trim().slice(0, 100);
+    const skill  = (searchParams.get("skill") ?? "").trim().slice(0, 100);
+    const page   = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10) || 1);
 
     // Build provider profile filter
     const profileFilter: Record<string, unknown> = {};
@@ -45,7 +57,8 @@ export async function GET(request: NextRequest) {
           approvalStatus: "approved",
           isSuspended: { $ne: true },
           isDeleted: { $ne: true },
-          ...(search ? { name: { $regex: search, $options: "i" } } : {}),
+          // Escape before building regex to prevent ReDoS
+          ...(search ? { name: { $regex: escapeRegex(search), $options: "i" } } : {}),
         },
         select: "name avatar",
       })

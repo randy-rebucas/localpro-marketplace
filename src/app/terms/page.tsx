@@ -1,9 +1,28 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { CalendarDays, HelpCircle, Printer, ShieldCheck } from "lucide-react";
 import PublicHeader from "@/components/layout/PublicHeader";
 import PublicFooter from "@/components/layout/PublicFooter";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://www.localpro.asia";
+
+const sections = [
+  { id: "acceptance", title: "Acceptance of Terms" },
+  { id: "description", title: "Description of Services" },
+  { id: "eligibility", title: "Eligibility" },
+  { id: "accounts", title: "User Accounts" },
+  { id: "payments", title: "Payments & Fees" },
+  { id: "provider-terms", title: "Service Provider Terms" },
+  { id: "client-terms", title: "Client Responsibilities" },
+  { id: "conduct", title: "Content and Conduct" },
+  { id: "disputes", title: "Dispute Resolution" },
+  { id: "ip", title: "Intellectual Property" },
+  { id: "liability", title: "Limitation of Liability" },
+  { id: "termination", title: "Termination" },
+  { id: "law", title: "Governing Law" },
+  { id: "changes", title: "Changes to These Terms" },
+  { id: "contact", title: "Contact Us" },
+];
 
 export const metadata: Metadata = {
   title: "Terms of Service",
@@ -24,14 +43,79 @@ export default function TermsPage() {
       {/* Nav */}
       <PublicHeader />
 
-      {/* Content */}
-      <main className="max-w-3xl mx-auto px-4 py-16">
-        <h1 className="text-4xl font-extrabold text-slate-900 mb-2">Terms of Service</h1>
-        <p className="text-sm text-slate-400 mb-10">Last updated: February 28, 2026</p>
+      <main>
+        <section className="bg-gradient-to-br from-white via-brand-50/30 to-primary-50/50">
+          <div className="mx-auto grid max-w-site items-center gap-10 px-4 py-14 sm:px-6 lg:grid-cols-[1fr_360px]">
+            <div>
+              <p className="mb-5 text-xs font-bold uppercase tracking-[0.28em] text-brand-700">Legal</p>
+              <h1 className="text-4xl font-extrabold tracking-tight text-[#0a2540] sm:text-5xl">
+                Terms of Service
+              </h1>
+              <p className="mt-5 max-w-xl text-base leading-7 text-slate-600">
+                These Terms of Service govern your access to and use of the LocalPro platform, including our website, mobile applications, and related services.
+              </p>
+              <p className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-slate-600">
+                <CalendarDays className="h-4 w-4 text-brand-700" />
+                Last Updated: May 15, 2024
+              </p>
+            </div>
+            <div className="hidden justify-center lg:flex">
+              <div className="relative flex h-56 w-72 items-center justify-center rounded-[2rem] bg-brand-50">
+                <div className="absolute left-8 top-6 h-40 w-32 rounded-xl bg-white shadow-xl ring-1 ring-slate-200">
+                  <div className="space-y-3 p-5">
+                    <div className="h-2 rounded bg-slate-200" />
+                    <div className="h-2 rounded bg-slate-200" />
+                    <div className="h-2 w-2/3 rounded bg-slate-200" />
+                    <div className="mt-8 h-2 rounded bg-slate-200" />
+                    <div className="h-2 w-3/4 rounded bg-slate-200" />
+                  </div>
+                </div>
+                <div className="absolute bottom-8 right-10 flex h-20 w-20 items-center justify-center rounded-2xl bg-white text-brand-700 shadow-xl ring-1 ring-slate-200">
+                  <ShieldCheck className="h-11 w-11" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
 
-        <div className="prose prose-slate max-w-none space-y-8">
+        <section className="mx-auto grid max-w-site gap-6 px-4 py-8 sm:px-6 lg:grid-cols-[260px_minmax(0,1fr)]">
+          <aside className="space-y-5 lg:sticky lg:top-24 lg:self-start">
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-card">
+              <h2 className="mb-4 text-sm font-extrabold text-[#0a2540]">On this page</h2>
+              <nav className="space-y-1">
+                {sections.map((section, index) => (
+                  <a
+                    key={section.id}
+                    href={`#${section.id}`}
+                    className={`flex items-center gap-3 rounded-lg px-3 py-2 text-xs font-semibold transition ${
+                      index === 0 ? "bg-brand-50 text-brand-800" : "text-slate-600 hover:bg-slate-50 hover:text-brand-700"
+                    }`}
+                  >
+                    <span className="w-4 text-[11px]">{index + 1}.</span>
+                    {section.title}
+                  </a>
+                ))}
+              </nav>
+            </div>
 
-          <section>
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-card">
+              <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-full bg-brand-50 text-brand-700">
+                <HelpCircle className="h-5 w-5" />
+              </div>
+              <h2 className="text-sm font-extrabold text-[#0a2540]">Questions about these terms?</h2>
+              <p className="mt-3 text-sm leading-6 text-slate-600">
+                If you have any questions, please contact our support team.
+              </p>
+              <Link href="/support" className="mt-4 inline-flex items-center gap-2 text-sm font-bold text-brand-700 hover:text-brand-800">
+                Contact Support
+              </Link>
+            </div>
+          </aside>
+
+          <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-card sm:p-10">
+            <div className="prose prose-slate max-w-none space-y-8 prose-h2:text-[#0a2540] prose-p:text-slate-600 prose-li:text-slate-600">
+
+          <section id="acceptance" className="scroll-mt-28">
             <h2 className="text-xl font-bold text-slate-800 mb-3">1. Acceptance of Terms</h2>
             <p className="text-slate-600 leading-relaxed">
               By registering for or using the LocalPro Marketplace (&ldquo;Platform&rdquo;) at <strong>localpro.asia</strong>,
@@ -40,7 +124,7 @@ export default function TermsPage() {
             </p>
           </section>
 
-          <section>
+          <section id="description" className="scroll-mt-28">
             <h2 className="text-xl font-bold text-slate-800 mb-3">2. Description of Service</h2>
             <p className="text-slate-600 leading-relaxed">
               LocalPro is an online marketplace that connects clients who need local services
@@ -50,7 +134,7 @@ export default function TermsPage() {
             </p>
           </section>
 
-          <section>
+          <section id="eligibility" className="scroll-mt-28">
             <h2 className="text-xl font-bold text-slate-800 mb-3">3. Eligibility</h2>
             <ul className="list-disc pl-5 space-y-2 text-slate-600 leading-relaxed">
               <li>You must be at least 18 years old to register.</li>
@@ -60,7 +144,7 @@ export default function TermsPage() {
             </ul>
           </section>
 
-          <section>
+          <section id="accounts" className="scroll-mt-28">
             <h2 className="text-xl font-bold text-slate-800 mb-3">4. User Accounts</h2>
             <p className="text-slate-600 leading-relaxed">
               You are responsible for maintaining the confidentiality of your account credentials and for all
@@ -70,7 +154,7 @@ export default function TermsPage() {
             </p>
           </section>
 
-          <section>
+          <section id="payments" className="scroll-mt-28">
             <h2 className="text-xl font-bold text-slate-800 mb-3">5. Payments &amp; Escrow</h2>
             <ul className="list-disc pl-5 space-y-2 text-slate-600 leading-relaxed">
               <li>Payments are processed through <strong>PayMongo</strong>, a BSP-regulated payment gateway.</li>
@@ -82,7 +166,7 @@ export default function TermsPage() {
             </ul>
           </section>
 
-          <section>
+          <section id="provider-terms" className="scroll-mt-28">
             <h2 className="text-xl font-bold text-slate-800 mb-3">6. Provider Obligations</h2>
             <ul className="list-disc pl-5 space-y-2 text-slate-600 leading-relaxed">
               <li>Providers must complete KYC (Know Your Customer) identity verification to become eligible for paid jobs.</li>
@@ -93,7 +177,7 @@ export default function TermsPage() {
             </ul>
           </section>
 
-          <section>
+          <section id="client-terms" className="scroll-mt-28">
             <h2 className="text-xl font-bold text-slate-800 mb-3">7. Client Obligations</h2>
             <ul className="list-disc pl-5 space-y-2 text-slate-600 leading-relaxed">
               <li>Clients must accurately describe the work required when posting a job.</li>
@@ -103,7 +187,7 @@ export default function TermsPage() {
             </ul>
           </section>
 
-          <section>
+          <section id="conduct" className="scroll-mt-28">
             <h2 className="text-xl font-bold text-slate-800 mb-3">8. Prohibited Conduct</h2>
             <p className="text-slate-600 leading-relaxed mb-3">You must not:</p>
             <ul className="list-disc pl-5 space-y-2 text-slate-600 leading-relaxed">
@@ -117,7 +201,7 @@ export default function TermsPage() {
             </ul>
           </section>
 
-          <section>
+          <section id="disputes" className="scroll-mt-28">
             <h2 className="text-xl font-bold text-slate-800 mb-3">9. Dispute Resolution</h2>
             <p className="text-slate-600 leading-relaxed">
               Disputes between clients and providers should first be attempted to be resolved directly through
@@ -128,7 +212,7 @@ export default function TermsPage() {
             </p>
           </section>
 
-          <section>
+          <section id="ip" className="scroll-mt-28">
             <h2 className="text-xl font-bold text-slate-800 mb-3">10. Intellectual Property</h2>
             <p className="text-slate-600 leading-relaxed">
               The LocalPro name, logo, and all Platform content created by LocalPro are the exclusive property
@@ -139,7 +223,7 @@ export default function TermsPage() {
             </p>
           </section>
 
-          <section>
+          <section id="liability" className="scroll-mt-28">
             <h2 className="text-xl font-bold text-slate-800 mb-3">11. Limitation of Liability</h2>
             <p className="text-slate-600 leading-relaxed">
               To the maximum extent permitted by Philippine law, LocalPro&apos;s total liability to you for any
@@ -150,7 +234,7 @@ export default function TermsPage() {
             </p>
           </section>
 
-          <section>
+          <section id="termination" className="scroll-mt-28">
             <h2 className="text-xl font-bold text-slate-800 mb-3">12. Termination</h2>
             <p className="text-slate-600 leading-relaxed">
               LocalPro reserves the right to suspend or permanently ban any account that violates these Terms,
@@ -160,7 +244,7 @@ export default function TermsPage() {
             </p>
           </section>
 
-          <section>
+          <section id="law" className="scroll-mt-28">
             <h2 className="text-xl font-bold text-slate-800 mb-3">13. Governing Law</h2>
             <p className="text-slate-600 leading-relaxed">
               These Terms are governed by and construed in accordance with the laws of the Republic of the
@@ -169,7 +253,7 @@ export default function TermsPage() {
             </p>
           </section>
 
-          <section>
+          <section id="changes" className="scroll-mt-28">
             <h2 className="text-xl font-bold text-slate-800 mb-3">14. Changes to Terms</h2>
             <p className="text-slate-600 leading-relaxed">
               We may modify these Terms at any time. We will provide at least 7 days&apos; notice by email before
@@ -178,7 +262,7 @@ export default function TermsPage() {
             </p>
           </section>
 
-          <section>
+          <section id="contact" className="scroll-mt-28">
             <h2 className="text-xl font-bold text-slate-800 mb-3">15. Contact</h2>
             <p className="text-slate-600 leading-relaxed">
               For questions about these Terms, contact:
@@ -188,9 +272,19 @@ export default function TermsPage() {
               <li>🌐 <strong>localpro.asia</strong></li>
             </ul>
           </section>
+            </div>
+
+        <div className="mt-10 border-t border-slate-200 pt-6">
+          <p className="text-sm text-slate-600">
+            By using LocalPro, you acknowledge that you have read, understood, and agree to these Terms of Service.
+          </p>
+          <a href="#top" className="mt-4 inline-flex items-center gap-2 text-sm font-bold text-brand-700 hover:text-brand-800">
+            <Printer className="h-4 w-4" />
+            Print this page
+          </a>
         </div>
 
-        <div className="mt-12 pt-8 border-t border-slate-200 flex flex-wrap items-center gap-3 text-sm text-slate-400">
+        <div className="mt-10 flex flex-wrap items-center gap-3 border-t border-slate-200 pt-6 text-sm text-slate-400">
           <Link href="/privacy"            className="hover:text-primary transition-colors">Privacy Policy</Link>
           <span className="text-slate-300">·</span>
           <Link href="/provider-agreement" className="hover:text-primary transition-colors">Provider Agreement</Link>
@@ -205,6 +299,8 @@ export default function TermsPage() {
           <span className="text-slate-300">·</span>
           <Link href="/"                   className="hover:text-primary transition-colors">Back to Home</Link>
         </div>
+          </article>
+        </section>
       </main>
 
       {/* Footer */}

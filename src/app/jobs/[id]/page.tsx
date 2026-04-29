@@ -8,7 +8,6 @@ import {
   Briefcase,
   Clock,
   CheckCircle2,
-  ArrowLeft,
   PhilippinePeso,
   ListChecks,
 } from "lucide-react";
@@ -17,6 +16,8 @@ import { connectDB } from "@/lib/db";
 import Job from "@/models/Job";
 import { getCurrentUser } from "@/lib/auth";
 import { ShareButtons } from "./ShareButtons";
+import PublicHeader from "@/components/layout/PublicHeader";
+import PublicFooter from "@/components/layout/PublicFooter";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -24,7 +25,6 @@ const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://www.localpro.asia";
 
 const PROVIDER_REGISTER_URL = `${APP_URL}/register?role=provider`;
 const LOGIN_URL = `${APP_URL}/login`;
-const BOARD_URL = `${APP_URL}/board`;
 const QR_BASE = "https://api.qrserver.com/v1/create-qr-code/?format=png&color=0d2340&bgcolor=ffffff&margin=6";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -59,15 +59,15 @@ const STATUS_CONFIG: Record<
   JobStatus,
   { label: string; badge: string; dot: string }
 > = {
-  open:                { label: "Open",             badge: "bg-emerald-500/20 text-emerald-300 border-emerald-500/40", dot: "bg-emerald-400" },
-  pending_validation:  { label: "Pending Review",   badge: "bg-yellow-500/20  text-yellow-300  border-yellow-500/40",  dot: "bg-yellow-400"  },
-  assigned:            { label: "Assigned",         badge: "bg-amber-500/20   text-amber-300   border-amber-500/40",   dot: "bg-amber-400"   },
-  in_progress:         { label: "In Progress",      badge: "bg-amber-500/20   text-amber-300   border-amber-500/40",   dot: "bg-amber-400"   },
-  completed:           { label: "Completed",        badge: "bg-blue-500/20    text-blue-300    border-blue-500/40",    dot: "bg-blue-400"    },
-  disputed:            { label: "Disputed",         badge: "bg-rose-500/20    text-rose-300    border-rose-500/40",    dot: "bg-rose-400"    },
-  rejected:            { label: "Rejected",         badge: "bg-slate-500/20   text-slate-400   border-slate-500/30",   dot: "bg-slate-400"   },
-  refunded:            { label: "Refunded",         badge: "bg-slate-500/20   text-slate-400   border-slate-500/30",   dot: "bg-slate-400"   },
-  expired:             { label: "Expired",          badge: "bg-slate-500/20   text-slate-400   border-slate-500/30",   dot: "bg-slate-400"   },
+  open:                { label: "Open",             badge: "bg-emerald-50 text-emerald-700 border-emerald-200", dot: "bg-emerald-500" },
+  pending_validation:  { label: "Pending Review",   badge: "bg-yellow-50  text-yellow-700  border-yellow-200",  dot: "bg-yellow-500"  },
+  assigned:            { label: "Assigned",         badge: "bg-amber-50   text-amber-700   border-amber-200",   dot: "bg-amber-500"   },
+  in_progress:         { label: "In Progress",      badge: "bg-amber-50   text-amber-700   border-amber-200",   dot: "bg-amber-500"   },
+  completed:           { label: "Completed",        badge: "bg-blue-50    text-blue-700    border-blue-200",    dot: "bg-blue-500"    },
+  disputed:            { label: "Disputed",         badge: "bg-rose-50    text-rose-700    border-rose-200",    dot: "bg-rose-500"    },
+  rejected:            { label: "Rejected",         badge: "bg-slate-100  text-slate-600   border-slate-200",   dot: "bg-slate-400"   },
+  refunded:            { label: "Refunded",         badge: "bg-slate-100  text-slate-600   border-slate-200",   dot: "bg-slate-400"   },
+  expired:             { label: "Expired",          badge: "bg-slate-100  text-slate-600   border-slate-200",   dot: "bg-slate-400"   },
 };
 
 // ─── Data fetching ────────────────────────────────────────────────────────────
@@ -207,108 +207,102 @@ export default async function JobDetailPage(
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jobSchema) }}
       />
 
-      {/* ── Header ──────────────────────────────────────────────────────────── */}
-      <header className="bg-white border-b border-slate-200 px-4 sm:px-6 lg:px-10 py-3 flex items-center justify-between">
-        <Link
-          href={BOARD_URL}
-          className="flex items-center gap-1.5 text-sm text-primary hover:text-primary/80 transition-colors"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          <span className="hidden sm:inline">Back to Board</span>
-        </Link>
-
-        <Link href={APP_URL} className="flex items-center gap-1.5">
-          <span className="text-lg font-extrabold text-slate-900 tracking-tight">LocalPro</span>
-          <span className="text-xs text-slate-500 font-medium hidden sm:inline">Marketplace</span>
-        </Link>
-
-        {isProvider ? (
-          <a
-            href={applyUrl}
-            className="text-sm font-semibold px-4 py-1.5 rounded-lg bg-primary hover:bg-primary/90 transition-colors text-white"
-          >
-            {ctaLabel}
-          </a>
-        ) : (
-          <a
-            href={PROVIDER_REGISTER_URL}
-            className="text-sm font-semibold px-4 py-1.5 rounded-lg bg-primary hover:bg-primary/90 transition-colors text-white"
-          >
-            Register as Provider
-          </a>
-        )}
-      </header>
+      <PublicHeader />
 
       {/* ── Body ─────────────────────────────────────────────────────────────── */}
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-10 py-8 flex flex-col lg:flex-row gap-6">
+      <main className="mx-auto max-w-site px-4 py-8 sm:px-6 lg:py-10">
+        <nav className="mb-7 flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-500" aria-label="Breadcrumb">
+          <Link href="/" className="hover:text-brand-700">Home</Link>
+          <span>/</span>
+          <Link href="/jobs" className="hover:text-brand-700">Browse Jobs</Link>
+          <span>/</span>
+          <span className="text-slate-700">{job.title}</span>
+        </nav>
+
+        <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_340px]">
 
         {/* ── Left: Job Detail ─────────────────────────────────────────────── */}
-        <article className="flex-1 min-w-0 flex flex-col gap-6">
+        <article className="min-w-0">
 
-          {/* Badges row */}
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center px-3 py-1 rounded-full bg-primary/10 text-primary border border-primary/20 text-xs font-bold uppercase tracking-wider">
-              <Briefcase className="h-3 w-3 mr-1.5" />
-              {job.category}
-            </span>
-            {job.jobSource === "peso" && (
-              <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-sky-100 text-sky-700 border border-sky-200 text-xs font-bold uppercase tracking-wider">
-                🏛️ PESO
+          <div className="mb-6 rounded-3xl bg-gradient-to-br from-white via-brand-50/45 to-primary-50/60 p-6 shadow-[0_16px_55px_rgba(10,37,64,0.08)] ring-1 ring-slate-200 sm:p-8">
+            <div className="mb-5 flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center rounded-full bg-brand-50 px-3 py-1 text-xs font-bold uppercase tracking-wider text-brand-700 ring-1 ring-brand-200">
+                <Briefcase className="mr-1.5 h-3.5 w-3.5" />
+                {job.category}
               </span>
-            )}
-            {job.jobSource === "lgu" && (
-              <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-teal-100 text-teal-700 border border-teal-200 text-xs font-bold uppercase tracking-wider">
-                🏛️ LGU
+              {job.jobSource === "peso" && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-sky-50 px-3 py-1 text-xs font-bold uppercase tracking-wider text-sky-700 ring-1 ring-sky-200">
+                  PESO
+                </span>
+              )}
+              {job.jobSource === "lgu" && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-teal-50 px-3 py-1 text-xs font-bold uppercase tracking-wider text-teal-700 ring-1 ring-teal-200">
+                  LGU
+                </span>
+              )}
+              <span
+                className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-bold uppercase tracking-wider ${statusCfg.badge}`}
+              >
+                <span className={`h-1.5 w-1.5 flex-shrink-0 rounded-full ${statusCfg.dot} ${isOpen ? "animate-pulse" : ""}`} />
+                {statusCfg.label}
               </span>
-            )}
-            <span
-              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-bold uppercase tracking-wider ${statusCfg.badge}`}
-            >
-              <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${statusCfg.dot} ${isOpen ? "animate-pulse" : ""}`} />
-              {statusCfg.label}
-            </span>
-            <span className="text-xs text-slate-500 ml-auto">
-              Posted {formatTimeAgo(job.createdAt)}
-            </span>
+            </div>
+
+            <h1 className="max-w-3xl text-3xl font-extrabold leading-tight tracking-tight text-[#0a2540] sm:text-4xl">
+              {job.title}
+            </h1>
+            <p className="mt-4 max-w-2xl text-sm leading-6 text-slate-600 sm:text-base">
+              Review the job details, confirm the scope, and apply as a verified LocalPro provider.
+            </p>
+
+            <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm font-medium text-slate-600">
+              <span className="inline-flex items-center gap-1.5">
+                <MapPin className="h-4 w-4 text-brand-700" />
+                {job.location}
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <CalendarDays className="h-4 w-4 text-brand-700" />
+                {formatDate(job.scheduleDate)}
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <Clock className="h-4 w-4 text-brand-700" />
+                Posted {formatTimeAgo(job.createdAt)}
+              </span>
+            </div>
           </div>
 
-          {/* Title */}
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 leading-tight">
-            {job.title}
-          </h1>
-
           {/* Key info grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="flex items-start gap-3 bg-slate-50 border border-slate-200 rounded-xl p-4">
-              <MapPin className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
+          <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-card">
+              <MapPin className="mt-0.5 h-5 w-5 flex-shrink-0 text-brand-700" />
               <div>
-                <p className="text-[11px] text-slate-500 font-semibold uppercase tracking-wider mb-0.5">Location</p>
-                <p className="text-sm font-semibold text-slate-900">{job.location}</p>
+                <p className="mb-0.5 text-[11px] font-bold uppercase tracking-wider text-slate-500">Location</p>
+                <p className="text-sm font-bold text-[#0a2540]">{job.location}</p>
               </div>
             </div>
 
-            <div className="flex items-start gap-3 bg-slate-50 border border-slate-200 rounded-xl p-4">
-              <PhilippinePeso className="h-5 w-5 text-emerald-600 mt-0.5 flex-shrink-0" />
+            <div className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-card">
+              <PhilippinePeso className="mt-0.5 h-5 w-5 flex-shrink-0 text-brand-700" />
               <div>
-                <p className="text-[11px] text-slate-500 font-semibold uppercase tracking-wider mb-0.5">Budget</p>
-                <p className="text-lg font-extrabold text-emerald-600">{formatPeso(job.budget)}</p>
+                <p className="mb-0.5 text-[11px] font-bold uppercase tracking-wider text-slate-500">Budget</p>
+                <p className="text-lg font-extrabold text-brand-700">{formatPeso(job.budget)}</p>
               </div>
             </div>
 
-            <div className="flex items-start gap-3 bg-slate-50 border border-slate-200 rounded-xl p-4">
-              <CalendarDays className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
+            <div className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-card">
+              <CalendarDays className="mt-0.5 h-5 w-5 flex-shrink-0 text-brand-700" />
               <div>
-                <p className="text-[11px] text-slate-500 font-semibold uppercase tracking-wider mb-0.5">Schedule</p>
-                <p className="text-sm font-semibold text-slate-900">{formatDate(job.scheduleDate)}</p>
+                <p className="mb-0.5 text-[11px] font-bold uppercase tracking-wider text-slate-500">Schedule</p>
+                <p className="text-sm font-bold text-[#0a2540]">{formatDate(job.scheduleDate)}</p>
               </div>
             </div>
           </div>
 
           {/* Description */}
-          <section className="bg-slate-50 border border-slate-200 rounded-2xl p-5 sm:p-6">
-            <h2 className="text-sm font-bold text-slate-700 uppercase tracking-wider mb-3 flex items-center gap-2">
+          <section className="mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-card sm:p-6">
+            <h2 className="mb-4 flex items-center gap-2 text-sm font-extrabold uppercase tracking-wider text-[#0a2540]">
               <Briefcase className="h-4 w-4" />
-              About this Job
+              About this job
             </h2>
             <div
               className="prose prose-sm max-w-none text-slate-600 leading-relaxed"
@@ -318,8 +312,8 @@ export default async function JobDetailPage(
 
           {/* Special instructions */}
           {job.specialInstructions && job.specialInstructions.trim().length > 0 && (
-            <section className="bg-amber-50 border border-amber-200 rounded-2xl p-5">
-              <h2 className="text-sm font-bold text-amber-900 uppercase tracking-wider mb-2 flex items-center gap-2">
+            <section className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 p-5">
+              <h2 className="mb-2 flex items-center gap-2 text-sm font-extrabold uppercase tracking-wider text-amber-900">
                 <Clock className="h-4 w-4" />
                 Special Instructions
               </h2>
@@ -332,10 +326,10 @@ export default async function JobDetailPage(
 
           {/* Gov source notice */}
           {isGovJob && (
-            <section className="bg-sky-50 border border-sky-200 rounded-2xl p-5 flex items-start gap-3">
-              <span className="text-2xl leading-none mt-0.5">🏛️</span>
+            <section className="mb-6 flex items-start gap-3 rounded-2xl border border-sky-200 bg-sky-50 p-5">
+              <span className="mt-0.5 text-2xl leading-none">🏛️</span>
               <div>
-                <p className="text-sm font-bold text-sky-900 mb-1">
+                <p className="mb-1 text-sm font-bold text-sky-900">
                   {job.jobSource === "peso" ? "PESO — Public Employment Service Office" : "LGU — Local Government Unit"} Posted Job
                 </p>
                 <p className="text-xs text-sky-700 leading-relaxed">
@@ -349,19 +343,19 @@ export default async function JobDetailPage(
 
           {/* Milestones */}
           {job.milestones && job.milestones.length > 0 && (
-            <section className="bg-slate-50 border border-slate-200 rounded-2xl p-5 sm:p-6">
-              <h2 className="text-sm font-bold text-slate-700 uppercase tracking-wider mb-4 flex items-center gap-2">
+            <section className="mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-card sm:p-6">
+              <h2 className="mb-4 flex items-center gap-2 text-sm font-extrabold uppercase tracking-wider text-[#0a2540]">
                 <ListChecks className="h-4 w-4" />
                 Payment Milestones
               </h2>
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-3">
                 {job.milestones.map((m, i) => (
                   <div
                     key={m._id ?? i}
-                    className="flex items-center justify-between gap-4 bg-white border border-slate-200 rounded-xl px-4 py-3"
+                    className="flex items-center justify-between gap-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3"
                   >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-bold flex items-center justify-center">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-brand text-xs font-bold text-white">
                         {i + 1}
                       </span>
                       <div className="min-w-0">
@@ -371,8 +365,8 @@ export default async function JobDetailPage(
                         )}
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <span className="text-base font-bold text-emerald-600 whitespace-nowrap">
+                    <div className="flex flex-shrink-0 items-center gap-2">
+                      <span className="whitespace-nowrap text-base font-bold text-brand-700">
                         {formatPeso(m.amount)}
                       </span>
                       {m.status === "released" && (
@@ -382,26 +376,27 @@ export default async function JobDetailPage(
                   </div>
                 ))}
               </div>
-              <p className="text-xs text-slate-500 mt-3">
+              <p className="mt-3 text-xs text-slate-500">
                 Payments are held in escrow and released per milestone.
               </p>
             </section>
           )}
 
           {/* Mobile-only share (below description on small screens) */}
-          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 lg:hidden">
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-card lg:hidden">
             <ShareButtons url={pageUrl} text={shareText} />
           </div>
         </article>
 
         {/* ── Right: Apply + QR ────────────────────────────────────────────── */}
-        <aside className="w-full lg:w-72 xl:w-80 flex-shrink-0 flex flex-col gap-4">
+        <aside className="w-full flex-shrink-0 lg:sticky lg:top-24 lg:self-start">
+          <div className="flex flex-col gap-4">
 
           {/* Apply card */}
-          <div className="bg-white border border-slate-200 rounded-2xl p-5 flex flex-col gap-4 shadow-sm">
+          <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-[0_16px_45px_rgba(10,37,64,0.08)]">
             <div>
-              <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-1">Budget</p>
-              <p className="text-3xl font-extrabold text-emerald-600 tracking-tight">
+              <p className="mb-1 text-xs font-bold uppercase tracking-wider text-slate-500">Project Budget</p>
+              <p className="text-3xl font-extrabold tracking-tight text-brand-700">
                 {formatPeso(job.budget)}
               </p>
               {isGovJob && (
@@ -416,7 +411,7 @@ export default async function JobDetailPage(
                 {isProvider ? (
                   <a
                     href={applyUrl}
-                    className="block w-full py-3 rounded-xl bg-primary hover:bg-primary/90 text-center font-bold text-white text-sm transition-colors"
+                    className="block w-full rounded-xl bg-brand py-3 text-center text-sm font-bold text-white transition-colors hover:bg-brand-600"
                   >
                     {ctaLabel}
                   </a>
@@ -424,13 +419,13 @@ export default async function JobDetailPage(
                   <>
                     <a
                       href={PROVIDER_REGISTER_URL}
-                      className="block w-full py-3 rounded-xl bg-primary hover:bg-primary/90 text-center font-bold text-white text-sm transition-colors"
+                      className="block w-full rounded-xl bg-brand py-3 text-center text-sm font-bold text-white transition-colors hover:bg-brand-600"
                     >
                       {registerLabel}
                     </a>
                     <a
                       href={`${LOGIN_URL}?redirect=/jobs/${job._id}`}
-                      className="block w-full py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-center font-semibold text-slate-700 text-sm transition-colors"
+                      className="block w-full rounded-xl border border-slate-200 bg-white py-2.5 text-center text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
                     >
                       Log in to Apply
                     </a>
@@ -438,12 +433,24 @@ export default async function JobDetailPage(
                 )}
               </>
             ) : (
-              <div className="py-3 rounded-xl bg-slate-100 border border-slate-200 text-center text-sm font-semibold text-slate-600">
+              <div className="rounded-xl border border-slate-200 bg-slate-100 py-3 text-center text-sm font-semibold text-slate-600">
                 This job is no longer accepting applications
               </div>
             )}
 
-            <p className="text-[11px] text-slate-600 text-center leading-relaxed">
+            <div className="rounded-xl bg-brand-50 p-4">
+              <p className="mb-2 flex items-center gap-2 text-sm font-bold text-[#0a2540]">
+                <CheckCircle2 className="h-4 w-4 text-brand-700" />
+                Why apply through LocalPro?
+              </p>
+              <ul className="space-y-2 text-xs leading-5 text-slate-600">
+                <li>Verified customers and protected communication.</li>
+                <li>Escrow-backed payment support for marketplace jobs.</li>
+                <li>Build your profile with successful completed work.</li>
+              </ul>
+            </div>
+
+            <p className="text-center text-[11px] leading-relaxed text-slate-600">
               {isGovJob
                 ? "This is a government-posted job. Applications are reviewed by the PESO/LGU office."
                 : "All payments are protected by LocalPro escrow. You only get paid when the client confirms completion."
@@ -452,8 +459,8 @@ export default async function JobDetailPage(
           </div>
 
           {/* QR code card */}
-          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 flex flex-col items-center gap-3">
-            <p className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+          <div className="flex flex-col items-center gap-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-card">
+            <p className="text-xs font-extrabold uppercase tracking-wider text-[#0a2540]">
               {isGovJob ? "Scan to Apply" : "Scan to Quote"}
             </p>
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -464,45 +471,26 @@ export default async function JobDetailPage(
               height={160}
               className="rounded-xl border border-slate-200 bg-white p-2"
             />
-            <p className="text-[11px] text-slate-600 text-center">
+            <p className="text-center text-[11px] text-slate-600">
               Scan with your phone camera to open this job on LocalPro
             </p>
           </div>
 
           {/* Desktop share */}
-          <div className="bg-white border border-slate-200 rounded-2xl p-5 hidden lg:block">
+          <div className="hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-card lg:block">
             <ShareButtons url={pageUrl} text={shareText} />
           </div>
 
           {/* Posted at */}
-          <p className="text-[11px] text-slate-600 text-center">
+          <p className="text-center text-[11px] text-slate-600">
             Posted on {formatDate(job.createdAt)}
           </p>
+          </div>
         </aside>
+        </div>
       </main>
 
-      {/* ── Footer ───────────────────────────────────────────────────────────── */}
-      <footer className="border-t border-slate-200 py-6 mt-8 px-4 sm:px-6 bg-white">
-        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-600">
-          <span>
-            Powered by{" "}
-            <Link href={APP_URL} className="text-primary hover:text-primary/80 font-semibold">
-              LocalPro Marketplace
-            </Link>
-          </span>
-          <div className="flex items-center gap-4">
-            <Link href={BOARD_URL} className="hover:text-slate-900 transition-colors">
-              View All Jobs
-            </Link>
-            <Link href={PROVIDER_REGISTER_URL} className="hover:text-slate-900 transition-colors">
-              Become a Provider
-            </Link>
-            <Link href="/privacy" className="hover:text-slate-900 transition-colors">
-              Privacy
-            </Link>
-          </div>
-        </div>
-      </footer>
+      <PublicFooter />
     </div>
   );
 }

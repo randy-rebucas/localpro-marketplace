@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { jobRepository } from "@/repositories/job.repository";
 import RealtimeRefresher from "@/components/shared/RealtimeRefresher";
@@ -10,7 +11,7 @@ export const metadata: Metadata = { title: "Manage Jobs" };
 
 export default async function AdminJobsPage() {
   const user = await getCurrentUser();
-  if (!user || (user.role !== "admin" && user.role !== "staff")) return null;
+  if (!user || (user.role !== "admin" && user.role !== "staff")) redirect("/login");
 
   const raw = await jobRepository.findPendingValidation();
 

@@ -8,6 +8,7 @@ import { sendEmail, baseMarketingTemplate } from "@/lib/email";
 import { sendSms } from "@/lib/twilio";
 import { generateUnsubscribeUrl } from "@/lib/unsubscribe";
 
+import { checkRateLimit } from "@/lib/rateLimit";
 const CHANNELS = ["email", "sms", "in_app"] as const;
 
 const MessageSchema = z.object({
@@ -22,6 +23,8 @@ export const POST = withHandler(async (
 ) => {
   const admin = await requireUser();
   requireRole(admin, "admin", "staff");
+  const rl = await checkRateLimit(`admin:${admin.userId}`, { windowMs: 60_000, max: 200 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   requireCapability(admin, "manage_support");
 
   const { id } = await params;

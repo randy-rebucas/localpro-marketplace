@@ -3,6 +3,7 @@ import { requireUser, requireRole } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { userRepository, providerProfileRepository } from "@/repositories";
 
+import { checkRateLimit } from "@/lib/rateLimit";
 /** Escape a CSV cell: wrap in quotes if it contains a comma, quote, or newline. */
 function csvCell(value: string | number | null | undefined): string {
   const s = String(value ?? "");
@@ -21,6 +22,8 @@ export const GET = withHandler(async (req: NextRequest) => {
   const admin = await requireUser();
   // L4: bulk PII export is restricted to full admins only (not staff with manage_users)
   requireRole(admin, "admin");
+  const rl = await checkRateLimit(`admin:${admin.userId}`, { windowMs: 60_000, max: 200 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   const { searchParams } = new URL(req.url);
   const roleParam = searchParams.get("role") ?? "all";

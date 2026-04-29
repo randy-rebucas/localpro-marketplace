@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jobRepository } from "@/repositories/job.repository";
 import { geoVerificationService } from "@/services/geo-verification.service";
-import { providerReplacementService } from "@/services/provider-replacement.service";
-import { requireUser } from "@/lib/auth";
-import { isValidObjectId } from "mongoose";
-import { ForbiddenError, ValidationError, NotFoundError } from "@/lib/errors";
+import { requireUser, requireRole, requireCsrfToken } from "@/lib/auth";
+import { withHandler } from "@/lib/utils";
+import { ForbiddenError, ValidationError, NotFoundError, assertObjectId } from "@/lib/errors";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 /**
  * POST /api/jobs/[id]/geo-check-in
@@ -23,128 +23,78 @@ import { ForbiddenError, ValidationError, NotFoundError } from "@/lib/errors";
  *   appVersion?: string
  * }
  */
-export async function POST(
+export const POST = withHandler(async (
   req: NextRequest,
   context: { params: Promise<{ id: string }> }
-) {
-  try {
-    const token = await requireUser();
-    if (!token) {
-      return NextResponse.json(
-        { error: "Authentication required" },
-        { status: 401 }
-      );
-    }
+) => {
+  const user = await requireUser();
+  requireRole(user, "provider");
+  requireCsrfToken(req, user);
 
-    const { id: jobId } = await context.params;
+  const { id: jobId } = await context.params;
+  assertObjectId(jobId, "jobId");
 
-    // Validate jobId format
-    if (!isValidObjectId(jobId)) {
-      throw new ValidationError("Invalid job ID format");
-    }
+  const rl = await checkRateLimit(`geo-check-in:${user.userId}`, { windowMs: 60_000, max: 30 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
-    const body = await req.json();
-    const { latitude, longitude, accuracy, platform, appVersion } = body;
+  const body = await req.json();
+  const { latitude, longitude, accuracy, platform, appVersion } = body;
 
-    // Validate GPS coordinates
-    if (typeof latitude !== "number" || typeof longitude !== "number") {
-      throw new ValidationError("Invalid GPS coordinates");
-    }
+  if (typeof latitude !== "number" || typeof longitude !== "number") {
+    throw new ValidationError("Invalid GPS coordinates");
+  }
 
-    if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
-      throw new ValidationError("GPS coordinates out of valid range");
-    }
+  if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+    throw new ValidationError("GPS coordinates out of valid range");
+  }
 
-    if (accuracy === undefined || accuracy < 0) {
-      throw new ValidationError("Invalid accuracy value");
-    }
+  if (accuracy === undefined || accuracy < 0) {
+    throw new ValidationError("Invalid accuracy value");
+  }
 
-    if (!["ios", "android", "web"].includes(platform)) {
-      throw new ValidationError("Invalid platform");
-    }
+  if (!["ios", "android", "web"].includes(platform)) {
+    throw new ValidationError("Invalid platform");
+  }
 
-    // Get job and verify provider is assigned
-    const job = await jobRepository.getDocById(jobId);
-    if (!job) {
-      throw new NotFoundError("Job");
-    }
+  const job = await jobRepository.getDocById(jobId);
+  if (!job) throw new NotFoundError("Job");
 
-    if (job.providerId?.toString() !== token.userId) {
-      throw new ForbiddenError();
-    }
+  if (job.providerId?.toString() !== user.userId) throw new ForbiddenError();
 
-    // Verify job is in proper state for check-in
-    if (!["assigned", "in_progress"].includes(job.status)) {
-      return NextResponse.json(
-        {
-          error: "Job is not in a state that allows check-in",
-          status: job.status,
-        },
-        { status: 400 }
-      );
-    }
-
-    // Perform GPS verification
-    const result = await geoVerificationService.verifyCheckIn({
-      jobId,
-      providerId: token.userId,
-      latitude,
-      longitude,
-      accuracy,
-      platform,
-      appVersion,
-    });
-
-    // If valid check-in, update job to in_progress
-    if (result.isValid && job.status === "assigned") {
-      try {
-        const { escrowService } = await import("@/services/escrow.service");
-        await escrowService.startJob(token, jobId, []);
-      } catch (err) {
-        console.error("[geo-check-in] Error transitioning job to in_progress:", err);
-        // Don't fail the check-in response, but log the error
-      }
-    }
-
+  if (!["assigned", "in_progress"].includes(job.status)) {
     return NextResponse.json(
-      {
-        success: result.isValid,
-        checkIn: {
-          distance: result.distance,
-          isWithinGeofence: result.isWithinGeofence,
-          status: result.status,
-        },
-        message: result.message,
-      },
-      { status: 200 }
-    );
-  } catch (error) {
-    console.error("[geo-check-in] Error:", error);
-
-    if (error instanceof ForbiddenError) {
-      return NextResponse.json(
-        { error: "You are not the assigned provider for this job" },
-        { status: 403 }
-      );
-    }
-
-    if (error instanceof NotFoundError) {
-      return NextResponse.json(
-        { error: "Job not found" },
-        { status: 404 }
-      );
-    }
-
-    if (error instanceof ValidationError) {
-      return NextResponse.json(
-        { error: error.message },
-        { status: 400 }
-      );
-    }
-
-    return NextResponse.json(
-      { error: "Check-in verification failed" },
-      { status: 500 }
+      { error: "Job is not in a state that allows check-in", status: job.status },
+      { status: 400 }
     );
   }
-}
+
+  const result = await geoVerificationService.verifyCheckIn({
+    jobId,
+    providerId: user.userId,
+    latitude,
+    longitude,
+    accuracy,
+    platform,
+    appVersion,
+  });
+
+  // If valid check-in and job not yet started, transition to in_progress
+  if (result.isValid && job.status === "assigned") {
+    try {
+      const { escrowService } = await import("@/services/escrow.service");
+      await escrowService.startJob(user, jobId, []);
+    } catch (err) {
+      console.error("[geo-check-in] Error transitioning job to in_progress:", err);
+    }
+  }
+
+  return NextResponse.json({
+    success: result.isValid,
+    checkIn: {
+      distance: result.distance,
+      isWithinGeofence: result.isWithinGeofence,
+      status: result.status,
+    },
+    message: result.message,
+  });
+});

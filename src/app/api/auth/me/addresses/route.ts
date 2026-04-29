@@ -5,6 +5,7 @@ import { withHandler } from "@/lib/utils";
 import { NotFoundError, ValidationError } from "@/lib/errors";
 import User from "@/models/User";
 import { connectDB } from "@/lib/db";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 const CoordSchema = z.object({
   lat: z.number(),
@@ -20,6 +21,8 @@ const AddressSchema = z.object({
 /** POST /api/auth/me/addresses — add a new saved address */
 export const POST = withHandler(async (req: NextRequest) => {
   const tokenUser = await requireUser();
+  const rl = await checkRateLimit(`auth:addresses:${tokenUser.userId}`, { windowMs: 60_000, max: 20 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   const body = await req.json();
   const parsed = AddressSchema.safeParse(body);
   if (!parsed.success) throw new ValidationError(parsed.error.errors[0].message);

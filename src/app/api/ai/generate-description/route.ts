@@ -3,6 +3,7 @@ import OpenAI from "openai";
 import { requireUser } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { ValidationError, UnprocessableError } from "@/lib/errors";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 function getClient() {
   if (!process.env.OPENAI_API_KEY) throw new UnprocessableError("AI features are not configured");
@@ -10,7 +11,9 @@ function getClient() {
 }
 
 export const POST = withHandler(async (req: NextRequest) => {
-  await requireUser();
+  const user = await requireUser();
+  const rl = await checkRateLimit(`ai:gen-desc:${user.userId}`, { windowMs: 60_000, max: 20 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   const { title, category } = await req.json();
   if (!title || typeof title !== "string" || title.trim().length < 3) {
@@ -44,7 +47,7 @@ export const POST = withHandler(async (req: NextRequest) => {
   });
 
   const description = completion.choices[0]?.message?.content?.trim() ?? "";
-  if (!description) throw new Error("AI returned an empty response. Please try again.");
+  if (!description) throw new UnprocessableError("AI returned an empty response. Please try again.");
 
   return NextResponse.json({ description }, { status: 200 });
 });

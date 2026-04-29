@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useCallback } from "react";
+import { apiFetch } from "@/lib/fetchClient";
 import { toast } from "react-hot-toast";
 import {
   Trash2,
@@ -112,7 +113,7 @@ export default function BlogsManager({ initialData, userId }: BlogsManagerProps)
     }
 
     try {
-      const res = await fetch(`/api/admin/blogs/${id}`, {
+      const res = await apiFetch(`/api/admin/blogs/${id}`, {
         method: "DELETE",
       });
       if (!res.ok) throw new Error("Failed to delete blog");

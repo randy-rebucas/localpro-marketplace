@@ -6,12 +6,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import { z } from "zod";
-import { connectDB } from "@/lib/db";
 import { withHandler } from "@/lib/utils";
 import { requireUser } from "@/lib/auth";
 import { AIDecisionService } from "@/services/ai-decision.service";
 import { enqueueNotification } from "@/lib/notification-queue";
-import mongoose from "mongoose";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 interface SupportQueryInput {
   ticketId?: string;
@@ -191,8 +190,9 @@ Return JSON with fields:
  * POST /api/ai/agents/support
  */
 export const POST = withHandler(async (req: NextRequest) => {
-  await connectDB();
   const user = await requireUser();
+  const rl = await checkRateLimit(`ai:support:${user.userId}`, { windowMs: 60_000, max: 20 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
   const body = await req.json();
   const input: SupportQueryInput = {

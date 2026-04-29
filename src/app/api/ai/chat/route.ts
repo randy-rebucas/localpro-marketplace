@@ -3,6 +3,7 @@ import OpenAI from "openai";
 import { z } from "zod";
 import { withHandler } from "@/lib/utils";
 import { requireUser } from "@/lib/auth";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 function getClient(): OpenAI | null {
   if (!process.env.OPENAI_API_KEY) return null;
@@ -222,6 +223,8 @@ Respond ONLY with valid JSON (no markdown):
 /** POST /api/ai/chat - AI chat dispatcher with action routing */
 export const POST = withHandler(async (req: NextRequest) => {
   const user = await requireUser();
+  const rl = await checkRateLimit(`ai:chat:${user.userId}`, { windowMs: 60_000, max: 30 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   const { messages, context, conversationState } = await req.json();
 
   if (!Array.isArray(messages) || messages.length === 0) {

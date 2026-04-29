@@ -7,9 +7,13 @@
  * Tokens never expire — CAN-SPAM requires unsubscribe links to remain valid.
  */
 
-import { createHmac } from "crypto";
+import { createHmac, timingSafeEqual } from "crypto";
 
-const HMAC_KEY = process.env.JWT_SECRET as string;
+// Dedicated secret for unsubscribe tokens. Keeping it separate from JWT_SECRET
+// means JWT rotation doesn't silently invalidate outstanding unsubscribe links
+// (CAN-SPAM requires them to remain valid). Falls back to JWT_SECRET for
+// deployments that haven't added the new env var yet.
+const HMAC_KEY = process.env.UNSUBSCRIBE_SECRET ?? process.env.JWT_SECRET;
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -23,6 +27,7 @@ function base64urlDecode(str: string): Buffer {
 }
 
 function sign(data: string): string {
+  if (!HMAC_KEY) throw new Error("UNSUBSCRIBE_SECRET (or JWT_SECRET) env var is not set");
   return createHmac("sha256", HMAC_KEY).update(data).digest("base64url");
 }
 
@@ -53,10 +58,15 @@ export function verifyUnsubscribeToken(token: string): { userId: string } | null
     if (lastColon === -1) return null;
 
     const payload = decoded.slice(0, lastColon);   // "userId:timestamp"
-    const hmac = decoded.slice(lastColon + 1);      // "hmac"
+    const hmac    = decoded.slice(lastColon + 1);   // "hmac"
 
     const expectedHmac = sign(payload);
-    if (hmac !== expectedHmac) return null;
+
+    // Constant-time comparison prevents timing attacks that could be used to
+    // forge a valid HMAC byte-by-byte against this unauthenticated endpoint.
+    const a = Buffer.from(hmac, "utf-8");
+    const b = Buffer.from(expectedHmac, "utf-8");
+    if (a.length !== b.length || !timingSafeEqual(a, b)) return null;
 
     const firstColon = payload.indexOf(":");
     if (firstColon === -1) return null;
