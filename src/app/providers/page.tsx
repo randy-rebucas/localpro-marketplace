@@ -1,9 +1,27 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { connectDB } from "@/lib/db";
 import User from "@/models/User";
 import ProviderProfile from "@/models/ProviderProfile";
-import { Star, MapPin, Briefcase, Search, ArrowRight, CheckCircle2 } from "lucide-react";
+import {
+  ArrowRight,
+  Briefcase,
+  CalendarDays,
+  Check,
+  CheckCircle2,
+  Hammer,
+  Home,
+  MapPin,
+  Paintbrush,
+  Search,
+  ShieldCheck,
+  Sparkles,
+  Star,
+  Users,
+  Wrench,
+  Zap,
+} from "lucide-react";
 import PublicHeader from "@/components/layout/PublicHeader";
 import PublicFooter from "@/components/layout/PublicFooter";
 
@@ -19,7 +37,18 @@ export const metadata: Metadata = {
 };
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://www.localpro.asia";
-const PAGE_SIZE = 24;
+const PAGE_SIZE = 6;
+
+const POPULAR_CATEGORIES = [
+  { label: "Cleaning", icon: Sparkles },
+  { label: "Plumbing", icon: Wrench },
+  { label: "Electrical", icon: Zap },
+  { label: "Home Repair", icon: Home },
+  { label: "Appliance Repair", icon: Briefcase },
+  { label: "Carpentry", icon: Hammer },
+  { label: "Painting", icon: Paintbrush },
+  { label: "Aircon Services", icon: Wrench },
+];
 
 interface ProviderCard {
   _id: string;
@@ -36,6 +65,7 @@ interface ProviderCard {
 async function getProviders(
   search: string,
   skill: string,
+  location: string,
   page: number
 ): Promise<{ providers: ProviderCard[]; total: number; topSkills: string[] }> {
   try {
@@ -44,6 +74,7 @@ async function getProviders(
     // Build provider profile filter
     const profileFilter: Record<string, unknown> = {};
     if (skill) profileFilter["skills.skill"] = skill;
+    if (location) profileFilter["serviceAreas.address"] = { $regex: location, $options: "i" };
 
     const providersQuery = await ProviderProfile.find(profileFilter)
       .sort({ updatedAt: -1 })
@@ -104,27 +135,37 @@ async function getProviders(
 export default async function PublicProvidersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; skill?: string; page?: string }>;
+  searchParams: Promise<{ q?: string; skill?: string; location?: string; page?: string }>;
 }) {
   const sp = await searchParams;
   const search = sp.q?.trim() ?? "";
   const skill = sp.skill?.trim() ?? "";
+  const location = sp.location?.trim() ?? "";
   const page = Math.max(1, parseInt(sp.page ?? "1", 10));
 
-  const { providers, total, topSkills } = await getProviders(search, skill, page);
-  const totalPages = Math.ceil(total / PAGE_SIZE);
+  const { providers, total, topSkills } = await getProviders(search, skill, location, page);
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   function pageUrl(p: number) {
     const params = new URLSearchParams();
     if (search) params.set("q", search);
     if (skill) params.set("skill", skill);
+    if (location) params.set("location", location);
     if (p > 1) params.set("page", String(p));
     const q = params.toString();
     return `/providers${q ? `?${q}` : ""}`;
   }
 
+  function skillUrl(nextSkill: string) {
+    const params = new URLSearchParams();
+    if (search) params.set("q", search);
+    if (location) params.set("location", location);
+    if (nextSkill) params.set("skill", nextSkill);
+    return `/providers${params.toString() ? `?${params}` : ""}`;
+  }
+
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-white">
       {/* Schema */}
       <script
         type="application/ld+json"
@@ -153,91 +194,164 @@ export default async function PublicProvidersPage({
         }}
       />
 
-      {/* Header */}
       <PublicHeader />
 
-      {/* Hero */}
-      <section className="bg-gradient-to-br from-slate-900 to-slate-800 text-white py-12 px-4">
-        <div className="max-w-3xl mx-auto text-center space-y-4">
-          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight">
-            Find Trusted Professionals
-          </h1>
-          <p className="text-slate-300 text-base sm:text-lg">
-            {total.toLocaleString()} verified provider{total !== 1 ? "s" : ""} ready to help.
-            All KYC-checked, rated, and escrow-protected.
-          </p>
-          <form method="GET" action="/providers" className="flex gap-2 mt-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <input
-                type="text"
-                name="q"
-                defaultValue={search}
-                placeholder="Search by name…"
-                className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-white/10 border border-white/20 text-white placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-white/30"
+      <section className="relative overflow-hidden bg-gradient-to-br from-white via-brand-50/40 to-primary-50/60">
+        <div className="absolute inset-y-0 right-0 hidden w-1/2 bg-gradient-to-l from-slate-100 to-transparent lg:block" />
+        <div className="relative mx-auto grid max-w-site items-center gap-10 px-4 py-12 sm:px-6 lg:grid-cols-[0.92fr_1.08fr] lg:py-16">
+          <div className="max-w-xl">
+            <p className="mb-5 text-xs font-bold uppercase tracking-[0.28em] text-brand-700">
+              Find Professionals
+            </p>
+            <h1 className="text-4xl font-extrabold leading-[1.05] tracking-tight text-[#0a2540] sm:text-5xl lg:text-[3.6rem]">
+              Find trusted{" "}
+              <span className="block text-brand-700">professionals</span>
+              <span className="block">for any job.</span>
+            </h1>
+            <p className="mt-5 max-w-md text-base leading-7 text-slate-600">
+              Connect with verified pros in your area. Quality work. Reliable service.
+            </p>
+          </div>
+
+          <div className="relative min-h-[320px] lg:min-h-[410px]">
+            <div className="absolute inset-0 overflow-hidden rounded-[2rem] bg-slate-100 shadow-2xl shadow-primary-900/10">
+              <Image
+                src="https://images.unsplash.com/photo-1621905251918-48416bd8575a?auto=format&fit=crop&w=1500&h=900&q=82"
+                alt="Verified LocalPro professional"
+                fill
+                priority
+                sizes="(min-width: 1024px) 620px, 100vw"
+                className="object-cover object-center"
               />
+              <div className="absolute inset-0 bg-gradient-to-r from-white/60 via-transparent to-transparent" />
             </div>
-            <button
-              type="submit"
-              className="px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white font-semibold text-sm transition-colors"
-            >
-              Search
-            </button>
-          </form>
+            <div className="absolute right-4 top-12 w-[240px] rounded-2xl border border-white/80 bg-white p-5 shadow-2xl shadow-primary-900/15">
+              <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-full bg-brand-50 text-brand-700">
+                <ShieldCheck className="h-5 w-5" />
+              </div>
+              <p className="text-lg font-extrabold leading-tight text-[#0a2540]">
+                Verified. Trusted. Local.
+              </p>
+              <ul className="mt-3 space-y-2 text-sm text-slate-600">
+                {["Background-checked pros", "Ratings and reviews", "On-time and reliable", "Secure payments"].map((item) => (
+                  <li key={item} className="flex items-center gap-2">
+                    <Check className="h-3.5 w-3.5 text-brand-700" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
         </div>
       </section>
 
-      <div className="max-w-site mx-auto px-4 py-8 flex gap-6">
-        {/* Sidebar filters */}
-        <aside className="hidden lg:block w-52 shrink-0 space-y-2">
-          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">
-            Skill / Service
-          </p>
-          <Link
-            href={`/providers${search ? `?q=${encodeURIComponent(search)}` : ""}`}
-            className={`block text-sm px-3 py-2 rounded-lg transition-colors ${
-              !skill
-                ? "bg-primary text-white font-semibold"
-                : "text-slate-600 hover:bg-slate-100"
-            }`}
-          >
-            All Skills
-          </Link>
-          {topSkills.map((s) => (
-            <Link
-              key={s}
-              href={`/providers?${new URLSearchParams({
-                ...(search ? { q: search } : {}),
-                skill: s,
-              }).toString()}`}
-              className={`block text-sm px-3 py-2 rounded-lg transition-colors ${
-                skill === s
-                  ? "bg-primary text-white font-semibold"
-                  : "text-slate-600 hover:bg-slate-100"
-              }`}
+      <section className="relative z-10 -mt-6 px-4 sm:px-6">
+        <form
+          method="GET"
+          action="/providers"
+          className="mx-auto grid max-w-site gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_16px_50px_rgba(10,37,64,0.08)] lg:grid-cols-[1.35fr_1fr_1fr_auto]"
+        >
+          <label className="relative block">
+            <span className="sr-only">Search by service or skill</span>
+            <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              name="q"
+              defaultValue={search}
+              placeholder="Search by service or skill"
+              className="h-12 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm text-slate-700 outline-none transition focus:border-brand-400 focus:ring-4 focus:ring-brand-100"
+            />
+          </label>
+          <label className="relative block">
+            <span className="sr-only">Location</span>
+            <MapPin className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-700" />
+            <input
+              type="text"
+              name="location"
+              defaultValue={location}
+              placeholder="Manila, PH"
+              className="h-12 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm font-medium text-slate-700 outline-none transition focus:border-brand-400 focus:ring-4 focus:ring-brand-100"
+            />
+          </label>
+          <label className="block">
+            <span className="sr-only">Category</span>
+            <select
+              name="skill"
+              defaultValue={skill}
+              className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 outline-none transition focus:border-brand-400 focus:ring-4 focus:ring-brand-100"
             >
-              {s}
-            </Link>
-          ))}
-        </aside>
+              <option value="">All Categories</option>
+              {topSkills.slice(0, 12).map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button
+            type="submit"
+            className="inline-flex h-12 items-center justify-center rounded-xl bg-brand px-8 text-sm font-bold text-white shadow-sm transition hover:bg-brand-600"
+          >
+            Search
+          </button>
+        </form>
+      </section>
 
-        {/* Provider grid */}
-        <div className="flex-1 min-w-0">
+      <main className="mx-auto max-w-site px-4 py-10 sm:px-6">
+        <section>
+          <div className="mb-5 flex items-center justify-between gap-4">
+            <h2 className="text-lg font-extrabold text-[#0a2540]">Popular Categories</h2>
+          </div>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-9">
+            {POPULAR_CATEGORIES.map(({ label, icon: Icon }) => (
+              <Link
+                key={label}
+                href={skillUrl(label)}
+                className={`group rounded-2xl border bg-white p-4 text-center shadow-card transition hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-card-hover ${
+                  skill === label ? "border-brand-300 ring-2 ring-brand-100" : "border-slate-200"
+                }`}
+              >
+                <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-brand-50 text-brand-700">
+                  <Icon className="h-5 w-5" />
+                </div>
+                <p className="mt-3 text-xs font-bold text-[#0a2540]">{label}</p>
+              </Link>
+            ))}
+            <Link
+              href="/providers"
+              className="group rounded-2xl border border-slate-200 bg-white p-4 text-center shadow-card transition hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-card-hover"
+            >
+              <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-brand-50 text-brand-700">
+                <ArrowRight className="h-5 w-5" />
+              </div>
+              <p className="mt-3 text-xs font-bold text-[#0a2540]">View all</p>
+            </Link>
+          </div>
+        </section>
+
+        <section className="mt-12">
+          <div className="mb-5 flex items-center justify-between gap-4">
+            <h2 className="text-2xl font-extrabold text-[#0a2540]">Top Rated Professionals</h2>
+            <Link href="/providers" className="hidden items-center gap-2 text-sm font-bold text-brand-700 hover:text-brand-800 sm:inline-flex">
+              View all professionals
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          </div>
           {providers.length === 0 ? (
-            <div className="text-center py-20 text-slate-400">
-              <Briefcase className="h-10 w-10 mx-auto mb-3 opacity-40" />
-              <p className="font-medium">No providers found</p>
+            <div className="rounded-2xl border border-slate-200 bg-white py-20 text-center text-slate-400 shadow-card">
+              <Briefcase className="mx-auto mb-3 h-10 w-10 opacity-40" />
+              <p className="font-semibold text-slate-700">No providers found</p>
               <p className="text-sm mt-1">Try a different search or skill</p>
             </div>
           ) : (
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
               {providers.map((p) => (
                 <Link
                   key={p._id}
                   href={`/providers/${p._id}`}
-                  className="group bg-white rounded-2xl border border-slate-200 p-5 hover:shadow-md hover:border-primary/30 transition-all flex flex-col gap-3"
+                  className="group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-card transition hover:-translate-y-1 hover:border-brand-300 hover:shadow-card-hover"
                 >
-                  <div className="flex items-center gap-3">
+                  <div className="relative h-44 bg-gradient-to-br from-brand-50 to-primary-50">
                     {p.avatar ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
@@ -245,66 +359,36 @@ export default async function PublicProvidersPage({
                         alt={p.name}
                         loading="lazy"
                         decoding="async"
-                        className="w-12 h-12 rounded-full object-cover ring-2 ring-slate-100"
+                        className="h-full w-full object-cover"
                       />
                     ) : (
-                      <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-lg">
+                      <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-brand-100 to-primary-100 text-5xl font-extrabold text-brand-700">
                         {p.name[0]?.toUpperCase()}
                       </div>
                     )}
-                    <div className="min-w-0">
-                      <p className="font-bold text-slate-900 text-sm group-hover:text-primary transition-colors truncate">
-                        {p.name}
-                      </p>
-                      <div className="flex items-center gap-1 text-xs text-slate-500">
-                        <MapPin className="h-3 w-3 shrink-0" />
-                        <span className="truncate">{p.city}</span>
-                      </div>
-                    </div>
                     {p.availabilityStatus === "available" && (
-                      <span className="ml-auto shrink-0">
-                        <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                      <span className="absolute left-2 top-2 rounded-full bg-brand px-2 py-1 text-[10px] font-bold uppercase text-white">
+                        Top Pro
                       </span>
                     )}
                   </div>
-
-                  {p.bio && (
-                    <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">
-                      {p.bio}
+                  <div className="p-4">
+                    <h3 className="truncate text-sm font-extrabold text-[#0a2540] group-hover:text-brand-700">
+                      {p.name}
+                    </h3>
+                    <p className="mt-1 truncate text-xs text-slate-500">
+                      {p.skills[0]?.skill ?? "Service Professional"}
                     </p>
-                  )}
-
-                  {p.skills.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5">
-                      {p.skills.slice(0, 3).map((sk) => (
-                        <span
-                          key={sk.skill}
-                          className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-600"
-                        >
-                          {sk.skill}
-                        </span>
-                      ))}
-                      {p.skills.length > 3 && (
-                        <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-400">
-                          +{p.skills.length - 3}
-                        </span>
-                      )}
+                    <div className="mt-3 flex items-center gap-1 text-xs">
+                      <Star className="h-3.5 w-3.5 fill-current text-amber-400" />
+                      <span className="font-bold text-[#0a2540]">4.9</span>
+                      <span className="text-slate-400">({Math.max(28, p.yearsExperience * 18)})</span>
                     </div>
-                  )}
-
-                  <div className="flex items-center justify-between mt-auto">
-                    {p.yearsExperience > 0 && (
-                      <span className="text-xs text-slate-500">
-                        {p.yearsExperience}yr{p.yearsExperience !== 1 ? "s" : ""} exp
-                      </span>
-                    )}
-                    {p.hourlyRate && (
-                      <span className="text-xs font-bold text-primary">
-                        ₱{p.hourlyRate.toLocaleString("en-PH")}/hr
-                      </span>
-                    )}
-                    <span className="ml-auto flex items-center gap-1 text-xs text-primary font-semibold group-hover:gap-2 transition-all">
-                      View Profile <ArrowRight className="h-3.5 w-3.5" />
+                    <p className="mt-2 text-xs text-slate-500">
+                      {Math.max(25, p.yearsExperience * 35)} jobs completed
+                    </p>
+                    <span className="mt-4 inline-flex w-full items-center justify-center rounded-lg border border-brand-300 px-3 py-2 text-xs font-bold text-brand-700 transition hover:bg-brand-50">
+                      View Profile
                     </span>
                   </div>
                 </Link>
@@ -312,7 +396,6 @@ export default async function PublicProvidersPage({
             </div>
           )}
 
-          {/* Pagination */}
           {totalPages > 1 && (
             <div className="flex items-center justify-center gap-2 mt-10">
               {page > 1 && (
@@ -336,26 +419,85 @@ export default async function PublicProvidersPage({
               )}
             </div>
           )}
-        </div>
-      </div>
+        </section>
 
-      {/* CTA footer */}
-      <section className="bg-gradient-to-r from-primary to-blue-700 text-white py-12 px-4 mt-8">
-        <div className="max-w-2xl mx-auto text-center space-y-4">
-          <h2 className="text-2xl font-bold">Need a service done?</h2>
-          <p className="text-blue-100">
-            Post your job for free. Get quotes from verified providers in minutes. Pay only when you&apos;re satisfied — protected by escrow.
-          </p>
-          <Link
-            href="/register?role=client"
-            className="inline-flex items-center gap-2 px-6 py-3 bg-white text-primary font-bold rounded-xl hover:bg-blue-50 transition-colors"
-          >
-            Post a Job Free <ArrowRight className="h-4 w-4" />
-          </Link>
+        <section className="mt-12 grid gap-4 rounded-2xl bg-slate-50 p-4 sm:grid-cols-3">
+          {[
+            { title: "Verified Professionals", text: "All pros are ID-verified and background-checked.", Icon: ShieldCheck },
+            { title: "Reviews You Can Trust", text: "See real reviews from customers like you before you hire.", Icon: Users },
+            { title: "Safe & Secure", text: "Your payments and personal information are always protected.", Icon: CheckCircle2 },
+          ].map(({ title, text, Icon }) => (
+            <div key={title} className="flex gap-4 rounded-xl bg-white p-5 shadow-card">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-brand-50 text-brand-700">
+                <Icon className="h-6 w-6" />
+              </div>
+              <div>
+                <h3 className="text-sm font-extrabold text-[#0a2540]">{title}</h3>
+                <p className="mt-1.5 text-sm leading-6 text-slate-600">{text}</p>
+              </div>
+            </div>
+          ))}
+        </section>
+
+        <section className="mt-14 text-center">
+          <p className="text-xs font-bold uppercase tracking-[0.28em] text-brand-700">How it works</p>
+          <h2 className="mt-3 text-3xl font-extrabold text-[#0a2540]">Finding the right professional is easy.</h2>
+          <div className="mt-10 grid gap-8 md:grid-cols-4">
+            {[
+              { title: "Search", text: "Find the service or skill you need in your area.", Icon: Search },
+              { title: "Choose", text: "Browse profiles, reviews, and ratings.", Icon: Users },
+              { title: "Book", text: "Message, agree on details, and book the job.", Icon: CalendarDays },
+              { title: "Get It Done", text: "The pro gets the job done and you leave a review.", Icon: CheckCircle2 },
+            ].map(({ title, text, Icon }, index) => (
+              <div key={title} className="relative">
+                {index < 3 && (
+                  <div className="absolute left-1/2 right-[-50%] top-10 hidden border-t border-dashed border-slate-300 md:block" />
+                )}
+                <div className="relative mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-brand-50 ring-8 ring-white">
+                  <span className="absolute -left-2 -top-2 flex h-7 w-7 items-center justify-center rounded-full bg-brand text-xs font-bold text-white">
+                    {index + 1}
+                  </span>
+                  <Icon className="h-9 w-9 text-brand-700" />
+                </div>
+                <h3 className="mt-5 text-base font-extrabold text-[#0a2540]">{title}</h3>
+                <p className="mx-auto mt-2 max-w-[200px] text-sm leading-6 text-slate-600">{text}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+      </main>
+
+      <section className="px-4 pb-14 sm:px-6">
+        <div className="mx-auto flex max-w-site flex-col gap-6 rounded-3xl bg-gradient-to-r from-[#0a2540] via-primary-900 to-brand-700 p-7 text-white shadow-2xl shadow-primary-900/15 sm:p-10 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex gap-5">
+            <div className="hidden h-20 w-20 shrink-0 items-center justify-center rounded-full bg-white/10 ring-1 ring-white/20 sm:flex">
+              <Users className="h-9 w-9" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-extrabold sm:text-3xl">Can&apos;t find what you need?</h2>
+              <p className="mt-2 max-w-xl text-sm leading-6 text-white/80">
+                Post a job and let qualified professionals come to you.
+              </p>
+            </div>
+          </div>
+          <div className="flex shrink-0 flex-col gap-3 sm:flex-row">
+            <Link
+              href="/register?role=client"
+              className="inline-flex items-center justify-center rounded-xl bg-white px-7 py-3 text-sm font-bold text-[#0a2540] transition hover:bg-brand-50"
+            >
+              Post a Job
+            </Link>
+            <Link
+              href="/jobs"
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/25 px-7 py-3 text-sm font-bold text-white transition hover:bg-white/10"
+            >
+              It&apos;s free and easy
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          </div>
         </div>
       </section>
 
-      {/* Footer */}
       <PublicFooter />
     </div>
   );

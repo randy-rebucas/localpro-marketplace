@@ -1,0 +1,41 @@
+---
+description: LocalPro UI/design fine-tuning — tokens, marketing/legal shells, components, dark mode
+globs:
+  - "src/**/*.tsx"
+  - "src/app/globals.css"
+  - "tailwind.config.ts"
+alwaysApply: false
+---
+
+# Design fine-tuning (LocalPro)
+
+When polishing or adjusting **visual design**, follow this project’s system instead of inventing new palettes or spacing scales.
+
+## Tokens and sources
+
+- **Colors:** Prefer Tailwind `primary` / `brand` / `surface` and `slate-*` for neutrals. Align with `tailwind.config.ts` and CSS variables in `src/app/globals.css`.
+- **Typography:** `font-sans` is Inter (Next font). Headings use `font-semibold` / `font-extrabold` and `tracking-tight` where pages already do.
+- **Layout width:** Public/marketing content uses `max-w-site` (1200px) and horizontal padding `px-4 sm:px-6`.
+
+## Public / legal / policy pages (reference pattern)
+
+Match pages that use `PublicHeader` + `PublicFooter`:
+
+- **Page root:** `min-h-screen bg-white` (or `bg-surface` if the rest of the tree already uses app shell colors).
+- **Hero:** `bg-gradient-to-br from-white via-brand-50/30 to-primary-50/50` with inner grid `mx-auto max-w-site gap-10 px-4 py-14 sm:px-6 lg:grid-cols-[1fr_360px]`.
+- **Eyebrow:** `text-xs font-bold uppercase tracking-[0.28em] text-brand-700`.
+- **Hero title:** `text-4xl font-extrabold tracking-tight text-[#0a2540] sm:text-5xl`.
+- **Hero body:** `text-base leading-7 text-slate-600` with optional `max-w-xl`.
+- **Two-column body:** `lg:grid-cols-[260px_minmax(0,1fr)]`, sticky TOC `lg:sticky lg:top-24`, TOC card `rounded-2xl border border-slate-200 bg-white p-5 shadow-card`.
+
+## Components and interactions
+
+- Reuse `@/components/ui/*` and global classes from `globals.css` (`.card`, `.btn-primary`, `.btn-secondary`, `.input`, `.badge`) when they fit before adding new utility stacks.
+- **Dark mode:** Use `next-themes` (`class` strategy). Pair light styles with `dark:` variants using existing slate/card/border patterns in `globals.css`.
+- **Motion:** Prefer existing animation utilities (`animate-fade-in`, `animate-reveal-up`, `reveal-stagger`) from `globals.css` over ad-hoc keyframes.
+
+## Fine-tuning discipline
+
+- Mirror **neighboring sections** in the same file for spacing, border radius, and type scale.
+- Prefer **semantic contrast** (`text-slate-600` body vs `text-[#0a2540]` headings) over low-contrast gray-on-gray.
+- Do **not** introduce arbitrary hex colors or new spacing scales unless extending `tailwind.config.ts` for the whole product.

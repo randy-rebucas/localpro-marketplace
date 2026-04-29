@@ -1,9 +1,24 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { CalendarDays, HelpCircle, LockKeyhole, Printer, ShieldCheck } from "lucide-react";
 import PublicHeader from "@/components/layout/PublicHeader";
 import PublicFooter from "@/components/layout/PublicFooter";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://www.localpro.asia";
+
+const sections = [
+  { id: "introduction", title: "Introduction" },
+  { id: "information", title: "Information We Collect" },
+  { id: "use", title: "How We Use Information" },
+  { id: "sharing", title: "Sharing of Information" },
+  { id: "cookies", title: "Cookies" },
+  { id: "retention", title: "Data Retention" },
+  { id: "rights", title: "Your Privacy Rights" },
+  { id: "security", title: "Security" },
+  { id: "children", title: "Children's Privacy" },
+  { id: "changes", title: "Changes to This Policy" },
+  { id: "contact", title: "Contact Us" },
+];
 
 export const metadata: Metadata = {
   title: "Privacy Policy",
@@ -24,14 +39,73 @@ export default function PrivacyPage() {
       {/* Nav */}
       <PublicHeader />
 
-      {/* Content */}
-      <main className="max-w-3xl mx-auto px-4 py-16">
-        <h1 className="text-4xl font-extrabold text-slate-900 mb-2">Privacy Policy</h1>
-        <p className="text-sm text-slate-400 mb-10">Last updated: February 28, 2026</p>
+      <main>
+        <section className="bg-gradient-to-br from-white via-brand-50/30 to-primary-50/50">
+          <div className="mx-auto grid max-w-site items-center gap-10 px-4 py-14 sm:px-6 lg:grid-cols-[1fr_360px]">
+            <div>
+              <p className="mb-5 text-xs font-bold uppercase tracking-[0.28em] text-brand-700">Legal</p>
+              <h1 className="text-4xl font-extrabold tracking-tight text-[#0a2540] sm:text-5xl">
+                Privacy Policy
+              </h1>
+              <p className="mt-5 max-w-xl text-base leading-7 text-slate-600">
+                Learn how LocalPro collects, uses, discloses, and protects your personal information across our marketplace platform.
+              </p>
+              <p className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-slate-600">
+                <CalendarDays className="h-4 w-4 text-brand-700" />
+                Last Updated: May 15, 2024
+              </p>
+            </div>
+            <div className="hidden justify-center lg:flex">
+              <div className="relative flex h-56 w-72 items-center justify-center rounded-[2rem] bg-brand-50">
+                <div className="absolute left-8 top-6 flex h-40 w-32 items-center justify-center rounded-xl bg-white shadow-xl ring-1 ring-slate-200">
+                  <LockKeyhole className="h-14 w-14 text-brand-700" />
+                </div>
+                <div className="absolute bottom-8 right-10 flex h-20 w-20 items-center justify-center rounded-2xl bg-white text-brand-700 shadow-xl ring-1 ring-slate-200">
+                  <ShieldCheck className="h-11 w-11" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
 
-        <div className="prose prose-slate max-w-none space-y-8">
+        <section className="mx-auto grid max-w-site gap-6 px-4 py-8 sm:px-6 lg:grid-cols-[260px_minmax(0,1fr)]">
+          <aside className="space-y-5 lg:sticky lg:top-24 lg:self-start">
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-card">
+              <h2 className="mb-4 text-sm font-extrabold text-[#0a2540]">On this page</h2>
+              <nav className="space-y-1">
+                {sections.map((section, index) => (
+                  <a
+                    key={section.id}
+                    href={`#${section.id}`}
+                    className={`flex items-center gap-3 rounded-lg px-3 py-2 text-xs font-semibold transition ${
+                      index === 0 ? "bg-brand-50 text-brand-800" : "text-slate-600 hover:bg-slate-50 hover:text-brand-700"
+                    }`}
+                  >
+                    <span className="w-4 text-[11px]">{index + 1}.</span>
+                    {section.title}
+                  </a>
+                ))}
+              </nav>
+            </div>
 
-          <section>
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-card">
+              <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-full bg-brand-50 text-brand-700">
+                <HelpCircle className="h-5 w-5" />
+              </div>
+              <h2 className="text-sm font-extrabold text-[#0a2540]">Privacy questions?</h2>
+              <p className="mt-3 text-sm leading-6 text-slate-600">
+                Contact us if you need help with your data or privacy rights.
+              </p>
+              <Link href="/support" className="mt-4 inline-flex items-center gap-2 text-sm font-bold text-brand-700 hover:text-brand-800">
+                Contact Support
+              </Link>
+            </div>
+          </aside>
+
+          <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-card sm:p-10">
+            <div className="prose prose-slate max-w-none space-y-8 prose-h2:text-[#0a2540] prose-p:text-slate-600 prose-li:text-slate-600">
+
+          <section id="introduction" className="scroll-mt-28">
             <h2 className="text-xl font-bold text-slate-800 mb-3">1. Introduction</h2>
             <p className="text-slate-600 leading-relaxed">
               LocalPro (&ldquo;we&rdquo;, &ldquo;our&rdquo;, or &ldquo;us&rdquo;) operates the LocalPro Marketplace platform
@@ -41,7 +115,7 @@ export default function PrivacyPage() {
             </p>
           </section>
 
-          <section>
+          <section id="information" className="scroll-mt-28">
             <h2 className="text-xl font-bold text-slate-800 mb-3">2. Information We Collect</h2>
             <ul className="list-disc pl-5 space-y-2 text-slate-600 leading-relaxed">
               <li><strong>Account information</strong> — name, email address, phone number, and password (stored as a secure hash).</li>
@@ -54,7 +128,7 @@ export default function PrivacyPage() {
             </ul>
           </section>
 
-          <section>
+          <section id="use" className="scroll-mt-28">
             <h2 className="text-xl font-bold text-slate-800 mb-3">3. How We Use Your Information</h2>
             <ul className="list-disc pl-5 space-y-2 text-slate-600 leading-relaxed">
               <li>To create and manage your account.</li>
@@ -68,7 +142,7 @@ export default function PrivacyPage() {
             </ul>
           </section>
 
-          <section>
+          <section id="sharing" className="scroll-mt-28">
             <h2 className="text-xl font-bold text-slate-800 mb-3">4. Sharing of Information</h2>
             <p className="text-slate-600 leading-relaxed mb-3">
               We do not sell your personal data. We share information only in these circumstances:
@@ -81,7 +155,7 @@ export default function PrivacyPage() {
             </ul>
           </section>
 
-          <section>
+          <section id="cookies" className="scroll-mt-28">
             <h2 className="text-xl font-bold text-slate-800 mb-3">5. Cookies</h2>
             <p className="text-slate-600 leading-relaxed">
               We use essential cookies for authentication (session tokens stored as secure, HTTP-only cookies)
@@ -91,7 +165,7 @@ export default function PrivacyPage() {
             </p>
           </section>
 
-          <section>
+          <section id="retention" className="scroll-mt-28">
             <h2 className="text-xl font-bold text-slate-800 mb-3">6. Data Retention</h2>
             <p className="text-slate-600 leading-relaxed">
               We retain your account data for as long as your account is active. KYC documents are deleted
@@ -101,7 +175,7 @@ export default function PrivacyPage() {
             </p>
           </section>
 
-          <section>
+          <section id="rights" className="scroll-mt-28">
             <h2 className="text-xl font-bold text-slate-800 mb-3">7. Your Rights (Republic Act 10173 — Data Privacy Act)</h2>
             <p className="text-slate-600 leading-relaxed mb-3">
               Under the Philippine Data Privacy Act of 2012, you have the right to:
@@ -119,7 +193,7 @@ export default function PrivacyPage() {
             </p>
           </section>
 
-          <section>
+          <section id="security" className="scroll-mt-28">
             <h2 className="text-xl font-bold text-slate-800 mb-3">8. Security</h2>
             <p className="text-slate-600 leading-relaxed">
               We implement industry-standard security measures: TLS encryption in transit, bcrypt password
@@ -129,7 +203,7 @@ export default function PrivacyPage() {
             </p>
           </section>
 
-          <section>
+          <section id="children" className="scroll-mt-28">
             <h2 className="text-xl font-bold text-slate-800 mb-3">9. Children&apos;s Privacy</h2>
             <p className="text-slate-600 leading-relaxed">
               LocalPro is not intended for users under 18 years of age. We do not knowingly collect personal
@@ -138,7 +212,7 @@ export default function PrivacyPage() {
             </p>
           </section>
 
-          <section>
+          <section id="changes" className="scroll-mt-28">
             <h2 className="text-xl font-bold text-slate-800 mb-3">10. Changes to This Policy</h2>
             <p className="text-slate-600 leading-relaxed">
               We may update this Privacy Policy from time to time. We will notify registered users by email
@@ -147,7 +221,7 @@ export default function PrivacyPage() {
             </p>
           </section>
 
-          <section>
+          <section id="contact" className="scroll-mt-28">
             <h2 className="text-xl font-bold text-slate-800 mb-3">11. Contact Us</h2>
             <p className="text-slate-600 leading-relaxed">
               If you have questions or concerns about this Privacy Policy, please reach out:
@@ -157,9 +231,19 @@ export default function PrivacyPage() {
               <li>🌐 <strong>localpro.asia</strong></li>
             </ul>
           </section>
+            </div>
+
+        <div className="mt-10 border-t border-slate-200 pt-6">
+          <p className="text-sm text-slate-600">
+            By using LocalPro, you acknowledge that you have read and understood how we handle your personal information.
+          </p>
+          <a href="#top" className="mt-4 inline-flex items-center gap-2 text-sm font-bold text-brand-700 hover:text-brand-800">
+            <Printer className="h-4 w-4" />
+            Print this page
+          </a>
         </div>
 
-        <div className="mt-12 pt-8 border-t border-slate-200 flex flex-wrap items-center gap-3 text-sm text-slate-400">
+        <div className="mt-10 flex flex-wrap items-center gap-3 border-t border-slate-200 pt-6 text-sm text-slate-400">
           <Link href="/terms"              className="hover:text-primary transition-colors">Terms of Service</Link>
           <span className="text-slate-300">·</span>
           <Link href="/provider-agreement" className="hover:text-primary transition-colors">Provider Agreement</Link>
@@ -174,6 +258,8 @@ export default function PrivacyPage() {
           <span className="text-slate-300">·</span>
           <Link href="/"                   className="hover:text-primary transition-colors">Back to Home</Link>
         </div>
+          </article>
+        </section>
       </main>
 
       {/* Footer */}

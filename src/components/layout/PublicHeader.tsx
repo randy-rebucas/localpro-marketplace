@@ -1,16 +1,24 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useState, useRef, useEffect } from "react";
 import { ChevronDown, Loader2, MapPin, Menu, Navigation, X } from "lucide-react";
 import { useVisitorLocation } from "@/hooks/useVisitorLocation";
 import LocationPickerInput from "@/components/layout/LocationPickerInput";
 
+const navLinkClass =
+  "relative flex h-20 items-center px-2 text-sm font-semibold text-[#0a2540] transition-colors hover:text-brand-700";
+const navActiveClass =
+  "after:absolute after:bottom-0 after:left-2 after:right-2 after:h-0.5 after:rounded-full after:bg-brand";
+
 function NavDropdown({
   label,
+  active = false,
   children,
 }: {
   label: string;
+  active?: boolean;
   children: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
@@ -29,7 +37,7 @@ function NavDropdown({
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="flex items-center gap-1 text-sm font-medium text-[#0a2540] hover:text-primary-700 px-2.5 py-2 rounded-lg hover:bg-slate-50/80 transition-colors"
+        className={`${navLinkClass} gap-1 ${active ? navActiveClass : ""}`}
         aria-expanded={open}
       >
         {label}
@@ -61,6 +69,7 @@ function DropdownLink({ href, children }: { href: string; children: React.ReactN
  * Marketing header — logo left, nav centered, actions right (reference layout).
  */
 export default function PublicHeader() {
+  const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [locationOpen, setLocationOpen] = useState(false);
   const [locationBusy, setLocationBusy] = useState(false);
@@ -98,12 +107,15 @@ export default function PublicHeader() {
     }
   }
 
+  const servicesActive = pathname === "/jobs" || pathname.startsWith("/providers") || pathname.startsWith("/board");
+  const resourcesActive = pathname.startsWith("/blog") || pathname.startsWith("/peso-program");
+
   return (
     <header className="sticky top-0 z-50 border-b border-slate-200/80 bg-white shadow-[0_1px_0_rgba(10,37,64,0.04)]">
-      <div className="relative max-w-site mx-auto px-4 sm:px-6 min-h-[4.75rem] h-[4.75rem] sm:min-h-[5rem] sm:h-[5rem] flex items-center justify-between gap-3">
+      <div className="relative mx-auto flex h-20 w-full items-center justify-between gap-4 px-5 sm:px-8">
         <Link
           href="/"
-          className="relative z-10 flex h-full min-h-0 max-w-[min(560px,90vw)] shrink-0 items-center gap-2 sm:gap-2.5"
+          className="relative z-10 flex h-full min-h-0 max-w-[min(360px,70vw)] shrink-0 items-center gap-2.5"
           aria-label="LocalPro — home"
         >
           {/* eslint-disable-next-line @next/next/no-img-element -- static public assets */}
@@ -115,7 +127,7 @@ export default function PublicHeader() {
             decoding="async"
             fetchPriority="high"
             aria-hidden
-            className="block h-11 w-auto max-h-11 shrink-0 object-contain object-center sm:h-12 sm:max-h-12 md:h-[3.35rem] md:max-h-[3.35rem]"
+            className="block h-12 w-auto max-h-12 shrink-0 object-contain object-center"
           />
           <img
             src="/logo-text.png"
@@ -124,73 +136,73 @@ export default function PublicHeader() {
             height={192}
             decoding="async"
             fetchPriority="high"
-            className="block h-11 w-auto min-w-0 max-h-11 object-contain object-left sm:h-12 sm:max-h-12 md:h-[3.35rem] md:max-h-[3.35rem]"
+            className="block h-12 w-auto min-w-0 max-h-12 object-contain object-left"
           />
         </Link>
 
         <nav
-          className="hidden lg:flex absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 items-center justify-center gap-0.5 xl:gap-1 whitespace-nowrap"
+          className="hidden xl:flex absolute left-1/2 top-0 h-20 -translate-x-1/2 items-center justify-center gap-7 whitespace-nowrap"
           aria-label="Main"
         >
-          <NavDropdown label="Services">
+          <NavDropdown label="Services" active={servicesActive}>
             <DropdownLink href="/jobs">Browse open jobs</DropdownLink>
             <DropdownLink href="/providers">Find professionals</DropdownLink>
             <DropdownLink href="/board">Public job board</DropdownLink>
           </NavDropdown>
           <Link
             href="/for-businesses"
-            className="text-sm font-medium text-[#0a2540] hover:text-primary-700 px-2.5 py-2 rounded-lg hover:bg-slate-50/80 transition-colors"
+            className={`${navLinkClass} ${pathname === "/for-businesses" ? navActiveClass : ""}`}
           >
             For Businesses
           </Link>
           <Link
             href="/for-pros"
-            className="text-sm font-medium text-[#0a2540] hover:text-primary-700 px-2.5 py-2 rounded-lg hover:bg-slate-50/80 transition-colors"
+            className={`${navLinkClass} ${pathname === "/for-pros" ? navActiveClass : ""}`}
           >
             For Pros
           </Link>
           <Link
             href="/support"
-            className="text-sm font-medium text-[#0a2540] hover:text-primary-700 px-2.5 py-2 rounded-lg hover:bg-slate-50/80 transition-colors"
+            className={`${navLinkClass} ${pathname === "/support" ? navActiveClass : ""}`}
           >
             About Us
           </Link>
-          <NavDropdown label="Resources">
+          <NavDropdown label="Resources" active={resourcesActive}>
             <DropdownLink href="/blog">Blog</DropdownLink>
             <DropdownLink href="/support">Help &amp; support</DropdownLink>
             <DropdownLink href="/peso-program">PESO program</DropdownLink>
           </NavDropdown>
         </nav>
 
-        <div className="flex h-full min-h-0 items-center gap-2 sm:gap-3 shrink-0 z-10">
+        <div className="z-10 flex h-full min-h-0 shrink-0 items-center gap-3">
           <button
             type="button"
             onClick={() => setLocationOpen(true)}
-            className="hidden sm:inline-flex h-full min-h-0 items-center gap-2 text-xs font-medium text-slate-600 max-w-[min(180px,26vw)] min-w-0 rounded-lg px-1.5 -mx-1.5 hover:bg-slate-50 hover:text-slate-800 transition-colors text-left"
+            className="hidden h-full min-h-0 max-w-[min(170px,18vw)] min-w-0 items-center gap-2 rounded-lg px-1.5 text-left text-sm font-semibold text-[#0a2540] transition-colors hover:bg-slate-50 hover:text-slate-800 md:inline-flex"
             title={`${visitorLocation}${isManual ? " (custom)" : ""} — click to change`}
             aria-haspopup="dialog"
             aria-expanded={locationOpen}
           >
-            <MapPin className="h-[1.125rem] w-[1.125rem] text-brand shrink-0 self-center" strokeWidth={2.25} aria-hidden />
+            <MapPin className="h-4 w-4 shrink-0 self-center text-brand" strokeWidth={2.5} aria-hidden />
             <span className="truncate" suppressHydrationWarning>
               {visitorLocation}
             </span>
           </button>
           <Link
             href="/login"
-            className="hidden sm:inline-flex text-sm font-semibold text-[#0a2540] border border-slate-300 hover:border-primary-400 hover:bg-slate-50 px-4 py-2 rounded-lg transition-colors"
+            className="hidden rounded-lg border border-brand-300 px-5 py-2.5 text-sm font-semibold text-[#0a2540] transition-colors hover:border-brand-500 hover:bg-brand-50 sm:inline-flex"
           >
             Log In
           </Link>
           <Link
             href="/register"
-            className="inline-flex text-sm font-semibold bg-brand hover:bg-brand-600 text-white px-4 py-2 rounded-lg shadow-sm transition-colors"
+            className="inline-flex rounded-lg bg-brand px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-brand-600"
           >
             Sign Up
           </Link>
           <button
             type="button"
-            className="lg:hidden p-2 rounded-lg text-slate-700 hover:bg-slate-100"
+            className="xl:hidden p-2 rounded-lg text-slate-700 hover:bg-slate-100"
             aria-label={mobileOpen ? "Close menu" : "Open menu"}
             onClick={() => setMobileOpen((o) => !o)}
           >
@@ -200,7 +212,7 @@ export default function PublicHeader() {
       </div>
 
       {mobileOpen && (
-        <div className="lg:hidden border-t border-slate-100 bg-white px-4 py-4 space-y-1 shadow-inner">
+        <div className="xl:hidden border-t border-slate-100 bg-white px-4 py-4 space-y-1 shadow-inner">
           <div className="flex items-center justify-between gap-2 py-2 text-xs font-medium text-slate-600 border-b border-slate-100 mb-2">
             <p className="flex items-center gap-2 min-w-0 flex-1">
               <MapPin className="h-[1.125rem] w-[1.125rem] text-brand shrink-0" strokeWidth={2.25} aria-hidden />
@@ -225,11 +237,14 @@ export default function PublicHeader() {
           <Link href="/providers" className="block py-2 text-sm font-medium text-slate-800" onClick={() => setMobileOpen(false)}>
             Find pros
           </Link>
-          <Link href="/register?role=client" className="block py-2 text-sm font-medium text-slate-800" onClick={() => setMobileOpen(false)}>
+          <Link href="/for-businesses" className="block py-2 text-sm font-medium text-slate-800" onClick={() => setMobileOpen(false)}>
             For businesses
           </Link>
-          <Link href="/register?role=provider" className="block py-2 text-sm font-medium text-slate-800" onClick={() => setMobileOpen(false)}>
+          <Link href="/for-pros" className="block py-2 text-sm font-medium text-slate-800" onClick={() => setMobileOpen(false)}>
             For pros
+          </Link>
+          <Link href="/#how-it-works" className="block py-2 text-sm font-medium text-slate-800" onClick={() => setMobileOpen(false)}>
+            How it works
           </Link>
           <Link href="/support" className="block py-2 text-sm font-medium text-slate-800" onClick={() => setMobileOpen(false)}>
             About / support

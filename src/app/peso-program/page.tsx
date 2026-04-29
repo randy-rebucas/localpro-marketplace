@@ -153,6 +153,18 @@ function CitySeal({ abbr, city }: { abbr: string; city: string }) {
   );
 }
 
+function OfficialSeal({ src, city }: { src: string; city: string }) {
+  return (
+    <div className="flex flex-col items-center gap-2">
+      <div className="h-16 w-16 rounded-full border-2 border-slate-200 bg-white flex items-center justify-center shadow-sm overflow-hidden">
+        {/* eslint-disable-next-line @next/next/no-img-element -- public partner seal asset */}
+        <img src={src} alt={`${city} official seal`} className="h-full w-full object-contain p-1" />
+      </div>
+      <p className="text-[11px] font-medium text-slate-500 text-center leading-tight">{city}</p>
+    </div>
+  );
+}
+
 /* ── page ───────────────────────────────────────────────────── */
 
 export default function PesoPage() {
@@ -432,11 +444,7 @@ export default function PesoPage() {
             <p className="text-sm text-slate-400 mb-10">We're proud to work with PESO offices across the country.</p>
 
             <div className="flex flex-wrap items-center justify-center gap-8 sm:gap-12">
-              <CitySeal abbr="PESO MNL" city="PESO Manila" />
-              <CitySeal abbr="PESO QC"  city="PESO Quezon City" />
-              <CitySeal abbr="PESO DAV" city="PESO Davao City" />
-              <CitySeal abbr="PESO CEB" city="PESO Cebu City" />
-              <CitySeal abbr="PESO ILO" city="PESO Iloilo City" />
+              <OfficialSeal src="/official_seal_ormoc.png" city="PESO Ormoc City" />
               {/* And many more */}
               <div className="flex flex-col items-center gap-2">
                 <div className="h-16 w-16 rounded-full border-2 border-dashed border-slate-200 bg-slate-50 flex items-center justify-center">
