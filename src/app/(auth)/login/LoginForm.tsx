@@ -1,16 +1,38 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
 import { Eye, EyeOff, Lock, Mail } from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
 
+const OAUTH_ERRORS: Record<string, string> = {
+  oauth_denied:         "Sign-in was cancelled.",
+  oauth_state_mismatch: "Session expired. Please try again.",
+  oauth_token_exchange: "Could not complete sign-in. Please try again.",
+  oauth_profile_fetch:  "Could not retrieve your profile. Please try again.",
+  oauth_no_email:       "Your account has no verified email. Please sign up with email instead.",
+  suspended:            "Your account has been suspended. Please contact support.",
+  too_many_attempts:    "Too many attempts. Please wait a moment and try again.",
+};
+
 export default function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const from = searchParams.get("from");
+
+  useEffect(() => {
+    const err = searchParams.get("error");
+    if (err) {
+      toast.error(OAUTH_ERRORS[err] ?? "Sign-in failed. Please try again.");
+      // Remove the ?error= param without a re-render loop
+      const url = new URL(window.location.href);
+      url.searchParams.delete("error");
+      window.history.replaceState({}, "", url.toString());
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const { setUser } = useAuthStore();
   const [isLoading, setIsLoading] = useState(false);
