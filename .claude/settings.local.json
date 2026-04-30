@@ -110,7 +110,10 @@
       "Bash(npx js-yaml:*)",
       "Bash(pnpm add:*)",
       "Bash(grep -v \"^\\\\s*$\")",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(npm ls *)",
+      "Bash(node -e ' *)",
+      "Bash(node -e \"const v=require\\('./vercel.json'\\); console.log\\('cron count:', v.crons.length\\); v.crons.forEach\\(c=>console.log\\(c.schedule.padEnd\\(15\\), c.path\\)\\)\")"
     ]
   }
 }

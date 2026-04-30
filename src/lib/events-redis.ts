@@ -39,15 +39,19 @@ export class RedisBus extends EventEmitter {
   /* ------------------------------------------------------------------ */
 
   emit(channel: string, ...args: unknown[]): boolean {
-    // Always fire in-process so co-located listeners still work
-    const hadLocal = super.emit(channel, ...args);
+    const redis = getRedis();
+    if (redis) {
+      // Redis mode: publish only to the stream. All instances (including this
+      // one) will receive the event via their polling intervals, preventing the
+      // double-delivery that would occur if we also fired locally here.
+      this.redisPublish(channel, args[0]).catch((err) => {
+        console.error(`[RedisBus] XADD failed for ${channel}:`, err);
+      });
+      return this.listenerCount(channel) > 0;
+    }
 
-    // Asynchronously publish to Redis (fire-and-forget)
-    this.redisPublish(channel, args[0]).catch((err) => {
-      console.error(`[RedisBus] XADD failed for ${channel}:`, err);
-    });
-
-    return hadLocal;
+    // No Redis — fall back to in-process delivery only.
+    return super.emit(channel, ...args);
   }
 
   /* ------------------------------------------------------------------ */

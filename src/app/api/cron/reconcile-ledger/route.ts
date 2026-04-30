@@ -44,33 +44,10 @@ export async function GET(req: NextRequest) {
   await ledgerService.refreshBalances(currency);
 
   // ── CHECK 1: Total debits = total credits ─────────────────────────────────
+  // Groups by debitAccount and creditAccount separately; the sum of all debit
+  // postings must equal the sum of all credit postings for the ledger to balance.
   try {
     const { default: LedgerEntry } = await import("@/models/LedgerEntry");
-    // Sum amountCentavos for every entry appearing as a debit vs. as a credit.
-    // In a balanced double-entry ledger these two aggregations must be equal.
-    const [debitAgg, creditAgg] = await Promise.all([
-      LedgerEntry.aggregate([
-        { $match: { currency } },
-        { $group: { _id: null, total: { $sum: "$amountCentavos" } } },
-      ]),
-      LedgerEntry.aggregate([
-        { $match: { currency } },
-        {
-          $group: {
-            _id: null,
-            // Each row is one entry; both debitAccount and creditAccount share
-            // the same amountCentavos. The ledger is balanced iff the count of
-            // entries on the debit side equals the credit side — i.e. if we sum
-            // amountCentavos for all records (each contributes one debit and one
-            // credit of equal size) the totals are structurally equal.
-            // To catch real imbalances we instead sum by aggregating on each
-            // account role independently using separate pipelines below.
-            total: { $sum: "$amountCentavos" },
-          },
-        },
-      ]),
-    ]);
-    // Recompute using per-account-role aggregation to catch any orphaned entries.
     const [allDebitsByAccount, allCreditsByAccount] = await Promise.all([
       LedgerEntry.aggregate([
         { $match: { currency } },
@@ -86,7 +63,6 @@ export async function GET(req: NextRequest) {
     const diff1 = totalDebitSide - totalCreditSide;
     checks.push({ name: "Debits = Credits", passed: diff1 === 0, ledgerValue: totalDebitSide, operationalValue: totalCreditSide, diffCentavos: diff1 });
     if (diff1 !== 0) errors.push(`CHECK 1 FAILED: debit-side total ${totalDebitSide} ≠ credit-side total ${totalCreditSide} (diff ${diff1} centavos)`);
-    void debitAgg; void creditAgg; // consumed above via per-account aggregation
   } catch (err) {
     errors.push(`CHECK 1 ERROR: ${String(err)}`);
   }

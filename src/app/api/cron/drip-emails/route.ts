@@ -2,12 +2,13 @@
  * /api/cron/drip-emails
  *
  * Sends onboarding drip emails:
- *   - Day 3 "Post your first job" (clients)/  "Complete your profile" (providers)
+ *   - Day 3 "Post your first job" (clients) / "Complete your profile" (providers)
  *   - Day 7 "Jobs near you" re-engagement
  *
- * Schedule: run daily via Vercel Cron.
- * Add to vercel.json:
- *   { "path": "/api/cron/drip-emails", "schedule": "0 9 * * *" }
+ * Idempotency: sentDripDay3At / sentDripDay7At are set atomically before each
+ * email send. Cron retries and duplicate invocations skip users already marked.
+ *
+ * Schedule: 15 9 * * * (09:15 UTC daily — offset from spawn-recurring at 09:00)
  */
 
 import type { NextRequest } from "next/server";
@@ -32,9 +33,9 @@ export async function GET(req: NextRequest) {
   await connectDB();
 
   const now = Date.now();
-  const day3Start = new Date(now - 4 * DAY_MS); // 3–4 days ago window
+  const day3Start = new Date(now - 4 * DAY_MS);
   const day3End   = new Date(now - 3 * DAY_MS);
-  const day7Start = new Date(now - 8 * DAY_MS); // 7–8 days ago window
+  const day7Start = new Date(now - 8 * DAY_MS);
   const day7End   = new Date(now - 7 * DAY_MS);
 
   // ── Day 3: clients who haven't posted a job yet ────────────────────────────
@@ -45,6 +46,7 @@ export async function GET(req: NextRequest) {
     email: { $exists: true, $ne: null },
     "preferences.marketingEmails": { $ne: false },
     createdAt: { $gte: day3Start, $lte: day3End },
+    sentDripDay3At: null,
   })
     .select("_id name email")
     .limit(500)
@@ -53,9 +55,15 @@ export async function GET(req: NextRequest) {
   let day3ClientCount = 0;
   for (const client of day3Clients) {
     if (!client.email) continue;
-    // Check they haven't posted any job yet
     const hasJob = await Job.exists({ clientId: client._id });
     if (hasJob) continue;
+    // Claim the slot atomically before sending — prevents duplicate on retry
+    const claimed = await User.findOneAndUpdate(
+      { _id: client._id, sentDripDay3At: null },
+      { $set: { sentDripDay3At: new Date() } },
+      { new: false }
+    );
+    if (!claimed) continue;
     await sendDripDay3ClientEmail(client.email, client.name ?? "there", String(client._id));
     day3ClientCount++;
   }
@@ -68,6 +76,7 @@ export async function GET(req: NextRequest) {
     email: { $exists: true, $ne: null },
     "preferences.marketingEmails": { $ne: false },
     createdAt: { $gte: day3Start, $lte: day3End },
+    sentDripDay3At: null,
   })
     .select("_id name email")
     .limit(500)
@@ -80,6 +89,12 @@ export async function GET(req: NextRequest) {
       .select("skills")
       .lean();
     if (profile && (profile as { skills?: unknown[] }).skills?.length) continue;
+    const claimed = await User.findOneAndUpdate(
+      { _id: provider._id, sentDripDay3At: null },
+      { $set: { sentDripDay3At: new Date() } },
+      { new: false }
+    );
+    if (!claimed) continue;
     await sendDripDay3ProviderEmail(provider.email, provider.name ?? "there", String(provider._id));
     day3ProviderCount++;
   }
@@ -93,6 +108,7 @@ export async function GET(req: NextRequest) {
     email: { $exists: true, $ne: null },
     "preferences.marketingEmails": { $ne: false },
     createdAt: { $gte: day7Start, $lte: day7End },
+    sentDripDay7At: null,
   })
     .select("_id name email")
     .limit(500)
@@ -102,7 +118,13 @@ export async function GET(req: NextRequest) {
   for (const client of day7Clients) {
     if (!client.email) continue;
     const jobCount = await Job.countDocuments({ clientId: client._id });
-    if (jobCount > 0) continue; // already active
+    if (jobCount > 0) continue;
+    const claimed = await User.findOneAndUpdate(
+      { _id: client._id, sentDripDay7At: null },
+      { $set: { sentDripDay7At: new Date() } },
+      { new: false }
+    );
+    if (!claimed) continue;
     await sendDripDay7ClientEmail(client.email, client.name ?? "there", openJobCount, "your area", String(client._id));
     day7ClientCount++;
   }
@@ -114,6 +136,7 @@ export async function GET(req: NextRequest) {
     email: { $exists: true, $ne: null },
     "preferences.marketingEmails": { $ne: false },
     createdAt: { $gte: day7Start, $lte: day7End },
+    sentDripDay7At: null,
   })
     .select("_id name email")
     .limit(500)
@@ -125,6 +148,12 @@ export async function GET(req: NextRequest) {
     if (!provider.email) continue;
     const hasQuote = await Quote.exists({ providerId: provider._id });
     if (hasQuote) continue;
+    const claimed = await User.findOneAndUpdate(
+      { _id: provider._id, sentDripDay7At: null },
+      { $set: { sentDripDay7At: new Date() } },
+      { new: false }
+    );
+    if (!claimed) continue;
     await sendDripDay7ProviderEmail(provider.email, provider.name ?? "there", openJobCount, String(provider._id));
     day7ProviderCount++;
   }

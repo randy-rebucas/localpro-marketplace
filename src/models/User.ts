@@ -30,6 +30,7 @@ export interface UserDocument extends Omit<IUser, "_id">, Document {
   deletedAt?: Date | null;
   pushSubscriptions?: PushSubscriptionRecord[];
   expoPushTokens?: ExpoPushTokenRecord[];
+  googleId?: string;
 }
 
 const AddressSubSchema = new Schema(
@@ -112,7 +113,8 @@ const UserSchema = new Schema<UserDocument>(
     capabilities: { type: [String], default: [] },
     agencyId: { type: Schema.Types.ObjectId, ref: "AgencyProfile", default: null },
     facebookId: { type: String, default: null, index: true, sparse: true },
-    oauthProvider: { type: String, enum: ["facebook"], default: null },
+    googleId:   { type: String, default: null, index: true, sparse: true },
+    oauthProvider: { type: String, enum: ["facebook", "google"], default: null },
     phone: { type: String, default: null },
     dateOfBirth: { type: Date, default: null },
     gender: { type: String, enum: ["male", "female", "other", null], default: null },
@@ -201,6 +203,9 @@ const UserSchema = new Schema<UserDocument>(
     lockedUntil: { type: Date, default: null },
     // Activity tracking — stamped on every authenticated request (throttled).
     lastSeenAt: { type: Date, default: null, index: true },
+    // Drip email idempotency — set when each wave is sent to prevent duplicates on cron retry.
+    sentDripDay3At: { type: Date, default: null },
+    sentDripDay7At: { type: Date, default: null },
   },
   {
     timestamps: true,

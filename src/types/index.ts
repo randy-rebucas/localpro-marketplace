@@ -96,7 +96,8 @@ export interface IUser {
   accountType?: "personal" | "business";
   avatar?: string;
   facebookId?: string;
-  oauthProvider?: "facebook" | null;
+  googleId?: string;
+  oauthProvider?: "facebook" | "google" | null;
   phone?: string | null;
   kycStatus?: "none" | "pending" | "approved" | "rejected";
   kycDocuments?: Array<{ type: string; url: string; uploadedAt: Date }>;
@@ -124,6 +125,10 @@ export interface IUser {
   lockedUntil?: Date | string | null;
   /** Last time the user made an authenticated request — used for online indicator. */
   lastSeenAt?: Date | string | null;
+  /** Set when the day-3 drip email is sent — prevents duplicate sends on cron retry. */
+  sentDripDay3At?: Date | string | null;
+  /** Set when the day-7 drip email is sent — prevents duplicate sends on cron retry. */
+  sentDripDay7At?: Date | string | null;
   createdAt: Date;
   updatedAt: Date;
 }

@@ -220,16 +220,22 @@ export async function POST(req: NextRequest) {
       } else {
         const sessionId = resourceData.id;
         const paymentIntentId = resourceData.attributes.payment_intent?.id ?? "";
-        await paymentService.confirmEscrowFunding(sessionId, paymentIntentId, "checkout");
 
-        // Stamp webhookEventId so duplicate deliveries are caught above
+        // Stamp webhookEventId BEFORE processing so concurrent retries are blocked.
+        // findOneAndUpdate with $exists: false ensures only one invocation proceeds.
         if (webhookEventId) {
           await connectDB();
-          await Payment.findOneAndUpdate(
-            { paymentIntentId: sessionId },
-            { webhookEventId },
+          const alreadyStamped = await Payment.findOneAndUpdate(
+            { paymentIntentId: sessionId, webhookEventId: { $exists: false } },
+            { $set: { webhookEventId } },
           );
+          if (!alreadyStamped) {
+            log.info({ webhookEventId, sessionId }, "Duplicate escrow event — skipping");
+            return NextResponse.json({ received: true, duplicate: true });
+          }
         }
+
+        await paymentService.confirmEscrowFunding(sessionId, paymentIntentId, "checkout");
 
         // Save card PM for future recurring auto-pay
         const payments = resourceData.attributes.payments ?? [];
