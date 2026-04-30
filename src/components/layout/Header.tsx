@@ -3,12 +3,12 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
 import toast from "react-hot-toast";
 import { ChevronDown, LogOut, User, Shield, Briefcase, UserCog, Menu, Settings, Bell, Gift, MessageSquare, BookOpen } from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
 import NotificationBell from "@/components/shared/NotificationBell";
 import GlobalSearch from "@/components/shared/GlobalSearch";
+import { UserAvatar } from "@/components/shared/UserAvatar";
 import ThemeToggle from "@/components/theme/ThemeToggle";
 
 interface HeaderProps {
@@ -43,10 +43,6 @@ export default function Header({ title, onMenuClick }: HeaderProps) {
     toast.success("You have been signed out");
     router.push("/login");
   }
-
-  const initials = user?.name
-    ? user.name.split(" ").filter(Boolean).map((n) => n[0]).join("").toUpperCase().slice(0, 2)
-    : "?";
 
   const roleConfig = user?.role ? ROLE_CONFIG[user.role] : null;
   const RoleIcon = roleConfig?.icon ?? User;
@@ -146,19 +142,14 @@ export default function Header({ title, onMenuClick }: HeaderProps) {
           >
             {/* Avatar */}
             <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 ring-2 ring-slate-100">
-              {user?.avatar ? (
-                <Image
-                  src={user.avatar}
-                  alt={user.name || "Avatar"}
-                  width={32}
-                  height={32}
-                  className="h-8 w-8 rounded-full object-cover"
-                />
-              ) : (
-                <div className={`w-8 h-8 rounded-full ${avatarBg} flex items-center justify-center text-white text-xs font-bold select-none`}>
-                  {initials}
-                </div>
-              )}
+              <UserAvatar
+                avatarUrl={user?.avatar}
+                gravatarUrl={user?.gravatarUrl}
+                name={user?.name}
+                size={32}
+                className="h-8 w-8"
+                fallbackClassName={`${avatarBg} text-white`}
+              />
             </div>
 
             {/* Name + role badge (desktop only) */}
@@ -187,19 +178,14 @@ export default function Header({ title, onMenuClick }: HeaderProps) {
                 {/* User card header */}
                 <div className="px-4 py-4 bg-slate-50 dark:bg-slate-700/50 border-b border-slate-100 dark:border-slate-700 flex items-center gap-3">
                   <div className="flex-shrink-0">
-                    {user?.avatar ? (
-                      <Image
-                        src={user.avatar}
-                        alt={user.name || "Avatar"}
-                        width={40}
-                        height={40}
-                        className="h-10 w-10 rounded-full object-cover ring-2 ring-white"
-                      />
-                    ) : (
-                      <div className={`w-10 h-10 rounded-full ${avatarBg} flex items-center justify-center text-white text-sm font-bold select-none ring-2 ring-white`}>
-                        {initials}
-                      </div>
-                    )}
+                    <UserAvatar
+                      avatarUrl={user?.avatar}
+                      gravatarUrl={user?.gravatarUrl}
+                      name={user?.name}
+                      size={40}
+                      className="ring-2 ring-white dark:ring-slate-700"
+                      fallbackClassName={`${avatarBg} text-white`}
+                    />
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate leading-tight">{user?.name}</p>

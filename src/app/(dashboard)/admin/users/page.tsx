@@ -7,6 +7,7 @@ import AdminUsersList from "./AdminUsersList";
 import TourGuide from "@/components/shared/TourGuide";
 import { Users } from "lucide-react";
 import type { IUser } from "@/types";
+import { gravatarUrlForEmail } from "@/lib/gravatar";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Manage Users" };
@@ -111,6 +112,7 @@ export default async function AdminUsersPage({
     _id: u._id.toString(),
     createdAt: u.createdAt instanceof Date ? u.createdAt.toISOString() : u.createdAt,
     addresses: (u.addresses ?? []).map((a) => ({ ...a, _id: a._id.toString() })),
+    gravatarUrl: gravatarUrlForEmail(u.email, 72),
   })) as unknown as IUser[];
 
   // Fetch skills / work experience for provider users on this page

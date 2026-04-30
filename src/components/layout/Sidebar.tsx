@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { UserAvatar } from "@/components/shared/UserAvatar";
 import {
   LayoutDashboard,
   PlusCircle,
@@ -286,15 +286,6 @@ function filterForStaff(groups: NavGroup[], capabilities: string[]): NavGroup[] 
     .filter((group) => group.items.length > 0);
 }
 
-/** Generates a 1–2 letter avatar from a display name. */
-function getInitials(name?: string | null): string {
-  if (!name) return "?";
-  const parts = name.trim().split(/\s+/);
-  return parts.length >= 2
-    ? `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase()
-    : parts[0].slice(0, 2).toUpperCase();
-}
-
 const ROLE_COLORS: Record<string, string> = {
   client: "bg-sky-500/20 text-sky-300",
   provider: "bg-emerald-500/20 text-emerald-300",
@@ -362,7 +353,6 @@ export default function Sidebar({ role, capabilities, isOpen, onClose }: Sidebar
     router.push("/login");
   }
 
-  const initials = getInitials(user?.name);
   const roleBadgeClass = ROLE_COLORS[role] ?? "bg-white/10 text-primary-300";
   const avatarBg = ROLE_AVATAR_BG[role] ?? "bg-primary";
 
@@ -444,25 +434,29 @@ export default function Sidebar({ role, capabilities, isOpen, onClose }: Sidebar
               className="flex items-center justify-center w-full"
             >
               <div className="w-9 h-9 rounded-lg overflow-hidden flex-shrink-0 ring-2 ring-white/10">
-                {user?.avatar ? (
-                  <Image src={user.avatar} alt={user.name || "Avatar"} width={36} height={36} className="w-9 h-9 object-cover" />
-                ) : (
-                  <div className={`w-9 h-9 flex items-center justify-center text-xs font-bold text-white select-none ${avatarBg}`}>
-                    {initials}
-                  </div>
-                )}
+                <UserAvatar
+                  avatarUrl={user?.avatar}
+                  gravatarUrl={user?.gravatarUrl}
+                  name={user?.name}
+                  size={36}
+                  roundedClass="rounded-lg"
+                  className="w-9 h-9"
+                  fallbackClassName={`${avatarBg} text-white`}
+                />
               </div>
             </Link>
           ) : (
             <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-white/5 border border-slate-700/50">
               <div className="flex-shrink-0 w-8 h-8 rounded-lg overflow-hidden ring-1 ring-white/10">
-                {user?.avatar ? (
-                  <Image src={user.avatar} alt={user.name || "Avatar"} width={32} height={32} className="w-8 h-8 object-cover" />
-                ) : (
-                  <div className={`w-8 h-8 flex items-center justify-center text-xs font-bold text-white select-none ${avatarBg}`}>
-                    {initials}
-                  </div>
-                )}
+                <UserAvatar
+                  avatarUrl={user?.avatar}
+                  gravatarUrl={user?.gravatarUrl}
+                  name={user?.name}
+                  size={32}
+                  roundedClass="rounded-lg"
+                  className="w-8 h-8"
+                  fallbackClassName={`${avatarBg} text-white`}
+                />
               </div>
               <div className="min-w-0 flex-1 overflow-hidden">
                 <p className="text-sm font-semibold text-white truncate leading-tight">

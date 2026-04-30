@@ -95,6 +95,8 @@ export interface IUser {
   approvalStatus: "pending_approval" | "approved" | "rejected";
   accountType?: "personal" | "business";
   avatar?: string;
+  /** Gravatar URL derived from email (e.g. admin list, /api/auth/me). Not stored in MongoDB. */
+  gravatarUrl?: string | null;
   facebookId?: string;
   googleId?: string;
   oauthProvider?: "facebook" | "google" | null;

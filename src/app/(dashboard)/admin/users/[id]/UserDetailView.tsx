@@ -2,7 +2,6 @@
 
 import { useState, useCallback } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { apiFetch } from "@/lib/fetchClient";
@@ -13,6 +12,7 @@ import {
   ExternalLink, ChevronDown,
 } from "lucide-react";
 import { formatDate } from "@/lib/utils";
+import { UserAvatar } from "@/components/shared/UserAvatar";
 import type { IUser, IProviderProfile } from "@/types";
 import UserActions from "../UserActions";
 import KycActions from "./KycActions";
@@ -22,6 +22,7 @@ import UserWalletSection from "./UserWalletSection";
 
 interface Props {
   user: IUser;
+  gravatarUrl: string | null;
   providerProfile: IProviderProfile | null;
   /** Role of the currently logged-in admin/staff user. */
   currentUserRole: string;
@@ -187,12 +188,11 @@ interface DupUser {
 
 // ─── Main component ────────────────────────────────────────────────────────
 
-export default function UserDetailView({ user, providerProfile, currentUserRole }: Props) {
+export default function UserDetailView({ user, gravatarUrl, providerProfile, currentUserRole }: Props) {
   const isAdmin = currentUserRole === "admin";
   const router = useRouter();
   const { items: completenessItems, pct } = getCompleteness(user);
   const c = completenessColor(pct);
-  const initials = (user.name ?? "").split(" ").filter(Boolean).map((w: string) => w[0]).join("").slice(0, 2).toUpperCase() || "?";
   const approvalStatus = user.approvalStatus ?? "approved";
   const kycStatus = user.kycStatus ?? "none";
   const userId = String(user._id);
@@ -279,11 +279,15 @@ export default function UserDetailView({ user, providerProfile, currentUserRole 
       <div className="bg-white rounded-xl border border-slate-200 shadow-card p-6">
         <div className="flex flex-col sm:flex-row gap-6 items-start">
           {/* Avatar */}
-          <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center flex-shrink-0 overflow-hidden">
-            {user.avatar
-              ? <Image src={user.avatar} alt={user.name} width={64} height={64} className="object-cover w-full h-full rounded-2xl" />
-              : <span className="text-2xl font-bold text-primary">{initials}</span>}
-          </div>
+          <UserAvatar
+            avatarUrl={user.avatar}
+            gravatarUrl={gravatarUrl}
+            name={user.name}
+            size={64}
+            roundedClass="rounded-2xl"
+            className="flex-shrink-0 bg-primary/10"
+            fallbackClassName="bg-primary/10 text-primary font-bold"
+          />
 
           {/* Name + meta */}
           <div className="flex-1 min-w-0">

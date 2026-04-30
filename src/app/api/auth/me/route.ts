@@ -8,6 +8,7 @@ import { connectDB } from "@/lib/db";
 import { ValidationError, NotFoundError } from "@/lib/errors";
 import AgencyProfile from "@/models/AgencyProfile";
 import { checkRateLimit, SENSITIVE_LIMITS } from "@/lib/rateLimit";
+import { gravatarUrlForEmail } from "@/lib/gravatar";
 
 const UpdateMeSchema = z.object({
   name: z.string().min(2).max(100).optional(),
@@ -51,12 +52,14 @@ export const PUT = withHandler(async (req: NextRequest) => {
     await revokeAllUserTokens(tokenUser.userId);
   }
 
+  const email = user.email;
   return NextResponse.json({
     _id: user._id,
     name: user.name,
-    email: user.email,
+    email,
     role: user.role,
     avatar: user.avatar ?? null,
+    gravatarUrl: gravatarUrlForEmail(email, 80),
     phone: (user as unknown as { phone?: string | null }).phone ?? null,
     createdAt: user.createdAt,
   });
@@ -80,14 +83,16 @@ export const GET = withHandler(async () => {
     agencyId = agency ? String(agency._id) : null;
   }
 
+  const email = user.email;
   return NextResponse.json({
     _id: user._id,
     name: user.name,
-    email: user.email,
+    email,
     role: user.role,
     isVerified: user.isVerified,
     isSuspended: user.isSuspended,
     avatar: user.avatar ?? null,
+    gravatarUrl: gravatarUrlForEmail(email, 80),
     phone: (user as unknown as { phone?: string | null }).phone ?? null,
     kycStatus: (user as unknown as { kycStatus?: string }).kycStatus ?? "none",
     addresses: user.addresses ?? [],

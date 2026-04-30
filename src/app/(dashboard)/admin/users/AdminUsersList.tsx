@@ -2,10 +2,10 @@
 
 import { useMemo, useState, useRef, useCallback, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import Image from "next/image";
 import toast from "react-hot-toast";
 import { apiFetch } from "@/lib/fetchClient";
 import { formatDate } from "@/lib/utils";
+import { UserAvatar } from "@/components/shared/UserAvatar";
 import UserActions from "./UserActions";
 import CreateUserModal from "./CreateUserModal";
 import ImportUsersModal from "./ImportUsersModal";
@@ -677,7 +677,6 @@ export default function AdminUsersList({
         ) : (
           <ul className="flex flex-col gap-2 p-2">
             {users.map((u) => {
-              const initials = (u.name ?? "").split(" ").filter(Boolean).map((w: string) => w[0]).join("").slice(0, 2).toUpperCase() || "?";
               const approvalStatus = u.approvalStatus ?? "approved";
               const isPendingProvider = u.role === "provider" && approvalStatus === "pending_approval";
               const uid = u._id.toString();
@@ -703,11 +702,14 @@ export default function AdminUsersList({
 
                     {/* Avatar */}
                     <div className="relative w-9 h-9 flex-shrink-0">
-                      <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden">
-                        {u.avatar
-                          ? <Image src={u.avatar} alt={u.name} width={36} height={36} className="object-cover w-full h-full" />
-                          : <span className="text-xs font-bold text-primary">{initials}</span>}
-                      </div>
+                      <UserAvatar
+                        avatarUrl={u.avatar}
+                        gravatarUrl={u.gravatarUrl}
+                        name={u.name}
+                        size={36}
+                        className="w-full h-full rounded-full bg-primary/10"
+                        fallbackClassName="bg-primary/10 text-primary font-bold"
+                      />
                       {/* Online / activity presence dot */}
                       {(() => {
                         const p = getPresence(u.lastSeenAt);
@@ -764,8 +766,8 @@ export default function AdminUsersList({
                           </span>
                           {hasSkills && (
                             <div className="flex flex-wrap gap-1">
-                              {skills.slice(0, 4).map((s) => (
-                                <span key={s.skill} className="inline-block px-1.5 py-0.5 rounded-md bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 text-[10px] font-medium">{s.skill}</span>
+                              {skills.slice(0, 4).map((s, i) => (
+                                <span key={`${i}-${s.skill}`} className="inline-block px-1.5 py-0.5 rounded-md bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 text-[10px] font-medium">{s.skill}</span>
                               ))}
                               {skills.length > 4 && (
                                 <span className="inline-block px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 text-[10px] font-medium">+{skills.length - 4}</span>

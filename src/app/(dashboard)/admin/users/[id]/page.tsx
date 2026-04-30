@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { adminService } from "@/services";
 import { providerProfileRepository } from "@/repositories";
 import type { IUser, IProviderProfile } from "@/types";
+import { gravatarUrlForEmail } from "@/lib/gravatar";
 import UserDetailView from "./UserDetailView";
 
 export const metadata: Metadata = { title: "User Details" };
@@ -38,5 +39,12 @@ export default async function AdminUserDetailPage({
     }
   }
 
-  return <UserDetailView user={user} providerProfile={providerProfile} currentUserRole={currentUser.role} />;
+  return (
+    <UserDetailView
+      user={user}
+      gravatarUrl={gravatarUrlForEmail(user.email, 128)}
+      providerProfile={providerProfile}
+      currentUserRole={currentUser.role}
+    />
+  );
 }
