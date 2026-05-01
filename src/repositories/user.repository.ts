@@ -351,11 +351,21 @@ export class UserRepository extends BaseRepository<UserDocument> {
 
   async getKycStatus(
     userId: string
-  ): Promise<{ kycStatus: string; kycDocuments: unknown[]; kycRejectionReason: string | null } | null> {
+  ): Promise<{
+    kycStatus: string;
+    kycDocuments: unknown[];
+    kycRejectionReason: string | null;
+    accountType: string;
+  } | null> {
     await this.connect();
     return User.findById(userId)
-      .select("kycStatus kycDocuments kycRejectionReason")
-      .lean() as unknown as { kycStatus: string; kycDocuments: unknown[]; kycRejectionReason: string | null } | null;
+      .select("kycStatus kycDocuments kycRejectionReason accountType")
+      .lean() as unknown as {
+      kycStatus: string;
+      kycDocuments: unknown[];
+      kycRejectionReason: string | null;
+      accountType: string;
+    } | null;
   }
 
   // ─── Fraud / Risk ─────────────────────────────────────────────────────────

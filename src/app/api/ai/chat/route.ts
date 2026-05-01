@@ -16,8 +16,29 @@ interface ChatMessage {
 }
 
 export interface ExtractedIntent {
-  intent: "ASK_QUESTION" | "CONFIRM_BOOKING" | "ASSIGN_PROVIDER" | "STATUS_UPDATE" | "CANCEL_JOB" | "GENERAL_CHAT" | "RECURRING_SERVICE" | "GET_QUOTE_ESTIMATE" | "MODIFY_JOB" | "ESCALATE_DISPUTE" | "BOOKING_INQUIRY" | "URGENT_SERVICE" | "SWITCH_PROVIDER" | "VENDOR_REQUEST";
+  intent:
+    | "ASK_QUESTION"
+    | "CONFIRM_BOOKING"
+    | "ASSIGN_PROVIDER"
+    | "STATUS_UPDATE"
+    | "CANCEL_JOB"
+    | "GENERAL_CHAT"
+    | "RECURRING_SERVICE"
+    | "GET_QUOTE_ESTIMATE"
+    | "MODIFY_JOB"
+    | "ESCALATE_DISPUTE"
+    | "BOOKING_INQUIRY"
+    | "URGENT_SERVICE"
+    | "SWITCH_PROVIDER"
+    | "VENDOR_REQUEST"
+    | "MARKETING_OUTREACH"
+    | "FINANCE_LEGAL_INQUIRY"
+    | "PROVIDER_ONBOARDING";
   confidence: number;
+  /** Orchestrator-style routing hints when confident (see Orchestration.md) */
+  requestType?: string;
+  stakeholderType?: string;
+  primaryTeam?: string;
   extractedData: {
     jobTitle?: string;
     description?: string;
@@ -44,7 +65,24 @@ export interface ExtractedIntent {
     inquiryType?: "vendor_account" | "partnership" | "api_access" | "white_label";
   };
   clarifyingQuestions?: string[];
-  nextAction: "ASK_QUESTION" | "CONFIRM_BOOKING" | "ASSIGN_PROVIDER" | "STATUS_UPDATE" | "CANCEL_JOB" | "RESPOND_ONLY" | "SHOW_RECURRING_OPTIONS" | "SHOW_PRICE_ESTIMATE" | "MODIFY_JOB_CONFIRM" | "ESCALATE_DISPUTE" | "SHOW_BOOKING_INFO" | "SHOW_URGENT_OPTIONS" | "CONFIRM_PROVIDER_SWITCH" | "VENDOR_INQUIRY_RECEIVED";
+  nextAction:
+    | "ASK_QUESTION"
+    | "CONFIRM_BOOKING"
+    | "ASSIGN_PROVIDER"
+    | "STATUS_UPDATE"
+    | "CANCEL_JOB"
+    | "RESPOND_ONLY"
+    | "SHOW_RECURRING_OPTIONS"
+    | "SHOW_PRICE_ESTIMATE"
+    | "MODIFY_JOB_CONFIRM"
+    | "ESCALATE_DISPUTE"
+    | "SHOW_BOOKING_INFO"
+    | "SHOW_URGENT_OPTIONS"
+    | "CONFIRM_PROVIDER_SWITCH"
+    | "VENDOR_INQUIRY_RECEIVED"
+    | "SHOW_MARKETING_INFO"
+    | "SHOW_FINANCE_LEGAL_INFO"
+    | "SHOW_PROVIDER_ONBOARDING_INFO";
 }
 
 // Zod schema for the JSON blob we expect OpenAI to return
@@ -54,6 +92,9 @@ const IntentResponseSchema = z.object({
   extractedData: z.record(z.unknown()).default({}),
   clarifyingQuestions: z.array(z.string()).default([]),
   nextAction: z.string().default("RESPOND_ONLY"),
+  requestType: z.string().optional(),
+  stakeholderType: z.string().optional(),
+  primaryTeam: z.string().optional(),
 });
 
 /**
@@ -116,7 +157,7 @@ async function extractIntent(
   conversationHistory: ChatMessage[],
   conversationState?: any
 ): Promise<ExtractedIntent> {
-  const extractionPrompt = `You are an AI dispatcher for LocalPro marketplace. Analyze the user's message and extract intent.
+  const extractionPrompt = `You are an AI dispatcher for LocalPro marketplace (Master Orchestrator routing layer). Five virtual teams exist: Business Operations, Sales & Partnerships (B2B), Marketing & Outreach, Finance & Legal, and Provider Onboarding & Quality. Map each user message to ONE intent and the correct nextAction; prefer specialized intents over GENERAL_CHAT when confident.
 
 Current state: ${JSON.stringify({
     hasActiveJob: !!conversationState?.jobId,
@@ -132,33 +173,47 @@ DETECT THESE INTENTS:
 - CONFIRM_BOOKING: User accepts booking ("YES", "confirm", "proceed", "ok")
 - STATUS_UPDATE: User asks status ("where?", "ETA?", "status?", "how far")
 - CANCEL_JOB: User wants to cancel ("cancel", "stop", "abort")
-- BOOKING_INQUIRY: Questions about HOW to use platform ("how do I", "how does", "requirements", "secure", "process", "steps", "background check", "payment", "escrow", "guarantee")
-- VENDOR_REQUEST: Vendor/partner inquiries ("partnership", "vendor account", "become a provider", "work with us", "api access", "wholesale", "bulk", "white label")
+- BOOKING_INQUIRY: Questions about HOW to use platform as a customer ("how do I post", "how does escrow work", "requirements", "background check", "steps")
+- VENDOR_REQUEST: B2B/partnership/vendor programs ("partnership with LocalPro", "vendor account", "API access", "white label", "wholesale", "bulk enterprise", "LGU partnership") — use this for commercial/partner programs; NOT consumer help posting a job
+- PROVIDER_ONBOARDING: Signing up to OFFER services on the marketplace ("sign up as provider", "apply as cleaner", "provider KYC", "how to list my services", "our team wants to offer services on LocalPro") — teams listing labor use this; API/white-label/LGU deals stay VENDOR_REQUEST
+- MARKETING_OUTREACH: Platform marketing, media, sponsorships, co-branding, campaigns WITH LocalPro ("press inquiry", "marketing partnership", "feature our brand", "co-marketing", "sponsor event")
+- FINANCE_LEGAL_INQUIRY: Invoices, payouts, commissions, tax docs, contracts, compliance ("commission statement", "invoice copy", "withholding tax", "legal department", "terms dispute" as informational—not active job dispute)
 - SWITCH_PROVIDER: User wants different provider ("switch", "different", "change provider", "not working out", "replace", "someone else")
 - URGENT_SERVICE: Emergency same-day services ("emergency", "urgent!", "right now", "asap", "immediately", "today", "within hours", "now")
 - RECURRING_SERVICE: Keywords like "weekly", "monthly", "bi-weekly", "every", "regular", "contract", "recurring"
 - GET_QUOTE_ESTIMATE: Price questions ("how much", "cost", "price", "budget", "expensive", "affordable")
 - MODIFY_JOB: Change request ("reschedule", "change", "move", "postpone", "tomorrow instead", "can I")
-- ESCALATE_DISPUTE: Quality/payment issues ("poor quality", "bad work", "overcharge", "refund", "safety")
+- ESCALATE_DISPUTE: Active job quality/payment issues ("poor quality", "bad work", "overcharge", "refund this job", "safety")
 - GENERAL_CHAT: Other questions about platform
+
+NEXT ACTION MAP:
+ASK_QUESTION→ASK_QUESTION | ASSIGN_PROVIDER→ASSIGN_PROVIDER | CONFIRM_BOOKING→CONFIRM_BOOKING | STATUS_UPDATE→STATUS_UPDATE | CANCEL_JOB→CANCEL_JOB | RECURRING_SERVICE→SHOW_RECURRING_OPTIONS | GET_QUOTE_ESTIMATE→SHOW_PRICE_ESTIMATE | MODIFY_JOB→MODIFY_JOB_CONFIRM | ESCALATE_DISPUTE→ESCALATE_DISPUTE | BOOKING_INQUIRY→SHOW_BOOKING_INFO | URGENT_SERVICE→SHOW_URGENT_OPTIONS | SWITCH_PROVIDER→CONFIRM_PROVIDER_SWITCH | VENDOR_REQUEST→VENDOR_INQUIRY_RECEIVED | MARKETING_OUTREACH→SHOW_MARKETING_INFO | FINANCE_LEGAL_INQUIRY→SHOW_FINANCE_LEGAL_INFO | PROVIDER_ONBOARDING→SHOW_PROVIDER_ONBOARDING_INFO | GENERAL_CHAT→RESPOND_ONLY
 
 EXAMPLE DETECTIONS:
 "I need weekly cleaning" → RECURRING_SERVICE + frequency: weekly
 "How much to paint?" → GET_QUOTE_ESTIMATE + category: painting
 "Can I change to tomorrow?" → MODIFY_JOB + newDate: tomorrow
 "The work is bad" → ESCALATE_DISPUTE + severity: medium
-"How do I post a job?" → BOOKING_INQUIRY + questionType: process
-"How is payment secure?" → BOOKING_INQUIRY + questionType: payment
-"I need a plumber RIGHT NOW!" → URGENT_SERVICE + urgency: emergency
+"How do I post a job?" → BOOKING_INQUIRY + primaryTeam: Business Operations
+"How is payment secure?" → BOOKING_INQUIRY
+"I need a plumber RIGHT NOW!" → URGENT_SERVICE + urgency: rush
 "It's urgent, can someone come today?" → URGENT_SERVICE + urgency: same_day
-"There's an issue with the current provider" → SWITCH_PROVIDER + switchReason: not_working_out
-"Can we partner with LocalPro?" → VENDOR_REQUEST + vendorType: agency
+"There's an issue with the current provider" → SWITCH_PROVIDER
+"Can we partner with LocalPro as an agency?" → VENDOR_REQUEST + vendorType: agency + stakeholderType: MSME or Enterprise
 "What's the API access like?" → VENDOR_REQUEST + inquiryType: api_access
+"I want to apply as a handyman on LocalPro" → PROVIDER_ONBOARDING + stakeholderType: Provider
+"We're interested in co-marketing with LocalPro" → MARKETING_OUTREACH + stakeholderType: MSME
+"I need my commission statement for taxes" → FINANCE_LEGAL_INQUIRY + primaryTeam: Finance & Legal
+
+OPTIONAL METADATA (omit if unsure): requestType (e.g. Booking, Partnership, Marketing Campaign, Financial Report, Provider Application), stakeholderType (Consumer, Provider, MSME, Enterprise, LGU), primaryTeam (use exact labels above).
 
 Respond ONLY with valid JSON (no markdown):
 {
   "intent": "one of the above",
   "confidence": 0-1,
+  "requestType": "short label or omit",
+  "stakeholderType": "Consumer|Provider|MSME|Enterprise|LGU or omit",
+  "primaryTeam": "team name or omit",
   "extractedData": {
     "jobTitle": "or null",
     "description": "or null",
@@ -176,16 +231,22 @@ Respond ONLY with valid JSON (no markdown):
     "newTime": "HH:MM or null",
     "scopeChange": "add|remove|reduce or null",
     "disputeReason": "reason or null",
-    "disputeSeverity": "low|medium|high or null"
+    "disputeSeverity": "low|medium|high or null",
+    "vendorType": "sole_proprietor|small_team|agency|enterprise or null",
+    "businessName": "or null",
+    "inquiryType": "vendor_account|partnership|api_access|white_label or null",
+    "switchReason": "poor_work|not_responding|other or null",
+    "switchFeedback": "or null",
+    "jobIdToCancel": "or null"
   },
-  "clarifyingQuestions": ["q1", "q2"] if ASK_QUESTION,
-  "nextAction": "appropriate action based on intent"
+  "clarifyingQuestions": ["q1", "q2"] if ASK_QUESTION else [],
+  "nextAction": "from NEXT ACTION MAP only"
 }`;
 
   try {
     const response = await client.chat.completions.create({
       model: "gpt-4o-mini",
-      max_tokens: 600,
+      max_tokens: 800,
       temperature: 0.5,
       messages: [
         ...conversationHistory,
@@ -208,6 +269,9 @@ Respond ONLY with valid JSON (no markdown):
       extractedData:       parsed.extractedData as ExtractedIntent["extractedData"],
       clarifyingQuestions: parsed.clarifyingQuestions,
       nextAction:          parsed.nextAction as ExtractedIntent["nextAction"],
+      requestType:         parsed.requestType,
+      stakeholderType:     parsed.stakeholderType,
+      primaryTeam:         parsed.primaryTeam,
     };
   } catch (err) {
     console.error("[Intent extraction failed]:", err);
@@ -305,6 +369,42 @@ export const POST = withHandler(async (req: NextRequest) => {
       action: "BOOKING_INQUIRY",
       userMessage: userMessage,
     };
+  } else if (intent.nextAction === "SHOW_MARKETING_INFO") {
+    responseContent =
+      "I'll connect you with guidance on marketing and outreach with LocalPro...";
+    actionData = {
+      action: "MARKETING_OUTREACH",
+      userMessage,
+      routing: {
+        requestType: intent.requestType,
+        stakeholderType: intent.stakeholderType,
+        primaryTeam: intent.primaryTeam ?? "Marketing & Outreach",
+      },
+    };
+  } else if (intent.nextAction === "SHOW_FINANCE_LEGAL_INFO") {
+    responseContent =
+      "I'll route this to finance and compliance-aware guidance. Human review may be needed for legal or high-risk matters...";
+    actionData = {
+      action: "FINANCE_LEGAL_INQUIRY",
+      userMessage,
+      routing: {
+        requestType: intent.requestType,
+        stakeholderType: intent.stakeholderType,
+        primaryTeam: intent.primaryTeam ?? "Finance & Legal",
+      },
+    };
+  } else if (intent.nextAction === "SHOW_PROVIDER_ONBOARDING_INFO") {
+    responseContent =
+      "Here is how provider onboarding and verification work on LocalPro...";
+    actionData = {
+      action: "PROVIDER_ONBOARDING",
+      userMessage,
+      routing: {
+        requestType: intent.requestType ?? "Provider Application",
+        stakeholderType: intent.stakeholderType ?? "Provider",
+        primaryTeam: intent.primaryTeam ?? "Provider Onboarding & Quality Control",
+      },
+    };
   } else if (intent.nextAction === "SHOW_URGENT_OPTIONS") {
     responseContent = `⚡ I understand this is urgent! Let me find providers who can help you TODAY...`;
     actionData = {
@@ -373,7 +473,9 @@ export const POST = withHandler(async (req: NextRequest) => {
     }
   } else {
     // General chat response
-    const systemPrompt = `You are a helpful LocalPro assistant. You help users navigate the platform, answer questions about services, provide guidance on posting jobs or finding providers, and offer support.
+    const systemPrompt = `You are a helpful LocalPro assistant aligned with the Master Orchestrator operating model: prioritize customer satisfaction, provider welfare, and partner success; stay consistent with Philippine regulations and fair marketplace practices.
+
+You help users navigate the platform, answer questions about services, provide guidance on posting jobs or finding providers, and offer support.
 
 LocalPro is a trusted marketplace for local service professionals in the Philippines and beyond. Key features:
 - Post jobs and receive quotes from KYC-verified providers
@@ -385,11 +487,12 @@ LocalPro is a trusted marketplace for local service professionals in the Philipp
 - Job modifications & rescheduling
 
 Guidelines:
-- Be friendly, professional, and concise
-- Provide helpful information about using the platform
+- Professional, clear, solution-oriented; adapt tone to the audience (consumers, providers, businesses)
+- Be friendly and concise; keep responses to 2-3 sentences when possible unless more detail is necessary
+- Protect privacy: do not invent stakeholder names, IDs, amounts, or documents
 - If you don't know something, say so and suggest contacting support
-- Keep responses to 2-3 sentences when possible
 - For account issues, direct users to contact support
+- Escalate when topics require licensed legal counsel, binding financial decisions, fraud/safety risk, or strategic commitments beyond standard policies—say that a human administrator or official channel should review
 ${context ? `\nAdditional context: ${context}` : ""}`;
 
     try {
@@ -419,5 +522,8 @@ ${context ? `\nAdditional context: ${context}` : ""}`;
     nextAction: intent.nextAction,
     extractedData: intent.extractedData,
     action: actionData,
+    ...(intent.requestType && { requestType: intent.requestType }),
+    ...(intent.stakeholderType && { stakeholderType: intent.stakeholderType }),
+    ...(intent.primaryTeam && { primaryTeam: intent.primaryTeam }),
   });
 });

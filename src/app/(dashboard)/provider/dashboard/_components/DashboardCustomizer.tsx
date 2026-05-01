@@ -32,13 +32,23 @@ const WIDGET_META: { key: keyof DashboardPrefs; label: string; description: stri
 interface Props {
   header:   React.ReactNode;
   kpis:     React.ReactNode;
+  /** Full-width slot after KPIs, before the main/sidebar grid */
+  performanceReport?: React.ReactNode;
   activity: React.ReactNode;
   tier:     React.ReactNode;
   schedule: React.ReactNode;
   actions:  React.ReactNode;
 }
 
-export default function DashboardCustomizer({ header, kpis, activity, tier, schedule, actions }: Props) {
+export default function DashboardCustomizer({
+  header,
+  kpis,
+  performanceReport,
+  activity,
+  tier,
+  schedule,
+  actions,
+}: Props) {
   const [prefs, setPrefs] = useState<DashboardPrefs>(DEFAULT_PREFS);
   const [panelOpen, setPanelOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -72,6 +82,8 @@ export default function DashboardCustomizer({ header, kpis, activity, tier, sche
 
       {/* ── Widgets ── */}
       {show.kpis && slots.kpis}
+
+      {performanceReport}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
         {/* Main column */}

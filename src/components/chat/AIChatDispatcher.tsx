@@ -176,6 +176,27 @@ export default function AIChatDispatcher() {
       } else if (data.action?.action === "BOOKING_INQUIRY") {
         const d = await dispatchAction("/api/ai/chat/booking-info", { userMessage: data.action.userMessage }, "booking").catch(() => null);
         if (d) addMsg(d.message, `booking-${Date.now()}`);
+      } else if (data.action?.action === "PROVIDER_ONBOARDING") {
+        const d = await dispatchAction(
+          "/api/ai/chat/provider-onboarding",
+          { userMessage: data.action.userMessage, routing: data.action.routing },
+          "provider-onboarding"
+        ).catch(() => null);
+        if (d) addMsg(d.message, `provider-onboarding-${Date.now()}`);
+      } else if (data.action?.action === "MARKETING_OUTREACH") {
+        const d = await dispatchAction(
+          "/api/ai/chat/marketing-outreach",
+          { userMessage: data.action.userMessage, routing: data.action.routing },
+          "marketing-outreach"
+        ).catch(() => null);
+        if (d) addMsg(d.message, `marketing-${Date.now()}`);
+      } else if (data.action?.action === "FINANCE_LEGAL_INQUIRY") {
+        const d = await dispatchAction(
+          "/api/ai/chat/finance-legal",
+          { userMessage: data.action.userMessage, routing: data.action.routing },
+          "finance-legal"
+        ).catch(() => null);
+        if (d) addMsg(d.message, `finance-legal-${Date.now()}`);
       } else if (data.action?.action === "RECURRING_SERVICE" && data.action?.jobData) {
         const d = await dispatchAction("/api/ai/chat/recurring-job", { jobData: data.action.jobData }, "recurring").catch((e) => { toast.error(e.message); return null; });
         if (d) {

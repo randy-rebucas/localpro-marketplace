@@ -15,6 +15,9 @@ import {
   Wallet,
   CreditCard,
   ShieldCheck,
+  Sparkles,
+  ExternalLink,
+  Target,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { isPayMongoCheckoutUrl } from "@/lib/utils";
@@ -44,6 +47,26 @@ interface Course {
   completedLessonsCount: number;
 }
 
+interface TrainingRecItem {
+  source: "localpro" | "external";
+  courseId?: string;
+  slug?: string;
+  title: string;
+  category?: CourseCategory;
+  rationale: string;
+  pathwayNote?: string;
+  externalUrl?: string;
+}
+
+interface TrainingRecommendationsResponse {
+  items: TrainingRecItem[];
+  cpdMessage: string;
+  clusters?: string[];
+  performanceHint?: string;
+  aiPolished?: boolean;
+  tier?: string;
+}
+
 const CATEGORY_LABELS: Record<CourseCategory, string> = {
   basic:         "Basic",
   advanced:      "Advanced",
@@ -65,6 +88,7 @@ export default function ProviderTrainingPage() {
   const [loading, setLoading] = useState(true);
   const [enrolling, setEnrolling] = useState<string | null>(null);
   const [filter, setFilter] = useState<CourseCategory | "all">("all");
+  const [recommendations, setRecommendations] = useState<TrainingRecommendationsResponse | null>(null);
 
   const fetchCourses = useCallback(async () => {
     setLoading(true);
@@ -80,6 +104,13 @@ export default function ProviderTrainingPage() {
   }, []);
 
   useEffect(() => { void fetchCourses(); }, [fetchCourses]);
+
+  useEffect(() => {
+    apiFetch("/api/provider/training/recommendations")
+      .then((r) => (r.ok ? r.json() : Promise.reject()))
+      .then((data: TrainingRecommendationsResponse) => setRecommendations(data))
+      .catch(() => setRecommendations(null));
+  }, []);
 
   async function handleEnroll(courseId: string, price: number) {
     if (price > 0 && !confirm(`Enroll for ₱${price.toLocaleString()} from your wallet?`)) return;
@@ -177,6 +208,82 @@ export default function ProviderTrainingPage() {
             <Award className="h-4 w-4 text-emerald-400" />
             <span><strong>{completedCount}</strong> completed</span>
           </div>
+        </div>
+      )}
+
+      {/* Recommended for you */}
+      {recommendations && recommendations.items.length > 0 && (
+        <div className="rounded-2xl border border-indigo-200 bg-gradient-to-br from-indigo-50/90 via-white to-violet-50/80 px-4 py-5 sm:px-5 shadow-sm space-y-4">
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <Target className="h-5 w-5 text-indigo-600 flex-shrink-0" />
+              <div>
+                <h3 className="text-sm font-bold text-slate-900">Recommended for you</h3>
+                <p className="text-xs text-slate-600 mt-0.5">
+                  Based on your skills and marketplace performance
+                  {recommendations.performanceHint ? ` (${recommendations.performanceHint})` : ""}.
+                </p>
+              </div>
+            </div>
+            {recommendations.aiPolished && (
+              <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-violet-700 bg-violet-100 border border-violet-200 rounded-full px-2 py-0.5">
+                <Sparkles className="h-3 w-3" /> Refined with AI
+              </span>
+            )}
+          </div>
+          <ul className="space-y-3">
+            {recommendations.items.map((item, idx) => (
+              <li
+                key={`${item.source}-${item.courseId ?? item.title}-${idx}`}
+                className="rounded-xl border border-slate-200/80 bg-white/90 px-3 py-3 sm:px-4 shadow-sm"
+              >
+                <div className="flex flex-wrap items-center gap-2 mb-1.5">
+                  <span
+                    className={`text-[10px] font-bold uppercase tracking-wide rounded-full px-2 py-0.5 border ${
+                      item.source === "localpro"
+                        ? "text-indigo-800 bg-indigo-50 border-indigo-200"
+                        : "text-amber-900 bg-amber-50 border-amber-200"
+                    }`}
+                  >
+                    {item.source === "localpro" ? "LocalPro course" : "TESDA / industry pathway"}
+                  </span>
+                  {item.category && item.source === "localpro" && (
+                    <span className={`text-[10px] font-semibold rounded-full px-2 py-0.5 ${CATEGORY_COLORS[item.category]}`}>
+                      {CATEGORY_LABELS[item.category]}
+                    </span>
+                  )}
+                </div>
+                <p className="text-sm font-semibold text-slate-900">{item.title}</p>
+                {item.pathwayNote && (
+                  <p className="text-xs text-slate-500 mt-0.5">{item.pathwayNote}</p>
+                )}
+                <p className="text-xs text-slate-600 mt-2 leading-relaxed">{item.rationale}</p>
+                <div className="mt-2.5 flex flex-wrap gap-2">
+                  {item.source === "localpro" && item.courseId && (
+                    <Link
+                      href={`/provider/training/${item.courseId}`}
+                      className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:text-indigo-800 hover:underline"
+                    >
+                      View course <ChevronRight className="h-3 w-3" />
+                    </Link>
+                  )}
+                  {item.source === "external" && item.externalUrl && (
+                    <a
+                      href={item.externalUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-xs font-semibold text-amber-800 hover:text-amber-950 hover:underline"
+                    >
+                      Explore TESDA programs <ExternalLink className="h-3 w-3" />
+                    </a>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+          <p className="text-xs text-slate-600 leading-relaxed border-t border-indigo-100 pt-3">
+            {recommendations.cpdMessage}
+          </p>
         </div>
       )}
 

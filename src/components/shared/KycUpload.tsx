@@ -6,8 +6,10 @@ import {
   ShieldCheck, ShieldX, Clock, Upload, ExternalLink,
   CheckCircle2, FileText, X, Loader2, Award, BadgeCheck,
   Briefcase, Wallet, UserCheck, GraduationCap, Send,
+  Receipt, ClipboardList,
 } from "lucide-react";
 import { apiFetch } from "@/lib/fetchClient";
+import type { VerificationChecklistItem } from "@/lib/provider-verification-checklist";
 
 const DOC_TYPES = [
   {
@@ -51,6 +53,14 @@ const DOC_TYPES = [
     note: "Shows clients you run a legitimate registered business",
   },
   {
+    value: "bir_registration",
+    label: "BIR / TIN documentation",
+    hint: "Certificate of Registration (Form 2303) or official BIR TIN proof",
+    required: false,
+    badge: { label: "Tax Verified", color: "text-amber-800 bg-amber-50 border-amber-200", icon: Receipt },
+    note: "Required for business tax compliance and payout verification",
+  },
+  {
     value: "bank_verification",
     label: "Bank / E-Wallet Verification",
     hint: "Bank statement, GCash, or Maya account screenshot",
@@ -83,6 +93,8 @@ interface KycState {
   kycStatus: "none" | "pending" | "approved" | "rejected";
   kycDocuments: KycDoc[];
   kycRejectionReason?: string | null;
+  accountType?: "personal" | "business";
+  checklist?: VerificationChecklistItem[];
 }
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024; // 10 MB
@@ -97,11 +109,16 @@ export default function KycUpload() {
   const stateRef = useRef(state);
   useEffect(() => { stateRef.current = state; }, [state]);
 
+  async function refreshKycFromApi(): Promise<KycState | null> {
+    const r = await apiFetch("/api/kyc");
+    if (!r.ok) return null;
+    const data = (await r.json()) as KycState;
+    setState(data);
+    return data;
+  }
+
   useEffect(() => {
-    apiFetch("/api/kyc")
-      .then((r) => r.json())
-      .then((data: KycState) => { setState(data); setIsLoading(false); })
-      .catch(() => setIsLoading(false));
+    refreshKycFromApi().finally(() => setIsLoading(false));
   }, []);
 
   function setItem(type: DocType, s: "uploading" | "staged" | "submitting" | null) {
@@ -161,11 +178,7 @@ export default function KycUpload() {
       const data = await res.json();
       if (!res.ok) { toast.error(data.error ?? "Submission failed"); setItem(type, "staged"); return; }
       toast.success(`${DOC_TYPES.find((d) => d.value === type)?.label} submitted!`);
-      setState((prev) => ({
-        kycStatus: prev?.kycStatus === "none" || prev?.kycStatus === "rejected" ? "pending" : (prev?.kycStatus ?? "pending"),
-        kycDocuments: merged,
-        kycRejectionReason: prev?.kycRejectionReason,
-      }));
+      await refreshKycFromApi();
       setStaged((prev) => { const n = { ...prev }; delete n[type]; return n; });
       setItem(type, null);
     } catch {
@@ -223,6 +236,42 @@ export default function KycUpload() {
             <p className="font-medium">KYC Rejected</p>
             {state?.kycRejectionReason && <p className="mt-1 text-red-600">{state.kycRejectionReason}</p>}
             <p className="mt-2 text-xs text-red-500">Re-upload the correct documents below and submit each one.</p>
+          </div>
+        )}
+
+        {/* ── Verification checklist ── */}
+        {state?.checklist && state.checklist.length > 0 && (
+          <div className="rounded-xl border border-slate-200 bg-slate-50/80 dark:bg-slate-800/40 dark:border-slate-700 p-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <ClipboardList className="h-4 w-4 text-primary flex-shrink-0" />
+              <h4 className="text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wide">
+                Verification checklist
+              </h4>
+            </div>
+            <ul className="space-y-3">
+              {state.checklist.map((row) => (
+                <li key={row.id} className="text-sm border-b border-slate-100 dark:border-slate-700 last:border-0 pb-3 last:pb-0">
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="font-medium text-slate-800 dark:text-slate-100">{row.title}</span>
+                    <span
+                      className={[
+                        "flex-shrink-0 text-[10px] font-bold uppercase tracking-wide rounded-full px-2 py-0.5 border",
+                        row.status === "Verified"
+                          ? "text-green-700 bg-green-50 border-green-200 dark:text-green-400 dark:bg-green-900/20 dark:border-green-800"
+                          : row.status === "Rejected"
+                            ? "text-red-700 bg-red-50 border-red-200 dark:text-red-400 dark:bg-red-900/20 dark:border-red-800"
+                            : "text-amber-800 bg-amber-50 border-amber-200 dark:text-amber-300 dark:bg-amber-900/20 dark:border-amber-800",
+                      ].join(" ")}
+                    >
+                      {row.status}
+                    </span>
+                  </div>
+                  {row.nextSteps ? (
+                    <p className="text-xs text-slate-600 dark:text-slate-400 mt-1.5 leading-relaxed">{row.nextSteps}</p>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
           </div>
         )}
 

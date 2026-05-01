@@ -6,6 +6,12 @@ import { useRouter, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
 import { Eye, EyeOff, Lock, Mail } from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
+import { DisciplinaryNotice } from "@/components/shared/DisciplinaryNotice";
+import {
+  DISCIPLINARY_SUPPORT_EMAIL,
+  SUSPENDED_ACCOUNT_POLICY_LINKS,
+  isSuspendedAuthMessage,
+} from "@/lib/disciplinary-notice";
 
 const OAUTH_ERRORS: Record<string, string> = {
   oauth_denied:         "Sign-in was cancelled.",
@@ -13,7 +19,6 @@ const OAUTH_ERRORS: Record<string, string> = {
   oauth_token_exchange: "Could not complete sign-in. Please try again.",
   oauth_profile_fetch:  "Could not retrieve your profile. Please try again.",
   oauth_no_email:       "Your account has no verified email. Please sign up with email instead.",
-  suspended:            "Your account has been suspended. Please contact support.",
   too_many_attempts:    "Too many attempts. Please wait a moment and try again.",
 };
 
@@ -21,12 +26,17 @@ export default function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const from = searchParams.get("from");
+  const [suspendedNotice, setSuspendedNotice] = useState(false);
 
   useEffect(() => {
     const err = searchParams.get("error");
-    if (err) {
+    if (err === "suspended") {
+      setSuspendedNotice(true);
+      toast.error("Account suspended — see notice below.");
+    } else if (err) {
       toast.error(OAUTH_ERRORS[err] ?? "Sign-in failed. Please try again.");
-      // Remove the ?error= param without a re-render loop
+    }
+    if (err) {
       const url = new URL(window.location.href);
       url.searchParams.delete("error");
       window.history.replaceState({}, "", url.toString());
@@ -68,6 +78,11 @@ export default function LoginForm() {
       const data = await res.json();
 
       if (!res.ok) {
+        if (isSuspendedAuthMessage(data.error)) {
+          setSuspendedNotice(true);
+          toast.error("Account suspended — see notice below.");
+          return;
+        }
         toast.error(data.error ?? "Login failed");
         return;
       }
@@ -87,6 +102,26 @@ export default function LoginForm() {
 
   return (
     <>
+      {suspendedNotice && (
+        <div className="mb-6">
+          <DisciplinaryNotice
+            tone="red"
+            title="Account suspended"
+            reasonHeading="Reason for this action"
+            reasonBody="Sign-in is blocked because your account has been suspended under LocalPro policies. Suspensions follow review of account activity against our Terms of Service and, depending on your role, your Provider or Client Agreement."
+            evidenceLines={[
+              "Supporting detail may include documented activity such as reviews, disputes, verification outcomes, fraud signals, or administrative findings. Specific facts retained on your case can be discussed when you contact Trust & Safety.",
+            ]}
+            policyLinks={SUSPENDED_ACCOUNT_POLICY_LINKS}
+            appealHeading="Appeal or possible reactivation"
+            appealLines={[
+              `Use the Help Center (/support) to open a ticket and reference your registered email.`,
+              `Email ${DISCIPLINARY_SUPPORT_EMAIL} with the subject line \"Suspension appeal\", include your registered email, and any evidence that supports reinstatement.`,
+              "If reactivation is available for your case, the team will explain remediation steps or timelines after review. Decisions are made case-by-case under the cited agreements.",
+            ]}
+          />
+        </div>
+      )}
       <h2 className="mb-1 text-4xl font-extrabold tracking-tight text-[#0a2440]">Welcome back!</h2>
       <p className="mb-6 text-base text-slate-600">Log in to your account to continue</p>
 

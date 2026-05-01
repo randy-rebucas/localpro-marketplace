@@ -4,6 +4,27 @@ This file registers specialized AI agents for business domain functions within L
 
 ## Registered Agents
 
+### Master Orchestrator (routing persona)
+
+- **ID:** `master_orchestrator`
+- **Description:** Cross-functional coordination persona for intent routing, escalation policy, and unified tone across virtual teams.
+- **Type:** Orchestration layer (system prompts + dispatcher metadata)
+- **Location:** [Orchestration.md](Orchestration.md) (full persona: workflows, KPIs, escalation, ethical constraints)
+- **Integration Points:**
+  - [src/app/api/ai/chat/route.ts](src/app/api/ai/chat/route.ts) — `extractIntent()` dispatcher preamble, optional `requestType` / `stakeholderType` / `primaryTeam` on responses, general-chat escalation & privacy rules
+  - In-app chat widget: [src/components/chat/AIChatDispatcher.tsx](src/components/chat/AIChatDispatcher.tsx) — follows `action` payloads to specialized handlers below
+
+**Intent → virtual team → API handler**
+
+| Intent | Primary team | Handler |
+|--------|----------------|---------|
+| `BOOKING_INQUIRY`, booking lifecycle (`ASSIGN_PROVIDER`, `CONFIRM_BOOKING`, `STATUS_UPDATE`, `CANCEL_JOB`, `MODIFY_JOB`, `RECURRING_SERVICE`, `GET_QUOTE_ESTIMATE`, `URGENT_SERVICE`, `SWITCH_PROVIDER`) | Business Operations | `/api/ai/chat` actions → booking-info, confirm-booking, job-status, cancel-job, modify-job, recurring-job, price-estimate, urgent-service, switch-provider, etc. |
+| `VENDOR_REQUEST` | Sales & Partnerships (B2B) | `/api/ai/chat/vendor-request` |
+| `MARKETING_OUTREACH` | Marketing & Outreach | `/api/ai/chat/marketing-outreach` |
+| `FINANCE_LEGAL_INQUIRY` | Finance & Legal | `/api/ai/chat/finance-legal` |
+| `PROVIDER_ONBOARDING` | Provider Onboarding & Quality Control | `/api/ai/chat/provider-onboarding` |
+| `ESCALATE_DISPUTE` | Operations → Finance/Legal (human escalation) | `/api/ai/chat/escalate-dispute` |
+
 ### 1. Sales & Partnerships Team
 - **ID:** `sales_partnerships_team`
 - **Description:** Strategic business development and partnership management specialist
@@ -91,6 +112,7 @@ Reference this file or the specific agent prompt:
 - URGENT_SERVICE: 9% coverage, ₱540M potential
 - SWITCH_PROVIDER: 6% coverage, ₱210M potential
 - **VENDOR_REQUEST: 5% coverage, ₱180M potential** ← Sales Partnership agent focus
+- **Orchestrator expansion:** `PROVIDER_ONBOARDING`, `MARKETING_OUTREACH`, `FINANCE_LEGAL_INQUIRY` routed via Master Orchestrator dispatcher ([Orchestration.md](Orchestration.md)) to dedicated chat endpoints
 
 **Sales Partnership Agent Activation:** April 15, 2026
 - Integrated into vendor-request handler with intelligent lead qualification

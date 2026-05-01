@@ -1,11 +1,9 @@
 import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
 
 /**
- * Test Suite: AI Chat Dispatcher Phase 2 Implementation
- * Tests: BOOKING_INQUIRY, URGENT_SERVICE, SWITCH_PROVIDER, VENDOR_REQUEST
- * 
- * Coverage: 4 new intents adding 32% user coverage increase
- * Total test scenarios: 20+ mapped to test cases
+ * Test Suite: AI Chat Dispatcher Phase 2 + orchestrator intents
+ * Tests: BOOKING_INQUIRY, URGENT_SERVICE, SWITCH_PROVIDER, VENDOR_REQUEST,
+ *        PROVIDER_ONBOARDING, MARKETING_OUTREACH, FINANCE_LEGAL_INQUIRY
  */
 
 describe("AI Chat Dispatcher - Phase 2 Intents", () => {
@@ -16,6 +14,9 @@ describe("AI Chat Dispatcher - Phase 2 Intents", () => {
     urgentService: `${apiBase}/urgent-service`,
     switchProvider: `${apiBase}/switch-provider`,
     vendorRequest: `${apiBase}/vendor-request`,
+    providerOnboarding: `${apiBase}/provider-onboarding`,
+    marketingOutreach: `${apiBase}/marketing-outreach`,
+    financeLegal: `${apiBase}/finance-legal`,
   };
 
   // Mock data for testing
@@ -495,7 +496,7 @@ describe("AI Chat Dispatcher - Phase 2 Intents", () => {
             {
               role: "user",
               content:
-                "We are a 3-person team interested in becoming providers on LocalPro",
+                "We run a cleaning MSME and need a vendor account and dashboard access to partner with LocalPro at scale",
             },
           ],
           userId: "vendor-test-001",
@@ -687,6 +688,122 @@ describe("AI Chat Dispatcher - Phase 2 Intents", () => {
       const duration = Date.now() - startTime;
       expect(response.status).toBe(200);
       expect(duration).toBeLessThan(500);
+    });
+  });
+
+  describe("Master Orchestrator intents (Phase 3 routing)", () => {
+    it("should detect provider onboarding signup intent", async () => {
+      const response = await fetch(endpoints.main, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages: [
+            {
+              role: "user",
+              content:
+                "I want to sign up as a handyman on LocalPro—what documents do I need for provider verification?",
+            },
+          ],
+          userId: testData.userId,
+        }),
+      });
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.intent).toBe("PROVIDER_ONBOARDING");
+      expect(data.nextAction).toBe("SHOW_PROVIDER_ONBOARDING_INFO");
+    });
+
+    it("should detect marketing / outreach intent", async () => {
+      const response = await fetch(endpoints.main, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages: [
+            {
+              role: "user",
+              content:
+                "We're a regional brand and want to explore co-marketing and a press partnership with LocalPro",
+            },
+          ],
+          userId: testData.userId,
+        }),
+      });
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.intent).toBe("MARKETING_OUTREACH");
+      expect(data.nextAction).toBe("SHOW_MARKETING_INFO");
+    });
+
+    it("should detect finance / legal informational intent", async () => {
+      const response = await fetch(endpoints.main, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages: [
+            {
+              role: "user",
+              content:
+                "I'm a provider—how do I download my commission statements for BIR withholding tax reporting?",
+            },
+          ],
+          userId: testData.userId,
+        }),
+      });
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.intent).toBe("FINANCE_LEGAL_INQUIRY");
+      expect(data.nextAction).toBe("SHOW_FINANCE_LEGAL_INFO");
+    });
+
+    it("provider-onboarding endpoint returns a message", async () => {
+      const response = await fetch(endpoints.providerOnboarding, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userMessage: "How do I apply as a provider?",
+          userId: testData.userId,
+        }),
+      });
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.message).toBeTruthy();
+      expect(data.nextAction).toBe("CONTINUE_CHAT");
+    });
+
+    it("marketing-outreach endpoint returns a message", async () => {
+      const response = await fetch(endpoints.marketingOutreach, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userMessage: "Media inquiry about featuring LocalPro",
+          routing: { primaryTeam: "Marketing & Outreach" },
+          userId: testData.userId,
+        }),
+      });
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.message).toBeTruthy();
+    });
+
+    it("finance-legal endpoint returns a message", async () => {
+      const response = await fetch(endpoints.financeLegal, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userMessage: "Where do I find payout invoices?",
+          routing: { primaryTeam: "Finance & Legal" },
+          userId: testData.userId,
+        }),
+      });
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.message).toBeTruthy();
     });
   });
 

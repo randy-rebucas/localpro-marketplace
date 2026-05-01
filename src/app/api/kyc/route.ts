@@ -3,18 +3,25 @@ import { z } from "zod";
 import { requireUser, requireCsrfToken } from "@/lib/auth";
 import { withHandler } from "@/lib/utils";
 import { ValidationError } from "@/lib/errors";
-import { userRepository } from "@/repositories";
+import { userRepository, providerProfileRepository } from "@/repositories";
 import { notificationService } from "@/services";
 import { AIDecisionService } from "@/services/ai-decision.service";
 import { checkRateLimit } from "@/lib/rateLimit";
+import {
+  buildVerificationChecklist,
+  KYC_UPLOAD_DOCUMENT_TYPES,
+  type KycVerificationSnapshot,
+} from "@/lib/provider-verification-checklist";
 
 /** Cloudinary-only URL pattern for uploaded KYC documents */
 const CLOUDINARY_URL_RE = /^https:\/\/res\.cloudinary\.com\//;
 
+const kycDocTypeEnum = z.enum(KYC_UPLOAD_DOCUMENT_TYPES);
+
 const SubmitKycSchema = z.object({
   documents: z.array(
     z.object({
-      type: z.enum(["government_id", "tesda_certificate", "business_permit", "selfie_with_id", "other"]),
+      type: kycDocTypeEnum,
       url: z
         .string()
         .url("Invalid document URL")
@@ -81,7 +88,11 @@ export const POST = withHandler(async (req: NextRequest) => {
               idDocument: documents.find((d) => d.type === "government_id")?.url,
               licenseDocument: documents.find((d) => d.type === "tesda_certificate")?.url,
               certifications: documents
-                .filter((d) => ["tesda_certificate", "business_permit"].includes(d.type))
+                .filter((d) =>
+                  ["tesda_certificate", "training_certificate", "business_permit", "certification", "bir_registration"].includes(
+                    d.type
+                  )
+                )
                 .map((d) => d.url),
             },
             userData: {
@@ -164,9 +175,27 @@ export const GET = withHandler(async (req: NextRequest) => {
 
   const u = await userRepository.getKycStatus(user.userId);
 
-  return NextResponse.json({
-    kycStatus: u?.kycStatus ?? "none",
-    kycDocuments: u?.kycDocuments ?? [],
+  const kycDocuments = (u?.kycDocuments ?? []) as KycVerificationSnapshot["kycDocuments"];
+  const accountType =
+    u?.accountType === "business" ? "business" : "personal";
+
+  let profileCertificationsCount = 0;
+  const profile = await providerProfileRepository.findByUserId(user.userId);
+  if (profile?.certifications?.length) profileCertificationsCount = profile.certifications.length;
+
+  const snapshot: KycVerificationSnapshot = {
+    kycStatus: (u?.kycStatus ?? "none") as KycVerificationSnapshot["kycStatus"],
+    kycDocuments,
+    accountType,
+    profileCertificationsCount,
     kycRejectionReason: u?.kycRejectionReason ?? null,
+  };
+
+  return NextResponse.json({
+    kycStatus: snapshot.kycStatus,
+    kycDocuments,
+    kycRejectionReason: snapshot.kycRejectionReason,
+    accountType,
+    checklist: buildVerificationChecklist(snapshot),
   });
 });

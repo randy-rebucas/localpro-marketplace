@@ -7,8 +7,14 @@ import KpiCard from "@/components/ui/KpiCard";
 import { formatCurrency } from "@/lib/utils";
 import {
   CircleDollarSign, Briefcase, Star, TrendingUp, Zap,
-  TriangleAlert, ShieldCheck, FileText,
+  ShieldCheck, FileText,
 } from "lucide-react";
+import { DisciplinaryNotice } from "@/components/shared/DisciplinaryNotice";
+import {
+  DISCIPLINARY_SUPPORT_EMAIL,
+  PROVIDER_PERFORMANCE_POLICY_LINKS,
+  buildProviderPerformanceEvidenceLines,
+} from "@/lib/disciplinary-notice";
 
 export async function DashboardKpis({ userId }: { userId: string }) {
   const [activeJobs, earnings, ratingSummary, profileDoc, pendingQuotes, escrowPending, monthlyNet] =
@@ -31,13 +37,9 @@ export async function DashboardKpis({ userId }: { userId: string }) {
   const completedJobCount = profileDoc?.completedJobCount ?? 0;
   const avgResponseTimeHours = profileDoc?.avgResponseTimeHours ?? 0;
 
-  const showPerfWarning =
-    (avgRating > 0 && avgRating < 3.5) ||
-    (completedJobCount > 0 && completionRate < 70);
-  const perfWarningMsg =
-    avgRating > 0 && avgRating < 3.5
-      ? `Your rating is ${avgRating.toFixed(1)}★ — aim for 3.5★+ to avoid account restrictions.`
-      : `Your completion rate is ${completionRate}% — maintain 70%+ to stay in good standing.`;
+  const ratingTrigger = avgRating > 0 && avgRating < 3.5;
+  const completionTrigger = completedJobCount > 0 && completionRate < 70;
+  const showPerfWarning = ratingTrigger || completionTrigger;
 
   const responseRatePct =
     avgResponseTimeHours <= 0 ? 0
@@ -48,17 +50,47 @@ export async function DashboardKpis({ userId }: { userId: string }) {
 
   return (
     <>
-      {/* Performance warning */}
+      {/* Performance warning — structured notice (metrics as evidence; policies + appeal paths) */}
       {showPerfWarning && (
-        <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3.5">
-          <TriangleAlert className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
-          <div>
-            <p className="text-sm font-medium text-amber-800">Performance needs attention</p>
-            <p className="text-xs text-amber-700 mt-0.5">
-              {perfWarningMsg} Focus on delivering quality work and communicating proactively with clients.
-            </p>
-          </div>
-        </div>
+        <DisciplinaryNotice
+          tone="amber"
+          title="Performance needs attention"
+          reasonHeading="Why you are seeing this"
+          reasonBody="Measured marketplace metrics on your account are below the thresholds we highlight on the dashboard. This is an advisory notice so you can improve before any escalation. Persistent or severe issues may be reviewed under the agreements linked below."
+          evidenceLines={
+            ratingTrigger && completionTrigger
+              ? [
+                  ...buildProviderPerformanceEvidenceLines({
+                    avgRating,
+                    reviewCount,
+                    completionRate,
+                    completedJobCount,
+                    trigger: "rating",
+                  }),
+                  ...buildProviderPerformanceEvidenceLines({
+                    avgRating,
+                    reviewCount,
+                    completionRate,
+                    completedJobCount,
+                    trigger: "completion",
+                  }),
+                ]
+              : buildProviderPerformanceEvidenceLines({
+                  avgRating,
+                  reviewCount,
+                  completionRate,
+                  completedJobCount,
+                  trigger: ratingTrigger ? "rating" : "completion",
+                })
+          }
+          policyLinks={PROVIDER_PERFORMANCE_POLICY_LINKS}
+          appealHeading="Appeal, correction, or questions"
+          appealLines={[
+            "Visit the Help Center at /support and include specific job IDs if you believe completion or ratings are incorrect.",
+            `Email ${DISCIPLINARY_SUPPORT_EMAIL} from your registered address with \"Performance metrics review\" in the subject line.`,
+            "Improving ratings and completion rate through delivery and communication is the usual path back to strong standing; formal account actions, when they occur, follow the cited agreement sections.",
+          ]}
+        />
       )}
 
       {/* KPI cards — row 1: financials */}
