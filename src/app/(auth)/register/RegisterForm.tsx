@@ -91,7 +91,7 @@ export default function RegisterForm({ defaultRole, refCode }: Props) {
   return (
     <>
       <h2 className="text-2xl font-bold text-slate-900 mb-0.5">Create your account</h2>
-      <p className="text-slate-500 text-sm mb-5">Join LocalPro and get things done</p>
+      <p className="text-slate-500 text-sm mb-5">We provide workers on demand</p>
 
       {/* Role tabs */}
       <div className="flex border-b border-slate-200 mb-5">
